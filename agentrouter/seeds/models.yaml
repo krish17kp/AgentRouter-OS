@@ -1,0 +1,198 @@
+# AgentRouter OS — model registry (schema: MODEL_REGISTRY_SCHEMA.md)
+# NOTE: model_id values are ILLUSTRATIVE PLACEHOLDERS. Routing logic never keys
+# off a name — only off these fields. Edit this file to add/reprice/retire models.
+models:
+  # --- claude-code ----------------------------------------------------------
+  - provider: claude-code
+    model_id: frontier-coding-model
+    display_name: Frontier Coding Model
+    context_window: 200000
+    max_output_tokens: 64000
+    pricing_tier: frontier
+    latency_tier: medium
+    ability: { coding: 10, reasoning: 9, writing: 8 }
+    tool_support: [tool-use, file-edit, shell]
+    vision_support: true
+    ideal_use_cases: [coding, analysis]
+    avoid_use_cases: []
+    deprecation_status: active
+    fallback: [strong-coding-model, mid-tier-coding-model]
+    source: manual
+    last_updated: "2026-07-07"
+
+  - provider: claude-code
+    model_id: fast-coding-model
+    display_name: Fast Coding Model
+    context_window: 200000
+    max_output_tokens: 32000
+    pricing_tier: medium
+    latency_tier: fast
+    ability: { coding: 8, reasoning: 7, writing: 7 }
+    tool_support: [tool-use, file-edit, shell]
+    vision_support: true
+    ideal_use_cases: [coding]
+    deprecation_status: active
+    fallback: [mid-tier-coding-model]
+    source: manual
+    last_updated: "2026-07-07"
+
+  # --- openai ---------------------------------------------------------------
+  - provider: openai
+    model_id: frontier-reasoning-model
+    display_name: Frontier Reasoning Model
+    context_window: 400000
+    max_output_tokens: 100000
+    pricing_tier: frontier
+    latency_tier: slow
+    ability: { coding: 9, reasoning: 10, writing: 8 }
+    tool_support: [tool-use, function-calling]
+    vision_support: true
+    ideal_use_cases: [reasoning, analysis]
+    avoid_use_cases: [summarization]
+    deprecation_status: active
+    fallback: [general-purpose-model]
+    source: manual
+    last_updated: "2026-07-07"
+
+  - provider: openai
+    model_id: general-purpose-model
+    display_name: General Purpose Model
+    context_window: 128000
+    max_output_tokens: 16000
+    pricing_tier: medium
+    latency_tier: fast
+    ability: { coding: 7, reasoning: 8, writing: 8 }
+    tool_support: [tool-use, function-calling]
+    vision_support: true
+    ideal_use_cases: [general, writing]
+    deprecation_status: active
+    source: manual
+    last_updated: "2026-07-07"
+
+  - provider: openai
+    model_id: legacy-general-model
+    display_name: Legacy General Model
+    context_window: 32000
+    max_output_tokens: 8000
+    pricing_tier: medium
+    latency_tier: medium
+    ability: { coding: 6, reasoning: 6, writing: 6 }
+    tool_support: [function-calling]
+    vision_support: false
+    deprecation_status: deprecated
+    fallback: [general-purpose-model]
+    source: manual
+    last_updated: "2026-07-07"
+
+  # --- openrouter -----------------------------------------------------------
+  - provider: openrouter
+    model_id: strong-coding-model
+    display_name: Strong Coding Model
+    context_window: 128000
+    max_output_tokens: 32000
+    pricing_tier: high
+    latency_tier: medium
+    ability: { coding: 9, reasoning: 8, writing: 7 }
+    tool_support: [tool-use, function-calling, file-edit]
+    vision_support: false
+    ideal_use_cases: [coding]
+    deprecation_status: active
+    fallback: [mid-tier-coding-model]
+    source: manual
+    last_updated: "2026-07-07"
+
+  - provider: openrouter
+    model_id: mid-tier-coding-model
+    display_name: Mid-Tier Coding Model
+    context_window: 128000
+    max_output_tokens: 32000
+    pricing_tier: low
+    latency_tier: fast
+    ability: { coding: 7, reasoning: 7, writing: 7 }
+    tool_support: [tool-use, function-calling]
+    vision_support: false
+    ideal_use_cases: [coding, general]
+    deprecation_status: active
+    source: manual
+    last_updated: "2026-07-07"
+
+  - provider: openrouter
+    model_id: cheap-fast-model
+    display_name: Cheap Fast Model
+    context_window: 32000
+    max_output_tokens: 8000
+    pricing_tier: free
+    latency_tier: fast
+    ability: { coding: 5, reasoning: 6, writing: 6 }
+    tool_support: [function-calling]
+    vision_support: false
+    ideal_use_cases: [general, summarization]
+    avoid_use_cases: [coding]
+    deprecation_status: active
+    source: manual
+    last_updated: "2026-07-07"
+
+  - provider: openrouter
+    model_id: long-context-writer-model
+    display_name: Long-Context Writer Model
+    context_window: 1000000
+    max_output_tokens: 64000
+    pricing_tier: high
+    latency_tier: slow
+    ability: { coding: 6, reasoning: 8, writing: 9 }
+    tool_support: [tool-use]
+    vision_support: true
+    ideal_use_cases: [summarization, writing, analysis]
+    deprecation_status: active
+    source: manual
+    last_updated: "2026-07-07"
+
+  # --- cursor ---------------------------------------------------------------
+  - provider: cursor
+    model_id: ide-coding-model
+    display_name: IDE Coding Model
+    context_window: 128000
+    max_output_tokens: 32000
+    pricing_tier: high
+    latency_tier: fast
+    ability: { coding: 9, reasoning: 7, writing: 6 }
+    tool_support: [file-edit, tool-use, shell]
+    vision_support: false
+    ideal_use_cases: [coding]
+    deprecation_status: active
+    fallback: [mid-tier-coding-model]
+    source: manual
+    last_updated: "2026-07-07"
+
+  # --- cli-agent --------------------------------------------------------------
+  - provider: cli-agent
+    model_id: local-coding-agent
+    display_name: Local Coding Agent
+    context_window: 64000
+    max_output_tokens: 16000
+    pricing_tier: free
+    latency_tier: medium
+    ability: { coding: 6, reasoning: 5, writing: 4 }
+    tool_support: [file-edit, shell]
+    vision_support: false
+    ideal_use_cases: [coding]
+    avoid_use_cases: [writing, summarization]
+    deprecation_status: active
+    source: manual
+    last_updated: "2026-07-07"
+
+  # --- manual (always-available fallback) ------------------------------------
+  - provider: manual
+    model_id: human-operator
+    display_name: Human Operator (do it yourself)
+    context_window: 1000000000
+    max_output_tokens: 1000000000
+    pricing_tier: high
+    latency_tier: slow
+    ability: { coding: 5, reasoning: 6, writing: 6 }
+    tool_support: [tool-use, file-edit, shell, web, function-calling]
+    vision_support: true
+    deprecation_status: active
+    notes: Always-eligible fallback; intentionally conservative scores.
+    source: manual
+    last_updated: "2026-07-07"

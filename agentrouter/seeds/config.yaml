@@ -1,0 +1,6 @@
+# AgentRouter OS — user config
+weights:
+  w_cap: 0.45
+  w_cost: 0.25
+  w_lat: 0.15
+  w_ctx: 0.15

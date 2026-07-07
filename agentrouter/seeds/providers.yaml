@@ -1,0 +1,27 @@
+# AgentRouter OS — provider registry (PROVIDER_ADAPTER_SPEC.md)
+# supports_execution is false for ALL adapters in v1 (planner, not executor).
+providers:
+  - id: claude-code
+    adapter: claude-code
+    auth_model: oauth
+    supports_execution: false
+  - id: openai
+    adapter: openai
+    auth_model: api-key
+    supports_execution: false
+  - id: openrouter
+    adapter: openrouter
+    auth_model: api-key
+    supports_execution: false
+  - id: cursor
+    adapter: cursor
+    auth_model: oauth
+    supports_execution: false
+  - id: cli-agent
+    adapter: cli-agent
+    auth_model: local
+    supports_execution: false
+  - id: manual
+    adapter: manual
+    auth_model: manual
+    supports_execution: false

@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentrouter-os"
+version = "0.1.0"
+description = "CLI-first AI task-routing planner"
+requires-python = ">=3.10"
+dependencies = ["typer>=0.12", "pydantic>=2.5", "PyYAML>=6.0"]
+
+[project.scripts]
+agentrouter = "agentrouter.cli:app"
+
+[tool.setuptools.packages.find]
+include = ["agentrouter*"]
+
+[tool.setuptools.package-data]
+agentrouter = ["seeds/*.yaml"]
