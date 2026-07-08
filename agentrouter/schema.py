@@ -4,12 +4,11 @@ from __future__ import annotations
 
 from datetime import date
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # --- enums ---------------------------------------------------------------
+
 
 class PricingTier(str, Enum):
     free = "free"
@@ -68,6 +67,7 @@ class ContextBand(str, Enum):
 
 # --- registry entries ------------------------------------------------------
 
+
 class Ability(BaseModel):
     model_config = ConfigDict(extra="forbid")
     coding: int = Field(ge=0, le=10)
@@ -82,9 +82,9 @@ class ModelEntry(BaseModel):
 
     provider: str
     model_id: str
-    display_name: Optional[str] = None
+    display_name: str | None = None
     context_window: int = Field(gt=0)
-    max_input_tokens: Optional[int] = Field(default=None, gt=0)
+    max_input_tokens: int | None = Field(default=None, gt=0)
     max_output_tokens: int = Field(gt=0)
     pricing_tier: PricingTier
     latency_tier: LatencyTier
@@ -95,9 +95,9 @@ class ModelEntry(BaseModel):
     avoid_use_cases: list[str] = []
     deprecation_status: DeprecationStatus
     fallback: list[str] = []
-    notes: Optional[str] = None
-    source: Optional[str] = None  # manual | refresh
-    last_updated: Optional[date] = None
+    notes: str | None = None
+    source: str | None = None  # manual | refresh
+    last_updated: date | None = None
 
     @property
     def key(self) -> str:
@@ -117,6 +117,7 @@ class Provider(BaseModel):
 
 
 # --- classification --------------------------------------------------------
+
 
 class Classification(BaseModel):
     """The 7 canonical dimensions (ROUTING_RULES.md §1)."""

@@ -41,9 +41,7 @@ def save_decision(conn: sqlite3.Connection, task: str, payload: dict) -> str:
 
 
 def recent_ids(conn: sqlite3.Connection, n: int = 3) -> list[str]:
-    rows = conn.execute(
-        "SELECT id FROM decisions ORDER BY id DESC LIMIT ?", (n,)
-    ).fetchall()
+    rows = conn.execute("SELECT id FROM decisions ORDER BY id DESC LIMIT ?", (n,)).fetchall()
     return [f"d_{r[0]:05d}" for r in rows]
 
 

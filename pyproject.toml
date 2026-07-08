@@ -4,10 +4,34 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentrouter-os"
-version = "0.1.0"
-description = "CLI-first AI task-routing planner"
+version = "0.2.0"
+description = "CLI-first AI task-routing planner: classifies a task and recommends the best model/tool, with explainable, logged decisions"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Krish Parekh" }]
 requires-python = ">=3.10"
+keywords = ["ai", "routing", "cli", "llm", "model-selection"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = ["typer>=0.12", "pydantic>=2.5", "PyYAML>=6.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.6"]
+
+[project.urls]
+Homepage = "https://github.com/krish17kp/AgentRouter-OS"
+Issues = "https://github.com/krish17kp/AgentRouter-OS/issues"
 
 [project.scripts]
 agentrouter = "agentrouter.cli:app"
@@ -17,3 +41,21 @@ include = ["agentrouter*"]
 
 [tool.setuptools.package-data]
 agentrouter = ["seeds/*.yaml"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["B008"]  # Typer's Option/Argument defaults are calls by design
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["agentrouter"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true

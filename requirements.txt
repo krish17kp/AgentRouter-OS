@@ -1,4 +1,5 @@
+# Runtime dependencies only. Preferred install: pip install -e ".[dev]"
+# (pyproject.toml is the source of truth; this file mirrors it for convenience)
 typer>=0.12
 pydantic>=2.5
 PyYAML>=6.0
-pytest>=8.0

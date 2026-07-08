@@ -19,31 +19,113 @@ _SUMMARIZE = ("summarize", "summary", "tl;dr", "tldr", "condense", "into bullets
 # Documentation intent — checked BEFORE coding so "Python/CLI/repo/project" mentions
 # never override README/docs intent. Artifact nouns + doc-editing verbs.
 _DOC_ARTIFACTS = (
-    "readme", "prd", "brd", "roadmap", "milestone", "user guide", "changelog",
-    "documentation", "docs", "architecture doc", "design doc", "overview",
-    "report", "guide", "wiki", "tutorial",
+    "readme",
+    "prd",
+    "brd",
+    "roadmap",
+    "milestone",
+    "user guide",
+    "changelog",
+    "documentation",
+    "docs",
+    "architecture doc",
+    "design doc",
+    "overview",
+    "report",
+    "guide",
+    "wiki",
+    "tutorial",
 )
 _DOC_VERBS = ("polish", "rewrite", "proofread", "explain")
 _CODING = (
-    "refactor", "debug", "implement", "fix", "bug", "code", "script", "function",
-    "endpoint", "unit test", "compile", "regex", "sql", "api", "class", "module",
-    "one-liner", "bash", "python", "typescript", "command", "cli",
+    "refactor",
+    "debug",
+    "implement",
+    "fix",
+    "bug",
+    "code",
+    "script",
+    "function",
+    "endpoint",
+    "unit test",
+    "compile",
+    "regex",
+    "sql",
+    "api",
+    "class",
+    "module",
+    "one-liner",
+    "bash",
+    "python",
+    "typescript",
+    "command",
+    "cli",
 )
-_WRITING = ("write a blog", "write an article", "write documentation", "draft", "email", "essay", "readme")
-_ANALYSIS = ("analyze", "analyse", "compare", "review", "evaluate", "assess", "what's wrong", "describe")
+_WRITING = (
+    "write a blog",
+    "write an article",
+    "write documentation",
+    "draft",
+    "email",
+    "essay",
+    "readme",
+)
+_ANALYSIS = (
+    "analyze",
+    "analyse",
+    "compare",
+    "review",
+    "evaluate",
+    "assess",
+    "what's wrong",
+    "describe",
+)
 _REASONING = ("plan", "design", "architect", "prove", "solve", "strategy", "decide")
 
 _RISK_HIGH = (  # "token" deliberately absent: collides with LLM-token phrasing
-    "auth", "password", "secret", "credential", "api key", "payment", "billing",
-    "production", "prod ", "delete", "drop table", "migration", "migrate",
-    "infrastructure", "terraform", "kubernetes", "deploy",
+    "auth",
+    "password",
+    "secret",
+    "credential",
+    "api key",
+    "payment",
+    "billing",
+    "production",
+    "prod ",
+    "delete",
+    "drop table",
+    "migration",
+    "migrate",
+    "infrastructure",
+    "terraform",
+    "kubernetes",
+    "deploy",
 )
 _RISK_MEDIUM = ("database", "config", "user data", "pii", "schema", "env var")
 
 _TRIVIAL = ("one-liner", "oneliner", "simple", "quick", "small", "trivial", "single line")
-_COMPLEX = ("refactor", "redesign", "overhaul", "architecture", "end-to-end", "entire", "across", "migrate")
+_COMPLEX = (
+    "refactor",
+    "redesign",
+    "overhaul",
+    "architecture",
+    "end-to-end",
+    "entire",
+    "across",
+    "migrate",
+)
 
-_FILE_EDIT = ("refactor", "edit", "modify", "rename", "update the", "codebase", "our ", "module", "add tests")
+_FILE_EDIT = (
+    "refactor",
+    "edit",
+    "modify",
+    "rename",
+    "update the",
+    "codebase",
+    "our ",
+    "module",
+    "add tests",
+)
 _SHELL = ("run", "execute", "install", "build", "test")
 _VISION = ("image", "screenshot", "photo", "diagram", "mockup", "picture")
 _WEB = ("search the web", "browse", "latest news", "look up online")
@@ -68,7 +150,9 @@ def _is_documentation(text: str) -> bool:
 def _task_type(text: str) -> TaskType:
     if _contains(text, _SUMMARIZE):
         return TaskType.summarization
-    if _is_documentation(text):  # before coding: "Python CLI project" must not override README intent
+    if _is_documentation(
+        text
+    ):  # before coding: "Python CLI project" must not override README intent
         return TaskType.writing
     if _contains(text, _CODING):
         return TaskType.coding
@@ -167,7 +251,7 @@ def classify(
     risk: Level | None = None,
     tools: list[str] | None = None,
 ) -> Classification:
-    """Classify a task; keyword overrides win over inference (CLI --risk/--tool/--context-tokens)."""
+    """Classify a task; explicit overrides (--risk/--tool/--context-tokens) win over inference."""
     text = task.lower()
     task_type = _task_type(text)
     resolved_risk = risk or _risk(text)

@@ -1,10 +1,14 @@
 # AgentRouter OS
 
+[![CI](https://github.com/krish17kp/AgentRouter-OS/actions/workflows/ci.yml/badge.svg)](https://github.com/krish17kp/AgentRouter-OS/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 > **A CLI-first planner that reads your task and tells you which AI model, agent, IDE, or CLI tool to use — and why.**
 
 **Status: production-grade local MVP.** The CLI, classifier, routing engine,
 safety gating, decision log, and live OpenRouter catalog refresh (Capstone M2)
-are implemented and tested (46 passing tests).
+are implemented and tested (49 passing tests, 80%+ coverage enforced in CI).
 It is *not* fully production-ready: live provider sync, the feedback learning
 loop, execution, and team features are documented but not built — see
 [TODO.md](TODO.md) for the honest gap list.
@@ -47,17 +51,23 @@ YAML — adding tomorrow's model is a config edit, not a code change.
 ## Quick start (fresh clone)
 
 ```console
+# 0. Clone
+git clone https://github.com/krish17kp/AgentRouter-OS.git
+cd AgentRouter-OS
+
 # 1. Virtual environment
 python -m venv .venv
 .venv\Scripts\activate            # Windows
 # source .venv/bin/activate       # macOS/Linux
 
-# 2. Install (editable, gives you the `agentrouter` command)
-pip install -e .
-pip install pytest                # for running tests
+# 2. Install (editable + dev tools: pytest, pytest-cov, ruff)
+pip install -e ".[dev]"
+# runtime only: pip install -e .
 
 # 3. Verify
-pytest                            # 46 tests should pass (offline; refresh tests are mocked)
+pytest                            # 49 tests, offline (refresh tests are mocked)
+pytest --cov=agentrouter          # with coverage (80% gate)
+ruff check . && ruff format --check .
 
 # 4. Initialize (creates ~/.agentrouter/ with seed registries)
 python -m agentrouter init
@@ -165,6 +175,10 @@ MVP (this) → Capstone demo (live `providers refresh`, rich multi-provider show
 | Doc | Purpose |
 |---|---|
 | [USER_GUIDE.md](USER_GUIDE.md) | Per-command walkthrough + JSON output contract |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Dev setup, pre-push checks, conventions |
+| [TESTING.md](TESTING.md) | Test layout, coverage, live smoke test |
+| [SECURITY.md](SECURITY.md) | Secret handling, safety design, reporting |
+| [CHANGELOG.md](CHANGELOG.md) / [RELEASE.md](RELEASE.md) | Version history + release checklist |
 | [TODO.md](TODO.md) | Completed work + honest remaining gaps |
 | [PRD.md](PRD.md) / [BRD.md](BRD.md) | Product + business requirements |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Components + request lifecycle |

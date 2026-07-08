@@ -25,12 +25,27 @@ _CAP_BLEND: dict[TaskType, dict[str, float]] = {
 
 # cost_fit: pricing tier suitability per complexity
 _COST_FIT: dict[Level, dict[PricingTier, float]] = {
-    Level.low: {PricingTier.free: 1.0, PricingTier.low: 0.9, PricingTier.medium: 0.6,
-                PricingTier.high: 0.3, PricingTier.frontier: 0.1},
-    Level.medium: {PricingTier.free: 0.7, PricingTier.low: 0.8, PricingTier.medium: 1.0,
-                   PricingTier.high: 0.8, PricingTier.frontier: 0.6},
-    Level.high: {PricingTier.free: 0.4, PricingTier.low: 0.5, PricingTier.medium: 0.7,
-                 PricingTier.high: 0.9, PricingTier.frontier: 1.0},
+    Level.low: {
+        PricingTier.free: 1.0,
+        PricingTier.low: 0.9,
+        PricingTier.medium: 0.6,
+        PricingTier.high: 0.3,
+        PricingTier.frontier: 0.1,
+    },
+    Level.medium: {
+        PricingTier.free: 0.7,
+        PricingTier.low: 0.8,
+        PricingTier.medium: 1.0,
+        PricingTier.high: 0.8,
+        PricingTier.frontier: 0.6,
+    },
+    Level.high: {
+        PricingTier.free: 0.4,
+        PricingTier.low: 0.5,
+        PricingTier.medium: 0.7,
+        PricingTier.high: 0.9,
+        PricingTier.frontier: 1.0,
+    },
 }
 
 _LAT_FIT: dict[Level, dict[LatencyTier, float]] = {
@@ -45,7 +60,9 @@ _IDEAL_BOOST = 0.05
 _AVOID_PENALTY = 0.10
 
 
-def weights_for(cls: Classification, base: dict[str, float] | None = None) -> tuple[dict, list[str]]:
+def weights_for(
+    cls: Classification, base: dict[str, float] | None = None
+) -> tuple[dict, list[str]]:
     w = dict(base or BASE_WEIGHTS)
     shifts: list[str] = []
     if cls.complexity is Level.high or cls.risk is Level.high:
@@ -60,7 +77,9 @@ def weights_for(cls: Classification, base: dict[str, float] | None = None) -> tu
     return w, shifts
 
 
-def eligibility(models: list[ModelEntry], cls: Classification) -> tuple[list[ModelEntry], list[dict]]:
+def eligibility(
+    models: list[ModelEntry], cls: Classification
+) -> tuple[list[ModelEntry], list[dict]]:
     """Hard filters (ROUTING_RULES.md §2). Returns (eligible, excluded-with-reasons)."""
     eligible, excluded = [], []
     for m in models:
@@ -68,8 +87,9 @@ def eligibility(models: list[ModelEntry], cls: Classification) -> tuple[list[Mod
             excluded.append({"model": m.key, "reason": "retired"})
             continue
         if m.context_window < cls.context_tokens:
-            excluded.append({"model": m.key,
-                             "reason": f"context {m.context_window} < {cls.context_tokens}"})
+            excluded.append(
+                {"model": m.key, "reason": f"context {m.context_window} < {cls.context_tokens}"}
+            )
             continue
         needed = [t for t in cls.tool_needs if t != "vision"]
         missing = [t for t in needed if t not in m.tool_support]
@@ -107,8 +127,9 @@ def _use_case_adjust(m: ModelEntry, cls: Classification) -> float:
     return adj
 
 
-def score_models(eligible: list[ModelEntry], cls: Classification,
-                 weights: dict[str, float]) -> list[dict]:
+def score_models(
+    eligible: list[ModelEntry], cls: Classification, weights: dict[str, float]
+) -> list[dict]:
     """Score + rank eligible models. Returns rows sorted best-first."""
     rows = []
     for m in eligible:
@@ -118,20 +139,37 @@ def score_models(eligible: list[ModelEntry], cls: Classification,
         ctx = _context_fit(m, cls)
         adj = _use_case_adjust(m, cls)
         dep = _DEPRECATION_PENALTY if m.deprecation_status is DeprecationStatus.deprecated else 0.0
-        score = (weights["w_cap"] * cap + weights["w_cost"] * cost
-                 + weights["w_lat"] * lat + weights["w_ctx"] * ctx + adj - dep)
-        rows.append({
-            "model": m.key, "provider": m.provider, "model_id": m.model_id,
-            "terms": {"cap": round(cap, 2), "cost": round(cost, 2), "lat": round(lat, 2),
-                      "ctx": round(ctx, 2), "adj": round(adj, 2), "dep": round(dep, 2)},
-            "score": round(score, 3),
-        })
+        score = (
+            weights["w_cap"] * cap
+            + weights["w_cost"] * cost
+            + weights["w_lat"] * lat
+            + weights["w_ctx"] * ctx
+            + adj
+            - dep
+        )
+        rows.append(
+            {
+                "model": m.key,
+                "provider": m.provider,
+                "model_id": m.model_id,
+                "terms": {
+                    "cap": round(cap, 2),
+                    "cost": round(cost, 2),
+                    "lat": round(lat, 2),
+                    "ctx": round(ctx, 2),
+                    "adj": round(adj, 2),
+                    "dep": round(dep, 2),
+                },
+                "score": round(score, 3),
+            }
+        )
     rows.sort(key=lambda r: r["score"], reverse=True)
     return rows
 
 
-def pick_fallback(ranked: list[dict], models_by_key: dict[str, ModelEntry],
-                  eligible_ids: set[str]) -> dict | None:
+def pick_fallback(
+    ranked: list[dict], models_by_key: dict[str, ModelEntry], eligible_ids: set[str]
+) -> dict | None:
     """Fallback selection (ROUTING_RULES.md §5)."""
     if not ranked:
         return None
@@ -145,14 +183,17 @@ def pick_fallback(ranked: list[dict], models_by_key: dict[str, ModelEntry],
     tiers = list(PricingTier)
     for row in ranked[1:]:
         cand = models_by_key[row["model"]]
-        if cand.provider != rec.provider or tiers.index(cand.pricing_tier) < tiers.index(rec.pricing_tier):
+        if cand.provider != rec.provider or tiers.index(cand.pricing_tier) < tiers.index(
+            rec.pricing_tier
+        ):
             return row
     # 3. any second-best at all
     return ranked[1] if len(ranked) > 1 else None
 
 
-def route(models: list[ModelEntry], cls: Classification,
-          base_weights: dict[str, float] | None = None) -> dict:
+def route(
+    models: list[ModelEntry], cls: Classification, base_weights: dict[str, float] | None = None
+) -> dict:
     """Full routing pass: filter -> weight -> score -> recommend + fallback."""
     weights, shifts = weights_for(cls, base_weights)
     eligible, excluded = eligibility(models, cls)
@@ -162,8 +203,12 @@ def route(models: list[ModelEntry], cls: Classification,
         # recommend the manual-agent entry if present (ROUTING_RULES.md §2)
         manual = next((m for m in models if m.provider == "manual"), None)
         return {
-            "weights": weights, "weight_shifts": shifts, "excluded": excluded,
-            "scores": [], "recommendation": None, "fallback": None,
+            "weights": weights,
+            "weight_shifts": shifts,
+            "excluded": excluded,
+            "scores": [],
+            "recommendation": None,
+            "fallback": None,
             "manual_suggestion": manual.key if manual else None,
         }
 
@@ -171,7 +216,11 @@ def route(models: list[ModelEntry], cls: Classification,
     eligible_ids = {m.model_id for m in eligible}
     fallback = pick_fallback(ranked, models_by_key, eligible_ids)
     return {
-        "weights": weights, "weight_shifts": shifts, "excluded": excluded,
-        "scores": ranked, "recommendation": ranked[0], "fallback": fallback,
+        "weights": weights,
+        "weight_shifts": shifts,
+        "excluded": excluded,
+        "scores": ranked,
+        "recommendation": ranked[0],
+        "fallback": fallback,
         "manual_suggestion": None,
     }

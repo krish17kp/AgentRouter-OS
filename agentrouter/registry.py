@@ -76,7 +76,9 @@ def load_models(path: Path, providers: dict[str, Provider]) -> tuple[list[ModelE
     return models, warnings
 
 
-def load_all_models(reg_dir: Path, providers: dict[str, Provider]) -> tuple[list[ModelEntry], list[str]]:
+def load_all_models(
+    reg_dir: Path, providers: dict[str, Provider]
+) -> tuple[list[ModelEntry], list[str]]:
     """Manual models.yaml + any models.*.generated.yaml (from providers refresh).
 
     Manual entries win on key collision, so hand-edits are never shadowed and

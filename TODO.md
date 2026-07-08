@@ -1,8 +1,30 @@
 # AgentRouter OS — TODO / Status
 
-> Updated at the end of Capstone M2 (2026-07-07). Honest status:
-> **production-grade local MVP + live OpenRouter refresh** — not fully
-> production-ready; gaps listed below.
+> Updated at the end of the production-engineering pass (2026-07-08). Honest
+> status: **production-grade local CLI product, CI-verified on GitHub** —
+> remaining gaps listed below.
+
+## ✅ Completed in the production-engineering pass (v0.2.0)
+
+- [x] **Repo hygiene:** `.gitignore` verified (env, venv, caches, dbs,
+      egg-info); secret scan of all tracked files clean; `.env.example`
+      placeholders-only (confirmed clean in git history too)
+- [x] **Packaging:** full pyproject metadata (MIT license + LICENSE file,
+      classifiers, URLs, keywords), `[dev]` extras (pytest, pytest-cov, ruff),
+      version bumped to 0.2.0; `agentrouter` and `python -m agentrouter` both work
+- [x] **CI:** `.github/workflows/ci.yml` — push + PR, Python 3.11/3.12/3.13
+      matrix, ruff check + format check, pytest with 80% coverage gate, CLI
+      entrypoint smoke check
+- [x] **Code quality:** ruff configured (E/F/W/I/UP/B, line 100); whole
+      codebase formatted and lint-clean; no new runtime dependencies
+- [x] **Coverage:** pytest-cov wired, `fail_under = 80` (currently ~85%)
+- [x] **CLI smoke tests:** `tests/test_cli_smoke.py` (module entrypoint via
+      subprocess, `--help` command listing, fresh-user init→list→route flow)
+- [x] **Docs:** CONTRIBUTING.md, TESTING.md, SECURITY.md, CHANGELOG.md,
+      RELEASE.md; README gained CI/Python/license badges, clone-to-verified
+      quick start, doc map
+- [x] **Versioning:** CHANGELOG with 0.1.0/0.2.0 history; release checklist in
+      RELEASE.md (PyPI publishing deliberately deferred)
 
 ## ✅ Completed in Capstone M2 (live providers refresh)
 
@@ -79,8 +101,7 @@ maintainable catalog pipeline.
 3. **Refresh filtering/curation:** `--match` substring filter; way to overlay
    curated ability scores on refreshed entries without hand-editing generated files.
 4. **Feedback learning loop (M4):** bounded weight adaptation from stored ratings.
-5. **CI:** GitHub Actions running pytest + coverage gate.
-6. **Rotate the OpenRouter key in `.env.example`** and blank the placeholder.
+5. **PyPI publishing** (build + twine + trusted-publishing workflow) when ready.
 
 ## Production-readiness gaps (unresolved, documented)
 
@@ -89,7 +110,11 @@ maintainable catalog pipeline.
   not benchmarked — recommendations advisory
 - Rule-based classifier only; ambiguous phrasing can misread (overrides exist)
 - Feedback stored but not learned from
-- No CI, no PyPI packaging/release process, no CHANGELOG
+- Not published to PyPI (install is clone + `pip install -e .` for now)
+- No production monitoring/telemetry (local-only product; future if it ever
+  grows a service surface)
+- Benchmark-based ability scoring not built (scores are curated/heuristic)
+- Web dashboard not built (Advanced-tier idea, read-only if ever)
 - SQLite single-user assumption; no log rotation/retention policy
 - Decision log stores task text verbatim (documented; `--no-log` exists) — no
   redaction or encryption at rest

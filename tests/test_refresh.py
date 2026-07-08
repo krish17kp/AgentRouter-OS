@@ -55,6 +55,7 @@ def home(tmp_path, monkeypatch):
     monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     from agentrouter.cli import app
+
     result = runner.invoke(app, ["init"])
     assert result.exit_code == 0, result.output
     return tmp_path
@@ -75,13 +76,17 @@ def mock_http(monkeypatch):
 
 # --- mapping ------------------------------------------------------------------
 
-@pytest.mark.parametrize("price,tier", [
-    (0.0, PricingTier.free),
-    (5e-7, PricingTier.low),
-    (2e-6, PricingTier.medium),
-    (1e-5, PricingTier.high),
-    (2e-5, PricingTier.frontier),
-])
+
+@pytest.mark.parametrize(
+    "price,tier",
+    [
+        (0.0, PricingTier.free),
+        (5e-7, PricingTier.low),
+        (2e-6, PricingTier.medium),
+        (1e-5, PricingTier.high),
+        (2e-5, PricingTier.frontier),
+    ],
+)
 def test_pricing_tier_mapping(price, tier):
     assert refresh._pricing_tier(price) is tier
 
@@ -113,6 +118,7 @@ def test_map_entry_missing_context_raises():
 
 # --- fetch --------------------------------------------------------------------
 
+
 def test_fetch_skips_bad_entries_with_warning(mock_http):
     entries, warnings = fetch_openrouter_models(None, limit=25)
     assert [e.model_id for e in entries] == ["vendor/frontier-x", "vendor/cheap-y", "vendor/mid-z"]
@@ -132,14 +138,14 @@ def test_fetch_bad_shape_raises(monkeypatch):
 
 # --- generated registry merge ---------------------------------------------------
 
+
 def test_manual_wins_on_collision(home, mock_http):
     reg_dir = home / "registry"
     providers = load_providers(reg_dir / "providers.yaml")
     manual_models, _ = load_all_models(reg_dir, providers)
     manual_entry = next(m for m in manual_models if m.model_id == "strong-coding-model")
 
-    clone = manual_entry.model_copy(update={"pricing_tier": PricingTier.free,
-                                            "source": "refresh"})
+    clone = manual_entry.model_copy(update={"pricing_tier": PricingTier.free, "source": "refresh"})
     write_generated_registry(reg_dir, "openrouter", [clone])
     merged, warnings = load_all_models(reg_dir, providers)
 
@@ -150,6 +156,7 @@ def test_manual_wins_on_collision(home, mock_http):
 
 def test_refresh_is_idempotent(home, mock_http):
     from agentrouter.cli import app
+
     for _ in range(2):
         r = runner.invoke(app, ["providers", "refresh", "openrouter"])
         assert r.exit_code == 0, r.output
@@ -161,8 +168,10 @@ def test_refresh_is_idempotent(home, mock_http):
 
 # --- CLI ------------------------------------------------------------------------
 
+
 def test_cli_refresh_writes_and_routing_still_works(home, mock_http):
     from agentrouter.cli import app
+
     r = runner.invoke(app, ["providers", "refresh", "openrouter", "--limit", "10"])
     assert r.exit_code == 0, r.output
     gen = home / "registry" / "models.openrouter.generated.yaml"
@@ -171,8 +180,8 @@ def test_cli_refresh_writes_and_routing_still_works(home, mock_http):
     assert len(data["models"]) == 3
 
     lst = runner.invoke(app, ["registry", "list"])
-    assert "vendor/frontier-x" in lst.output          # refreshed model visible
-    assert "strong-coding-model" in lst.output        # manual registry preserved
+    assert "vendor/frontier-x" in lst.output  # refreshed model visible
+    assert "strong-coding-model" in lst.output  # manual registry preserved
 
     route = runner.invoke(app, ["route", "write a haiku about routers"])
     assert route.exit_code == 0, route.output
@@ -180,6 +189,7 @@ def test_cli_refresh_writes_and_routing_still_works(home, mock_http):
 
 def test_cli_refresh_dry_run_writes_nothing(home, mock_http):
     from agentrouter.cli import app
+
     r = runner.invoke(app, ["providers", "refresh", "openrouter", "--dry-run"])
     assert r.exit_code == 0, r.output
     assert "Dry run" in r.output
@@ -189,8 +199,10 @@ def test_cli_refresh_dry_run_writes_nothing(home, mock_http):
 def test_cli_refresh_network_error_exit1(home, monkeypatch):
     def boom(url, api_key):
         raise RefreshError("network error reaching https://example: unreachable")
+
     monkeypatch.setattr(refresh, "_http_get_json", boom)
     from agentrouter.cli import app
+
     r = runner.invoke(app, ["providers", "refresh", "openrouter"])
     assert r.exit_code == 1
     assert "registry was NOT modified" in r.output and "Next:" in r.output
@@ -198,6 +210,7 @@ def test_cli_refresh_network_error_exit1(home, monkeypatch):
 
 def test_cli_refresh_unsupported_provider_exit2(home):
     from agentrouter.cli import app
+
     r = runner.invoke(app, ["providers", "refresh", "openai"])
     assert r.exit_code == 2
     assert "not refreshable" in r.output and "openrouter" in r.output
@@ -207,6 +220,7 @@ def test_cli_refresh_never_prints_key(home, mock_http, monkeypatch):
     secret = "sk-or-test-DO-NOT-PRINT-000"
     monkeypatch.setenv("OPENROUTER_API_KEY", secret)
     from agentrouter.cli import app
+
     r = runner.invoke(app, ["providers", "refresh", "openrouter"])
     assert r.exit_code == 0, r.output
     assert secret not in r.output
@@ -216,6 +230,7 @@ def test_cli_refresh_never_prints_key(home, mock_http, monkeypatch):
 
 def test_cli_refresh_works_without_key(home, mock_http):
     from agentrouter.cli import app
+
     r = runner.invoke(app, ["providers", "refresh", "openrouter"])
     assert r.exit_code == 0, r.output
     assert "public catalog endpoint" in r.output

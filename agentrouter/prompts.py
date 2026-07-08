@@ -28,8 +28,7 @@ Target tool: {tool}
 """
 
 
-def generate_prompt(task: str, tool_key: str, cls: Classification,
-                    checklist: list[str]) -> str:
+def generate_prompt(task: str, tool_key: str, cls: Classification, checklist: list[str]) -> str:
     risk_line = (
         "4. STOP before any irreversible action - this task requires human approval."
         if cls.approval_level.value == "human-approval-required"

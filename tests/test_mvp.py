@@ -23,6 +23,7 @@ def home(tmp_path, monkeypatch):
     """Isolated AGENTROUTER_HOME, initialized via the real init command."""
     monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
     from agentrouter.cli import app
+
     result = runner.invoke(app, ["init"])
     assert result.exit_code == 0, result.output
     return tmp_path
@@ -37,6 +38,7 @@ def registries():
 
 
 # --- FR-1: classification of the three sample tasks --------------------------
+
 
 def test_classify_trivial_script():
     c = classify("write a bash one-liner to count lines in a file")
@@ -66,14 +68,24 @@ def test_classify_long_summary():
 
 # --- FR-2: registry validation fails loudly ----------------------------------
 
+
 def test_malformed_model_entry_names_field(tmp_path):
     providers = load_providers(SEEDS / "providers.yaml")
-    bad = {"models": [{"provider": "openai", "model_id": "x",
-                       "max_output_tokens": 100, "pricing_tier": "low",
-                       "latency_tier": "fast",
-                       "ability": {"coding": 5, "reasoning": 5, "writing": 5},
-                       "tool_support": [], "vision_support": False,
-                       "deprecation_status": "active"}]}  # missing context_window
+    bad = {
+        "models": [
+            {
+                "provider": "openai",
+                "model_id": "x",
+                "max_output_tokens": 100,
+                "pricing_tier": "low",
+                "latency_tier": "fast",
+                "ability": {"coding": 5, "reasoning": 5, "writing": 5},
+                "tool_support": [],
+                "vision_support": False,
+                "deprecation_status": "active",
+            }
+        ]
+    }  # missing context_window
     p = tmp_path / "models.yaml"
     p.write_text(yaml.safe_dump(bad), encoding="utf-8")
     with pytest.raises(RegistryError, match="context_window"):
@@ -92,6 +104,7 @@ def test_unknown_field_rejected(tmp_path):
 
 # --- FR-5: context-size hard filter ------------------------------------------
 
+
 def test_context_filter_excludes_small_models(registries):
     _, models = registries
     c = classify("Summarize this 300k-token filing into 10 bullets")
@@ -103,6 +116,7 @@ def test_context_filter_excludes_small_models(registries):
 
 # --- FR-6/FR-8: risk gates ----------------------------------------------------
 
+
 def test_high_risk_gates(registries):
     c = classify("Refactor our auth module to use JWT rotation and add tests")
     g = gates_for(c)
@@ -112,6 +126,7 @@ def test_high_risk_gates(registries):
 
 
 # --- FR-3/FR-4: scoring, recommendation + fallback ----------------------------
+
 
 def test_route_returns_recommendation_and_fallback(registries):
     _, models = registries
@@ -143,10 +158,13 @@ def test_vision_task_requires_vision(registries):
 
 # --- FR-9/FR-11: end-to-end CLI, log + explain reproduces ----------------------
 
+
 def test_route_and_explain_end_to_end(home):
     from agentrouter.cli import app
-    r = runner.invoke(app, ["route", "Refactor our auth module to use JWT rotation and add tests",
-                            "--json"])
+
+    r = runner.invoke(
+        app, ["route", "Refactor our auth module to use JWT rotation and add tests", "--json"]
+    )
     assert r.exit_code == 0, r.output
     payload = json.loads(r.output)
     did = payload["decision_id"]
@@ -161,18 +179,19 @@ def test_route_and_explain_end_to_end(home):
 
 def test_registry_list_and_prompt_generate(home, tmp_path):
     from agentrouter.cli import app
+
     r = runner.invoke(app, ["registry", "list", "--active-only"])
     assert r.exit_code == 0 and "MODEL_ID" in r.output
 
     out = tmp_path / "prompt.md"
-    p = runner.invoke(app, ["prompt", "generate", "write a haiku about routers",
-                            "--out", str(out)])
+    p = runner.invoke(app, ["prompt", "generate", "write a haiku about routers", "--out", str(out)])
     assert p.exit_code == 0, p.output
     assert out.exists() and "# Execution Prompt" in out.read_text(encoding="utf-8")
 
 
 def test_no_eligible_model_exit_code(home):
     from agentrouter.cli import app
+
     # demand an impossible tool so nothing qualifies
     r = runner.invoke(app, ["route", "do something", "--tool", "quantum-teleport"])
     assert r.exit_code == 4
@@ -230,9 +249,11 @@ def test_docstring_task_is_still_coding():
 
 # --- error-path UX -------------------------------------------------------------
 
+
 def test_route_before_init_gives_registry_error(tmp_path, monkeypatch):
     monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path / "empty"))
     from agentrouter.cli import app
+
     r = runner.invoke(app, ["route", "anything"])
     assert r.exit_code == 3
     assert "agentrouter init" in r.output
@@ -240,6 +261,7 @@ def test_route_before_init_gives_registry_error(tmp_path, monkeypatch):
 
 def test_explain_unknown_id_suggests_recent(home):
     from agentrouter.cli import app
+
     runner.invoke(app, ["route", "write a haiku", "--no-log"])  # no decision saved
     runner.invoke(app, ["route", "write a haiku"])  # d_00001 saved
     r = runner.invoke(app, ["explain", "d_99999"])
@@ -250,6 +272,7 @@ def test_explain_unknown_id_suggests_recent(home):
 def test_explain_without_db(tmp_path, monkeypatch):
     monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path / "nodb"))
     from agentrouter.cli import app
+
     r = runner.invoke(app, ["explain", "d_00001"])
     assert r.exit_code == 2
     assert "No decision log" in r.output
@@ -257,11 +280,21 @@ def test_explain_without_db(tmp_path, monkeypatch):
 
 def test_route_json_contains_reason_and_stable_keys(home):
     from agentrouter.cli import app
+
     r = runner.invoke(app, ["route", "Polish the README for a Python CLI project", "--json"])
     assert r.exit_code == 0, r.output
     payload = json.loads(r.output)
-    for key in ("decision_id", "task", "classification", "scores",
-                "recommendation", "fallback", "gates", "prompt", "reason"):
+    for key in (
+        "decision_id",
+        "task",
+        "classification",
+        "scores",
+        "recommendation",
+        "fallback",
+        "gates",
+        "prompt",
+        "reason",
+    ):
         assert key in payload, f"missing key: {key}"
     assert payload["classification"]["task_type"] == "writing"
 
@@ -269,6 +302,7 @@ def test_route_json_contains_reason_and_stable_keys(home):
 def test_invalid_config_yaml_errors_clearly(home):
     (home / "config.yaml").write_text("weights: [not: a: mapping", encoding="utf-8")
     from agentrouter.cli import app
+
     r = runner.invoke(app, ["route", "write a haiku"])
     assert r.exit_code == 3
     assert "Config error" in r.output
