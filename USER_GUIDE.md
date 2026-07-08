@@ -75,22 +75,29 @@ $ agentrouter prompt generate --from d_00002 --out prompt.md   # from a logged d
 $ agentrouter prompt generate "write release notes" --tool openai/general-purpose-model
 ```
 
-Paste the generated prompt into the recommended tool. AgentRouter never runs
-it for you (planner, not executor — by design in v1).
+Paste the generated prompt into the recommended tool — or use `execute` (§8)
+if you have opted a provider into execution.
 
-## 6. `feedback <id>` — record the outcome
+## 6. `feedback <id>` — record the outcome (feeds learning)
 
 ```console
 $ agentrouter feedback d_00002 --rating 5 --note "worked, tests passed"
 ```
 
-Stored in the local log today; weight adaptation ships in the Advanced tier.
+Ratings feed the **bounded learning loop (M4)**: once 3+ ratings exist, each
+low rating (≤2) shifts a little weight (0.01) from cost toward capability —
+capped at +0.10 total, never below `w_cost` 0.05. The adaptation is recomputed
+from the feedback table on every route (no hidden state), shows up in the
+decision's `weight_shifts`, and reverts if you delete feedback rows or set
+`learning: false` in `config.yaml`.
 
-## 7. `providers refresh` — live catalog sync (OpenRouter)
+## 7. `providers refresh` — live catalog sync (OpenRouter, OpenAI)
 
 ```console
 $ agentrouter providers refresh openrouter --dry-run     # preview, write nothing
 $ agentrouter providers refresh openrouter --limit 15    # import up to 15 models
+$ agentrouter providers refresh openrouter --match claude  # only ids containing "claude"
+$ OPENAI_API_KEY=sk-... agentrouter providers refresh openai
 ```
 
 Fetches OpenRouter's live model catalog and writes it to
@@ -103,10 +110,22 @@ Fetches OpenRouter's live model catalog and writes it to
   `OPENROUTER_API_KEY` is set in your environment it is sent as an auth
   header; it is never printed or logged.
 - Re-running converges (the file is rewritten wholesale, no duplicates).
-- **Honesty note:** refreshed entries carry real context windows and pricing
-  tiers, but `ability` scores are a pricing-based heuristic (marked in the
-  entry's `notes`) — treat them as rougher than the curated manual entries.
-- Other providers (`openai`, `claude-code`, …) are not refreshable yet; the
+- **OpenAI specifics:** requires `OPENAI_API_KEY` (read-only is enough). The
+  API exposes no context/pricing metadata, so entries are mapped from a static
+  family table (gpt-4o, gpt-4.1, gpt-5, o3, o4-mini, …); unknown/non-chat
+  entries are skipped with one aggregate warning.
+- **Honesty note:** refreshed `ability` scores are heuristics (marked in each
+  entry's `notes`). To curate them without touching generated files, add
+  `~/.agentrouter/registry/ability_overrides.yaml`:
+
+  ```yaml
+  overrides:
+    openrouter/anthropic/claude-x: { coding: 9, reasoning: 9 }
+  ```
+
+  Overrides survive every re-refresh; partial score maps are fine.
+- Entries whose `last_updated` ages past 90 days trigger a load-time warning.
+- Other providers (`claude-code`, `cursor`, …) are not refreshable; the
   command says so and exits with code 2.
 
 ### Live smoke test (needs internet; pytest never does)
@@ -120,6 +139,61 @@ $ agentrouter route "Summarize a 300k-token repository"           # long-ctx imp
 
 On network failure the command exits 1, explains itself, and guarantees the
 registry was not modified — routing keeps working from the manual registry.
+
+## 8. `execute <id>` — optionally run the recommendation (M6, opt-in)
+
+```console
+$ agentrouter execute d_00002          # shows what would run, asks for --yes
+$ agentrouter execute d_00002 --yes    # actually runs it
+```
+
+Disabled everywhere by default. To opt a provider in, edit
+`~/.agentrouter/registry/providers.yaml`:
+
+```yaml
+- id: claude-code
+  adapter: claude-code
+  auth_model: oauth
+  supports_execution: true            # your explicit opt-in
+  exec_command: ["claude", "-p", "{prompt}"]
+```
+
+`{prompt}` is replaced with the decision's generated prompt and run without a
+shell. Hard gate (NFR-8): decisions with `risk=high` or any non-auto approval
+level are **always blocked** — the command tells you to run the prompt
+yourself. The subprocess exit code is propagated.
+
+## 9. `stats` — local telemetry
+
+```console
+$ agentrouter stats            # decisions, risk + pricing-tier distributions, feedback
+$ agentrouter stats --json
+```
+
+## 10. `dashboard` — read-only web view
+
+```console
+$ agentrouter dashboard              # http://127.0.0.1:8321/
+$ agentrouter dashboard --port 0     # any free port
+```
+
+Serves decision history, risk/tier distributions, and feedback acceptance from
+the local SQLite db. Stdlib HTTP, GET-only — there is no write path from the
+dashboard into routing.
+
+## 11. Team mode (shared home) + policy
+
+Point everyone's `AGENTROUTER_HOME` at one shared directory to share the
+registry, config, and policy. In the shared `config.yaml`:
+
+```yaml
+policy:
+  max_pricing_tier: medium   # routing never recommends above this tier
+learning: true               # set false to freeze weights
+```
+
+The decision log lives in the same directory — fine for a small trusted team,
+not multi-tenant hosting (see TODO.md).
 
 ---
 

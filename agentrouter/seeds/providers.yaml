@@ -1,10 +1,13 @@
 # AgentRouter OS — provider registry (PROVIDER_ADAPTER_SPEC.md)
-# supports_execution is false for ALL adapters in v1 (planner, not executor).
+# supports_execution ships false everywhere: `agentrouter execute` refuses to run
+# until YOU flip it to true for a provider (M6 opt-in). exec_command is the argv
+# template it runs; {prompt} is replaced with the generated prompt.
 providers:
   - id: claude-code
     adapter: claude-code
     auth_model: oauth
     supports_execution: false
+    exec_command: ["claude", "-p", "{prompt}"]
   - id: openai
     adapter: openai
     auth_model: api-key

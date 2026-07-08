@@ -113,7 +113,10 @@ class Provider(BaseModel):
     id: str
     adapter: str
     auth_model: str = "none"  # none | api-key | oauth | local | manual
-    supports_execution: bool = False  # False for all adapters in v1
+    supports_execution: bool = False  # opt-in per provider (M6); seeds ship false
+    # argv template for `agentrouter execute`; "{prompt}" is replaced with the
+    # generated prompt. Only honored when supports_execution is true.
+    exec_command: list[str] = []
 
 
 # --- classification --------------------------------------------------------

@@ -1,7 +1,8 @@
-"""Provider catalog refresh — Capstone M2 (PROVIDER_ADAPTER_SPEC.md §2.3).
+"""Provider catalog refresh — Capstone M2/M3 (PROVIDER_ADAPTER_SPEC.md §2.3).
 
-OpenRouter is the first (and currently only) live adapter: one public endpoint,
-aggregated multi-vendor catalog, pricing metadata that maps cleanly to tiers.
+Live adapters: OpenRouter (public catalog, pricing metadata maps to tiers) and
+OpenAI (key-required model list; capability metadata comes from a static family
+table because the API exposes none).
 
 Refreshed entries are written to registry/models.<provider>.generated.yaml —
 never into the hand-edited models.yaml. Manual entries win on key collision;
@@ -22,7 +23,7 @@ from pydantic import ValidationError
 from .schema import Ability, LatencyTier, ModelEntry, PricingTier
 
 OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
-SUPPORTED_PROVIDERS = ("openrouter",)
+OPENAI_MODELS_URL = "https://api.openai.com/v1/models"
 GENERATED_SUFFIX = ".generated.yaml"
 
 _TIMEOUT_SECONDS = 20
@@ -121,7 +122,9 @@ def map_openrouter_model(raw: dict) -> ModelEntry:
         raise RefreshError(f"entry '{model_id}' does not fit the registry schema: {e}") from e
 
 
-def fetch_openrouter_models(api_key: str | None, limit: int) -> tuple[list[ModelEntry], list[str]]:
+def fetch_openrouter_models(
+    api_key: str | None, limit: int, match: str | None = None
+) -> tuple[list[ModelEntry], list[str]]:
     """Fetch the live OpenRouter catalog. Returns (entries, skipped-entry warnings)."""
     payload = _http_get_json(OPENROUTER_MODELS_URL, api_key)
     data = payload.get("data") if isinstance(payload, dict) else None
@@ -133,13 +136,130 @@ def fetch_openrouter_models(api_key: str | None, limit: int) -> tuple[list[Model
     for raw in data:  # ponytail: API order (newest first); no ranking data to sort by
         if len(entries) >= limit:
             break
+        if match and match not in str(raw.get("id", "")):
+            continue
         try:
             entries.append(map_openrouter_model(raw))
         except RefreshError as e:
             warnings.append(f"skipped: {e}")
     if not entries:
-        raise RefreshError("no OpenRouter entry could be mapped to the registry schema")
+        raise RefreshError(_no_entries_msg("OpenRouter", match))
     return entries, warnings
+
+
+# --- OpenAI adapter (M3) ---------------------------------------------------------
+#
+# GET /v1/models returns only {id, created, owned_by} — no context window, no
+# pricing, no capabilities. Capability metadata therefore comes from a static
+# family table (longest-prefix match); catalog entries with no family mapping
+# (embeddings, audio, images, unknown/new families) are skipped with one
+# aggregate warning. The live call still earns its keep: it tells you which
+# models YOUR key can actually see, and new snapshots of known families map
+# automatically.
+
+# prefix -> (context_window, max_output_tokens, pricing_tier,
+#            (coding, reasoning, writing), tools, vision)
+_OPENAI_FAMILIES: dict[str, tuple[int, int, PricingTier, tuple[int, int, int], bool, bool]] = {
+    "gpt-4o-mini": (128_000, 16_384, PricingTier.low, (7, 6, 7), True, True),
+    "gpt-4o": (128_000, 16_384, PricingTier.medium, (8, 7, 8), True, True),
+    "gpt-4.1-nano": (1_000_000, 32_768, PricingTier.low, (7, 6, 7), True, True),
+    "gpt-4.1-mini": (1_000_000, 32_768, PricingTier.low, (8, 7, 7), True, True),
+    "gpt-4.1": (1_000_000, 32_768, PricingTier.medium, (8, 8, 8), True, True),
+    "gpt-5-mini": (400_000, 128_000, PricingTier.low, (8, 8, 7), True, True),
+    "gpt-5-nano": (400_000, 128_000, PricingTier.low, (7, 7, 7), True, True),
+    "gpt-5": (400_000, 128_000, PricingTier.high, (9, 9, 8), True, True),
+    "o3-mini": (200_000, 100_000, PricingTier.medium, (8, 8, 6), True, False),
+    "o3": (200_000, 100_000, PricingTier.high, (9, 9, 7), True, True),
+    "o4-mini": (200_000, 100_000, PricingTier.medium, (8, 8, 7), True, True),
+}
+
+
+def _openai_family(model_id: str) -> tuple | None:
+    best = None
+    for prefix, meta in _OPENAI_FAMILIES.items():
+        if model_id == prefix or model_id.startswith(prefix + "-"):
+            if best is None or len(prefix) > len(best[0]):
+                best = (prefix, meta)
+    return best[1] if best else None
+
+
+def map_openai_model(raw: dict) -> ModelEntry:
+    """Translate one OpenAI /v1/models entry via the static family table.
+
+    Raises RefreshError when the id has no family mapping (caller aggregates these).
+    """
+    model_id = raw.get("id")
+    if not model_id or not isinstance(model_id, str):
+        raise RefreshError(f"entry missing id: {raw!r}")
+    meta = _openai_family(model_id)
+    if meta is None:
+        raise RefreshError(f"no family mapping for '{model_id}'")
+    context, max_out, tier, (coding, reasoning, writing), tools, vision = meta
+    return ModelEntry(
+        provider="openai",
+        model_id=model_id,
+        context_window=context,
+        max_output_tokens=max_out,
+        pricing_tier=tier,
+        latency_tier=LatencyTier.medium,  # API exposes no latency data
+        ability=Ability(coding=coding, reasoning=reasoning, writing=writing),
+        tool_support=["tool-use", "function-calling"] if tools else [],
+        vision_support=vision,
+        deprecation_status="active",
+        notes="auto-generated by providers refresh; metadata from a static "
+        "family table, not benchmarks",
+        source="refresh",
+        last_updated=date.today(),
+    )
+
+
+def fetch_openai_models(
+    api_key: str | None, limit: int, match: str | None = None
+) -> tuple[list[ModelEntry], list[str]]:
+    """Fetch the models visible to this OPENAI_API_KEY. Returns (entries, warnings)."""
+    if not api_key:
+        raise RefreshError(
+            "OpenAI refresh requires OPENAI_API_KEY (a read-only key is enough); "
+            "set it in your environment and retry"
+        )
+    payload = _http_get_json(OPENAI_MODELS_URL, api_key)
+    data = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(data, list) or not data:
+        raise RefreshError(
+            "unexpected response shape from OpenAI: expected a non-empty 'data' list"
+        )
+    entries, unmapped = [], 0
+    for raw in data:
+        if len(entries) >= limit:
+            break
+        if match and match not in str(raw.get("id", "")):
+            continue
+        try:
+            entries.append(map_openai_model(raw))
+        except RefreshError:
+            unmapped += 1
+    warnings = (
+        [f"skipped {unmapped} catalog entries with no family mapping (non-chat or unknown)"]
+        if unmapped
+        else []
+    )
+    if not entries:
+        raise RefreshError(_no_entries_msg("OpenAI", match))
+    return entries, warnings
+
+
+def _no_entries_msg(provider: str, match: str | None) -> str:
+    if match:
+        return f"no {provider} entry matched '--match {match}'"
+    return f"no {provider} entry could be mapped to the registry schema"
+
+
+# provider -> (fetcher, env var holding its API key)
+FETCHERS = {
+    "openrouter": (fetch_openrouter_models, "OPENROUTER_API_KEY"),
+    "openai": (fetch_openai_models, "OPENAI_API_KEY"),
+}
+SUPPORTED_PROVIDERS = tuple(FETCHERS)
 
 
 def write_generated_registry(reg_dir: Path, provider: str, entries: list[ModelEntry]) -> Path:

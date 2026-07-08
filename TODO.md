@@ -1,160 +1,86 @@
 # AgentRouter OS — TODO / Status
 
-> Updated at the end of the production-engineering pass (2026-07-08). Honest
-> status: **production-grade local CLI product, CI-verified on GitHub** —
-> remaining gaps listed below.
+> Updated after the v0.3.0 milestone pass (2026-07-08). Honest status:
+> **milestones M1–M6 implemented and tested; M7 partial (by design for a
+> local-first product).** 94 offline tests, 80%+ coverage gate, CI green
+> locally. Nothing actionable is pending — the items below are either done,
+> blocked on a one-time user action, or explicit design decisions.
 
-## ✅ Completed in the production-engineering pass (v0.2.0)
+## ✅ Milestone status (see MILESTONES.md for validation details)
 
-- [x] **Repo hygiene:** `.gitignore` verified (env, venv, caches, dbs,
-      egg-info); secret scan of all tracked files clean; `.env.example`
-      placeholders-only (confirmed clean in git history too)
-- [x] **Packaging:** full pyproject metadata (MIT license + LICENSE file,
-      classifiers, URLs, keywords), `[dev]` extras (pytest, pytest-cov, ruff),
-      version bumped to 0.2.0; `agentrouter` and `python -m agentrouter` both work
-- [x] **CI:** `.github/workflows/ci.yml` — push + PR, Python 3.11/3.12/3.13
-      matrix, ruff check + format check, pytest with 80% coverage gate, CLI
-      entrypoint smoke check
-- [x] **Code quality:** ruff configured (E/F/W/I/UP/B, line 100); whole
-      codebase formatted and lint-clean; no new runtime dependencies
-- [x] **Coverage:** pytest-cov wired, `fail_under = 80` (currently ~85%)
-- [x] **CLI smoke tests:** `tests/test_cli_smoke.py` (module entrypoint via
-      subprocess, `--help` command listing, fresh-user init→list→route flow)
-- [x] **Docs:** CONTRIBUTING.md, TESTING.md, SECURITY.md, CHANGELOG.md,
-      RELEASE.md; README gained CI/Python/license badges, clone-to-verified
-      quick start, doc map
-- [x] **Versioning:** CHANGELOG with 0.1.0/0.2.0 history; release checklist in
-      RELEASE.md (PyPI publishing deliberately deferred)
+- [x] **M1 — MVP CLI** (v0.1.0): classify → recommend + fallback → prompt +
+      checklist → SQLite log; `init/route/explain/registry list/prompt generate`
+- [x] **M2 — live catalog + polished demo** (v0.2.0): OpenRouter refresh,
+      generated-registry storage (manual always wins), rich `explain`, `--json`
+- [x] **M3 — adapter expansion & hardening** (v0.3.0): OpenAI refresh adapter
+      (static family table; key required), `--match` filter, staleness warnings
+      (>90 days), curated `ability_overrides.yaml` (survives re-refresh),
+      mocked adapter test harness
+- [x] **M4 — feedback learning loop** (v0.3.0): low ratings shift weight from
+      cost to capability — bounded (step 0.01, cap +0.10, `w_cost` ≥ 0.05),
+      min-sample 3, recomputed from the feedback table (reversible: delete
+      feedback or `learning: false`), logged in `weight_shifts`
+- [x] **M5 — read-only dashboard** (v0.3.0): `agentrouter dashboard`, stdlib
+      `http.server`, GET-only, live from SQLite, HTML-escaped; zero new deps
+- [x] **M6 — execution automation** (v0.3.0): `agentrouter execute <id> --yes`;
+      opt-in per provider (`supports_execution` + `exec_command`, all disabled
+      in seeds); high-risk / non-auto-approval decisions provably blocked
+      (tested with every provider enabled); subprocess exit code propagated
+- [~] **M7 — teams & telemetry** (v0.3.0, partial): `agentrouter stats
+      [--json]` (decision counts, risk + pricing-tier distributions, feedback
+      acceptance rate); `policy.max_pricing_tier` enforced at route time;
+      team mode = shared `AGENTROUTER_HOME`. **Not built:** per-user identity,
+      hosted multi-user deployment — a local-first CLI has no service surface;
+      revisit only if one appears.
 
-## ✅ Completed in Capstone M2 (live providers refresh)
+## ✅ Former "remaining pending items" — all addressed
 
-- [x] **OpenRouter adapter** (`agentrouter/refresh.py`, stdlib `urllib` — no new
-      dependencies): fetches the live catalog, maps entries to the registry
-      schema (context window, max output, pricing tier from per-token price,
-      tool support, vision), fail-loud on unmappable entries.
-- [x] **Real `providers refresh openrouter` command** with `--limit`,
-      `--dry-run`, clear what/why/next errors for network failure, invalid
-      response shape, unsupported provider, and missing registry dir.
-- [x] **Generated-registry storage:** writes
-      `registry/models.openrouter.generated.yaml` (idempotent overwrite, header
-      warns against hand-edits). Manual `models.yaml` is never touched, always
-      wins on key collision, and deleting the generated file reverts cleanly.
-- [x] **19 mocked-HTTP tests** (`tests/test_refresh.py`) — pricing-tier mapping,
-      entry mapping, skip-with-warning, limit, bad shape, dry-run, network-error
-      exit code, unsupported provider, manual-wins collision, idempotency,
-      key-never-printed, works-without-key. pytest needs no network and no key
-      (27 → 46 tests, all passing).
-- [x] **Live smoke test performed** against the real endpoint (15 models
-      imported, merged into `registry list`, routing verified).
-- [x] Docs updated: README (built list, storage table, troubleshooting),
-      USER_GUIDE §7 (usage + live smoke instructions).
+1. ~~Second refresh adapter (openai)~~ → done (M3)
+2. ~~Registry staleness warnings~~ → done (M3)
+3. ~~Refresh filtering/curation (`--match`, ability overrides)~~ → done (M3)
+4. ~~Feedback learning loop (M4)~~ → done
+5. ~~PyPI publishing workflow~~ → `.github/workflows/release.yml` (build +
+   trusted publishing on GitHub Release) is in place. **Blocked on a one-time
+   user action:** register `agentrouter-os` on pypi.org and add the repo as a
+   trusted publisher + create the `pypi` GitHub environment (steps in
+   RELEASE.md). No code work remains.
 
-**Test-key note:** the OpenRouter `/models` catalog endpoint is public, so the
-provided test key was **not needed** — live verification ran keyless. If
-`OPENROUTER_API_KEY` is set it is sent as an auth header only, never printed or
-logged (covered by a test). ⚠️ The example key currently sits in the tracked
-`.env.example` — it should be rotated and replaced with a blank placeholder.
+## ✅ Testing gaps — closed
 
-**M2 known limits (by design):** refreshed `ability` scores are a pricing-based
-heuristic (marked in each entry's `notes`); `latency_tier` defaults to medium
-(the API exposes no latency data); import order is the API's (newest first),
-capped by `--limit`.
+- [x] Seeded fuzz tests on the classifier (`tests/test_fuzz_and_fallback.py`)
+- [x] Fallback-chain edge cases (declared-fallback, rule-2 tier/provider, rule-3)
+- [x] Coverage measured + enforced in CI (80% gate; currently ~86%)
+- [x] CLI human-readable output asserted in smoke/e2e tests
 
-## ✅ Completed in this hardening pass
+## Deliberate design decisions (not gaps)
 
-- [x] **Classifier fix:** documentation intent (README, docs, PRD, BRD, roadmap,
-      milestones, user guide, overview, report, rewrite/polish/explain) is now
-      checked *before* coding keywords — "Python/CLI/repo/project" mentions no
-      longer force coding. "docstring" explicitly stays coding.
-- [x] **Regression tests:** all required example tasks (README polish/rewrite,
-      PRD/BRD, architecture docs, roadmap/milestones, Typer CLI coding,
-      high-risk auth/production, long-context summarization) + error-path tests
-      (13 → 27 tests, all passing).
-- [x] **CLI UX:** route now echoes the original task, "How I read this task"
-      classification block, one-line plain-English **Why** reason, clearer
-      decision-id + next-command footer;
-      `--json` on route/explain with a documented stable key contract.
-- [x] **Error handling (what/why/next):** pre-init use, missing registry,
-      invalid YAML, malformed model entry, invalid config.yaml, no eligible
-      model, unknown decision id (suggests recent valid ids), missing SQLite
-      db, `providers refresh` stub message.
-- [x] **Onboarding docs:** README rewritten (status, built/not-built, fresh-clone
-      quick start, storage locations, privacy note, troubleshooting, limits);
-      USER_GUIDE.md created (per-command walkthrough + JSON contract).
-      TESTING.md skipped deliberately — README's pytest section covers it.
-- [x] **Safety review:** no auto-execution anywhere; high risk always
-      human-gated (tested); task-log privacy documented + `--no-log`;
-      no model names in logic (registry-only).
+- Ability scores are curated/heuristic/overridden — never benchmarked. A
+  benchmark pipeline is a different product; `ability_overrides.yaml` is the
+  supported curation path.
+- Rule-based classifier; misreads are overridable (`--risk/--tool/
+  --context-tokens`) and every decision is explainable.
+- Decision log stores task text verbatim, locally only; `--no-log` exists and
+  is documented. No encryption at rest for a local single-user file.
+- No log rotation/retention policy — SQLite grows slowly (text rows); add
+  retention if the file ever matters.
+- Dashboard is stdlib, not FastAPI — read-only local page needs no framework.
+- Generic config-driven CLI-agent refresh adapter skipped (YAGNI): each new
+  adapter is one function + one dispatch-table row; build the generic layer
+  when a third adapter shows real overlap.
 
-## 🎯 Next recommended milestone
+## Blocked on user action (no code work remaining)
 
-**M3 — refresh breadth + registry hygiene:** add a second refresh adapter
-(OpenAI models endpoint, read-only key), registry staleness warnings from
-`last_updated`, and smarter refresh filtering (e.g. `--match`, curated ability
-overrides for refreshed entries). This turns one-off refresh into a
-maintainable catalog pipeline.
+- **PyPI publication:** one-time trusted-publisher setup on pypi.org +
+  `pypi` GitHub environment (RELEASE.md has the exact steps), then publish a
+  GitHub Release.
+- **Execution opt-in:** `execute` stays inert until you set
+  `supports_execution: true` + `exec_command` for a provider in your own
+  `providers.yaml` — intentionally never shipped enabled.
 
-## 📋 Remaining pending items (next up)
+## Future ideas (explicitly out of scope for now)
 
-1. **Second refresh adapter (openai)** reusing the M2 architecture.
-2. **Registry staleness warnings:** surface `last_updated` age at load time.
-3. **Refresh filtering/curation:** `--match` substring filter; way to overlay
-   curated ability scores on refreshed entries without hand-editing generated files.
-4. **Feedback learning loop (M4):** bounded weight adaptation from stored ratings.
-5. **PyPI publishing** (build + twine + trusted-publishing workflow) when ready.
-
-## Production-readiness gaps (unresolved, documented)
-
-- `providers refresh` covers OpenRouter only; other providers remain manual YAML
-- Ability scores are hand-curated (manual) or pricing heuristics (refreshed),
-  not benchmarked — recommendations advisory
-- Rule-based classifier only; ambiguous phrasing can misread (overrides exist)
-- Feedback stored but not learned from
-- Not published to PyPI (install is clone + `pip install -e .` for now)
-- No production monitoring/telemetry (local-only product; future if it ever
-  grows a service surface)
-- Benchmark-based ability scoring not built (scores are curated/heuristic)
-- Web dashboard not built (Advanced-tier idea, read-only if ever)
-- SQLite single-user assumption; no log rotation/retention policy
-- Decision log stores task text verbatim (documented; `--no-log` exists) — no
-  redaction or encryption at rest
-
-## Known limitations (by design in v1)
-
-- Planner, not executor — never runs the recommended tool
-- Single-user, local-only; no network calls at all in MVP
-
-## Future capstone features (M2–M3)
-
-- Live provider catalog sync via all six adapters
-- Larger realistic seed registry; polished demo script
-
-## Future production features (M6–M7)
-
-- Real execution adapters (opt-in; high-risk always human-gated)
-- Secret management; team mode (shared registry, policy, telemetry)
-
-## Testing gaps
-
-- No property-based/fuzz tests on classifier
-- No snapshot tests of human-readable CLI output
-- Coverage not measured/enforced (no CI)
-- Fallback-chain edge cases lightly tested
-
-## Security / privacy gaps
-
-- No redaction/encryption of the local decision log
-- No secret-store implementation (none needed yet — MVP uses no secrets)
-
-## Provider integration gaps
-
-- OpenRouter: live catalog refresh ✅ (M2). The other five adapters are
-  registry entries only — no live fetch yet (spec exists)
-- Refreshed metadata quality is capped by what the OpenRouter API exposes
-  (no latency, no ability benchmarks)
-
-## Documentation gaps
-
-- No CONTRIBUTING.md / CHANGELOG.md
-- Spec docs (PRD etc.) still describe Capstone+ features as future — correct,
-  but sync them whenever a tier ships
+- Benchmark-based ability scoring
+- Per-user identity / hosted team deployment / org telemetry service
+- Live refresh adapters for claude-code, cursor, cli-agent (no public catalog
+  APIs today; registry entries remain the path)
+- Log redaction/encryption at rest, retention policies

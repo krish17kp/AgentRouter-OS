@@ -211,7 +211,7 @@ def test_cli_refresh_network_error_exit1(home, monkeypatch):
 def test_cli_refresh_unsupported_provider_exit2(home):
     from agentrouter.cli import app
 
-    r = runner.invoke(app, ["providers", "refresh", "openai"])
+    r = runner.invoke(app, ["providers", "refresh", "cursor"])
     assert r.exit_code == 2
     assert "not refreshable" in r.output and "openrouter" in r.output
 
@@ -235,3 +235,110 @@ def test_cli_refresh_works_without_key(home, mock_http):
     assert r.exit_code == 0, r.output
     assert "public catalog endpoint" in r.output
     assert mock_http[0]["api_key"] is None
+
+
+# --- M3: --match filter -------------------------------------------------------------
+
+
+def test_fetch_match_filters_by_substring(mock_http):
+    entries, _ = fetch_openrouter_models(None, limit=25, match="frontier")
+    assert [e.model_id for e in entries] == ["vendor/frontier-x"]
+
+
+def test_fetch_match_nothing_raises(mock_http):
+    with pytest.raises(RefreshError, match="--match"):
+        fetch_openrouter_models(None, limit=25, match="does-not-exist")
+
+
+def test_cli_refresh_match(home, mock_http):
+    from agentrouter.cli import app
+
+    r = runner.invoke(app, ["providers", "refresh", "openrouter", "--match", "cheap"])
+    assert r.exit_code == 0, r.output
+    data = yaml.safe_load(
+        (home / "registry" / "models.openrouter.generated.yaml").read_text(encoding="utf-8")
+    )
+    assert [m["model_id"] for m in data["models"]] == ["vendor/cheap-y"]
+
+
+# --- M3: OpenAI adapter ---------------------------------------------------------------
+
+OPENAI_RESPONSE = {
+    "data": [
+        {"id": "gpt-4o-mini-2024-07-18", "object": "model", "owned_by": "system"},
+        {"id": "gpt-4.1", "object": "model", "owned_by": "system"},
+        {"id": "whisper-1", "object": "model", "owned_by": "system"},
+        {"id": "text-embedding-3-small", "object": "model", "owned_by": "system"},
+        {"id": "o4-mini", "object": "model", "owned_by": "system"},
+    ]
+}
+
+
+@pytest.fixture()
+def mock_openai_http(monkeypatch):
+    calls = []
+
+    def fake(url, api_key):
+        calls.append({"url": url, "api_key": api_key})
+        return copy.deepcopy(OPENAI_RESPONSE)
+
+    monkeypatch.setattr(refresh, "_http_get_json", fake)
+    return calls
+
+
+def test_map_openai_prefix_match():
+    m = refresh.map_openai_model({"id": "gpt-4o-mini-2024-07-18"})
+    assert m.key == "openai/gpt-4o-mini-2024-07-18"
+    assert m.pricing_tier is PricingTier.low
+    assert m.context_window == 128_000
+    assert m.tool_support == ["tool-use", "function-calling"]
+    assert m.source == "refresh"
+
+
+def test_map_openai_longest_prefix_wins():
+    # gpt-4o-mini must map to the mini family, not plain gpt-4o
+    mini = refresh.map_openai_model({"id": "gpt-4o-mini"})
+    full = refresh.map_openai_model({"id": "gpt-4o"})
+    assert mini.pricing_tier is PricingTier.low
+    assert full.pricing_tier is PricingTier.medium
+
+
+def test_map_openai_unknown_family_raises():
+    with pytest.raises(RefreshError, match="family"):
+        refresh.map_openai_model({"id": "whisper-1"})
+
+
+def test_fetch_openai_requires_key(mock_openai_http):
+    with pytest.raises(RefreshError, match="OPENAI_API_KEY"):
+        refresh.fetch_openai_models(None, limit=25)
+    assert mock_openai_http == []  # no request without a key
+
+
+def test_fetch_openai_maps_and_aggregates_skips(mock_openai_http):
+    entries, warnings = refresh.fetch_openai_models("sk-test", limit=25)
+    assert [e.model_id for e in entries] == ["gpt-4o-mini-2024-07-18", "gpt-4.1", "o4-mini"]
+    assert len(warnings) == 1 and "skipped 2" in warnings[0]
+    assert mock_openai_http[0]["api_key"] == "sk-test"
+
+
+def test_cli_refresh_openai_end_to_end(home, mock_openai_http, monkeypatch):
+    secret = "sk-test-DO-NOT-PRINT"
+    monkeypatch.setenv("OPENAI_API_KEY", secret)
+    from agentrouter.cli import app
+
+    r = runner.invoke(app, ["providers", "refresh", "openai"])
+    assert r.exit_code == 0, r.output
+    assert secret not in r.output
+    gen = home / "registry" / "models.openai.generated.yaml"
+    assert gen.exists()
+    lst = runner.invoke(app, ["registry", "list", "--provider", "openai"])
+    assert "gpt-4.1" in lst.output
+
+
+def test_cli_refresh_openai_without_key_exit1(home, mock_openai_http, monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from agentrouter.cli import app
+
+    r = runner.invoke(app, ["providers", "refresh", "openai"])
+    assert r.exit_code == 1
+    assert "OPENAI_API_KEY" in r.output

@@ -18,17 +18,18 @@ from . import store
 from .classifier import classify
 from .engine import BASE_WEIGHTS
 from .engine import route as engine_route
+from .learning import learned_weights
 from .prompts import generate_prompt
 from .refresh import (
+    FETCHERS,
     GENERATED_SUFFIX,
     SUPPORTED_PROVIDERS,
     RefreshError,
-    fetch_openrouter_models,
     write_generated_registry,
 )
 from .registry import RegistryError, load_all_models, load_providers
 from .safety import gates_for
-from .schema import Classification, Level
+from .schema import Classification, Level, PricingTier
 
 app = typer.Typer(
     help="AgentRouter OS - route AI tasks to the best model/tool.", add_completion=False
@@ -64,10 +65,10 @@ def _load_registries():
     return providers, models
 
 
-def _load_weights() -> dict:
+def _load_config() -> dict:
     cfg_path = _home() / "config.yaml"
     if not cfg_path.exists():
-        return dict(BASE_WEIGHTS)
+        return {}
     try:
         cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
     except yaml.YAMLError as e:
@@ -86,9 +87,52 @@ def _load_weights() -> dict:
             err=True,
         )
         raise typer.Exit(EXIT_REGISTRY)
+    return cfg
+
+
+def _load_weights(cfg: dict | None = None) -> dict:
+    cfg = _load_config() if cfg is None else cfg
     w = cfg.get("weights") or {}
     valid = {k: v for k, v in w.items() if k in BASE_WEIGHTS and isinstance(v, (int, float))}
     return {**BASE_WEIGHTS, **valid}
+
+
+def _apply_policy(models: list, cfg: dict) -> list:
+    """M7 policy control: config `policy.max_pricing_tier` caps what routing may pick.
+
+    With AGENTROUTER_HOME pointing at a shared directory, this enforces the cap
+    team-wide from one config file.
+    """
+    policy = cfg.get("policy") or {}
+    if not isinstance(policy, dict):
+        typer.echo("Config error: 'policy' must be a mapping.", err=True)
+        raise typer.Exit(EXIT_REGISTRY)
+    max_tier = policy.get("max_pricing_tier")
+    if max_tier is None:
+        return models
+    tiers = [t.value for t in PricingTier]
+    if max_tier not in tiers:
+        typer.echo(
+            f"Config error: policy.max_pricing_tier '{max_tier}' is not one of {tiers}.", err=True
+        )
+        raise typer.Exit(EXIT_REGISTRY)
+    cap = tiers.index(max_tier)
+    kept = [m for m in models if tiers.index(m.pricing_tier.value) <= cap]
+    dropped = len(models) - len(kept)
+    if dropped:
+        typer.echo(f"policy: excluded {dropped} model(s) above pricing tier '{max_tier}'", err=True)
+    return kept
+
+
+def _adapted_weights(cfg: dict) -> tuple[dict, str | None]:
+    """Base/config weights, plus M4 feedback adaptation unless `learning: false`."""
+    weights = _load_weights(cfg)
+    if cfg.get("learning", True) is False:
+        return weights, None
+    conn = store.connect(_home())
+    weights, note = learned_weights(conn, weights)
+    conn.close()
+    return weights, note
 
 
 def _reason_for(rec: dict, cls, shifts: list[str]) -> str:
@@ -155,9 +199,14 @@ def route(
 ):
     """Classify a task and recommend the best model/tool + fallback."""
     _, models = _load_registries()
+    cfg = _load_config()
+    models = _apply_policy(models, cfg)
     tools = [t.strip() for t in tool.split(",") if t.strip()] if tool else None
     cls = classify(task, context_tokens=context_tokens, risk=risk, tools=tools)
-    result = engine_route(models, cls, _load_weights())
+    weights, learn_note = _adapted_weights(cfg)
+    result = engine_route(models, cls, weights)
+    if learn_note:
+        result["weight_shifts"].append(learn_note)
     gates = gates_for(cls)
 
     rec = result["recommendation"]
@@ -309,7 +358,7 @@ def explain(
     )
 
 
-# --- feedback (Advanced tier — stub) ---------------------------------------------
+# --- feedback (M4 — feeds the bounded learning loop) ------------------------------
 
 
 @app.command()
@@ -318,7 +367,7 @@ def feedback(
     rating: int = typer.Option(..., "--rating", min=1, max=5),
     note: str = typer.Option("", "--note"),
 ):
-    """Record outcome feedback for a decision (learning loop lands in the Advanced tier)."""
+    """Record outcome feedback for a decision. Ratings feed bounded weight adaptation."""
     conn = store.connect(_home())
     if store.load_decision(conn, decision_id) is None:
         recent = store.recent_ids(conn)
@@ -336,8 +385,8 @@ def feedback(
     conn.commit()
     conn.close()
     typer.echo(
-        f"Recorded rating {rating} for {decision_id}. "
-        "(Weight adaptation ships in the Advanced tier.)"
+        f"Recorded rating {rating} for {decision_id}. Low ratings (<=2) nudge future "
+        "routing toward capability, within bounds; set learning: false in config.yaml to disable."
     )
 
 
@@ -373,13 +422,16 @@ def registry_list(
         )
 
 
-# --- providers refresh (Capstone M2 — live for openrouter) -------------------------
+# --- providers refresh (M2 openrouter, M3 openai) ----------------------------------
 
 
 @providers_app.command("refresh")
 def providers_refresh(
     provider: str = typer.Argument("openrouter", help="Provider to refresh."),
     limit: int = typer.Option(25, "--limit", min=1, help="Max models to import from the catalog."),
+    match: str | None = typer.Option(
+        None, "--match", help="Only import models whose id contains this substring."
+    ),
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Show what would be imported; write nothing."
     ),
@@ -396,7 +448,7 @@ def providers_refresh(
             err=True,
         )
         typer.echo(
-            f"Next: agentrouter providers refresh openrouter, or edit "
+            f"Next: agentrouter providers refresh {SUPPORTED_PROVIDERS[0]}, or edit "
             f"{_home() / 'registry' / 'models.yaml'} by hand.",
             err=True,
         )
@@ -409,14 +461,16 @@ def providers_refresh(
         typer.echo("Next: run agentrouter init first.", err=True)
         raise typer.Exit(EXIT_REGISTRY)
 
-    api_key = os.environ.get("OPENROUTER_API_KEY")  # header-only; never echoed/logged
+    fetcher, key_env = FETCHERS[provider]
+    api_key = os.environ.get(key_env)  # header-only; never echoed/logged
     typer.echo(
-        "auth: using OPENROUTER_API_KEY from environment"
+        f"auth: using {key_env} from environment"
         if api_key
-        else "auth: no OPENROUTER_API_KEY set - using the public catalog endpoint"
+        else f"auth: no {key_env} set"
+        + (" - using the public catalog endpoint" if provider == "openrouter" else "")
     )
     try:
-        entries, warnings = fetch_openrouter_models(api_key, limit)
+        entries, warnings = fetcher(api_key, limit, match)
     except RefreshError as e:
         typer.echo(f"Refresh failed: {e}", err=True)
         typer.echo(
@@ -504,6 +558,133 @@ def prompt_generate(
         typer.echo(f"Wrote execution prompt for {target} -> {out}")
     else:
         typer.echo(prompt)
+
+
+# --- execute (M6 — opt-in, hard safety gate) ---------------------------------------
+
+
+@app.command()
+def execute(
+    decision_id: str = typer.Argument(..., help="Decision id to execute, e.g. d_00042."),
+    yes: bool = typer.Option(False, "--yes", help="Confirm running the recommended tool."),
+):
+    """Run the recommended tool for a logged decision (opt-in; high risk never executes).
+
+    Requires the recommendation's provider to have supports_execution: true and an
+    exec_command in providers.yaml — both ship disabled by default.
+    """
+    conn = store.connect(_home())
+    payload = store.load_decision(conn, decision_id)
+    recent = store.recent_ids(conn)
+    conn.close()
+    if payload is None:
+        typer.echo(f"No decision found with id '{decision_id}'.", err=True)
+        if recent:
+            typer.echo(f"Next: try a recent id: {', '.join(recent)}", err=True)
+        raise typer.Exit(EXIT_USAGE)
+
+    gates = payload["gates"]
+    if not gates["auto_execute_allowed"]:
+        typer.echo(f"Execution blocked for {decision_id}.", err=True)
+        typer.echo(
+            f"Why: risk={payload['classification']['risk']}, "
+            f"approval={gates['approval_level']} - this decision requires a human to run "
+            "the task themselves (NFR-8: high risk never auto-executes).",
+            err=True,
+        )
+        typer.echo(
+            f"Next: agentrouter prompt generate --from {decision_id} --out prompt.md "
+            "and run the tool yourself.",
+            err=True,
+        )
+        raise typer.Exit(EXIT_USAGE)
+
+    rec = payload["recommendation"]
+    if rec is None:
+        typer.echo("Nothing to execute: this decision had no eligible model.", err=True)
+        raise typer.Exit(EXIT_USAGE)
+    providers, _ = _load_registries()
+    provider = providers.get(rec["provider"])
+    if provider is None or not provider.supports_execution or not provider.exec_command:
+        typer.echo(f"Execution is not enabled for provider '{rec['provider']}'.", err=True)
+        typer.echo(
+            "Why: execution is opt-in per provider; it needs supports_execution: true "
+            "AND an exec_command in registry/providers.yaml.",
+            err=True,
+        )
+        typer.echo(
+            f"Next: edit {_home() / 'registry' / 'providers.yaml'} to opt in, or run the "
+            "generated prompt yourself.",
+            err=True,
+        )
+        raise typer.Exit(EXIT_USAGE)
+
+    argv = [a.replace("{prompt}", payload["prompt"]) for a in provider.exec_command]
+    if not yes:
+        typer.echo(f"Would run (provider {provider.id}): {provider.exec_command}")
+        typer.echo("Next: re-run with --yes to execute.")
+        raise typer.Exit(EXIT_USAGE)
+
+    import subprocess
+
+    typer.echo(f"Running {rec['model']} via provider '{provider.id}'...")
+    try:
+        completed = subprocess.run(argv)  # no shell; prompt passed as one argv element
+    except FileNotFoundError as e:
+        typer.echo(f"Execution failed: command not found: {argv[0]}", err=True)
+        typer.echo("Next: install the provider's CLI or fix exec_command.", err=True)
+        raise typer.Exit(EXIT_RUNTIME) from e
+    raise typer.Exit(completed.returncode)
+
+
+# --- stats (M7 telemetry — local aggregates) ----------------------------------------
+
+
+@app.command()
+def stats(json_out: bool = typer.Option(False, "--json")):
+    """Aggregate telemetry from the local decision log: counts, tiers, feedback."""
+    db_path = _home() / "agentrouter.db"
+    if not db_path.exists():
+        typer.echo(f"No decision log found at {db_path}.", err=True)
+        typer.echo('Next: agentrouter init, then agentrouter route "<task>"', err=True)
+        raise typer.Exit(EXIT_USAGE)
+    _, models = _load_registries()
+    tier_by_key = {m.key: m.pricing_tier.value for m in models}
+    conn = store.connect(_home())
+    agg = store.aggregate_stats(conn, tier_by_key)
+    conn.close()
+    if json_out:
+        typer.echo(json.dumps(agg, indent=2))
+        return
+    typer.echo(f"Decisions logged: {agg['decisions']}")
+    typer.echo(
+        "By risk: " + (", ".join(f"{k}={v}" for k, v in sorted(agg["by_risk"].items())) or "-")
+    )
+    typer.echo(
+        "By recommended pricing tier: "
+        + (", ".join(f"{k}={v}" for k, v in sorted(agg["by_pricing_tier"].items())) or "-")
+    )
+    fb = agg["feedback"]
+    avg = fb["avg_rating"] if fb["avg_rating"] is not None else "-"
+    acc = fb["acceptance_rate"] if fb["acceptance_rate"] is not None else "-"
+    typer.echo(f"Feedback: {fb['count']} rating(s), avg {avg}, acceptance rate {acc}")
+
+
+# --- dashboard (M5 — read-only, stdlib) ----------------------------------------------
+
+
+@app.command()
+def dashboard(port: int = typer.Option(8321, "--port", min=0, max=65535)):
+    """Serve a read-only local dashboard over the decision log (Ctrl+C to stop)."""
+    from .dashboard import serve
+
+    db_path = _home() / "agentrouter.db"
+    if not db_path.exists():
+        typer.echo(f"No decision log found at {db_path}.", err=True)
+        typer.echo('Next: agentrouter init, then agentrouter route "<task>"', err=True)
+        raise typer.Exit(EXIT_USAGE)
+    _, models = _load_registries()
+    serve(_home(), port, {m.key: m.pricing_tier.value for m in models})
 
 
 if __name__ == "__main__":

@@ -35,9 +35,22 @@ agentrouter --help
 5. Confirm CI is green on the tag, then create a GitHub Release from it,
    pasting the changelog section.
 
-## Later (when publishing to PyPI)
+## Publishing to PyPI
 
-- Add a `publish` workflow triggered on release (trusted publishing, no token
-  in repo)
-- Verify `python -m build` + `twine check dist/*` locally first
-- Test-install from TestPyPI before the real index
+The publish workflow exists: `.github/workflows/release.yml` builds sdist+wheel
+and publishes via **trusted publishing** (OIDC — no token stored in the repo)
+whenever a GitHub Release is published.
+
+One-time setup (repo owner, on pypi.org):
+
+1. Create/claim the `agentrouter-os` project name.
+2. Project settings → Publishing → add a **trusted publisher**:
+   owner `krish17kp`, repo `AgentRouter-OS`, workflow `release.yml`,
+   environment `pypi`.
+3. In the GitHub repo, create an environment named `pypi`
+   (Settings → Environments).
+4. Optional first dry-run: `python -m build && twine check dist/*` locally,
+   and/or point the workflow at TestPyPI before the real index.
+
+After that, step 5 above (publishing the GitHub Release) publishes to PyPI
+automatically.

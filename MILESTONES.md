@@ -25,14 +25,14 @@ static registries.
 
 **Outputs:** runnable `agentrouter` CLI; seed registries; SQLite schema.
 
-**Validation checklist**
-- [ ] `init` creates config + registries + DB.
-- [ ] `route` returns ≥1 recommendation + ≤1 fallback for the three sample tasks (script / auth refactor / long summary).
-- [ ] Malformed YAML entry → exit code 3 naming the field (FR-2).
-- [ ] 300k-token task excludes sub-300k-context models (FR-5).
-- [ ] `risk=high` → `human-approval-required` + ≥3 checklist items, no auto-execute flag (FR-6/8).
-- [ ] `explain <id>` reproduces the printed decision (FR-11).
-- [ ] No current model name appears in engine code (NFR-2).
+**Validation checklist** — ✅ complete (covered by `tests/test_mvp.py`)
+- [x] `init` creates config + registries + DB.
+- [x] `route` returns ≥1 recommendation + ≤1 fallback for the three sample tasks (script / auth refactor / long summary).
+- [x] Malformed YAML entry → exit code 3 naming the field (FR-2).
+- [x] 300k-token task excludes sub-300k-context models (FR-5).
+- [x] `risk=high` → `human-approval-required` + ≥3 checklist items, no auto-execute flag (FR-6/8).
+- [x] `explain <id>` reproduces the printed decision (FR-11).
+- [x] No current model name appears in engine code (NFR-2).
 
 **Completion criteria:** all MVP acceptance criteria in [PRD.md](PRD.md) pass.
 
@@ -53,11 +53,11 @@ static registries.
 
 **Outputs:** live-refreshable registry; demo script.
 
-**Validation checklist**
-- [ ] `providers refresh` updates the registry with no code change (FR-12).
-- [ ] Refresh is idempotent (re-run → no duplicates).
-- [ ] `explain` shows full eligibility + score breakdown.
-- [ ] Demo routes ≥4 task types across ≥3 real providers.
+**Validation checklist** — ✅ complete (`tests/test_refresh.py` + live smoke)
+- [x] `providers refresh` updates the registry with no code change (FR-12).
+- [x] Refresh is idempotent (re-run → no duplicates).
+- [x] `explain` shows full eligibility + score breakdown.
+- [x] Demo routes ≥4 task types across ≥3 real providers.
 
 **Completion criteria:** scripted multi-provider demo runs clean end-to-end.
 
@@ -76,12 +76,16 @@ static registries.
 
 **Outputs:** hardened adapters; test harness.
 
-**Validation checklist**
-- [ ] A brand-new provider added via new adapter + YAML only, routable end-to-end.
-- [ ] Stale entries surface a warning.
-- [ ] Adapter tests pass against mocked responses.
+**Validation checklist** — ✅ complete (`tests/test_refresh.py`, `tests/test_registry_hygiene.py`)
+- [x] A brand-new provider added via new adapter + YAML only, routable end-to-end (OpenAI adapter: `fetch_openai_models` + registry entries, zero engine change).
+- [x] Stale entries surface a warning (`last_updated` > 90 days).
+- [x] Adapter tests pass against mocked responses (no network, no keys in pytest).
 
 **Completion criteria:** "new provider = new adapter + YAML, zero engine change" demonstrated.
+*Note: the config-driven generic CLI-agent adapter was skipped (YAGNI) — the
+dispatch-table pattern in `refresh.py` makes each new adapter one function + one
+table row; add the generic adapter when a third refreshable provider shows real
+config overlap. Curated `ability_overrides.yaml` shipped here too.*
 
 **Risks:** inconsistent upstream metadata → conservative defaults + validation.
 
@@ -98,12 +102,12 @@ static registries.
 
 **Outputs:** feedback pipeline; adaptive weights.
 
-**Validation checklist**
-- [ ] `feedback` persists and links to a `decision_id`.
-- [ ] Repeated negative feedback shifts weights within bounds.
-- [ ] Weight changes are logged and reversible.
+**Validation checklist** — ✅ complete (`tests/test_learning.py`)
+- [x] `feedback` persists and links to a `decision_id`.
+- [x] Repeated negative feedback shifts weights within bounds (step 0.01, cap +0.10, `w_cost` floor 0.05, min 3 ratings).
+- [x] Weight changes are logged (in `weight_shifts`) and reversible (recomputed from the feedback table; delete rows or `learning: false` reverts).
 
-**Completion criteria:** feedback measurably changes later recommendations in a controlled test.
+**Completion criteria:** feedback measurably changes later recommendations in a controlled test — verified by `test_feedback_changes_later_recommendation_weights`.
 
 **Risks:** overfitting to sparse feedback → clamp nudge size; require minimum sample.
 
@@ -119,11 +123,13 @@ static registries.
 
 **Outputs:** dashboard app.
 
-**Validation checklist**
-- [ ] Dashboard renders live from local DB.
-- [ ] No write path from dashboard into routing.
+**Validation checklist** — ✅ complete (`tests/test_dashboard.py`)
+- [x] Dashboard renders live from local DB (recomputed per request).
+- [x] No write path from dashboard into routing (GET-only handler, no forms/scripts).
 
 **Completion criteria:** dashboard usable against a populated DB.
+*Note: built on stdlib `http.server` instead of FastAPI — zero new dependencies
+for a strictly read-only local page; swap to FastAPI if it ever needs auth or an API.*
 
 **Risks:** scope creep into a full web app → keep strictly read-only in this tier.
 
@@ -140,10 +146,10 @@ static registries.
 
 **Outputs:** execution path; secret handling.
 
-**Validation checklist**
-- [ ] A `risk=low` task executes end-to-end from the CLI.
-- [ ] A `risk=high` task is provably blocked from auto-execution.
-- [ ] No secrets logged or committed.
+**Validation checklist** — ✅ complete (`tests/test_execute.py`)
+- [x] A `risk=low` task executes end-to-end from the CLI (`execute <id> --yes`, provider opt-in required).
+- [x] A `risk=high` task is provably blocked from auto-execution (blocked even with every provider enabled; tested).
+- [x] No secrets logged or committed (AgentRouter stores no execution secrets — provider CLIs carry their own auth; refresh keys are env-only, header-only).
 
 **Completion criteria:** low-risk execution works; high-risk gating verified.
 
@@ -162,12 +168,12 @@ static registries.
 
 **Outputs:** team mode; telemetry.
 
-**Validation checklist**
-- [ ] Team shares one registry + policy.
-- [ ] Per-user history + aggregate cost reporting available.
-- [ ] Policy controls enforce routing/safety rules org-wide.
+**Validation checklist** — ◐ partial (`tests/test_stats.py`)
+- [x] Team shares one registry + policy (shared `AGENTROUTER_HOME` directory).
+- [ ] Per-user history + aggregate cost reporting available — aggregate reporting shipped (`agentrouter stats`); per-user history not built (single shared log, no user identity).
+- [x] Policy controls enforce routing/safety rules org-wide (`policy.max_pricing_tier` in shared config; high-risk execution gate is unconditional).
 
-**Completion criteria:** a team operates from shared config with per-user history and cost visibility.
+**Completion criteria:** a team operates from shared config with per-user history and cost visibility — **partially met**: shared config + policy + aggregate stats work today; per-user identity and hosting beyond a shared directory are deliberately not built in a local-first product (revisit if it grows a service surface).
 
 **Risks:** multi-tenant complexity → phase carefully after single-user is solid.
 

@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+from datetime import date, timedelta
 from pathlib import Path
 
 import yaml
 from pydantic import ValidationError
 
-from .schema import ModelEntry, Provider
+from .schema import Ability, ModelEntry, Provider
+
+STALE_AFTER_DAYS = 90
+OVERRIDES_FILE = "ability_overrides.yaml"
 
 
 class RegistryError(Exception):
@@ -82,7 +86,9 @@ def load_all_models(
     """Manual models.yaml + any models.*.generated.yaml (from providers refresh).
 
     Manual entries win on key collision, so hand-edits are never shadowed and
-    deleting a generated file cleanly reverts to the manual registry.
+    deleting a generated file cleanly reverts to the manual registry. Curated
+    ability overrides (ability_overrides.yaml) are applied last; staleness of
+    last_updated surfaces as one aggregate warning.
     """
     models, warnings = load_models(reg_dir / "models.yaml", providers)
     seen = {m.key for m in models}
@@ -95,4 +101,42 @@ def load_all_models(
                 continue
             seen.add(m.key)
             models.append(m)
+    models = _apply_ability_overrides(reg_dir, models, warnings)
+    stale_cutoff = date.today() - timedelta(days=STALE_AFTER_DAYS)
+    stale = [m.key for m in models if m.last_updated and m.last_updated < stale_cutoff]
+    if stale:
+        warnings.append(
+            f"{len(stale)} model(s) have last_updated older than {STALE_AFTER_DAYS} days "
+            f"(e.g. {stale[0]}) - consider 'agentrouter providers refresh' or updating models.yaml"
+        )
     return models, warnings
+
+
+def _apply_ability_overrides(
+    reg_dir: Path, models: list[ModelEntry], warnings: list[str]
+) -> list[ModelEntry]:
+    """Overlay curated ability scores from ability_overrides.yaml (key -> partial Ability).
+
+    Lets refreshed entries carry real curated scores without hand-editing
+    generated files (which refresh would overwrite).
+    """
+    path = reg_dir / OVERRIDES_FILE
+    if not path.exists():
+        return models
+    data = _load_yaml(path)
+    overrides = data.get("overrides")
+    if not isinstance(overrides, dict):
+        raise RegistryError(f"{path}: expected an 'overrides' mapping of model key -> scores")
+    by_key = {m.key: i for i, m in enumerate(models)}
+    out = list(models)
+    for key, scores in overrides.items():
+        if key not in by_key:
+            warnings.append(f"{path.name}: '{key}' does not match any loaded model - ignored")
+            continue
+        i = by_key[key]
+        try:
+            merged = Ability(**{**out[i].ability.model_dump(), **(scores or {})})
+        except ValidationError as e:
+            raise RegistryError(f"{path}: override for '{key}' invalid: {e}") from e
+        out[i] = out[i].model_copy(update={"ability": merged})
+    return out

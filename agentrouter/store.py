@@ -45,6 +45,61 @@ def recent_ids(conn: sqlite3.Connection, n: int = 3) -> list[str]:
     return [f"d_{r[0]:05d}" for r in rows]
 
 
+def recent_decisions(conn: sqlite3.Connection, n: int = 20) -> list[dict]:
+    """Newest-first summaries for stats/dashboard (id, time, task, pick, score, risk)."""
+    rows = conn.execute(
+        "SELECT id, created_at, task, payload FROM decisions ORDER BY id DESC LIMIT ?", (n,)
+    ).fetchall()
+    out = []
+    for rowid, created_at, task, payload_json in rows:
+        p = json.loads(payload_json)
+        rec = p.get("recommendation") or {}
+        out.append(
+            {
+                "decision_id": f"d_{rowid:05d}",
+                "created_at": created_at,
+                "task": task,
+                "model": rec.get("model") or "(no eligible model)",
+                "score": rec.get("score"),
+                "risk": (p.get("classification") or {}).get("risk"),
+            }
+        )
+    return out
+
+
+def aggregate_stats(conn: sqlite3.Connection, tier_by_key: dict[str, str] | None = None) -> dict:
+    """Telemetry aggregates: decision counts, risk/model/tier distributions, feedback."""
+    total = conn.execute("SELECT COUNT(*) FROM decisions").fetchone()[0]
+    by_risk: dict[str, int] = {}
+    by_model: dict[str, int] = {}
+    for (payload_json,) in conn.execute("SELECT payload FROM decisions"):
+        p = json.loads(payload_json)
+        risk = (p.get("classification") or {}).get("risk") or "unknown"
+        by_risk[risk] = by_risk.get(risk, 0) + 1
+        rec = p.get("recommendation") or {}
+        model = rec.get("model") or "(no eligible model)"
+        by_model[model] = by_model.get(model, 0) + 1
+    by_tier: dict[str, int] = {}
+    for model, n in by_model.items():
+        tier = (tier_by_key or {}).get(model, "unknown")
+        by_tier[tier] = by_tier.get(tier, 0) + n
+    fb_total, fb_avg, fb_accepted = conn.execute(
+        "SELECT COUNT(*), AVG(rating), COALESCE(SUM(rating >= 4), 0) "
+        "FROM feedback WHERE rating IS NOT NULL"
+    ).fetchone()
+    return {
+        "decisions": total,
+        "by_risk": by_risk,
+        "by_model": by_model,
+        "by_pricing_tier": by_tier,
+        "feedback": {
+            "count": fb_total,
+            "avg_rating": round(fb_avg, 2) if fb_avg is not None else None,
+            "acceptance_rate": round(fb_accepted / fb_total, 2) if fb_total else None,
+        },
+    }
+
+
 def load_decision(conn: sqlite3.Connection, decision_id: str) -> dict | None:
     try:
         rowid = int(decision_id.removeprefix("d_"))
