@@ -34,6 +34,28 @@ from .schema import Classification, Level, PricingTier
 app = typer.Typer(
     help="AgentRouter OS - route AI tasks to the best model/tool.", add_completion=False
 )
+
+
+def _version_callback(value: bool):
+    if value:
+        from importlib.metadata import PackageNotFoundError, version
+
+        try:
+            typer.echo(f"agentrouter-os {version('agentrouter-os')}")
+        except PackageNotFoundError:
+            typer.echo("agentrouter-os (not installed as a package)")
+        raise typer.Exit()
+
+
+@app.callback()
+def _main(
+    version: bool = typer.Option(
+        False, "--version", callback=_version_callback, is_eager=True, help="Show version and exit."
+    ),
+):
+    pass
+
+
 registry_app = typer.Typer(help="Registry inspection.")
 providers_app = typer.Typer(help="Provider operations.")
 prompt_app = typer.Typer(help="Prompt generation.")

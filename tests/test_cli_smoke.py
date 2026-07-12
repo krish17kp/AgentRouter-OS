@@ -24,6 +24,14 @@ def test_python_dash_m_help_runs():
     assert "route" in r.stdout and "registry" in r.stdout
 
 
+def test_version_flag():
+    from agentrouter.cli import app
+
+    r = runner.invoke(app, ["--version"])
+    assert r.exit_code == 0
+    assert "agentrouter-os" in r.output
+
+
 def test_app_help_lists_all_commands():
     from agentrouter.cli import app
 

@@ -86,9 +86,7 @@ def test_pre_m7_db_migrates_in_place(home):
         "CREATE TABLE decisions (id INTEGER PRIMARY KEY AUTOINCREMENT,"
         " created_at TEXT NOT NULL, task TEXT NOT NULL, payload TEXT NOT NULL)"
     )
-    conn.execute(
-        "INSERT INTO decisions (created_at, task, payload) VALUES ('t', 'old task', '{}')"
-    )
+    conn.execute("INSERT INTO decisions (created_at, task, payload) VALUES ('t', 'old task', '{}')")
     conn.commit()
     conn.close()
 

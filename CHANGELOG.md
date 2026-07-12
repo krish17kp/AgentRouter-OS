@@ -24,6 +24,11 @@ All notable changes to AgentRouter OS. Format loosely follows
 - **`pricing_tier` in `route --json`:** every score row (including
   `recommendation` and `fallback`) now carries the model's pricing tier — the
   field skill hosts map on.
+- **`--version` flag** on the CLI.
+- **Post-build verification in CI:** new `build-smoke` job builds the sdist +
+  wheel, installs the wheel into a clean venv, and smoke-tests the installed
+  artifact (`--version`, `init`, `route --json`, `stats`, `registry list`) —
+  catches packaging bugs editable installs never hit.
 
 ## [0.3.0] - 2026-07-08
 

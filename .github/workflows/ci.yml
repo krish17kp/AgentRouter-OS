@@ -38,3 +38,29 @@ jobs:
         run: |
           python -m agentrouter --help
           agentrouter --help
+
+  build-smoke:
+    # Post-build verification: the artifact users actually pip-install works.
+    # Catches packaging bugs (missing seeds, broken entrypoints) that editable
+    # installs never hit.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build sdist + wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+      - name: Install wheel into a clean venv and smoke-test it
+        run: |
+          python -m venv /tmp/wheelenv
+          /tmp/wheelenv/bin/pip install dist/*.whl
+          export AGENTROUTER_HOME=/tmp/arhome
+          /tmp/wheelenv/bin/agentrouter --version
+          /tmp/wheelenv/bin/agentrouter init
+          /tmp/wheelenv/bin/agentrouter route "write a short haiku" --json > /tmp/route.json
+          python -c "import json; d=json.load(open('/tmp/route.json')); assert d['recommendation'], d"
+          /tmp/wheelenv/bin/agentrouter stats
+          /tmp/wheelenv/bin/agentrouter registry list
