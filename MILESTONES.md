@@ -168,14 +168,54 @@ for a strictly read-only local page; swap to FastAPI if it ever needs auth or an
 
 **Outputs:** team mode; telemetry.
 
-**Validation checklist** — ◐ partial (`tests/test_stats.py`)
+**Validation checklist** — ✅ complete (`tests/test_stats.py`)
 - [x] Team shares one registry + policy (shared `AGENTROUTER_HOME` directory).
-- [ ] Per-user history + aggregate cost reporting available — aggregate reporting shipped (`agentrouter stats`); per-user history not built (single shared log, no user identity).
+- [x] Per-user history + aggregate cost reporting available — every decision
+      records a user (`AGENTROUTER_USER` env, falling back to the OS
+      username); `stats` reports `by_user`; the dashboard shows a per-user
+      table and a user column; `explain` returns the user. Pre-M7 databases
+      migrate in place (rows show as `unknown`).
 - [x] Policy controls enforce routing/safety rules org-wide (`policy.max_pricing_tier` in shared config; high-risk execution gate is unconditional).
 
-**Completion criteria:** a team operates from shared config with per-user history and cost visibility — **partially met**: shared config + policy + aggregate stats work today; per-user identity and hosting beyond a shared directory are deliberately not built in a local-first product (revisit if it grows a service surface).
+**Completion criteria:** a team operates from shared config with per-user history and cost visibility — **met** for the local-first scope: shared config + policy + per-user history + aggregate stats. *Hosting beyond a shared directory (multi-tenant service, auth) remains explicitly out of scope for a local CLI; revisit only if a service surface appears.*
 
 **Risks:** multi-tenant complexity → phase carefully after single-user is solid.
+
+---
+
+## M8 — Agent skill integration  · tier: **Production-future**  · depends on: M1–M4
+
+**Goal:** AgentRouter usable *inside* any agent CLI/IDE (Claude Code, Codex,
+Antigravity, Cursor, …) as a skill/instruction protocol, with auto/manual
+modes and per-subtask routing to save tokens.
+
+**Tasks**
+- Portable skill: `integrations/claude-code/agentrouter/SKILL.md` (modes,
+  decomposition protocol, tier→host-model mapping, safety gates).
+- Host-agnostic protocol snippet: `integrations/AGENTS.md` (Codex,
+  Antigravity, Cursor, generic system prompts).
+- `pricing_tier` exposed in `route --json` score rows so hosts map
+  recommendations onto their own model lineup without a second call.
+- Install docs per host (`integrations/README.md`).
+
+**Design:** the *host agent* (an LLM) decomposes tasks into subtasks;
+AgentRouter (rule-based, auditable) routes each subtask to a pricing tier; the
+host maps tiers onto whatever models it actually has (haiku/sonnet/opus,
+mini/full, flash/pro/ultra). Auto mode executes via subagents where supported;
+`risk=high` / `auto_execute_allowed=false` is never auto-executed in any mode.
+
+**Validation checklist** — ✅ complete
+- [x] `route --json` carries `pricing_tier` on recommendation/fallback/scores
+      (`tests/test_stats.py::test_route_json_scores_carry_pricing_tier`).
+- [x] Skill documents both modes, the decomposition protocol, and the
+      unconditional high-risk gate.
+- [x] Generic snippet installs by paste into any instruction file — no code.
+
+**Completion criteria:** installing the skill into a host requires zero code
+changes to AgentRouter — met (instructions + existing JSON contract only).
+
+**Risks:** host model lineups change names → mapping is by *tier*, not model
+name, so the skill survives model churn.
 
 ---
 
@@ -188,4 +228,5 @@ M1 ──▶ M2 ──▶ M3
  │              
  └────────────▶ (M4 also needs M1's log)
         M2,M3 ──▶ M6 ──▶ M7 ◀── M5
+        M1–M4 ──▶ M8 (skill layer; consumes route --json)
 ```

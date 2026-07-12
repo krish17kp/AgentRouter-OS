@@ -664,6 +664,9 @@ def stats(json_out: bool = typer.Option(False, "--json")):
         "By recommended pricing tier: "
         + (", ".join(f"{k}={v}" for k, v in sorted(agg["by_pricing_tier"].items())) or "-")
     )
+    typer.echo(
+        "By user: " + (", ".join(f"{k}={v}" for k, v in sorted(agg["by_user"].items())) or "-")
+    )
     fb = agg["feedback"]
     avg = fb["avg_rating"] if fb["avg_rating"] is not None else "-"
     acc = fb["acceptance_rate"] if fb["acceptance_rate"] is not None else "-"

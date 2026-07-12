@@ -1,6 +1,7 @@
-"""M7-lite — local telemetry aggregates and the policy pricing cap."""
+"""M7 — local telemetry aggregates, per-user history, and the policy pricing cap."""
 
 import json
+import sqlite3
 
 import pytest
 from typer.testing import CliRunner
@@ -45,6 +46,69 @@ def test_stats_aggregates(home):
 
     human = runner.invoke(app, ["stats"])
     assert "Decisions logged: 2" in human.output
+
+
+def test_stats_per_user_identity(home, monkeypatch):
+    """M7: decisions carry a user identity; stats aggregates by user."""
+    from agentrouter.cli import app
+
+    monkeypatch.setenv("AGENTROUTER_USER", "alice")
+    runner.invoke(app, ["route", "write a short haiku"])
+    monkeypatch.setenv("AGENTROUTER_USER", "bob")
+    runner.invoke(app, ["route", "summarize the changelog"])
+    runner.invoke(app, ["route", "list three test ideas"])
+
+    r = runner.invoke(app, ["stats", "--json"])
+    agg = json.loads(r.output)
+    assert agg["by_user"] == {"alice": 1, "bob": 2}
+    human = runner.invoke(app, ["stats"])
+    assert "By user: alice=1, bob=2" in human.output
+
+
+def test_explain_includes_user(home, monkeypatch):
+    from agentrouter.cli import app
+
+    monkeypatch.setenv("AGENTROUTER_USER", "carol")
+    r = runner.invoke(app, ["route", "write a short haiku", "--json"])
+    did = json.loads(r.output)["decision_id"]
+    e = runner.invoke(app, ["explain", did, "--json"])
+    assert json.loads(e.output)["user"] == "carol"
+
+
+def test_pre_m7_db_migrates_in_place(home):
+    """A decisions table without the user column gains it on connect."""
+    from agentrouter import store
+
+    db = home / "agentrouter.db"
+    conn = sqlite3.connect(db)
+    conn.execute("DROP TABLE decisions")
+    conn.execute(
+        "CREATE TABLE decisions (id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        " created_at TEXT NOT NULL, task TEXT NOT NULL, payload TEXT NOT NULL)"
+    )
+    conn.execute(
+        "INSERT INTO decisions (created_at, task, payload) VALUES ('t', 'old task', '{}')"
+    )
+    conn.commit()
+    conn.close()
+
+    conn = store.connect(home)
+    did = store.save_decision(conn, "new task", {})
+    agg = store.aggregate_stats(conn)
+    conn.close()
+    assert did == "d_00002"
+    assert agg["by_user"].get("unknown") == 1  # the pre-migration row
+    assert sum(agg["by_user"].values()) == 2
+
+
+def test_route_json_scores_carry_pricing_tier(home):
+    from agentrouter.cli import app
+
+    r = runner.invoke(app, ["route", "refactor the logging module", "--json"])
+    payload = json.loads(r.output)
+    tiers = {"free", "low", "medium", "high", "frontier"}
+    assert payload["recommendation"]["pricing_tier"] in tiers
+    assert all(row["pricing_tier"] in tiers for row in payload["scores"])
 
 
 def test_policy_max_pricing_tier_caps_routing(home):

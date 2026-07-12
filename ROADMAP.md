@@ -116,6 +116,25 @@ aggregate cost reporting.
 
 ---
 
+## Phase 8 — Production-future: agent skill integration  · tier: **Production-future**
+
+**Goal:** AgentRouter works *inside* any agent CLI/IDE (Claude Code, Codex,
+Antigravity, Cursor, …) as a skill/instruction protocol — the host agent
+decomposes tasks, AgentRouter routes each subtask to a pricing tier, the host
+runs each subtask on its cheapest adequate model.
+
+**Deliverables**
+- Portable Claude Code skill (auto/manual modes, decomposition protocol,
+  tier→host-model mapping, unconditional high-risk gate).
+- Host-agnostic `AGENTS.md` protocol snippet for skill-less hosts.
+- `pricing_tier` in `route --json` score rows (the field hosts map on).
+- Per-host install docs.
+
+**Done when:** installing into a new host requires only pasting instructions —
+zero AgentRouter code changes.
+
+---
+
 ## Phase → tier map
 
 | Phase | Tier |
@@ -127,3 +146,4 @@ aggregate cost reporting.
 | 5 Web dashboard | Advanced |
 | 6 Execution automation | Production-future |
 | 7 Teams & telemetry | Production-future |
+| 8 Agent skill integration | Production-future |

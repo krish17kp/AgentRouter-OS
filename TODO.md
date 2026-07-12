@@ -1,8 +1,8 @@
 # AgentRouter OS — TODO / Status
 
-> Updated after the v0.3.0 milestone pass (2026-07-08). Honest status:
-> **milestones M1–M6 implemented and tested; M7 partial (by design for a
-> local-first product).** 94 offline tests, 80%+ coverage gate, CI green
+> Updated after the v0.4.0 pass (2026-07-12). Honest status: **milestones
+> M1–M8 implemented and tested** (M7's hosted-multi-tenant half remains a
+> deliberate non-goal for a local-first CLI). 80%+ coverage gate, CI green
 > locally. Nothing actionable is pending — the items below are either done,
 > blocked on a one-time user action, or explicit design decisions.
 
@@ -26,12 +26,24 @@
       opt-in per provider (`supports_execution` + `exec_command`, all disabled
       in seeds); high-risk / non-auto-approval decisions provably blocked
       (tested with every provider enabled); subprocess exit code propagated
-- [~] **M7 — teams & telemetry** (v0.3.0, partial): `agentrouter stats
-      [--json]` (decision counts, risk + pricing-tier distributions, feedback
-      acceptance rate); `policy.max_pricing_tier` enforced at route time;
-      team mode = shared `AGENTROUTER_HOME`. **Not built:** per-user identity,
-      hosted multi-user deployment — a local-first CLI has no service surface;
+- [x] **M7 — teams & telemetry** (v0.4.0): `agentrouter stats [--json]`
+      (decision counts, risk + pricing-tier + **per-user** distributions,
+      feedback acceptance rate); every decision records a user
+      (`AGENTROUTER_USER` env → OS username fallback; pre-M7 DBs migrate in
+      place); dashboard shows per-user table + user column; `explain` returns
+      the user; `policy.max_pricing_tier` enforced at route time; team mode =
+      shared `AGENTROUTER_HOME`. **Still not built (deliberate):** hosted
+      multi-user deployment — a local-first CLI has no service surface;
       revisit only if one appears.
+- [x] **M8 — agent skill integration** (v0.4.0): portable skill in
+      `integrations/` making AgentRouter usable inside Claude Code, Codex,
+      Antigravity, Cursor, or any agent host. **Auto mode**: host agent
+      decomposes the task into subtasks, routes each via `route --json`, maps
+      `recommendation.pricing_tier` onto the host's own models (cheap subtask
+      → cheap model = token savings), executes via subagents where supported.
+      **Manual mode** (default): recommend + explain, user decides.
+      `risk=high` is never auto-executed in any mode. Enabler shipped in core:
+      `pricing_tier` on every `route --json` score row.
 
 ## ✅ Former "remaining pending items" — all addressed
 
@@ -80,7 +92,8 @@
 ## Future ideas (explicitly out of scope for now)
 
 - Benchmark-based ability scoring
-- Per-user identity / hosted team deployment / org telemetry service
+- Hosted team deployment / org telemetry service (per-user identity is done
+  locally; hosting is the part that stays out of scope)
 - Live refresh adapters for claude-code, cursor, cli-agent (no public catalog
   APIs today; registry entries remain the path)
 - Log redaction/encryption at rest, retention policies

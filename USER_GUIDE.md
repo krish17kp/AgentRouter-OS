@@ -166,9 +166,14 @@ yourself. The subprocess exit code is propagated.
 ## 9. `stats` — local telemetry
 
 ```console
-$ agentrouter stats            # decisions, risk + pricing-tier distributions, feedback
+$ agentrouter stats            # decisions, risk/tier/user distributions, feedback
 $ agentrouter stats --json
 ```
+
+Every decision records who made it: the `AGENTROUTER_USER` env var if set
+(recommended in team mode), else your OS username. `stats` shows a `by_user`
+breakdown and `explain --json` includes the `user`. Databases created before
+v0.4.0 migrate automatically (old rows show as `unknown`).
 
 ## 10. `dashboard` — read-only web view
 
@@ -193,7 +198,27 @@ learning: true               # set false to freeze weights
 ```
 
 The decision log lives in the same directory — fine for a small trusted team,
-not multi-tenant hosting (see TODO.md).
+not multi-tenant hosting (see TODO.md). Have each teammate set
+`AGENTROUTER_USER` so `stats` and the dashboard attribute decisions correctly:
+
+```console
+$ export AGENTROUTER_USER=alice     # or setx on Windows
+```
+
+## 12. Using AgentRouter inside Claude Code / Codex / Antigravity / any agent
+
+The `integrations/` directory ships a skill that lets agent CLIs and IDEs call
+AgentRouter themselves: the host agent decomposes a task into subtasks, routes
+each one (`route --json`), maps the recommended `pricing_tier` onto its own
+models, and runs cheap subtasks on cheap models — saving tokens. Manual mode
+recommends only; auto mode executes, but `risk=high` is never auto-run.
+
+```console
+$ cp -r integrations/claude-code/agentrouter ~/.claude/skills/agentrouter   # Claude Code
+# other hosts: paste integrations/AGENTS.md into the host's instruction file
+```
+
+See [integrations/README.md](integrations/README.md) for per-host install.
 
 ---
 
@@ -210,13 +235,14 @@ top-level keys (scripts can rely on them):
 | `weights` | object | `w_cap/w_cost/w_lat/w_ctx` actually used |
 | `weight_shifts` | array[string] | Human-readable weight adjustments applied |
 | `excluded` | array[{model, reason}] | Models removed by hard filters |
-| `scores` | array | Ranked rows: `{model, provider, model_id, terms{cap,cost,lat,ctx,adj,dep}, score}` |
+| `scores` | array | Ranked rows: `{model, provider, model_id, pricing_tier, terms{cap,cost,lat,ctx,adj,dep}, score}` |
 | `recommendation` | object \| null | Top-ranked score row |
 | `fallback` | object \| null | Fallback score row |
 | `manual_suggestion` | string \| null | Set when nothing was eligible |
 | `reason` | string \| null | The one-line "Why" |
 | `gates` | object | `{checklist: [...], auto_execute_allowed, approval_level}` |
 | `prompt` | string | The generated execution prompt |
+| `user` | string | Who logged the decision (`explain` only; from `AGENTROUTER_USER` or the OS username) |
 
 Exit codes: `0` ok · `1` runtime · `2` bad usage/unknown id · `3` invalid
 registry/config · `4` no eligible model.

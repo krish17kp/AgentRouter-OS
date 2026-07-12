@@ -5,6 +5,26 @@ All notable changes to AgentRouter OS. Format loosely follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-12
+
+### Added
+- **Per-user history (M7 complete):** every logged decision records a user —
+  `AGENTROUTER_USER` env var (shared-home teams) falling back to the OS
+  username. `stats` gains a `by_user` distribution, the dashboard a per-user
+  table + user column, `explain --json` a `user` field. Pre-0.4 databases
+  migrate in place (old rows report `unknown`).
+- **Agent skill integration (M8):** `integrations/` ships a portable Claude
+  Code skill (`claude-code/agentrouter/SKILL.md`) and a host-agnostic
+  `AGENTS.md` protocol snippet for Codex, Antigravity, Cursor, and any other
+  agent host. Auto mode: the host agent decomposes a task into subtasks,
+  routes each via `route --json`, maps the recommended pricing tier onto its
+  own model lineup, and runs cheap subtasks on cheap models. Manual mode
+  (default): recommend + explain only. High-risk subtasks are never
+  auto-executed in any mode.
+- **`pricing_tier` in `route --json`:** every score row (including
+  `recommendation` and `fallback`) now carries the model's pricing tier — the
+  field skill hosts map on.
+
 ## [0.3.0] - 2026-07-08
 
 ### Added

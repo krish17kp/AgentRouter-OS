@@ -28,6 +28,7 @@ _PAGE = """<!doctype html>
 acceptance {fb_acc}</p>
 <h2>Risk distribution</h2>{risk_table}
 <h2>Recommended pricing-tier distribution</h2>{tier_table}
+<h2>Decisions by user</h2>{user_table}
 <h2>Recent decisions</h2>{recent_table}
 </body></html>"""
 
@@ -48,6 +49,7 @@ def render_html(stats: dict, recent: list[dict]) -> str:
         rows = "".join(
             f"<tr><td>{html.escape(r['decision_id'])}</td>"
             f"<td>{html.escape(str(r['created_at'])[:19])}</td>"
+            f"<td>{html.escape(str(r.get('user', 'unknown')))}</td>"
             f"<td>{html.escape(r['task'][:80])}</td>"
             f"<td>{html.escape(r['model'])}</td>"
             f"<td>{r['score'] if r['score'] is not None else '-'}</td>"
@@ -55,7 +57,7 @@ def render_html(stats: dict, recent: list[dict]) -> str:
             for r in recent
         )
         recent_table = (
-            "<table><tr><th>id</th><th>when (UTC)</th><th>task</th>"
+            "<table><tr><th>id</th><th>when (UTC)</th><th>user</th><th>task</th>"
             f"<th>recommended</th><th>score</th><th>risk</th></tr>{rows}</table>"
         )
     else:
@@ -67,6 +69,7 @@ def render_html(stats: dict, recent: list[dict]) -> str:
         fb_acc=fb["acceptance_rate"] if fb["acceptance_rate"] is not None else "-",
         risk_table=_kv_table(stats["by_risk"]),
         tier_table=_kv_table(stats["by_pricing_tier"]),
+        user_table=_kv_table(stats.get("by_user", {})),
         recent_table=recent_table,
     )
 

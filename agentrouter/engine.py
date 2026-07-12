@@ -152,6 +152,7 @@ def score_models(
                 "model": m.key,
                 "provider": m.provider,
                 "model_id": m.model_id,
+                "pricing_tier": m.pricing_tier.value,
                 "terms": {
                     "cap": round(cap, 2),
                     "cost": round(cost, 2),
