@@ -3,8 +3,10 @@
 ## Secrets
 
 - **No secrets in this repo.** `.env.example` contains placeholders only.
-- Real keys go in an untracked `.env` (ignored via `.gitignore`) or your shell
-  environment — never in tracked files, code, or YAML registries.
+- The app reads keys from **shell environment variables** — it does not
+  auto-load `.env`. `.env`/`.env.example` are a reference template you can
+  `source` yourself; real keys live in your shell environment, never in
+  tracked files, code, or YAML registries.
 - If you set `OPENROUTER_API_KEY`, it is sent as an HTTP auth header only and
   is never printed or logged (enforced by a test).
 - `providers refresh openrouter` runs **keyless** — the catalog endpoint is

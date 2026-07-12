@@ -5,6 +5,14 @@ All notable changes to AgentRouter OS. Format loosely follows
 
 ## [Unreleased]
 
+### Changed
+- **Minimum Python is now 3.11** (was 3.10). The floor now matches the CI test
+  matrix (3.11 / 3.12 / 3.13), so every supported version is actually verified.
+
+### Security
+- Clarified that the app reads API keys from **shell environment variables** and
+  does not auto-load `.env`; docs and the `.env` template updated to match.
+
 ## [0.4.0] - 2026-07-12
 
 ### Added

@@ -26,9 +26,9 @@ mocked HTTP. Keep it that way: new tests must not depend on live internet.
 
 ## Secrets
 
-Never commit secrets. Real keys go in an untracked `.env` or your shell
-environment; `.env.example` holds placeholders only. See
-[SECURITY.md](SECURITY.md).
+Never commit secrets. The app reads keys from your shell environment (it does
+not auto-load `.env`); `.env.example` lists the variable names as a reference.
+See [SECURITY.md](SECURITY.md).
 
 ## Conventions
 

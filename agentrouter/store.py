@@ -6,7 +6,7 @@ import getpass
 import json
 import os
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 _SCHEMA = """
@@ -46,7 +46,7 @@ def connect(home: Path) -> sqlite3.Connection:
 def save_decision(conn: sqlite3.Connection, task: str, payload: dict) -> str:
     cur = conn.execute(
         "INSERT INTO decisions (created_at, task, payload, user) VALUES (?, ?, ?, ?)",
-        (datetime.now(timezone.utc).isoformat(), task, json.dumps(payload), current_user()),
+        (datetime.now(UTC).isoformat(), task, json.dumps(payload), current_user()),
     )
     conn.commit()
     return f"d_{cur.lastrowid:05d}"

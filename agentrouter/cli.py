@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+from datetime import UTC
 from importlib import resources
 from pathlib import Path
 
@@ -398,11 +399,11 @@ def feedback(
         if recent:
             typer.echo(f"Next: try a recent id: {', '.join(recent)}", err=True)
         raise typer.Exit(EXIT_USAGE)
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     conn.execute(
         "INSERT INTO feedback (decision_id, created_at, rating, note) VALUES (?, ?, ?, ?)",
-        (int(decision_id.removeprefix("d_")), datetime.now(timezone.utc).isoformat(), rating, note),
+        (int(decision_id.removeprefix("d_")), datetime.now(UTC).isoformat(), rating, note),
     )
     conn.commit()
     conn.close()
