@@ -3,11 +3,26 @@
 [![CI](https://github.com/krish17kp/AgentRouter-OS/actions/workflows/ci.yml/badge.svg)](https://github.com/krish17kp/AgentRouter-OS/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![Version](https://img.shields.io/badge/version-0.4.0-brightgreen)
 
 > **A CLI-first planner that reads your task and tells you which AI model, agent, IDE, or CLI tool to use — and why.**
-> Classify tasks across 7 dimensions, score every model in your YAML registry, and get explainable recommendations with safety checklists and execution logs. Built for teams: no cloud, no API keys required, everything stored locally in SQLite.
+>
+> It classifies a task across 7 dimensions, scores every model in a YAML registry you control, and returns an explainable recommendation with a fallback, a risk-scaled safety checklist, and a logged, replayable decision. No cloud, no API keys required — everything lives locally in SQLite.
 
-**Status: Production-grade v0.3.0** — All core features implemented and tested. 94 passing tests, 80%+ coverage enforced in CI.
+**Status: v0.4.0 — feature-complete (M1–M8).** 99 passing tests, 80%+ coverage enforced in CI, plus a post-build job that installs the real wheel and smoke-tests it.
+
+**New in 0.4.0:** [per-user history & telemetry](#team-mode-shared-config--per-user-history), an [agent-host skill](#use-agentrouter-inside-claude-code-codex-antigravity-cursor) that plugs AgentRouter into Claude Code / Codex / Antigravity / Cursor, and a `--version` flag.
+
+---
+
+## Why AgentRouter
+
+The model landscape changes every few weeks. AgentRouter is built on one assumption: **today's best model is soon obsolete.** So routing logic never hardcodes a model name — every decision is scored against a YAML registry you edit. Add tomorrow's model with a one-line YAML change, not a code change.
+
+- **Explainable** — every recommendation logs its full score table; replay it anytime with `explain`.
+- **Safe by default** — high-risk tasks always require human approval and are provably blocked from auto-execution.
+- **Local-first** — routing needs no network and no keys; only live catalog refresh reaches out.
+- **Token-saving** — inside an agent host, decompose a task and route each subtask to its cheapest adequate model.
 
 ---
 
@@ -15,548 +30,384 @@
 
 ### 1. Install
 
-```console
-# Clone the repository
+```bash
 git clone https://github.com/krish17kp/AgentRouter-OS.git
 cd AgentRouter-OS
 
-# Create and activate virtual environment
 python -m venv .venv
 .venv\Scripts\activate            # Windows
-# source .venv/bin/activate       # macOS/Linux
+# source .venv/bin/activate       # macOS / Linux
 
-# Install with development tools
 pip install -e ".[dev]"
+```
+
+This installs the `agentrouter` command. (`python -m agentrouter` is equivalent everywhere below.)
+
+```bash
+agentrouter --version             # -> agentrouter-os 0.4.0
 ```
 
 ### 2. Initialize
 
-```console
-# Initialize AgentRouter (creates ~/.agentrouter/ with seed registries)
-python -m agentrouter init
-
-# View available models
-python -m agentrouter registry list
+```bash
+agentrouter init                  # creates ~/.agentrouter/ with config + seed registries + DB
+agentrouter registry list         # see the models you can route to
 ```
 
-### 3. Route Your First Task
+### 3. Route your first task
 
-```console
-# Route a task to get a recommendation
-python -m agentrouter route "Polish the README for a Python CLI project"
+```bash
+agentrouter route "Refactor the auth module to use JWT tokens"
 ```
 
-**Example output:**
+Real output:
 
-```
+```text
+Task: "Refactor the auth module to use JWT tokens"
+
 How I read this task
-  type: coding         complexity: medium    risk: low
-  context: ~2000 tokens          output: text
-  tools needed: none
-  approval: human-review
+  type: coding         complexity: medium   risk: high
+  context: ~12000 tokens (medium)    output: code
+  tools needed: file-edit
+  approval: human-approval-required
 
 Recommendation                                        score
-  1  claude-code/frontier-coding-model            0.94   <- recommended
-  2  openrouter/capable-coding-model              0.87   <- fallback
+  1  cursor/ide-coding-model                      0.95   <- recommended
+  2  openrouter/strong-coding-model               0.94   <- fallback
 
-Why: strongest weighted fit for coding (capability 1.0, cost-fit 0.95, context-fit 1.0);
-ideal-use-case match; context-aware capability weighting.
+Why: strongest weighted fit for coding (capability 0.9, cost-fit 0.8, context-fit 1.0);
+ideal-use-case match; supports required tools: file-edit; capability weighted up (high complexity/risk).
 
-Safety checklist (risk=low)
-  [ ] Review output quality
-  [ ] Check for hallucinations
-  [ ] Verify sources if applicable
+Safety checklist (risk=high)
+  [ ] Review full diff before applying
+  [ ] Run the test suite
+  [ ] Secret scan changed files
+  [ ] Confirm rollback path
+  [ ] Human sign-off (no auto-execute)
 
-Decision logged: d_00001
-Next: agentrouter explain d_00001   or   agentrouter prompt generate --from d_00001
+Decision logged: d_00001  (prompt saved with it; task text is stored locally)
+Next: agentrouter explain d_00001   or   agentrouter prompt generate --from d_00001 --out prompt.md
 ```
+
+Model names in the seed registry are **placeholders** — routing keys off the registry fields (capability, pricing, context window), never off a name. Point it at your real models by editing `~/.agentrouter/registry/models.yaml`.
 
 ---
 
 ## Common Tasks
 
-### Route a Complex Task with Full Context
+### Override the classifier when it misreads the task
 
-```console
-# Route a high-risk production task
-python -m agentrouter route \
-  "Refactor authentication and migrate JWT token handling in production" \
+The classifier is keyword-based. When it guesses wrong, your flags win:
+
+```bash
+agentrouter route "tweak the thing" \
   --risk high \
   --tool file-edit,shell \
-  --context-tokens 50000
-
-# Output shows:
-# - Task classification (type, complexity, risk level)
-# - Top 2 recommendations with scores
-# - Plain-English reasoning
-# - Risk-appropriate safety checklist
-# - Decision ID for future reference
+  --context-tokens 150000
 ```
 
-### Override the Classifier
+Available overrides: `--risk {low|medium|high}`, `--tool <comma-separated>`, `--context-tokens <int>`. (There is no `--type` flag — task type is always inferred, then reflected in the score.)
 
-```console
-# If the classifier gets the task type wrong, override it
-python -m agentrouter route "Generate an image" \
-  --type creative \
-  --risk medium
+### Replay a past decision
 
-# Use flags to fine-tune classification:
-# --risk low|medium|high
-# --tool none|file-edit|shell|web-search|etc
-# --context-tokens <number>
+```bash
+agentrouter explain d_00001
 ```
 
-### View Routing Decision History
+Shows the stored classification, **every excluded model with its reason**, the full per-model score table, any feedback-driven weight shifts, and the safety gate. Nothing is recomputed — it is an audit replay of what `route` decided.
 
-```console
-# List recent decisions
-python -m agentrouter explain d_00001
+### Generate a ready-to-paste prompt
 
-# Output shows:
-# - Full task text
-# - Classification breakdown
-# - Complete scoring table for all eligible models
-# - Final recommendation with fallback
-# - Any applied feedback weights
+```bash
+# from a logged decision
+agentrouter prompt generate --from d_00001 --out prompt.md
+
+# or ad hoc for a specific tool
+agentrouter prompt generate "write release notes" --tool openai/general-purpose-model
 ```
 
-### Generate a Ready-to-Use Prompt
+Paste the result into the recommended tool, or run it via `execute` (below).
 
-```console
-# Extract the routing decision as a standalone prompt
-python -m agentrouter prompt generate --from d_00001 --out prompt.md
+### Give feedback so future routing improves
 
-# The generated prompt includes:
-# - Full task context
-# - Recommended model
-# - Role and instructions
-# - Output expectations
-# - Ready to copy/paste into your editor
+```bash
+agentrouter feedback d_00001 --rating 2 --note "model struggled with the token limit"
 ```
 
-### Refresh the Model Catalog from Live Providers
+`--rating` is an integer 1–5; `--note` is optional. Once 3+ ratings exist, each low rating (≤2) shifts a little weight from cost toward capability — bounded (step 0.01, cap +0.10, cost weight never below 0.05). The shift is recomputed from the feedback table on every route (no hidden state), shows up in the decision's `weight_shifts`, and reverts if you delete the feedback rows or set `learning: false` in `config.yaml`.
 
-```console
-# Sync models from OpenRouter (works without API key)
-python -m agentrouter providers refresh openrouter
+### Sync live model catalogs
 
-# Sync from OpenAI (requires read-only OPENAI_API_KEY)
-python -m agentrouter providers refresh openai \
-  --match "gpt-4" \
-  --limit 10
+```bash
+agentrouter providers refresh openrouter --dry-run     # preview, write nothing
+agentrouter providers refresh openrouter --limit 15    # import up to 15 models
+agentrouter providers refresh openrouter --match claude # only ids containing "claude"
 
-# Preview changes without modifying registry
-python -m agentrouter providers refresh openrouter --dry-run
-
-# Auto-generated files are in ~/.agentrouter/registry/models.*.generated.yaml
-# Delete them anytime to revert to manual registry
+OPENAI_API_KEY=sk-... agentrouter providers refresh openai
 ```
 
-### Log Feedback and Improve Future Decisions
+Your hand-edited `models.yaml` **always wins** on collision. Generated entries land in `models.<provider>.generated.yaml` — delete that file to revert. OpenRouter's catalog endpoint is public (no key needed); if `OPENROUTER_API_KEY` is set it is sent as a header and never logged. Non-refreshable providers exit with code 2 and say so.
 
-```console
-# Rate a past routing decision (improves future similar tasks)
-python -m agentrouter feedback d_00001 \
-  --rating unsatisfactory \
-  --reason "Model struggled with token limits"
+### Run the recommended tool (opt-in, risk-gated)
 
-# Feedback shifts weights toward capability over cost
-# View how feedback changed scoring:
-python -m agentrouter explain d_00001
-
-# All weight shifts are logged in the decision's weight_shifts field
-# Disable learning: set learning: false in ~/.agentrouter/config.yaml
+```bash
+agentrouter execute d_00001          # shows what would run, asks for --yes
+agentrouter execute d_00001 --yes    # actually runs it
 ```
 
-### Execute a Routing Decision
+Disabled everywhere by default. To opt a provider in, set `supports_execution: true` and an `exec_command` in `providers.yaml`. **Hard gate:** any decision with `risk=high` or non-auto approval is always blocked from auto-execution — the command tells you to run the prompt yourself.
 
-```console
-# Run the recommended tool directly (opt-in, gated by risk)
-python -m agentrouter execute d_00001 --yes
+### See telemetry and history
 
-# High-risk decisions are BLOCKED from auto-execution (by design)
-# Low-risk execution requires explicit provider config:
-# - Set supports_execution: true in providers.yaml
-# - Define exec_command for the tool
-# - Execution never happens without --yes flag
+```bash
+agentrouter stats                    # counts, risk/tier/user distributions, feedback
+agentrouter stats --json             # same, machine-readable
+agentrouter dashboard                # read-only local web page at http://127.0.0.1:8321/
 ```
 
-### View Decision History and Stats
+### Get JSON for scripting
 
-```console
-# Open interactive dashboard (local web page)
-python -m agentrouter dashboard
-
-# Shows:
-# - Decision history (tasks, recommendations, times)
-# - Risk tier distribution chart
-# - Model usage statistics
-# - Acceptance rate trends
-# - All data from local SQLite log
+```bash
+agentrouter route "summarize a 300k-token repository" --json
 ```
 
-### Check Team Policies and Limits
+Emits a stable object: `decision_id`, `task`, `classification`, `weights`, `weight_shifts`, `excluded`, `scores` (each row carries `pricing_tier`), `recommendation`, `fallback`, `reason`, `gates`, and `prompt`. Full contract in [USER_GUIDE.md](USER_GUIDE.md).
 
-```console
-# View current policy configuration
-cat ~/.agentrouter/config.yaml
+---
 
-# Example config with team policy:
-# learning: true
-# weights:
-#   capability: 0.5
-#   cost_fit: 0.3
-#   context_fit: 0.2
-# policy:
-#   max_pricing_tier: standard    # Enforce cost limits across team
+## Use AgentRouter inside Claude Code, Codex, Antigravity, Cursor
+
+The [`integrations/`](integrations/) directory turns AgentRouter into a **skill** any agent host can call, so the host routes its own subtasks to the cheapest adequate model and saves tokens.
+
+**The division of labor:** the host agent (an LLM) decomposes a task into subtasks → AgentRouter (rule-based, auditable) routes each subtask to a pricing tier → the host maps that tier onto whatever models it actually has and runs each subtask there.
+
+**Install into Claude Code:**
+
+```bash
+cp -r integrations/claude-code/agentrouter ~/.claude/skills/agentrouter   # all projects
+# or:  cp -r integrations/claude-code/agentrouter .claude/skills/agentrouter   # this project
 ```
+
+Then say *"route this task"* or *"use agentrouter in auto mode"* in any session.
+
+**Other hosts (Codex, Antigravity, Cursor, custom):** paste [`integrations/AGENTS.md`](integrations/AGENTS.md) into the host's instruction file (`AGENTS.md`, `.cursorrules`, workspace rules, or a system prompt).
+
+**Two modes:**
+
+| Mode | Behavior |
+| --- | --- |
+| **manual** (default) | Recommend + explain. The user decides what runs where. |
+| **auto** | Decompose → route each subtask → execute on the mapped host model (parallel subagents where supported). `risk=high` is **never** auto-executed. |
+
+**Worked example (auto mode):** *"Research competitor API pricing and write a comparison doc"* →
+
+```text
+subtask 1  search the web for pricing pages       → low tier    → cheap/fast model
+subtask 2  extract & normalize into a table       → medium tier → mid model
+subtask 3  write the comparison document          → high tier   → strongest model
+```
+
+Three route calls, three decision ids, cheap work on cheap models. See [integrations/README.md](integrations/README.md) for per-host details.
 
 ---
 
 ## Understanding the Output
 
-### Task Classification (How I Read This)
+### Task classification (7 dimensions)
 
-AgentRouter classifies your task across 7 dimensions:
+| Dimension | Values | Effect on routing |
+| --- | --- | --- |
+| **Type** | `coding`, `reasoning`, `writing`, `analysis`, `summarization`, `general` | Selects the capability blend used to score models |
+| **Complexity** | `low`, `medium`, `high` | High shifts weight toward capability; low toward cost |
+| **Risk** | `low`, `medium`, `high` | Sets the safety checklist; high forces human approval |
+| **Context size** | token estimate → band `small`/`medium`/`large` | Models below the token count are filtered out; large shifts weight to context fit |
+| **Output type** | `code`, `text`, `code+tests`, `data`, `plan` | Informs scoring |
+| **Tool needs** | `file-edit`, `shell`, `web-search`, `vision`, … | Hard eligibility gate — missing a required tool excludes the model |
+| **Approval level** | `auto`, `notify`, `human-approval-required` | Drives the execution gate |
 
-| Dimension          | Values                                                              | Effect                                                                      |
-| ------------------ | ------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| **Type**           | coding, research, creative, operations, analysis, learning, unknown | Filtered against model capabilities                                         |
-| **Complexity**     | low, medium, high, extreme                                          | Weights toward capability (high complexity = more capable models preferred) |
-| **Risk**           | low, medium, high                                                   | Determines safety checklist; high-risk blocks auto-execution                |
-| **Context Size**   | (tokens)                                                            | Models must have sufficient context window                                  |
-| **Output Type**    | text, code, code+tests, structured-data, unknown                    | Capability filter                                                           |
-| **Tool Needs**     | none, file-edit, shell, web-search, vision, etc                     | Hard eligibility gate                                                       |
-| **Approval Level** | none, human-review, human-approval-required                         | Determines execution gating                                                 |
+### Scoring formula
 
-Override any classification with CLI flags:
+Each eligible model gets a weighted score:
 
-```console
-python -m agentrouter route "<task>" \
-  --type coding \
-  --risk high \
-  --tool file-edit,shell \
-  --context-tokens 200000
+```text
+score = w_cap·capability + w_cost·cost_fit + w_lat·latency_fit + w_ctx·context_fit
+        + use_case_adjust − deprecation_penalty
+
+default weights:  w_cap 0.45   w_cost 0.25   w_lat 0.15   w_ctx 0.15
 ```
 
-### Scoring and Recommendations
-
-Each eligible model is scored across three dimensions (weighted sum):
-
-```
-score = (capability × C) + (cost_fit × H) + (context_fit × X)
-
-Where:
-  C = capability weight (default 0.5, increased for high complexity)
-  H = cost_fit weight (default 0.3)
-  X = context_fit weight (default 0.2)
-```
-
-**Top 2 models are returned:**
-
-1. **Primary recommendation** (highest score)
-2. **Fallback** (second highest, different provider preferred)
-
-Both scores and reasoning are logged for explainability.
+Weights auto-shift with the task: high complexity/risk raises `w_cap`; a large context raises `w_ctx`. The top model is the recommendation; the runner-up (a different provider or cheaper tier where possible) is the fallback. Every term is logged so `explain` can show exactly why a model won.
 
 ---
 
-## Data and Privacy
+## Configuration
 
-### Where Your Data Lives
+All config lives in `~/.agentrouter/config.yaml` (override the whole directory with the `AGENTROUTER_HOME` env var).
 
-Everything is local under one directory (customize with `AGENTROUTER_HOME`):
+```yaml
+# Custom scoring weights (keys must be w_cap / w_cost / w_lat / w_ctx)
+weights:
+  w_cap: 0.55       # favor capability more
+  w_cost: 0.15
+  w_lat: 0.15
+  w_ctx: 0.15
 
-| Path                                              | Contents                                                        |
-| ------------------------------------------------- | --------------------------------------------------------------- |
-| `~/.agentrouter/config.yaml`                      | Scoring weights, learning toggle, team policy limits            |
-| `~/.agentrouter/registry/models.yaml`             | **The model catalog — edit to add/reprice/retire models**       |
-| `~/.agentrouter/registry/models.*.generated.yaml` | Auto-generated by `providers refresh`; safe to delete           |
-| `~/.agentrouter/registry/ability_overrides.yaml`  | Curated ability scores (survives re-refresh)                    |
-| `~/.agentrouter/registry/providers.yaml`          | Provider definitions + opt-in execution config                  |
-| `~/.agentrouter/agentrouter.db`                   | SQLite decision + feedback log (all task text, scores, outputs) |
+learning: true      # set false to freeze feedback-driven weight adaptation
 
-### Privacy Notes
+policy:
+  max_pricing_tier: medium   # routing never recommends above this tier
+                             # valid tiers: free | low | medium | high | frontier
+```
 
-- **Nothing leaves your machine** except explicit catalog fetches (`providers refresh`) and tools you explicitly execute (`execute --yes`)
-- **Task text is stored locally** in SQLite so `explain` can replay full decisions
-- Use `--no-log` to skip logging a sensitive task
-- Share `AGENTROUTER_HOME` across a team for unified policy (same config, shared decision log)
+> Note: weight keys are `w_cap/w_cost/w_lat/w_ctx` and tiers are `free/low/medium/high/frontier`. Unknown weight keys are ignored; an invalid `max_pricing_tier` fails loudly with exit code 3.
+
+### Add or retire a model
+
+Edit `~/.agentrouter/registry/models.yaml` (schema in [MODEL_REGISTRY_SCHEMA.md](MODEL_REGISTRY_SCHEMA.md)):
+
+```yaml
+models:
+  - provider: anthropic
+    model_id: claude-opus-4
+    display_name: Claude Opus 4
+    context_window: 200000
+    max_output_tokens: 64000
+    pricing_tier: frontier          # free | low | medium | high | frontier
+    latency_tier: medium            # fast | medium | slow
+    ability: { coding: 10, reasoning: 9, writing: 8 }   # each 0–10
+    tool_support: [tool-use, file-edit, shell]
+    vision_support: false
+    ideal_use_cases: [coding, analysis]
+    avoid_use_cases: []
+    deprecation_status: active      # active | deprecated | retired
+    fallback: [some-cheaper-model]
+    source: manual
+    last_updated: "2026-07-12"
+```
+
+To retire a model without deleting it, set `deprecation_status: retired` — it is filtered out of every recommendation. Changes apply on the next command; no restart, no code.
+
+### Curate ability scores without touching generated files
+
+Add `~/.agentrouter/registry/ability_overrides.yaml`:
+
+```yaml
+overrides:
+  openrouter/anthropic/claude-x: { coding: 9, reasoning: 9 }
+```
+
+Overrides survive every `providers refresh`. Partial score maps are fine.
+
+---
+
+## Team Mode: shared config + per-user history
+
+Point every teammate's `AGENTROUTER_HOME` at one shared directory to share the registry, config, and policy from a single source:
+
+```bash
+export AGENTROUTER_HOME=/shared/agentrouter      # setx on Windows
+export AGENTROUTER_USER=alice                    # who this teammate is
+```
+
+- **`policy.max_pricing_tier`** in the shared `config.yaml` caps routing for everyone.
+- **Per-user history (new in 0.4.0):** every decision records who made it — `AGENTROUTER_USER` if set, else the OS username. `stats` shows a `by_user` breakdown, the dashboard adds a per-user table and a user column, and `explain --json` includes the `user`.
+- Databases created before 0.4.0 migrate automatically (old rows show as `unknown`).
+
+This suits a small trusted team on a shared filesystem. Hosted multi-tenant deployment (auth, a server) is intentionally out of scope for a local-first CLI.
+
+---
+
+## Data & Privacy
+
+Everything is local under `AGENTROUTER_HOME` (default `~/.agentrouter/`):
+
+| Path | Contents |
+| --- | --- |
+| `config.yaml` | Scoring weights, learning toggle, team policy |
+| `registry/models.yaml` | **The model catalog — edit to add/reprice/retire** |
+| `registry/models.*.generated.yaml` | Written by `providers refresh`; safe to delete |
+| `registry/ability_overrides.yaml` | Curated ability scores (survive re-refresh) |
+| `registry/providers.yaml` | Provider definitions + opt-in execution config |
+| `agentrouter.db` | SQLite decision + feedback log (task text, scores, users) |
+
+- **Nothing leaves your machine** except explicit `providers refresh` fetches and tools you run with `execute --yes`.
+- Task text is stored locally so `explain` can replay decisions. Use `--no-log` on `route` to skip persisting a sensitive task.
 
 ---
 
 ## Troubleshooting
 
-### Common Issues and Solutions
+| Symptom | Fix |
+| --- | --- |
+| `Registry file not found` | Run `agentrouter init` |
+| `Registry error … (exit 3)` | The message names the bad YAML field — fix it, or `agentrouter init --force` to re-seed |
+| `No eligible model (exit 4)` | Relax overrides: `--tool none`, raise `--context-tokens`, or add a capable model |
+| `No decision found … (exit 2)` | Ids look like `d_00001`; run `agentrouter explain <id>` with a real id |
+| `Execution blocked` | By design — high-risk never auto-executes. Enable low-risk via `supports_execution: true` + `exec_command` in `providers.yaml` |
 
-```console
-# Registry file not found
->> Fix: Run agentrouter init
+### Exit codes
 
-# Registry error: ... invalid (exit 3)
->> Fix: The error names the bad YAML field. Either fix it or:
-python -m agentrouter init --force
-
-# No eligible model found (exit 4)
->> Fix: Relax overrides or add capable models:
-python -m agentrouter route "<task>" --tool none --context-tokens 500000
-
-# No decision found with id ... (exit 2)
->> Fix: Ids look like d_00001. Run explain without args to list recent:
-python -m agentrouter explain
-
-# Execution blocked / not enabled (exit 2)
->> Fix: By design. High-risk decisions never auto-execute.
->> Enable for low-risk: set supports_execution: true + exec_command in providers.yaml
-```
-
-### Exit Codes
-
-| Code | Meaning                           | Next Step                                  |
-| ---- | --------------------------------- | ------------------------------------------ |
-| `0`  | Success                           | Continue                                   |
-| `1`  | Runtime error (network, file I/O) | Check error message; retry if temporary    |
-| `2`  | Bad usage or invalid ID           | Check command syntax or decision ID format |
-| `3`  | Registry or config invalid        | Fix YAML or re-seed with `--force`         |
-| `4`  | No eligible model found           | Relax constraints or add models            |
-
----
-
-## Features
-
-### Core Routing Engine
-
-- **Task classification** across 7 dimensions (type, complexity, risk, context, output, tools, approval)
-- **Pydantic-validated registries** — malformed entries fail loudly with clear errors
-- **Scoring over YAML** — no hardcoded model names, config-driven recommendations
-- **Hard eligibility filters** — context window, required tools, vision capability, retirement status
-- **Risk gating** — high-risk tasks always require human approval, never auto-execute
-
-### Decision Logging & Explainability
-
-- **SQLite decision log** — every routing decision is stored locally
-- **Full replay with `explain <id>`** — re-run any decision and see the complete score table
-- **Feedback learning loop** — rate decisions to improve similar future tasks
-- **Weight adaptation log** — track how feedback shifts scoring over time
-
-### Live Model Catalog Management
-
-- **`providers refresh openrouter|openai`** — sync live model catalogs into generated YAML files
-- **Manual registry always wins** — hand-edited models override generated ones on collision
-- **Registry hygiene warnings** — staleness alerts when entries age >90 days
-- **Curated ability overlays** — `ability_overrides.yaml` applies expert scores without re-editing generated files
-
-### Dashboard & Analytics
-
-- **Read-only decision dashboard** — interactive web page over the decision log
-- **Usage statistics** — model adoption, risk distribution, decision trends
-- **Decision replay** — relive any past routing decision with full context
-- **Acceptance rate tracking** — monitor decision quality over time
-
-### Gated Execution
-
-- **`execute <id> --yes`** — optionally run the recommended tool from the CLI
-- **Opt-in per provider** — execution is off by default everywhere
-- **Risk-scaled blocking** — high-risk decisions are provably prevented from auto-execution
-- **Custom exec_commands** — define how each provider executes via YAML
-
-### Team Mode
-
-- **Shared home directory** — point `AGENTROUTER_HOME` to a shared location for unified policy
-- **Team-wide policy enforcement** — `policy.max_pricing_tier` caps routing across the team
-- **Unified decision log** — see team decision history and aggregate stats
-- **No auth or cloud** — works entirely offline with a shared filesystem
-
----
-
-## Model Registry and Configuration
-
-### Adding a New Model
-
-Edit `~/.agentrouter/registry/models.yaml`:
-
-```yaml
-- model: claude-opus-4
-  provider: anthropic
-  pricing_tier: premium
-  capability_score: 0.95
-  supports:
-    - coding
-    - research
-    - creative
-    - analysis
-  max_tokens: 200000
-  vision: false
-  retirement_date: null
-  last_updated: 2026-01-15
-```
-
-### Curating Ability Scores
-
-Add expert overrides to `~/.agentrouter/registry/ability_overrides.yaml`:
-
-```yaml
-overrides:
-  - model: gpt-4-turbo
-    type: coding
-    score: 0.88
-  - model: claude-3-sonnet
-    type: research
-    score: 0.92
-```
-
-These persist across re-refreshes from live providers.
-
-### Disabling a Model
-
-Set `retirement_date` in the model entry:
-
-```yaml
-retirement_date: "2026-03-01" # Model will no longer be recommended
-```
-
----
-
-## Advanced Usage
-
-### Batch Routing Multiple Tasks
-
-```console
-# Create a file with tasks (one per line)
-cat > tasks.txt << 'EOF'
-Refactor authentication flow
-Optimize database query
-Write unit tests for auth module
-EOF
-
-# Route each task
-while IFS= read -r task; do
-  python -m agentrouter route "$task"
-done < tasks.txt
-```
-
-### JSON Output for Integration
-
-```console
-# Get structured output for programmatic use
-python -m agentrouter route "My task" --json
-
-# Output:
-# {
-#   "decision_id": "d_00042",
-#   "task": "My task",
-#   "classification": {
-#     "type": "coding",
-#     "complexity": "high",
-#     "risk": "medium",
-#     ...
-#   },
-#   "recommendation": {
-#     "rank": 1,
-#     "model": "claude-code/frontier",
-#     "score": 0.94
-#   },
-#   "fallback": {
-#     "rank": 2,
-#     "model": "openrouter/strong",
-#     "score": 0.87
-#   },
-#   ...
-# }
-```
-
-### Custom Weights for Your Team
-
-Adjust `~/.agentrouter/config.yaml`:
-
-```yaml
-weights:
-  capability: 0.6 # Favor capable models more
-  cost_fit: 0.2 # Reduce cost sensitivity
-  context_fit: 0.2
-
-learning: false # Disable feedback learning if not wanted
-
-policy:
-  max_pricing_tier: premium # Team-wide cost cap
-```
-
----
-
-## Architecture & Design
-
-AgentRouter is built around one hard assumption: **today's best model will be obsolete soon.**
-
-- **No hardcoded model names** in logic — all decisions reference the YAML registry
-- **Config-driven scoring** — add tomorrow's model with a YAML edit, not a code change
-- **Reversible decisions** — delete generated files or feedback logs to revert changes
-- **Local-first** — no cloud dependencies, no network required for routing (only for catalog refresh)
-- **Explainable by design** — every decision is loggable, replayable, and auditable
+| Code | Meaning | Next step |
+| --- | --- | --- |
+| `0` | Success | Continue |
+| `1` | Runtime error (network, file I/O) | Check the message; retry if transient |
+| `2` | Bad usage or unknown decision id | Check syntax / id format |
+| `3` | Registry or config invalid | Fix the named YAML field, or re-seed with `--force` |
+| `4` | No eligible model | Relax constraints or add a model |
 
 ---
 
 ## Testing & Quality
 
-- **94 passing tests** — full test coverage across classifier, scorer, loader, and CLI
-- **80%+ code coverage enforced** in CI
-- **Offline test suite** — `providers refresh` tests are mocked, no network required
-- **Ruff formatting** — consistent code style
-
-Run tests locally:
-
-```console
-pytest                            # Run all tests
-pytest --cov=agentrouter          # With coverage report (80% gate)
-ruff check . && ruff format --check .  # Lint and format check
+```bash
+pytest                                    # 99 tests, offline, ~8s
+pytest --cov=agentrouter                  # coverage report (fails under 80%)
+ruff check . && ruff format --check .     # lint + format
 ```
+
+No test needs internet or an API key — provider-refresh tests mock the HTTP layer. CI runs the same suite on Python 3.11 / 3.12 / 3.13, then a **`build-smoke` job** builds the real sdist + wheel, installs the wheel into a clean venv, and smoke-tests the *installed* artifact (`--version` → `init` → `route --json` → `stats` → `registry list`). That catches packaging bugs — a missing seed file, a broken entrypoint — that editable installs never hit. See [TESTING.md](TESTING.md).
 
 ---
 
-## What's Next
+## Milestones
 
-**Completed (M1–M6):**
+| # | Milestone | Status |
+| --- | --- | --- |
+| M1 | MVP routing engine (classify → recommend + fallback → prompt + checklist → log) | ✅ |
+| M2 | Live catalog refresh + rich `explain` + `--json` | ✅ |
+| M3 | Adapter expansion, staleness warnings, ability overrides | ✅ |
+| M4 | Feedback learning loop (bounded weight adaptation) | ✅ |
+| M5 | Read-only dashboard | ✅ |
+| M6 | Gated execution (high-risk provably blocked) | ✅ |
+| M7 | Teams & telemetry — shared config, policy, **per-user history** | ✅ |
+| M8 | **Agent skill integration** (Claude Code / Codex / Antigravity / Cursor) | ✅ |
 
-- ✅ MVP routing engine
-- ✅ Live provider refresh (OpenRouter, OpenAI)
-- ✅ Registry hygiene + ability overrides
-- ✅ Feedback learning loop
-- ✅ Read-only dashboard
-- ✅ Gated execution
-
-**In Progress (M7):**
-
-- 📋 Benchmarked ability scores
-- 📋 PyPI publication
-- 📋 Multi-user team hosting
-
-See [ROADMAP.md](ROADMAP.md) for full details and [TODO.md](TODO.md) for honest remaining gaps.
+See [ROADMAP.md](ROADMAP.md) and [MILESTONES.md](MILESTONES.md) for the full breakdown, and [TODO.md](TODO.md) for honest remaining non-goals (hosted multi-tenant deployment, benchmark-based scoring).
 
 ---
 
 ## Docs & References
 
-| Document                                             | Purpose                                        |
-| ---------------------------------------------------- | ---------------------------------------------- |
-| [USER_GUIDE.md](USER_GUIDE.md)                       | Per-command walkthrough + JSON output contract |
-| [CLI_SPEC.md](CLI_SPEC.md)                           | Full command specification and flags           |
-| [ROUTING_RULES.md](ROUTING_RULES.md)                 | Scoring logic, classification, risk, fallback  |
-| [ARCHITECTURE.md](ARCHITECTURE.md)                   | Components, request lifecycle, data flow       |
-| [MODEL_REGISTRY_SCHEMA.md](MODEL_REGISTRY_SCHEMA.md) | Model entry schema (source of truth)           |
-| [PROVIDER_ADAPTER_SPEC.md](PROVIDER_ADAPTER_SPEC.md) | Provider adapter contract (6 providers)        |
-| [CONTRIBUTING.md](CONTRIBUTING.md)                   | Dev setup, conventions, pre-push checklist     |
-| [TESTING.md](TESTING.md)                             | Test layout, coverage targets, live test       |
-| [SECURITY.md](SECURITY.md)                           | Secret handling, safety design, reporting      |
-| [CHANGELOG.md](CHANGELOG.md)                         | Version history and release notes              |
-| [MILESTONES.md](MILESTONES.md)                       | Milestone breakdown (M1–M7)                    |
-| [TODO.md](TODO.md)                                   | Completed work + honest remaining gaps         |
+| Document | Purpose |
+| --- | --- |
+| [USER_GUIDE.md](USER_GUIDE.md) | Per-command walkthrough + JSON output contract |
+| [integrations/README.md](integrations/README.md) | Install the skill into any agent host |
+| [CLI_SPEC.md](CLI_SPEC.md) | Full command specification and flags |
+| [ROUTING_RULES.md](ROUTING_RULES.md) | Scoring, classification, risk, fallback logic |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Components, request lifecycle, data flow |
+| [MODEL_REGISTRY_SCHEMA.md](MODEL_REGISTRY_SCHEMA.md) | Model entry schema (source of truth) |
+| [PROVIDER_ADAPTER_SPEC.md](PROVIDER_ADAPTER_SPEC.md) | Provider adapter contract |
+| [TESTING.md](TESTING.md) | Test layout, coverage, post-build verification |
+| [SECURITY.md](SECURITY.md) | Secret handling, safety design, reporting |
+| [CHANGELOG.md](CHANGELOG.md) | Version history |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Dev setup, conventions, pre-push checklist |
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE) for details.
+MIT — see [LICENSE](LICENSE).
 
 ## Contributing
 
-Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, conventions, and pre-push checks.
+Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for setup, conventions, and pre-push checks.

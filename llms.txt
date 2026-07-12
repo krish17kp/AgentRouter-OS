@@ -1,59 +1,64 @@
 # AgentRouter OS
 
-> CLI-first AI task routing planner that classifies your task across 7 dimensions and recommends the best model, agent, or tool with explainable scoring. Local-first with no cloud dependencies — everything is stored in SQLite with full decision replay and team policy support.
+> CLI-first AI task-routing planner that classifies a task across 7 dimensions and recommends the best model, agent, or CLI/IDE tool with explainable scoring, a fallback, and a risk-scaled safety checklist. Local-first, no cloud or API keys required — everything is stored in SQLite with full decision replay, feedback learning, per-user telemetry, and a portable skill that plugs into agent hosts like Claude Code, Codex, Antigravity, and Cursor.
 
 Key features:
 - Task classification across 7 dimensions (type, complexity, risk, context, output, tools, approval)
-- YAML-driven model registry with live provider sync (OpenRouter, OpenAI)
-- Scoring-based recommendations with plain-English reasoning
-- SQLite decision log with full replay and feedback learning
-- Risk-aware gating and safety checklists
-- Local web dashboard with decision history and stats
-- Opt-in execution with high-risk auto-blocking
-- Team mode via shared `AGENTROUTER_HOME` with unified policy
+- YAML-driven model registry with live provider sync (OpenRouter, OpenAI) — routing never hardcodes a model name
+- Scoring-based recommendations with plain-English reasoning and a fallback
+- SQLite decision log with full replay (`explain`) and a bounded feedback learning loop
+- Risk-aware gating: high-risk tasks always require human approval and never auto-execute
+- Read-only local web dashboard with decision history and per-user stats
+- Opt-in execution with provable high-risk blocking
+- Team mode via shared `AGENTROUTER_HOME`: unified policy + per-user history (`AGENTROUTER_USER`)
+- Agent skill integration: host agent decomposes a task, AgentRouter routes each subtask to a pricing tier, the host runs each on its cheapest adequate model (saves tokens)
 
 ## Getting Started
 
-- [Quick Start with Installation](https://github.com/krish17kp/AgentRouter-OS/blob/main/README.md#quick-start): Setup from scratch in 5 minutes
-- [Common Tasks](https://github.com/krish17kp/AgentRouter-OS/blob/main/README.md#common-tasks): Route tasks, refresh catalog, view decisions, run execution
-- [Understanding the Output](https://github.com/krish17kp/AgentRouter-OS/blob/main/README.md#understanding-the-output): Task classification, scoring, recommendations explained
-- [Troubleshooting](https://github.com/krish17kp/AgentRouter-OS/blob/main/README.md#troubleshooting): Common issues with solutions and exit codes
+- [Quick Start with Installation](https://github.com/krish17kp/AgentRouter-OS/blob/main/README.md#quick-start): Install, init, and route your first task in 5 minutes
+- [Common Tasks](https://github.com/krish17kp/AgentRouter-OS/blob/main/README.md#common-tasks): Override the classifier, replay decisions, generate prompts, refresh catalogs, feedback, execute, stats, JSON
+- [Understanding the Output](https://github.com/krish17kp/AgentRouter-OS/blob/main/README.md#understanding-the-output): The 7 classification dimensions and the scoring formula
+- [Troubleshooting](https://github.com/krish17kp/AgentRouter-OS/blob/main/README.md#troubleshooting): Common issues and exit codes
+
+## Agent Host Integration
+
+- [Use AgentRouter inside Claude Code / Codex / Antigravity / Cursor](https://github.com/krish17kp/AgentRouter-OS/blob/main/README.md#use-agentrouter-inside-claude-code-codex-antigravity-cursor): Auto/manual modes and the decompose-then-route protocol
+- [integrations/README.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/integrations/README.md): Per-host install instructions
+- [integrations/AGENTS.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/integrations/AGENTS.md): Host-agnostic protocol snippet to paste into any instruction file
+- [Claude Code SKILL.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/integrations/claude-code/agentrouter/SKILL.md): The full skill (modes, decomposition, tier-to-model mapping, safety gate)
 
 ## Core Documentation
 
-- [USER_GUIDE.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/USER_GUIDE.md): Full command walkthrough, JSON output contract, all flags and options
+- [USER_GUIDE.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/USER_GUIDE.md): Full command walkthrough, JSON output contract, all flags
 - [CLI_SPEC.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/CLI_SPEC.md): Complete command specification and argument details
 - [ROUTING_RULES.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/ROUTING_RULES.md): Classification logic, scoring formula, risk rules, fallback strategy
 
 ## Configuration and Registry
 
-- [MODEL_REGISTRY_SCHEMA.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/MODEL_REGISTRY_SCHEMA.md): Model entry schema (source of truth) with all required and optional fields
-- [PROVIDER_ADAPTER_SPEC.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/PROVIDER_ADAPTER_SPEC.md): Adapter contract for 6 providers with execution config
-- [README — Model Registry and Configuration](https://github.com/krish17kp/AgentRouter-OS/blob/main/README.md#model-registry-and-configuration): How to add models, curate ability scores, disable models
+- [Configuration](https://github.com/krish17kp/AgentRouter-OS/blob/main/README.md#configuration): Custom weights (w_cap/w_cost/w_lat/w_ctx), policy caps, adding/retiring models, ability overrides
+- [MODEL_REGISTRY_SCHEMA.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/MODEL_REGISTRY_SCHEMA.md): Model entry schema (source of truth) with all fields
+- [PROVIDER_ADAPTER_SPEC.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/PROVIDER_ADAPTER_SPEC.md): Adapter contract with execution config
 
 ## Architecture and Design
 
-- [ARCHITECTURE.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/ARCHITECTURE.md): Components, request lifecycle, data flow diagrams
-- [README — Architecture & Design](https://github.com/krish17kp/AgentRouter-OS/blob/main/README.md#architecture--design): Design principles, no-hardcoding philosophy, reversibility
-- [SECURITY.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/SECURITY.md): Secret handling, privacy notes, safety design, reporting vulnerabilities
+- [ARCHITECTURE.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/ARCHITECTURE.md): Components, request lifecycle, data flow
+- [SECURITY.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/SECURITY.md): Secret handling, privacy, safety design, reporting
 
 ## Development and Testing
 
 - [CONTRIBUTING.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/CONTRIBUTING.md): Dev setup, conventions, pre-push checklist
-- [TESTING.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/TESTING.md): Test layout, coverage targets, running tests
-- [README — Testing & Quality](https://github.com/krish17kp/AgentRouter-OS/blob/main/README.md#testing--quality): Test statistics, coverage enforced in CI
+- [TESTING.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/TESTING.md): Test layout, coverage targets, post-build wheel verification
+- [Testing & Quality](https://github.com/krish17kp/AgentRouter-OS/blob/main/README.md#testing--quality): Test stats and the build-smoke CI job
 
 ## Project Status and Roadmap
 
-- [MILESTONES.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/MILESTONES.md): Milestone breakdown (M1–M7) with feature details
-- [ROADMAP.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/ROADMAP.md): Full roadmap with phases and timeline
-- [TODO.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/TODO.md): Completed work and honest remaining gaps
-- [CHANGELOG.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/CHANGELOG.md): Version history and release notes
+- [MILESTONES.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/MILESTONES.md): Milestone breakdown (M1–M8) with validation checklists
+- [ROADMAP.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/ROADMAP.md): Full roadmap with phases
+- [TODO.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/TODO.md): Completed work and honest remaining non-goals
+- [CHANGELOG.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/CHANGELOG.md): Version history
 
-## Optional Resources
+## Optional
 
-- [RELEASE.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/RELEASE.md): Release checklist and process
+- [RELEASE.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/RELEASE.md): Release checklist and PyPI publishing steps
 - [PRD.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/PRD.md): Product requirements document
 - [BRD.md](https://github.com/krish17kp/AgentRouter-OS/blob/main/BRD.md): Business requirements document
-- [README — Features](https://github.com/krish17kp/AgentRouter-OS/blob/main/README.md#features): Detailed feature list with descriptions
-- [README — Advanced Usage](https://github.com/krish17kp/AgentRouter-OS/blob/main/README.md#advanced-usage): Batch routing, JSON output, custom weights
