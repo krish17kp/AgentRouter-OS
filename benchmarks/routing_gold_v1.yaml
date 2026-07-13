@@ -1,0 +1,105 @@
+# AgentRouter OS — routing gold benchmark v1
+#
+# Each scenario is a self-contained synthetic registry + a pinned classification
+# + expected routing outcome. Grades eligibility filters, top recommendation,
+# acceptable fallback, pricing cap, retired-model exclusion, and tool/context
+# constraints. Model dicts follow MODEL_REGISTRY_SCHEMA.md.
+version: 1
+scenarios:
+  - id: r-context-filter
+    description: A 300k-token task excludes sub-300k-context models.
+    classification: {task_type: coding, complexity: high, risk: low, context_tokens: 300000, tool_needs: []}
+    models:
+      - {provider: p, model_id: big-ctx, context_window: 400000, max_output_tokens: 8000, pricing_tier: medium, latency_tier: fast, ability: {coding: 8, reasoning: 8, writing: 7}, tool_support: [], vision_support: false, deprecation_status: active}
+      - {provider: p, model_id: small-ctx, context_window: 100000, max_output_tokens: 8000, pricing_tier: low, latency_tier: fast, ability: {coding: 9, reasoning: 9, writing: 9}, tool_support: [], vision_support: false, deprecation_status: active}
+    expect: {recommendation: big-ctx, excluded: [small-ctx]}
+
+  - id: r-tool-filter
+    description: A task needing file-edit + shell excludes a model missing shell.
+    classification: {task_type: coding, complexity: high, risk: low, context_tokens: 4000, tool_needs: [file-edit, shell]}
+    models:
+      - {provider: p, model_id: full-tools, context_window: 100000, max_output_tokens: 8000, pricing_tier: medium, latency_tier: fast, ability: {coding: 8, reasoning: 7, writing: 7}, tool_support: [file-edit, shell], vision_support: false, deprecation_status: active}
+      - {provider: p, model_id: partial-tools, context_window: 100000, max_output_tokens: 8000, pricing_tier: low, latency_tier: fast, ability: {coding: 10, reasoning: 10, writing: 10}, tool_support: [file-edit], vision_support: false, deprecation_status: active}
+    expect: {recommendation: full-tools, excluded: [partial-tools]}
+
+  - id: r-vision-filter
+    description: A vision task excludes models without vision support.
+    classification: {task_type: analysis, complexity: medium, risk: low, context_tokens: 4000, tool_needs: [vision]}
+    models:
+      - {provider: p, model_id: sees, context_window: 100000, max_output_tokens: 8000, pricing_tier: medium, latency_tier: fast, ability: {coding: 7, reasoning: 8, writing: 8}, tool_support: [], vision_support: true, deprecation_status: active}
+      - {provider: p, model_id: blind, context_window: 100000, max_output_tokens: 8000, pricing_tier: low, latency_tier: fast, ability: {coding: 10, reasoning: 10, writing: 10}, tool_support: [], vision_support: false, deprecation_status: active}
+    expect: {recommendation: sees, excluded: [blind]}
+
+  - id: r-top-by-ability
+    description: On a high-complexity coding task the strongest coder wins.
+    classification: {task_type: coding, complexity: high, risk: high, context_tokens: 4000, tool_needs: []}
+    models:
+      - {provider: p, model_id: strong, context_window: 100000, max_output_tokens: 8000, pricing_tier: frontier, latency_tier: medium, ability: {coding: 10, reasoning: 9, writing: 8}, tool_support: [], vision_support: false, deprecation_status: active}
+      - {provider: p, model_id: weak, context_window: 100000, max_output_tokens: 8000, pricing_tier: frontier, latency_tier: medium, ability: {coding: 5, reasoning: 5, writing: 5}, tool_support: [], vision_support: false, deprecation_status: active}
+    expect: {recommendation: strong, fallback: [weak]}
+
+  - id: r-declared-fallback
+    description: A declared, eligible fallback beats a higher-scoring sibling.
+    classification: {task_type: coding, complexity: high, risk: low, context_tokens: 4000, tool_needs: []}
+    models:
+      - {provider: p, model_id: top, context_window: 100000, max_output_tokens: 8000, pricing_tier: medium, latency_tier: fast, ability: {coding: 9, reasoning: 8, writing: 7}, tool_support: [], vision_support: false, deprecation_status: active, fallback: [declared]}
+      - {provider: p, model_id: declared, context_window: 100000, max_output_tokens: 8000, pricing_tier: low, latency_tier: fast, ability: {coding: 5, reasoning: 5, writing: 5}, tool_support: [], vision_support: false, deprecation_status: active}
+      - {provider: p, model_id: higher-scorer, context_window: 100000, max_output_tokens: 8000, pricing_tier: medium, latency_tier: fast, ability: {coding: 8, reasoning: 8, writing: 8}, tool_support: [], vision_support: false, deprecation_status: active}
+    expect: {recommendation: top, fallback: [declared]}
+
+  - id: r-pricing-cap
+    description: policy.max_pricing_tier=low caps routing; frontier is unreachable.
+    max_pricing_tier: low
+    classification: {task_type: coding, complexity: high, risk: low, context_tokens: 4000, tool_needs: []}
+    models:
+      - {provider: p, model_id: frontier-best, context_window: 100000, max_output_tokens: 8000, pricing_tier: frontier, latency_tier: fast, ability: {coding: 10, reasoning: 10, writing: 10}, tool_support: [], vision_support: false, deprecation_status: active}
+      - {provider: p, model_id: low-ok, context_window: 100000, max_output_tokens: 8000, pricing_tier: low, latency_tier: fast, ability: {coding: 7, reasoning: 7, writing: 7}, tool_support: [], vision_support: false, deprecation_status: active}
+    expect: {recommendation: low-ok}
+
+  - id: r-retired-never-wins
+    description: A retired model is excluded even when it is the strongest.
+    classification: {task_type: coding, complexity: high, risk: low, context_tokens: 4000, tool_needs: []}
+    models:
+      - {provider: p, model_id: retired-best, context_window: 100000, max_output_tokens: 8000, pricing_tier: frontier, latency_tier: fast, ability: {coding: 10, reasoning: 10, writing: 10}, tool_support: [], vision_support: false, deprecation_status: retired}
+      - {provider: p, model_id: active-ok, context_window: 100000, max_output_tokens: 8000, pricing_tier: medium, latency_tier: fast, ability: {coding: 7, reasoning: 7, writing: 7}, tool_support: [], vision_support: false, deprecation_status: active}
+    expect: {recommendation: active-ok, excluded: [retired-best]}
+
+  - id: r-deprecated-penalized
+    description: A deprecated model is penalized enough to lose to a weaker active one.
+    classification: {task_type: coding, complexity: high, risk: low, context_tokens: 4000, tool_needs: []}
+    models:
+      - {provider: p, model_id: deprecated-strong, context_window: 100000, max_output_tokens: 8000, pricing_tier: medium, latency_tier: fast, ability: {coding: 10, reasoning: 9, writing: 8}, tool_support: [], vision_support: false, deprecation_status: deprecated}
+      - {provider: p, model_id: active-good, context_window: 100000, max_output_tokens: 8000, pricing_tier: medium, latency_tier: fast, ability: {coding: 9, reasoning: 9, writing: 8}, tool_support: [], vision_support: false, deprecation_status: active}
+    expect: {recommendation: active-good}
+
+  - id: r-fallback-cheaper-sibling
+    description: With no declared fallback, a cheaper same-provider sibling is the fallback.
+    classification: {task_type: coding, complexity: high, risk: low, context_tokens: 4000, tool_needs: []}
+    models:
+      - {provider: p, model_id: premium, context_window: 100000, max_output_tokens: 8000, pricing_tier: high, latency_tier: fast, ability: {coding: 10, reasoning: 9, writing: 8}, tool_support: [], vision_support: false, deprecation_status: active}
+      - {provider: p, model_id: cheaper, context_window: 100000, max_output_tokens: 8000, pricing_tier: low, latency_tier: fast, ability: {coding: 8, reasoning: 8, writing: 8}, tool_support: [], vision_support: false, deprecation_status: active}
+    expect: {recommendation: premium, fallback: [cheaper]}
+
+  - id: r-no-eligible-model
+    description: When every model is too small for the context, nothing is eligible.
+    classification: {task_type: coding, complexity: high, risk: low, context_tokens: 500000, tool_needs: []}
+    models:
+      - {provider: p, model_id: tiny-a, context_window: 100000, max_output_tokens: 8000, pricing_tier: low, latency_tier: fast, ability: {coding: 9, reasoning: 9, writing: 9}, tool_support: [], vision_support: false, deprecation_status: active}
+      - {provider: p, model_id: tiny-b, context_window: 128000, max_output_tokens: 8000, pricing_tier: medium, latency_tier: fast, ability: {coding: 8, reasoning: 8, writing: 8}, tool_support: [], vision_support: false, deprecation_status: active}
+    expect: {no_eligible: true}
+
+  - id: r-cost-fit-low-complexity
+    description: On a trivial task a cheap model beats a pricey one (cost fit dominates).
+    classification: {task_type: coding, complexity: low, risk: low, context_tokens: 2000, tool_needs: []}
+    models:
+      - {provider: p, model_id: cheap-fast, context_window: 100000, max_output_tokens: 8000, pricing_tier: low, latency_tier: fast, ability: {coding: 7, reasoning: 7, writing: 7}, tool_support: [], vision_support: false, deprecation_status: active}
+      - {provider: p, model_id: pricey, context_window: 100000, max_output_tokens: 8000, pricing_tier: frontier, latency_tier: slow, ability: {coding: 8, reasoning: 8, writing: 8}, tool_support: [], vision_support: false, deprecation_status: active}
+    expect: {recommendation: cheap-fast}
+
+  - id: r-cross-provider-fallback
+    description: The fallback prefers a different provider when tiers are equal.
+    classification: {task_type: coding, complexity: high, risk: low, context_tokens: 4000, tool_needs: []}
+    models:
+      - {provider: alpha, model_id: alpha-top, context_window: 100000, max_output_tokens: 8000, pricing_tier: medium, latency_tier: fast, ability: {coding: 10, reasoning: 9, writing: 8}, tool_support: [], vision_support: false, deprecation_status: active}
+      - {provider: beta, model_id: beta-alt, context_window: 100000, max_output_tokens: 8000, pricing_tier: medium, latency_tier: fast, ability: {coding: 8, reasoning: 8, writing: 8}, tool_support: [], vision_support: false, deprecation_status: active}
+    expect: {recommendation: alpha-top, fallback: [beta-alt]}

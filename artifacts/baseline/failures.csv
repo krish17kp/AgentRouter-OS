@@ -1,0 +1,383 @@
+id,prompt,dimension,expected,predicted
+cod-002,Fix a null pointer exception in the login handler,risk,medium|high,low
+cod-002,Fix a null pointer exception in the login handler,approval,human-approval-required|notify,auto
+cod-002,Fix a null pointer exception in the login handler,tools,file-edit,
+cod-005,Build a REST API for a todo application with CRUD endpoints,complexity,medium|high,low
+cod-005,Build a REST API for a todo application with CRUD endpoints,tools,file-edit|shell,shell
+cod-006,Add pagination to the products endpoint,context,medium,small
+cod-006,Add pagination to the products endpoint,tools,file-edit,
+cod-007,Optimize this SQL query that is running slowly,complexity,medium,low
+cod-007,Optimize this SQL query that is running slowly,risk,medium,low
+cod-007,Optimize this SQL query that is running slowly,approval,notify,auto
+cod-007,Optimize this SQL query that is running slowly,tools,,shell
+cod-008,Debug why the unit tests are failing in the auth package,complexity,medium,low
+cod-008,Debug why the unit tests are failing in the auth package,context,medium,small
+cod-008,Debug why the unit tests are failing in the auth package,tools,file-edit|shell,shell
+cod-009,Create a Python script to rename files in a directory,context,small,medium
+cod-009,Create a Python script to rename files in a directory,tools,shell,file-edit
+cod-010,Implement JWT authentication middleware for the API,complexity,medium|high,low
+cod-010,Implement JWT authentication middleware for the API,context,medium,small
+cod-010,Implement JWT authentication middleware for the API,tools,file-edit,
+cod-011,Write unit tests for the shopping cart module,complexity,medium,low
+cod-012,Add a dark mode toggle to the settings page,task_type,coding,general
+cod-012,Add a dark mode toggle to the settings page,output,code,text
+cod-012,Add a dark mode toggle to the settings page,tools,file-edit,
+cod-013,Convert this callback-based code to async/await,complexity,medium,low
+cod-013,Convert this callback-based code to async/await,tools,file-edit,
+cod-014,Implement rate limiting on the public endpoints,complexity,medium,low
+cod-014,Implement rate limiting on the public endpoints,risk,medium|high,low
+cod-014,Implement rate limiting on the public endpoints,context,medium,small
+cod-014,Implement rate limiting on the public endpoints,approval,human-approval-required|notify,auto
+cod-014,Implement rate limiting on the public endpoints,tools,file-edit,
+cod-015,Build a CLI tool that converts CSV to JSON,tools,file-edit|shell,shell
+cod-016,Refactor the entire authentication system across the codebase,complexity,high,medium
+cod-016,Refactor the entire authentication system across the codebase,tools,file-edit|shell,file-edit
+cod-017,Add input validation to the signup form,task_type,coding,general
+cod-017,Add input validation to the signup form,risk,medium,low
+cod-017,Add input validation to the signup form,output,code,text
+cod-017,Add input validation to the signup form,approval,notify,auto
+cod-017,Add input validation to the signup form,tools,file-edit,
+cod-018,Implement a caching layer with Redis for the product service,complexity,medium|high,low
+cod-018,Implement a caching layer with Redis for the product service,risk,medium,low
+cod-018,Implement a caching layer with Redis for the product service,context,medium,small
+cod-018,Implement a caching layer with Redis for the product service,approval,notify,auto
+cod-018,Implement a caching layer with Redis for the product service,tools,file-edit|shell,
+cod-019,Write a bash script to back up the database nightly,tools,shell,
+cod-020,Create a React component for a searchable dropdown,task_type,coding,general
+cod-020,Create a React component for a searchable dropdown,output,code,text
+cod-020,Create a React component for a searchable dropdown,tools,file-edit,
+cod-021,Implement websocket support for real-time notifications,complexity,medium|high,low
+cod-021,Implement websocket support for real-time notifications,risk,medium,low
+cod-021,Implement websocket support for real-time notifications,context,medium,small
+cod-021,Implement websocket support for real-time notifications,approval,notify,auto
+cod-021,Implement websocket support for real-time notifications,tools,file-edit|shell,
+cod-022,Fix the memory leak in the image processing worker,complexity,high,low
+cod-022,Fix the memory leak in the image processing worker,risk,medium|high,low
+cod-022,Fix the memory leak in the image processing worker,context,medium,small
+cod-022,Fix the memory leak in the image processing worker,approval,human-approval-required|notify,auto
+cod-022,Fix the memory leak in the image processing worker,tools,file-edit,vision
+cod-024,Build a webhook receiver that verifies signatures,task_type,coding,general
+cod-024,Build a webhook receiver that verifies signatures,complexity,medium,low
+cod-024,Build a webhook receiver that verifies signatures,risk,medium|high,low
+cod-024,Build a webhook receiver that verifies signatures,output,code,text
+cod-024,Build a webhook receiver that verifies signatures,approval,human-approval-required|notify,auto
+cod-024,Build a webhook receiver that verifies signatures,tools,file-edit,
+cod-025,Implement pagination and sorting for the admin users table with tests,context,medium,small
+cod-025,Implement pagination and sorting for the admin users table with tests,tools,file-edit|shell,shell
+rea-001,Design the architecture for a multi-tenant SaaS platform,complexity,high,medium
+rea-001,Design the architecture for a multi-tenant SaaS platform,risk,medium,low
+rea-001,Design the architecture for a multi-tenant SaaS platform,output,plan,text
+rea-001,Design the architecture for a multi-tenant SaaS platform,approval,notify,auto
+rea-002,Plan a migration strategy from a monolith to microservices,complexity,high,low
+rea-003,Decide between PostgreSQL and MongoDB for our new service,task_type,reasoning|analysis,coding
+rea-003,Decide between PostgreSQL and MongoDB for our new service,risk,medium,low
+rea-003,Decide between PostgreSQL and MongoDB for our new service,output,plan|text,code
+rea-003,Decide between PostgreSQL and MongoDB for our new service,context,small,medium
+rea-003,Decide between PostgreSQL and MongoDB for our new service,approval,notify,auto
+rea-003,Decide between PostgreSQL and MongoDB for our new service,tools,,file-edit
+rea-004,Design a rate-limiting strategy for a public API,task_type,reasoning,coding
+rea-004,Design a rate-limiting strategy for a public API,complexity,medium|high,low
+rea-004,Design a rate-limiting strategy for a public API,risk,medium,low
+rea-004,Design a rate-limiting strategy for a public API,output,plan,code
+rea-004,Design a rate-limiting strategy for a public API,approval,notify,auto
+rea-005,Architect a scalable event-driven order processing system,complexity,high,low
+rea-005,Architect a scalable event-driven order processing system,risk,medium|high,low
+rea-005,Architect a scalable event-driven order processing system,output,plan,text
+rea-005,Architect a scalable event-driven order processing system,approval,human-approval-required|notify,auto
+rea-006,Prove that this sorting algorithm terminates,complexity,medium|high,low
+rea-007,Devise a strategy to reduce our cloud infrastructure costs,complexity,medium|high,low
+rea-007,Devise a strategy to reduce our cloud infrastructure costs,risk,medium,high
+rea-007,Devise a strategy to reduce our cloud infrastructure costs,output,plan,text
+rea-007,Devise a strategy to reduce our cloud infrastructure costs,context,small,medium
+rea-007,Devise a strategy to reduce our cloud infrastructure costs,approval,notify,human-approval-required
+rea-008,Plan the rollout of a feature flag system across teams,risk,medium,low
+rea-008,Plan the rollout of a feature flag system across teams,approval,notify,auto
+rea-009,Design a database schema for a booking platform,complexity,medium|high,low
+rea-009,Design a database schema for a booking platform,output,plan|code,text
+rea-009,Design a database schema for a booking platform,context,small,medium
+rea-010,Work out the optimal caching strategy for read-heavy traffic,complexity,medium|high,low
+rea-010,Work out the optimal caching strategy for read-heavy traffic,risk,medium,low
+rea-010,Work out the optimal caching strategy for read-heavy traffic,approval,notify,auto
+rea-011,Decide how to shard the users table for scale,complexity,high,low
+rea-011,Decide how to shard the users table for scale,risk,medium|high,low
+rea-011,Decide how to shard the users table for scale,output,plan,text
+rea-011,Decide how to shard the users table for scale,approval,human-approval-required|notify,auto
+rea-012,Design an approach for zero-downtime schema migrations,complexity,high,low
+rea-012,Design an approach for zero-downtime schema migrations,output,plan,text
+rea-013,Plan a disaster recovery process for the production cluster,complexity,high,low
+rea-014,Strategize how to onboard 10x more users next quarter,task_type,reasoning,general
+rea-014,Strategize how to onboard 10x more users next quarter,complexity,medium|high,low
+rea-014,Strategize how to onboard 10x more users next quarter,output,plan,text
+rea-015,Design the API contract between the frontend and backend,output,plan,code
+rea-016,Figure out the best deployment topology for low latency worldwide,task_type,reasoning,general
+rea-016,Figure out the best deployment topology for low latency worldwide,complexity,high,low
+rea-016,Figure out the best deployment topology for low latency worldwide,output,plan,text
+rea-017,Plan how to introduce observability into a legacy system,complexity,medium|high,low
+rea-017,Plan how to introduce observability into a legacy system,risk,medium,low
+rea-017,Plan how to introduce observability into a legacy system,approval,notify,auto
+rea-018,Design a permission model with roles and fine-grained scopes,complexity,high,low
+rea-018,Design a permission model with roles and fine-grained scopes,risk,high,low
+rea-018,Design a permission model with roles and fine-grained scopes,output,plan,text
+rea-018,Design a permission model with roles and fine-grained scopes,approval,human-approval-required,auto
+wri-001,Write a blog post about our new API launch,task_type,writing,coding
+wri-001,Write a blog post about our new API launch,output,text,code
+wri-001,Write a blog post about our new API launch,context,small,medium
+wri-001,Write a blog post about our new API launch,tools,,file-edit
+wri-002,Draft a professional email declining a meeting request,task_type,writing,coding
+wri-002,Draft a professional email declining a meeting request,output,text,code
+wri-005,Write release notes for version 2.0,task_type,writing,general
+wri-009,Write a cover letter for a software engineering role,task_type,writing,general
+wri-010,Compose a tweet thread announcing the beta,task_type,writing,general
+wri-011,Write a compelling landing page headline and subtext,task_type,writing,general
+wri-012,Draft a project proposal for stakeholders,context,small,medium
+wri-016,Write a technical blog post explaining our caching design,complexity,medium,low
+wri-017,Write marketing copy for the pricing page,task_type,writing,general
+wri-018,Write a short story about a robot learning to paint,task_type,writing,general
+ana-001,Analyze this dataset and identify sales trends,complexity,medium,low
+ana-003,Evaluate the security posture of this configuration,complexity,medium|high,low
+ana-004,Review this pull request for code quality issues,task_type,analysis,coding
+ana-004,Review this pull request for code quality issues,complexity,medium,low
+ana-004,Review this pull request for code quality issues,risk,medium,low
+ana-004,Review this pull request for code quality issues,output,text,code
+ana-004,Review this pull request for code quality issues,context,medium,small
+ana-004,Review this pull request for code quality issues,approval,notify,auto
+ana-005,Assess whether our test coverage is adequate,complexity,medium,low
+ana-006,What's wrong with this database schema design,complexity,medium,low
+ana-007,Analyze the root cause of the latency spike,complexity,medium|high,low
+ana-007,Analyze the root cause of the latency spike,risk,medium,low
+ana-007,Analyze the root cause of the latency spike,approval,notify,auto
+ana-008,Compare three cloud providers for our workload,complexity,medium,low
+ana-008,Compare three cloud providers for our workload,context,small,medium
+ana-009,Evaluate the tradeoffs of adopting GraphQL,complexity,medium,low
+ana-010,Review the quarterly metrics and describe what changed,complexity,medium,low
+ana-010,Review the quarterly metrics and describe what changed,context,medium,small
+ana-011,Assess the risk of this dependency upgrade,complexity,medium,low
+ana-011,Assess the risk of this dependency upgrade,risk,medium,low
+ana-011,Assess the risk of this dependency upgrade,approval,notify,auto
+ana-012,Analyze user churn and describe the main drivers,complexity,medium,low
+ana-013,Compare the performance of these two algorithms,complexity,medium,low
+ana-014,Evaluate whether this architecture will scale to 1M users,complexity,high,medium
+ana-014,Evaluate whether this architecture will scale to 1M users,risk,medium,low
+ana-014,Evaluate whether this architecture will scale to 1M users,approval,notify,auto
+ana-015,Review the incident report and identify gaps,task_type,analysis,writing
+ana-015,Review the incident report and identify gaps,complexity,medium,low
+ana-015,Review the incident report and identify gaps,risk,medium,low
+ana-015,Review the incident report and identify gaps,approval,notify,auto
+sum-005,Summarize a 300k-token codebase for a new engineer,complexity,medium|high,low
+gen-001,Help me with my project,context,small,medium
+gen-003,Give me some ideas for a weekend side project,context,small,medium
+gen-008,Recommend a good book on distributed systems,context,small,medium
+gen-012,What questions should I ask in a system design interview?,task_type,general,reasoning
+mix-001,Look into why signups dropped and propose a fix,task_type,analysis|reasoning,coding
+mix-001,Look into why signups dropped and propose a fix,risk,medium,low
+mix-001,Look into why signups dropped and propose a fix,output,text|plan,code
+mix-001,Look into why signups dropped and propose a fix,approval,notify,auto
+mix-002,Research vector databases and recommend one for us,task_type,analysis|reasoning,general
+mix-002,Research vector databases and recommend one for us,complexity,medium,low
+mix-004,Write documentation and code samples for the SDK,complexity,medium,low
+mix-004,Write documentation and code samples for the SDK,tools,file-edit,
+mix-005,Analyze the slow endpoint and refactor it,risk,medium,low
+mix-005,Analyze the slow endpoint and refactor it,context,medium,small
+mix-005,Analyze the slow endpoint and refactor it,approval,notify,auto
+mix-006,Plan and scaffold a new microservice,complexity,medium|high,low
+mix-006,Plan and scaffold a new microservice,risk,medium,low
+mix-006,Plan and scaffold a new microservice,approval,notify,auto
+mix-006,Plan and scaffold a new microservice,tools,file-edit|shell,
+mix-007,Summarize the RFC and give your recommendation,complexity,medium,low
+mix-008,Design and build a notification service,complexity,high,low
+mix-008,Design and build a notification service,risk,medium,low
+mix-008,Design and build a notification service,output,code|plan,text
+mix-008,Design and build a notification service,approval,notify,auto
+mix-008,Design and build a notification service,tools,file-edit|shell,
+mix-009,Review the code and write a summary of issues,complexity,medium,low
+mix-009,Review the code and write a summary of issues,risk,medium,low
+mix-009,Review the code and write a summary of issues,context,medium,small
+mix-009,Review the code and write a summary of issues,approval,notify,auto
+mix-010,Evaluate options and draft an architecture decision record,risk,medium,low
+mix-010,Evaluate options and draft an architecture decision record,approval,notify,auto
+mix-011,Investigate the flaky test and fix it,risk,medium,low
+mix-011,Investigate the flaky test and fix it,context,medium,small
+mix-011,Investigate the flaky test and fix it,approval,notify,auto
+mix-011,Investigate the flaky test and fix it,tools,file-edit|shell,shell
+mix-012,Compare frameworks then build a prototype,complexity,medium|high,low
+mix-012,Compare frameworks then build a prototype,tools,file-edit|shell,
+mix-013,Draft a spec and implement the first endpoint,tools,file-edit,
+mix-014,"Explain the bug, then patch it",task_type,coding,writing
+mix-014,"Explain the bug, then patch it",risk,medium,low
+mix-014,"Explain the bug, then patch it",approval,notify,auto
+mix-014,"Explain the bug, then patch it",tools,file-edit,
+mix-015,Audit dependencies and upgrade the vulnerable ones,task_type,coding|analysis,general
+mix-015,Audit dependencies and upgrade the vulnerable ones,complexity,medium,low
+mix-015,Audit dependencies and upgrade the vulnerable ones,risk,high,low
+mix-015,Audit dependencies and upgrade the vulnerable ones,context,medium,small
+mix-015,Audit dependencies and upgrade the vulnerable ones,approval,human-approval-required,auto
+mix-015,Audit dependencies and upgrade the vulnerable ones,tools,file-edit|shell,
+sec-001,Rotate the production database credentials,complexity,medium,low
+sec-001,Rotate the production database credentials,tools,shell,
+sec-002,Deploy the new version to the Kubernetes cluster,complexity,medium|high,low
+sec-002,Deploy the new version to the Kubernetes cluster,tools,shell,
+sec-003,Migrate the production database to the new schema,task_type,coding|reasoning,general
+sec-003,Migrate the production database to the new schema,complexity,high,medium
+sec-003,Migrate the production database to the new schema,output,code|plan,text
+sec-003,Migrate the production database to the new schema,tools,file-edit|shell,
+sec-004,Fix the SQL injection vulnerability in the search endpoint,complexity,medium|high,low
+sec-004,Fix the SQL injection vulnerability in the search endpoint,risk,high,low
+sec-004,Fix the SQL injection vulnerability in the search endpoint,context,medium,small
+sec-004,Fix the SQL injection vulnerability in the search endpoint,approval,human-approval-required,auto
+sec-004,Fix the SQL injection vulnerability in the search endpoint,tools,file-edit,
+sec-005,Implement the payment processing with Stripe,complexity,high,low
+sec-005,Implement the payment processing with Stripe,context,medium,small
+sec-005,Implement the payment processing with Stripe,tools,file-edit|shell,
+sec-006,Set up billing and subscription management,complexity,high,medium
+sec-006,Set up billing and subscription management,context,medium,small
+sec-006,Set up billing and subscription management,tools,file-edit|shell,
+sec-007,Run the terraform apply to provision the infrastructure,complexity,medium|high,low
+sec-007,Run the terraform apply to provision the infrastructure,tools,shell,
+sec-008,Store user passwords securely with hashing and salting,task_type,coding,general
+sec-008,Store user passwords securely with hashing and salting,complexity,medium|high,low
+sec-008,Store user passwords securely with hashing and salting,output,code,text
+sec-008,Store user passwords securely with hashing and salting,tools,file-edit,
+sec-009,Handle the API key secrets in the deployment pipeline,complexity,medium|high,low
+sec-009,Handle the API key secrets in the deployment pipeline,context,medium,small
+sec-009,Handle the API key secrets in the deployment pipeline,tools,file-edit|shell,
+sec-010,Delete the stale records from the production users table,complexity,medium,low
+sec-010,Delete the stale records from the production users table,tools,shell,
+sec-011,Audit the authentication flow for security holes,task_type,analysis,general
+sec-011,Audit the authentication flow for security holes,complexity,high,low
+sec-011,Audit the authentication flow for security holes,context,medium,small
+sec-012,Configure OAuth2 login with Google,task_type,coding,general
+sec-012,Configure OAuth2 login with Google,complexity,medium|high,low
+sec-012,Configure OAuth2 login with Google,output,code,text
+sec-012,Configure OAuth2 login with Google,context,medium,small
+sec-012,Configure OAuth2 login with Google,tools,file-edit,
+sec-013,Roll back the production deployment to the last good release,complexity,medium,low
+sec-013,Roll back the production deployment to the last good release,tools,shell,
+sec-014,Encrypt the PII fields in the user database,task_type,coding,general
+sec-014,Encrypt the PII fields in the user database,complexity,high,low
+sec-014,Encrypt the PII fields in the user database,risk,high,medium
+sec-014,Encrypt the PII fields in the user database,output,code,text
+sec-014,Encrypt the PII fields in the user database,context,medium,small
+sec-014,Encrypt the PII fields in the user database,approval,human-approval-required,notify
+sec-014,Encrypt the PII fields in the user database,tools,file-edit,
+sec-015,Set up the CI/CD pipeline to deploy on merge,task_type,coding|reasoning,general
+sec-015,Set up the CI/CD pipeline to deploy on merge,complexity,medium|high,low
+sec-015,Set up the CI/CD pipeline to deploy on merge,output,code|plan,text
+sec-015,Set up the CI/CD pipeline to deploy on merge,tools,file-edit|shell,
+rag-001,build a rag system which identifies the pdf very well and stores properly with chunking,task_type,coding|reasoning,general
+rag-001,build a rag system which identifies the pdf very well and stores properly with chunking,complexity,medium|high,low
+rag-001,build a rag system which identifies the pdf very well and stores properly with chunking,output,code|plan,text
+rag-001,build a rag system which identifies the pdf very well and stores properly with chunking,tools,file-edit|shell,
+rag-002,Implement a document ingestion pipeline with embeddings,complexity,medium|high,low
+rag-002,Implement a document ingestion pipeline with embeddings,tools,file-edit|shell,
+rag-003,Build a vector database search over our knowledge base,task_type,coding,general
+rag-003,Build a vector database search over our knowledge base,complexity,medium|high,low
+rag-003,Build a vector database search over our knowledge base,output,code,text
+rag-003,Build a vector database search over our knowledge base,tools,file-edit|shell,
+rag-004,Write a PDF parser that extracts tables and text,task_type,coding,general
+rag-004,Write a PDF parser that extracts tables and text,complexity,medium,low
+rag-004,Write a PDF parser that extracts tables and text,output,code,text
+rag-004,Write a PDF parser that extracts tables and text,tools,file-edit,
+rag-005,Implement semantic chunking for long documents,complexity,medium,low
+rag-005,Implement semantic chunking for long documents,tools,file-edit,
+rag-006,Train a classifier to detect spam messages,complexity,medium|high,low
+rag-006,Train a classifier to detect spam messages,tools,file-edit|shell,
+rag-007,Build an ETL pipeline that loads data into the warehouse,task_type,coding,general
+rag-007,Build an ETL pipeline that loads data into the warehouse,complexity,medium|high,low
+rag-007,Build an ETL pipeline that loads data into the warehouse,risk,medium,low
+rag-007,Build an ETL pipeline that loads data into the warehouse,output,code,text
+rag-007,Build an ETL pipeline that loads data into the warehouse,context,medium,small
+rag-007,Build an ETL pipeline that loads data into the warehouse,approval,notify,auto
+rag-007,Build an ETL pipeline that loads data into the warehouse,tools,file-edit|shell,
+rag-008,Set up a retrieval pipeline with reranking,task_type,coding,general
+rag-008,Set up a retrieval pipeline with reranking,complexity,medium|high,low
+rag-008,Set up a retrieval pipeline with reranking,output,code,text
+rag-008,Set up a retrieval pipeline with reranking,context,medium,small
+rag-008,Set up a retrieval pipeline with reranking,tools,file-edit|shell,
+rag-009,Implement embeddings generation and store them in a vector store,tools,file-edit|shell,
+rag-010,Build a data ingestion job that deduplicates records,task_type,coding,general
+rag-010,Build a data ingestion job that deduplicates records,complexity,medium,low
+rag-010,Build a data ingestion job that deduplicates records,risk,medium,low
+rag-010,Build a data ingestion job that deduplicates records,output,code,text
+rag-010,Build a data ingestion job that deduplicates records,context,medium,small
+rag-010,Build a data ingestion job that deduplicates records,approval,notify,auto
+rag-010,Build a data ingestion job that deduplicates records,tools,file-edit|shell,
+rag-011,Fine-tune an embedding model on our domain data,task_type,coding|reasoning,general
+rag-011,Fine-tune an embedding model on our domain data,complexity,high,low
+rag-011,Fine-tune an embedding model on our domain data,risk,medium,low
+rag-011,Fine-tune an embedding model on our domain data,output,code,text
+rag-011,Fine-tune an embedding model on our domain data,approval,notify,auto
+rag-011,Fine-tune an embedding model on our domain data,tools,file-edit|shell,
+rag-012,Design a RAG evaluation harness with retrieval metrics,complexity,high,low
+rag-012,Design a RAG evaluation harness with retrieval metrics,output,code|plan,text
+rag-012,Design a RAG evaluation harness with retrieval metrics,tools,file-edit|shell,
+rag-013,Build a frontend dashboard for the analytics pipeline,task_type,coding,general
+rag-013,Build a frontend dashboard for the analytics pipeline,complexity,medium|high,low
+rag-013,Build a frontend dashboard for the analytics pipeline,output,code,text
+rag-013,Build a frontend dashboard for the analytics pipeline,context,medium,small
+rag-013,Build a frontend dashboard for the analytics pipeline,tools,file-edit|shell,
+rag-014,Implement a backend service to serve model predictions,complexity,medium|high,low
+rag-014,Implement a backend service to serve model predictions,risk,medium,low
+rag-014,Implement a backend service to serve model predictions,context,medium,small
+rag-014,Implement a backend service to serve model predictions,approval,notify,auto
+rag-014,Implement a backend service to serve model predictions,tools,file-edit|shell,
+rag-015,Create a data validation layer for the ingestion pipeline,task_type,coding,general
+rag-015,Create a data validation layer for the ingestion pipeline,complexity,medium,low
+rag-015,Create a data validation layer for the ingestion pipeline,risk,medium,low
+rag-015,Create a data validation layer for the ingestion pipeline,output,code,text
+rag-015,Create a data validation layer for the ingestion pipeline,context,medium,small
+rag-015,Create a data validation layer for the ingestion pipeline,approval,notify,auto
+rag-015,Create a data validation layer for the ingestion pipeline,tools,file-edit,
+bld-001,build a mvp for a sales guide app,task_type,coding|reasoning,writing
+bld-001,build a mvp for a sales guide app,complexity,medium|high,low
+bld-001,build a mvp for a sales guide app,output,code|plan,text
+bld-001,build a mvp for a sales guide app,tools,file-edit|shell,
+bld-002,Build a mobile app for tracking daily habits,task_type,coding,general
+bld-002,Build a mobile app for tracking daily habits,complexity,medium|high,low
+bld-002,Build a mobile app for tracking daily habits,output,code,text
+bld-002,Build a mobile app for tracking daily habits,tools,file-edit|shell,
+bld-003,Create a web application for team task management,task_type,coding,general
+bld-003,Create a web application for team task management,complexity,medium|high,low
+bld-003,Create a web application for team task management,output,code,text
+bld-003,Create a web application for team task management,tools,file-edit|shell,
+bld-004,Build a chrome extension that blocks distractions,task_type,coding,general
+bld-004,Build a chrome extension that blocks distractions,complexity,medium,low
+bld-004,Build a chrome extension that blocks distractions,output,code,text
+bld-004,Build a chrome extension that blocks distractions,tools,file-edit|shell,
+bld-005,Develop a landing page with a signup form,task_type,coding,general
+bld-005,Develop a landing page with a signup form,output,code,text
+bld-005,Develop a landing page with a signup form,tools,file-edit|shell,
+bld-006,Build a Slack bot that posts daily standup reminders,task_type,coding,general
+bld-006,Build a Slack bot that posts daily standup reminders,complexity,medium,low
+bld-006,Build a Slack bot that posts daily standup reminders,output,code,text
+bld-006,Build a Slack bot that posts daily standup reminders,tools,file-edit|shell,
+bld-007,Create an application to generate invoices as PDFs,task_type,coding,general
+bld-007,Create an application to generate invoices as PDFs,complexity,medium,low
+bld-007,Create an application to generate invoices as PDFs,output,code,text
+bld-007,Create an application to generate invoices as PDFs,tools,file-edit|shell,
+bld-008,Build a real-time chat application with rooms,task_type,coding,general
+bld-008,Build a real-time chat application with rooms,complexity,high,low
+bld-008,Build a real-time chat application with rooms,output,code,text
+bld-008,Build a real-time chat application with rooms,context,medium,small
+bld-008,Build a real-time chat application with rooms,tools,file-edit|shell,
+typ-001,fix teh bug in login,risk,medium,low
+typ-001,fix teh bug in login,approval,notify,auto
+typ-001,fix teh bug in login,tools,file-edit,
+typ-002,refch the payment modle,task_type,coding,general
+typ-002,refch the payment modle,complexity,medium,low
+typ-002,refch the payment modle,output,code,text
+typ-002,refch the payment modle,tools,file-edit,
+typ-003,summriz this doc,task_type,summarization,general
+typ-004,build app,task_type,coding,general
+typ-004,build app,output,code,text
+typ-004,build app,tools,file-edit|shell,
+typ-005,write blog,task_type,writing,general
+typ-008,optmize db query,task_type,coding,general
+typ-008,optmize db query,complexity,medium,low
+typ-008,optmize db query,risk,medium,low
+typ-008,optmize db query,output,code,text
+typ-008,optmize db query,approval,notify,auto
+typ-009,deploy to prod,complexity,medium,low
+typ-009,deploy to prod,tools,shell,
+typ-012,add tests,task_type,coding,general
+typ-012,add tests,output,code+tests,text
+typ-012,add tests,tools,file-edit|shell,

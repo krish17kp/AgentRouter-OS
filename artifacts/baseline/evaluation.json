@@ -1,0 +1,4972 @@
+{
+  "n_cases": 165,
+  "overall_grade": 61.23,
+  "dimension_scores": {
+    "task_type": 0.6848,
+    "risk": 0.7515,
+    "complexity": 0.4545,
+    "tools": 0.1832,
+    "output": 0.7091,
+    "context": 0.7697,
+    "approval": 0.7515
+  },
+  "grade_weights": {
+    "task_type": 10,
+    "risk": 7,
+    "complexity": 4,
+    "tools": 4,
+    "output": 2,
+    "context": 2,
+    "approval": 1
+  },
+  "task_type": {
+    "accuracy": 0.6848,
+    "macro_f1": 0.7483,
+    "per_class_recall": {
+      "analysis": 0.75,
+      "coding": 0.5294,
+      "general": 0.9412,
+      "reasoning": 0.8095,
+      "summarization": 0.9333,
+      "writing": 0.625
+    },
+    "n": 165
+  },
+  "complexity": {
+    "accuracy": 0.4545,
+    "macro_f1": 0.3204,
+    "per_class_recall": {
+      "high": 0.0909,
+      "low": 1.0,
+      "medium": 0.1139
+    },
+    "n": 165
+  },
+  "risk": {
+    "accuracy": 0.7515,
+    "macro_f1": 0.6572,
+    "per_class_recall": {
+      "high": 0.8519,
+      "low": 1.0,
+      "medium": 0.1395
+    },
+    "n": 165,
+    "high_risk_recall": 0.8519
+  },
+  "tools": {
+    "precision": 0.7059,
+    "recall": 0.1053,
+    "f1": 0.1832,
+    "exact_set_accuracy": 0.5636,
+    "n": 165
+  },
+  "context": {
+    "accuracy": 0.7697,
+    "macro_f1": 0.7831,
+    "per_class_recall": {
+      "large": 1.0,
+      "medium": 0.4043,
+      "small": 0.9145
+    },
+    "n": 165
+  },
+  "output": {
+    "accuracy": 0.7091,
+    "macro_f1": 0.6982,
+    "per_class_recall": {
+      "code": 0.4918,
+      "code+tests": 0.8333,
+      "plan": 0.3333,
+      "text": 0.95
+    },
+    "n": 165
+  },
+  "approval": {
+    "accuracy": 0.7515,
+    "macro_f1": 0.6365,
+    "per_class_recall": {
+      "auto": 1.0,
+      "human-approval-required": 0.697,
+      "notify": 0.1622
+    },
+    "n": 165
+  },
+  "release_thresholds": {
+    "overall_grade>=85": false,
+    "task_type_macro_f1>=0.90": false,
+    "high_risk_recall==1.00": false,
+    "approval_accuracy==1.00": false,
+    "tool_f1>=0.90": false
+  },
+  "release_ready": false,
+  "failures": [
+    {
+      "id": "cod-002",
+      "prompt": "Fix a null pointer exception in the login handler",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "risk",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "human-approval-required",
+            "notify"
+          ],
+          "predicted": "auto"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "cod-005",
+      "prompt": "Build a REST API for a todo application with CRUD endpoints",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": [
+          "shell"
+        ]
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": [
+            "shell"
+          ]
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "cod-006",
+      "prompt": "Add pagination to the products endpoint",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "cod-007",
+      "prompt": "Optimize this SQL query that is running slowly",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": [
+          "shell"
+        ]
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        },
+        {
+          "dim": "tools",
+          "expected": [],
+          "predicted": [
+            "shell"
+          ]
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "cod-008",
+      "prompt": "Debug why the unit tests are failing in the auth package",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "high",
+        "output": "code+tests",
+        "context": "small",
+        "approval": "human-approval-required",
+        "tools": [
+          "shell"
+        ]
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": [
+            "shell"
+          ]
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "cod-009",
+      "prompt": "Create a Python script to rename files in a directory",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code",
+        "context": "medium",
+        "approval": "auto",
+        "tools": [
+          "file-edit"
+        ]
+      },
+      "failed": [
+        {
+          "dim": "context",
+          "expected": [
+            "small"
+          ],
+          "predicted": "medium"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "shell"
+          ],
+          "predicted": [
+            "file-edit"
+          ]
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "cod-010",
+      "prompt": "Implement JWT authentication middleware for the API",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "high",
+        "output": "code",
+        "context": "small",
+        "approval": "human-approval-required",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "cod-011",
+      "prompt": "Write unit tests for the shopping cart module",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code+tests",
+        "context": "medium",
+        "approval": "auto",
+        "tools": [
+          "file-edit",
+          "shell"
+        ]
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "cod-012",
+      "prompt": "Add a dark mode toggle to the settings page",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "cod-013",
+      "prompt": "Convert this callback-based code to async/await",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "cod-014",
+      "prompt": "Implement rate limiting on the public endpoints",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "human-approval-required",
+            "notify"
+          ],
+          "predicted": "auto"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "cod-015",
+      "prompt": "Build a CLI tool that converts CSV to JSON",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": [
+          "shell"
+        ]
+      },
+      "failed": [
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": [
+            "shell"
+          ]
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "cod-016",
+      "prompt": "Refactor the entire authentication system across the codebase",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "medium",
+        "risk": "high",
+        "output": "code",
+        "context": "medium",
+        "approval": "human-approval-required",
+        "tools": [
+          "file-edit"
+        ]
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "high"
+          ],
+          "predicted": "medium"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": [
+            "file-edit"
+          ]
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "cod-017",
+      "prompt": "Add input validation to the signup form",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "cod-018",
+      "prompt": "Implement a caching layer with Redis for the product service",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "cod-019",
+      "prompt": "Write a bash script to back up the database nightly",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "medium",
+        "output": "code",
+        "context": "small",
+        "approval": "notify",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "tools",
+          "expected": [
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "cod-020",
+      "prompt": "Create a React component for a searchable dropdown",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "cod-021",
+      "prompt": "Implement websocket support for real-time notifications",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "cod-022",
+      "prompt": "Fix the memory leak in the image processing worker",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": [
+          "vision"
+        ]
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "human-approval-required",
+            "notify"
+          ],
+          "predicted": "auto"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": [
+            "vision"
+          ]
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "cod-024",
+      "prompt": "Build a webhook receiver that verifies signatures",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "human-approval-required",
+            "notify"
+          ],
+          "predicted": "auto"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "cod-025",
+      "prompt": "Implement pagination and sorting for the admin users table with tests",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "medium",
+        "risk": "low",
+        "output": "code+tests",
+        "context": "small",
+        "approval": "auto",
+        "tools": [
+          "shell"
+        ]
+      },
+      "failed": [
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": [
+            "shell"
+          ]
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rea-001",
+      "prompt": "Design the architecture for a multi-tenant SaaS platform",
+      "predicted": {
+        "task_type": "reasoning",
+        "complexity": "medium",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "high"
+          ],
+          "predicted": "medium"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "plan"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rea-002",
+      "prompt": "Plan a migration strategy from a monolith to microservices",
+      "predicted": {
+        "task_type": "reasoning",
+        "complexity": "low",
+        "risk": "high",
+        "output": "plan",
+        "context": "small",
+        "approval": "human-approval-required",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "high"
+          ],
+          "predicted": "low"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rea-003",
+      "prompt": "Decide between PostgreSQL and MongoDB for our new service",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "medium",
+        "risk": "low",
+        "output": "code",
+        "context": "medium",
+        "approval": "auto",
+        "tools": [
+          "file-edit"
+        ]
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "reasoning",
+            "analysis"
+          ],
+          "predicted": "coding"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "plan",
+            "text"
+          ],
+          "predicted": "code"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "small"
+          ],
+          "predicted": "medium"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        },
+        {
+          "dim": "tools",
+          "expected": [],
+          "predicted": [
+            "file-edit"
+          ]
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rea-004",
+      "prompt": "Design a rate-limiting strategy for a public API",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "reasoning"
+          ],
+          "predicted": "coding"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "plan"
+          ],
+          "predicted": "code"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rea-005",
+      "prompt": "Architect a scalable event-driven order processing system",
+      "predicted": {
+        "task_type": "reasoning",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "plan"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "human-approval-required",
+            "notify"
+          ],
+          "predicted": "auto"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rea-006",
+      "prompt": "Prove that this sorting algorithm terminates",
+      "predicted": {
+        "task_type": "reasoning",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rea-007",
+      "prompt": "Devise a strategy to reduce our cloud infrastructure costs",
+      "predicted": {
+        "task_type": "reasoning",
+        "complexity": "low",
+        "risk": "high",
+        "output": "text",
+        "context": "medium",
+        "approval": "human-approval-required",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "high"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "plan"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "small"
+          ],
+          "predicted": "medium"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "human-approval-required"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rea-008",
+      "prompt": "Plan the rollout of a feature flag system across teams",
+      "predicted": {
+        "task_type": "reasoning",
+        "complexity": "medium",
+        "risk": "low",
+        "output": "plan",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rea-009",
+      "prompt": "Design a database schema for a booking platform",
+      "predicted": {
+        "task_type": "reasoning",
+        "complexity": "low",
+        "risk": "medium",
+        "output": "text",
+        "context": "medium",
+        "approval": "notify",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "plan",
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "small"
+          ],
+          "predicted": "medium"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rea-010",
+      "prompt": "Work out the optimal caching strategy for read-heavy traffic",
+      "predicted": {
+        "task_type": "reasoning",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rea-011",
+      "prompt": "Decide how to shard the users table for scale",
+      "predicted": {
+        "task_type": "reasoning",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "plan"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "human-approval-required",
+            "notify"
+          ],
+          "predicted": "auto"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rea-012",
+      "prompt": "Design an approach for zero-downtime schema migrations",
+      "predicted": {
+        "task_type": "reasoning",
+        "complexity": "low",
+        "risk": "high",
+        "output": "text",
+        "context": "small",
+        "approval": "human-approval-required",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "plan"
+          ],
+          "predicted": "text"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rea-013",
+      "prompt": "Plan a disaster recovery process for the production cluster",
+      "predicted": {
+        "task_type": "reasoning",
+        "complexity": "low",
+        "risk": "high",
+        "output": "plan",
+        "context": "small",
+        "approval": "human-approval-required",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "high"
+          ],
+          "predicted": "low"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rea-014",
+      "prompt": "Strategize how to onboard 10x more users next quarter",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "reasoning"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "plan"
+          ],
+          "predicted": "text"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rea-015",
+      "prompt": "Design the API contract between the frontend and backend",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "medium",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "output",
+          "expected": [
+            "plan"
+          ],
+          "predicted": "code"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rea-016",
+      "prompt": "Figure out the best deployment topology for low latency worldwide",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "high",
+        "output": "text",
+        "context": "small",
+        "approval": "human-approval-required",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "reasoning"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "plan"
+          ],
+          "predicted": "text"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rea-017",
+      "prompt": "Plan how to introduce observability into a legacy system",
+      "predicted": {
+        "task_type": "reasoning",
+        "complexity": "low",
+        "risk": "low",
+        "output": "plan",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rea-018",
+      "prompt": "Design a permission model with roles and fine-grained scopes",
+      "predicted": {
+        "task_type": "reasoning",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "plan"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "human-approval-required"
+          ],
+          "predicted": "auto"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "wri-001",
+      "prompt": "Write a blog post about our new API launch",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code",
+        "context": "medium",
+        "approval": "auto",
+        "tools": [
+          "file-edit"
+        ]
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "writing"
+          ],
+          "predicted": "coding"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "text"
+          ],
+          "predicted": "code"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "small"
+          ],
+          "predicted": "medium"
+        },
+        {
+          "dim": "tools",
+          "expected": [],
+          "predicted": [
+            "file-edit"
+          ]
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "wri-002",
+      "prompt": "Draft a professional email declining a meeting request",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "writing"
+          ],
+          "predicted": "coding"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "text"
+          ],
+          "predicted": "code"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "wri-005",
+      "prompt": "Write release notes for version 2.0",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "writing"
+          ],
+          "predicted": "general"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "wri-009",
+      "prompt": "Write a cover letter for a software engineering role",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "writing"
+          ],
+          "predicted": "general"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "wri-010",
+      "prompt": "Compose a tweet thread announcing the beta",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "writing"
+          ],
+          "predicted": "general"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "wri-011",
+      "prompt": "Write a compelling landing page headline and subtext",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "writing"
+          ],
+          "predicted": "general"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "wri-012",
+      "prompt": "Draft a project proposal for stakeholders",
+      "predicted": {
+        "task_type": "writing",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "medium",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "context",
+          "expected": [
+            "small"
+          ],
+          "predicted": "medium"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "wri-016",
+      "prompt": "Write a technical blog post explaining our caching design",
+      "predicted": {
+        "task_type": "writing",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "medium",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "wri-017",
+      "prompt": "Write marketing copy for the pricing page",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "writing"
+          ],
+          "predicted": "general"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "wri-018",
+      "prompt": "Write a short story about a robot learning to paint",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "writing"
+          ],
+          "predicted": "general"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "ana-001",
+      "prompt": "Analyze this dataset and identify sales trends",
+      "predicted": {
+        "task_type": "analysis",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "ana-003",
+      "prompt": "Evaluate the security posture of this configuration",
+      "predicted": {
+        "task_type": "analysis",
+        "complexity": "low",
+        "risk": "medium",
+        "output": "text",
+        "context": "small",
+        "approval": "notify",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "ana-004",
+      "prompt": "Review this pull request for code quality issues",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "analysis"
+          ],
+          "predicted": "coding"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "text"
+          ],
+          "predicted": "code"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "ana-005",
+      "prompt": "Assess whether our test coverage is adequate",
+      "predicted": {
+        "task_type": "analysis",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "medium",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "ana-006",
+      "prompt": "What's wrong with this database schema design",
+      "predicted": {
+        "task_type": "analysis",
+        "complexity": "low",
+        "risk": "medium",
+        "output": "text",
+        "context": "small",
+        "approval": "notify",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "ana-007",
+      "prompt": "Analyze the root cause of the latency spike",
+      "predicted": {
+        "task_type": "analysis",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "ana-008",
+      "prompt": "Compare three cloud providers for our workload",
+      "predicted": {
+        "task_type": "analysis",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "medium",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "small"
+          ],
+          "predicted": "medium"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "ana-009",
+      "prompt": "Evaluate the tradeoffs of adopting GraphQL",
+      "predicted": {
+        "task_type": "analysis",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "ana-010",
+      "prompt": "Review the quarterly metrics and describe what changed",
+      "predicted": {
+        "task_type": "analysis",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "ana-011",
+      "prompt": "Assess the risk of this dependency upgrade",
+      "predicted": {
+        "task_type": "analysis",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "ana-012",
+      "prompt": "Analyze user churn and describe the main drivers",
+      "predicted": {
+        "task_type": "analysis",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "ana-013",
+      "prompt": "Compare the performance of these two algorithms",
+      "predicted": {
+        "task_type": "analysis",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "ana-014",
+      "prompt": "Evaluate whether this architecture will scale to 1M users",
+      "predicted": {
+        "task_type": "analysis",
+        "complexity": "medium",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "high"
+          ],
+          "predicted": "medium"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "ana-015",
+      "prompt": "Review the incident report and identify gaps",
+      "predicted": {
+        "task_type": "writing",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "medium",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "analysis"
+          ],
+          "predicted": "writing"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "sum-005",
+      "prompt": "Summarize a 300k-token codebase for a new engineer",
+      "predicted": {
+        "task_type": "summarization",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "large",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "gen-001",
+      "prompt": "Help me with my project",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "medium",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "context",
+          "expected": [
+            "small"
+          ],
+          "predicted": "medium"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "gen-003",
+      "prompt": "Give me some ideas for a weekend side project",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "medium",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "context",
+          "expected": [
+            "small"
+          ],
+          "predicted": "medium"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "gen-008",
+      "prompt": "Recommend a good book on distributed systems",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "medium",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "context",
+          "expected": [
+            "small"
+          ],
+          "predicted": "medium"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "gen-012",
+      "prompt": "What questions should I ask in a system design interview?",
+      "predicted": {
+        "task_type": "reasoning",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "general"
+          ],
+          "predicted": "reasoning"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "mix-001",
+      "prompt": "Look into why signups dropped and propose a fix",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "medium",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "analysis",
+            "reasoning"
+          ],
+          "predicted": "coding"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "text",
+            "plan"
+          ],
+          "predicted": "code"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "mix-002",
+      "prompt": "Research vector databases and recommend one for us",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "medium",
+        "output": "text",
+        "context": "small",
+        "approval": "notify",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "analysis",
+            "reasoning"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "mix-004",
+      "prompt": "Write documentation and code samples for the SDK",
+      "predicted": {
+        "task_type": "writing",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "medium",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "mix-005",
+      "prompt": "Analyze the slow endpoint and refactor it",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "high",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": [
+          "file-edit"
+        ]
+      },
+      "failed": [
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "mix-006",
+      "prompt": "Plan and scaffold a new microservice",
+      "predicted": {
+        "task_type": "reasoning",
+        "complexity": "low",
+        "risk": "low",
+        "output": "plan",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "mix-007",
+      "prompt": "Summarize the RFC and give your recommendation",
+      "predicted": {
+        "task_type": "summarization",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "medium",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "mix-008",
+      "prompt": "Design and build a notification service",
+      "predicted": {
+        "task_type": "reasoning",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code",
+            "plan"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "mix-009",
+      "prompt": "Review the code and write a summary of issues",
+      "predicted": {
+        "task_type": "summarization",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "mix-010",
+      "prompt": "Evaluate options and draft an architecture decision record",
+      "predicted": {
+        "task_type": "writing",
+        "complexity": "medium",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "mix-011",
+      "prompt": "Investigate the flaky test and fix it",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "medium",
+        "risk": "low",
+        "output": "code+tests",
+        "context": "small",
+        "approval": "auto",
+        "tools": [
+          "shell"
+        ]
+      },
+      "failed": [
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": [
+            "shell"
+          ]
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "mix-012",
+      "prompt": "Compare frameworks then build a prototype",
+      "predicted": {
+        "task_type": "analysis",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "mix-013",
+      "prompt": "Draft a spec and implement the first endpoint",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "medium",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "mix-014",
+      "prompt": "Explain the bug, then patch it",
+      "predicted": {
+        "task_type": "writing",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "writing"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "mix-015",
+      "prompt": "Audit dependencies and upgrade the vulnerable ones",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding",
+            "analysis"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "human-approval-required"
+          ],
+          "predicted": "auto"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "sec-001",
+      "prompt": "Rotate the production database credentials",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "high",
+        "output": "text",
+        "context": "small",
+        "approval": "human-approval-required",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "sec-002",
+      "prompt": "Deploy the new version to the Kubernetes cluster",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "high",
+        "output": "text",
+        "context": "small",
+        "approval": "human-approval-required",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "sec-003",
+      "prompt": "Migrate the production database to the new schema",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "medium",
+        "risk": "high",
+        "output": "text",
+        "context": "small",
+        "approval": "human-approval-required",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding",
+            "reasoning"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "high"
+          ],
+          "predicted": "medium"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code",
+            "plan"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "sec-004",
+      "prompt": "Fix the SQL injection vulnerability in the search endpoint",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "human-approval-required"
+          ],
+          "predicted": "auto"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "sec-005",
+      "prompt": "Implement the payment processing with Stripe",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "high",
+        "output": "code",
+        "context": "small",
+        "approval": "human-approval-required",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "sec-006",
+      "prompt": "Set up billing and subscription management",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "medium",
+        "risk": "high",
+        "output": "code",
+        "context": "small",
+        "approval": "human-approval-required",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "high"
+          ],
+          "predicted": "medium"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "sec-007",
+      "prompt": "Run the terraform apply to provision the infrastructure",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "high",
+        "output": "text",
+        "context": "small",
+        "approval": "human-approval-required",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "sec-008",
+      "prompt": "Store user passwords securely with hashing and salting",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "high",
+        "output": "text",
+        "context": "small",
+        "approval": "human-approval-required",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "sec-009",
+      "prompt": "Handle the API key secrets in the deployment pipeline",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "high",
+        "output": "code",
+        "context": "small",
+        "approval": "human-approval-required",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "sec-010",
+      "prompt": "Delete the stale records from the production users table",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "high",
+        "output": "text",
+        "context": "small",
+        "approval": "human-approval-required",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "sec-011",
+      "prompt": "Audit the authentication flow for security holes",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "high",
+        "output": "text",
+        "context": "small",
+        "approval": "human-approval-required",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "analysis"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "sec-012",
+      "prompt": "Configure OAuth2 login with Google",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "high",
+        "output": "text",
+        "context": "small",
+        "approval": "human-approval-required",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "sec-013",
+      "prompt": "Roll back the production deployment to the last good release",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "high",
+        "output": "text",
+        "context": "small",
+        "approval": "human-approval-required",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "sec-014",
+      "prompt": "Encrypt the PII fields in the user database",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "medium",
+        "output": "text",
+        "context": "small",
+        "approval": "notify",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "high"
+          ],
+          "predicted": "medium"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "human-approval-required"
+          ],
+          "predicted": "notify"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "sec-015",
+      "prompt": "Set up the CI/CD pipeline to deploy on merge",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "high",
+        "output": "text",
+        "context": "small",
+        "approval": "human-approval-required",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding",
+            "reasoning"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code",
+            "plan"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rag-001",
+      "prompt": "build a rag system which identifies the pdf very well and stores properly with chunking",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding",
+            "reasoning"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code",
+            "plan"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rag-002",
+      "prompt": "Implement a document ingestion pipeline with embeddings",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code",
+        "context": "medium",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rag-003",
+      "prompt": "Build a vector database search over our knowledge base",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "medium",
+        "output": "text",
+        "context": "medium",
+        "approval": "notify",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rag-004",
+      "prompt": "Write a PDF parser that extracts tables and text",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rag-005",
+      "prompt": "Implement semantic chunking for long documents",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code",
+        "context": "medium",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rag-006",
+      "prompt": "Train a classifier to detect spam messages",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rag-007",
+      "prompt": "Build an ETL pipeline that loads data into the warehouse",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rag-008",
+      "prompt": "Set up a retrieval pipeline with reranking",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rag-009",
+      "prompt": "Implement embeddings generation and store them in a vector store",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "medium",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rag-010",
+      "prompt": "Build a data ingestion job that deduplicates records",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rag-011",
+      "prompt": "Fine-tune an embedding model on our domain data",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "medium",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding",
+            "reasoning"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rag-012",
+      "prompt": "Design a RAG evaluation harness with retrieval metrics",
+      "predicted": {
+        "task_type": "reasoning",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code",
+            "plan"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rag-013",
+      "prompt": "Build a frontend dashboard for the analytics pipeline",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rag-014",
+      "prompt": "Implement a backend service to serve model predictions",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "rag-015",
+      "prompt": "Create a data validation layer for the ingestion pipeline",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "bld-001",
+      "prompt": "build a mvp for a sales guide app",
+      "predicted": {
+        "task_type": "writing",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding",
+            "reasoning"
+          ],
+          "predicted": "writing"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code",
+            "plan"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "bld-002",
+      "prompt": "Build a mobile app for tracking daily habits",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "bld-003",
+      "prompt": "Create a web application for team task management",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium",
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "bld-004",
+      "prompt": "Build a chrome extension that blocks distractions",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "bld-005",
+      "prompt": "Develop a landing page with a signup form",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "bld-006",
+      "prompt": "Build a Slack bot that posts daily standup reminders",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "bld-007",
+      "prompt": "Create an application to generate invoices as PDFs",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "bld-008",
+      "prompt": "Build a real-time chat application with rooms",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "high"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "context",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "small"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "typ-001",
+      "prompt": "fix teh bug in login",
+      "predicted": {
+        "task_type": "coding",
+        "complexity": "low",
+        "risk": "low",
+        "output": "code",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "typ-002",
+      "prompt": "refch the payment modle",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "high",
+        "output": "text",
+        "context": "small",
+        "approval": "human-approval-required",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "typ-003",
+      "prompt": "summriz this doc",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "summarization"
+          ],
+          "predicted": "general"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "typ-004",
+      "prompt": "build app",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "typ-005",
+      "prompt": "write blog",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "writing"
+          ],
+          "predicted": "general"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "typ-008",
+      "prompt": "optmize db query",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "risk",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "approval",
+          "expected": [
+            "notify"
+          ],
+          "predicted": "auto"
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "typ-009",
+      "prompt": "deploy to prod",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "high",
+        "output": "text",
+        "context": "small",
+        "approval": "human-approval-required",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "complexity",
+          "expected": [
+            "medium"
+          ],
+          "predicted": "low"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    },
+    {
+      "id": "typ-012",
+      "prompt": "add tests",
+      "predicted": {
+        "task_type": "general",
+        "complexity": "low",
+        "risk": "low",
+        "output": "text",
+        "context": "small",
+        "approval": "auto",
+        "tools": []
+      },
+      "failed": [
+        {
+          "dim": "task_type",
+          "expected": [
+            "coding"
+          ],
+          "predicted": "general"
+        },
+        {
+          "dim": "output",
+          "expected": [
+            "code+tests"
+          ],
+          "predicted": "text"
+        },
+        {
+          "dim": "tools",
+          "expected": [
+            "file-edit",
+            "shell"
+          ],
+          "predicted": []
+        }
+      ],
+      "ok": false
+    }
+  ]
+}

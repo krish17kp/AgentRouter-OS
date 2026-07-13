@@ -1,0 +1,201 @@
+# AgentRouter OS — classifier gold benchmark v1
+#
+# Ground-truth labels are HUMAN expectations, not current classifier output.
+# Each dimension accepts a list of acceptable labels; a prediction is correct
+# when it lands in the set. Fields:
+#   task_type   : subset of [coding, reasoning, writing, analysis, summarization, general]
+#   complexity  : subset of [low, medium, high]
+#   risk        : subset of [low, medium, high]
+#   output_type : subset of [code, text, code+tests, data, plan]   (optional)
+#   tools       : exact expected set from [file-edit, shell, vision, web]; [] = none (optional)
+#   context_band: subset of [small, medium, large]                 (optional)
+# approval is a deterministic function of risk (low->auto, medium->notify,
+# high->human-approval-required) and is derived + graded automatically.
+version: 1
+cases:
+  # ---------------------------------------------------------------- coding (create/modify software)
+  - {id: cod-001, prompt: "Refactor the payment module and add unit tests", task_type: [coding], complexity: [high], risk: [high], output_type: [code+tests], tools: [file-edit, shell], context_band: [medium]}
+  - {id: cod-002, prompt: "Fix a null pointer exception in the login handler", task_type: [coding], complexity: [low, medium], risk: [low, medium], output_type: [code], tools: [file-edit], context_band: [small, medium]}
+  - {id: cod-003, prompt: "Implement a binary search function in Python", task_type: [coding], complexity: [low], risk: [low], output_type: [code], tools: [], context_band: [small]}
+  - {id: cod-004, prompt: "Write a regex that matches valid email addresses", task_type: [coding], complexity: [low], risk: [low], output_type: [code], tools: [], context_band: [small]}
+  - {id: cod-005, prompt: "Build a REST API for a todo application with CRUD endpoints", task_type: [coding], complexity: [medium, high], risk: [low, medium], output_type: [code], tools: [file-edit, shell], context_band: [small, medium]}
+  - {id: cod-006, prompt: "Add pagination to the products endpoint", task_type: [coding], complexity: [low, medium], risk: [low, medium], output_type: [code], tools: [file-edit], context_band: [medium]}
+  - {id: cod-007, prompt: "Optimize this SQL query that is running slowly", task_type: [coding], complexity: [medium], risk: [low, medium], output_type: [code], tools: [], context_band: [small]}
+  - {id: cod-008, prompt: "Debug why the unit tests are failing in the auth package", task_type: [coding], complexity: [medium], risk: [medium, high], output_type: [code, code+tests], tools: [file-edit, shell], context_band: [medium]}
+  - {id: cod-009, prompt: "Create a Python script to rename files in a directory", task_type: [coding], complexity: [low], risk: [low], output_type: [code], tools: [file-edit, shell], context_band: [small]}
+  - {id: cod-010, prompt: "Implement JWT authentication middleware for the API", task_type: [coding], complexity: [medium, high], risk: [high], output_type: [code], tools: [file-edit], context_band: [medium]}
+  - {id: cod-011, prompt: "Write unit tests for the shopping cart module", task_type: [coding], complexity: [medium], risk: [low, medium], output_type: [code+tests], tools: [file-edit, shell], context_band: [medium]}
+  - {id: cod-012, prompt: "Add a dark mode toggle to the settings page", task_type: [coding], complexity: [low, medium], risk: [low], output_type: [code], tools: [file-edit], context_band: [small, medium]}
+  - {id: cod-013, prompt: "Convert this callback-based code to async/await", task_type: [coding], complexity: [medium], risk: [low, medium], output_type: [code], tools: [file-edit], context_band: [small, medium]}
+  - {id: cod-014, prompt: "Implement rate limiting on the public endpoints", task_type: [coding], complexity: [medium], risk: [low, medium], output_type: [code], tools: [file-edit], context_band: [medium]}
+  - {id: cod-015, prompt: "Build a CLI tool that converts CSV to JSON", task_type: [coding], complexity: [low, medium], risk: [low], output_type: [code], tools: [file-edit, shell], context_band: [small]}
+  - {id: cod-016, prompt: "Refactor the entire authentication system across the codebase", task_type: [coding], complexity: [high], risk: [high], output_type: [code], tools: [file-edit, shell], context_band: [medium, large]}
+  - {id: cod-017, prompt: "Add input validation to the signup form", task_type: [coding], complexity: [low, medium], risk: [low, medium], output_type: [code], tools: [file-edit], context_band: [small, medium]}
+  - {id: cod-018, prompt: "Implement a caching layer with Redis for the product service", task_type: [coding], complexity: [medium, high], risk: [low, medium], output_type: [code], tools: [file-edit, shell], context_band: [medium]}
+  - {id: cod-019, prompt: "Write a bash script to back up the database nightly", task_type: [coding], complexity: [low, medium], risk: [medium, high], output_type: [code], tools: [file-edit, shell], context_band: [small]}
+  - {id: cod-020, prompt: "Create a React component for a searchable dropdown", task_type: [coding], complexity: [low, medium], risk: [low], output_type: [code], tools: [file-edit], context_band: [small, medium]}
+  - {id: cod-021, prompt: "Implement websocket support for real-time notifications", task_type: [coding], complexity: [medium, high], risk: [low, medium], output_type: [code], tools: [file-edit], context_band: [medium]}
+  - {id: cod-022, prompt: "Fix the memory leak in the image processing worker", task_type: [coding], complexity: [high], risk: [low, medium], output_type: [code], tools: [file-edit], context_band: [medium]}
+  - {id: cod-023, prompt: "Add TypeScript types to this untyped module", task_type: [coding], complexity: [low, medium], risk: [low], output_type: [code], tools: [file-edit], context_band: [medium]}
+  - {id: cod-024, prompt: "Build a webhook receiver that verifies signatures", task_type: [coding], complexity: [medium], risk: [low, medium], output_type: [code], tools: [file-edit, shell], context_band: [small, medium]}
+  - {id: cod-025, prompt: "Implement pagination and sorting for the admin users table with tests", task_type: [coding], complexity: [medium, high], risk: [low, medium], output_type: [code+tests], tools: [file-edit, shell], context_band: [medium]}
+
+  # ---------------------------------------------------------------- reasoning / architecture
+  - {id: rea-001, prompt: "Design the architecture for a multi-tenant SaaS platform", task_type: [reasoning], complexity: [high], risk: [low, medium], output_type: [plan], tools: [], context_band: [small, medium]}
+  - {id: rea-002, prompt: "Plan a migration strategy from a monolith to microservices", task_type: [reasoning], complexity: [high], risk: [high], output_type: [plan], tools: [], context_band: [small, medium]}
+  - {id: rea-003, prompt: "Decide between PostgreSQL and MongoDB for our new service", task_type: [reasoning, analysis], complexity: [medium], risk: [low, medium], output_type: [plan, text], tools: [], context_band: [small]}
+  - {id: rea-004, prompt: "Design a rate-limiting strategy for a public API", task_type: [reasoning], complexity: [medium, high], risk: [low, medium], output_type: [plan], tools: [], context_band: [small]}
+  - {id: rea-005, prompt: "Architect a scalable event-driven order processing system", task_type: [reasoning], complexity: [high], risk: [low, medium], output_type: [plan], tools: [], context_band: [small, medium]}
+  - {id: rea-006, prompt: "Prove that this sorting algorithm terminates", task_type: [reasoning], complexity: [medium, high], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: rea-007, prompt: "Devise a strategy to reduce our cloud infrastructure costs", task_type: [reasoning], complexity: [medium, high], risk: [low, medium], output_type: [plan], tools: [], context_band: [small]}
+  - {id: rea-008, prompt: "Plan the rollout of a feature flag system across teams", task_type: [reasoning], complexity: [medium, high], risk: [low, medium], output_type: [plan], tools: [], context_band: [small]}
+  - {id: rea-009, prompt: "Design a database schema for a booking platform", task_type: [reasoning, coding], complexity: [medium, high], risk: [low, medium], output_type: [plan, code], tools: [], context_band: [small]}
+  - {id: rea-010, prompt: "Work out the optimal caching strategy for read-heavy traffic", task_type: [reasoning], complexity: [medium, high], risk: [low, medium], output_type: [plan, text], tools: [], context_band: [small]}
+  - {id: rea-011, prompt: "Decide how to shard the users table for scale", task_type: [reasoning], complexity: [high], risk: [low, medium], output_type: [plan], tools: [], context_band: [small]}
+  - {id: rea-012, prompt: "Design an approach for zero-downtime schema migrations", task_type: [reasoning], complexity: [high], risk: [high], output_type: [plan], tools: [], context_band: [small]}
+  - {id: rea-013, prompt: "Plan a disaster recovery process for the production cluster", task_type: [reasoning], complexity: [high], risk: [high], output_type: [plan], tools: [], context_band: [small, medium]}
+  - {id: rea-014, prompt: "Strategize how to onboard 10x more users next quarter", task_type: [reasoning], complexity: [medium, high], risk: [low, medium], output_type: [plan], tools: [], context_band: [small]}
+  - {id: rea-015, prompt: "Design the API contract between the frontend and backend", task_type: [reasoning, coding], complexity: [medium], risk: [low, medium], output_type: [plan], tools: [], context_band: [small]}
+  - {id: rea-016, prompt: "Figure out the best deployment topology for low latency worldwide", task_type: [reasoning], complexity: [high], risk: [medium, high], output_type: [plan], tools: [], context_band: [small]}
+  - {id: rea-017, prompt: "Plan how to introduce observability into a legacy system", task_type: [reasoning], complexity: [medium, high], risk: [low, medium], output_type: [plan], tools: [], context_band: [small, medium]}
+  - {id: rea-018, prompt: "Design a permission model with roles and fine-grained scopes", task_type: [reasoning], complexity: [high], risk: [low, medium], output_type: [plan], tools: [], context_band: [small]}
+
+  # ---------------------------------------------------------------- writing
+  - {id: wri-001, prompt: "Write a blog post about our new API launch", task_type: [writing], complexity: [low, medium], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: wri-002, prompt: "Draft a professional email declining a meeting request", task_type: [writing], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: wri-003, prompt: "Write an essay on the impact of remote work", task_type: [writing], complexity: [low, medium], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: wri-004, prompt: "Proofread and polish the README for grammar", task_type: [writing], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small, medium]}
+  - {id: wri-005, prompt: "Write release notes for version 2.0", task_type: [writing], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: wri-006, prompt: "Draft a product announcement for the newsletter", task_type: [writing], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: wri-007, prompt: "Write documentation explaining how to use the CLI", task_type: [writing], complexity: [low, medium], risk: [low], output_type: [text], tools: [], context_band: [small, medium]}
+  - {id: wri-008, prompt: "Rewrite this paragraph to be more concise", task_type: [writing], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: wri-009, prompt: "Write a cover letter for a software engineering role", task_type: [writing], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: wri-010, prompt: "Compose a tweet thread announcing the beta", task_type: [writing], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: wri-011, prompt: "Write a compelling landing page headline and subtext", task_type: [writing], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: wri-012, prompt: "Draft a project proposal for stakeholders", task_type: [writing], complexity: [low, medium], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: wri-013, prompt: "Write a user guide for the mobile app onboarding flow", task_type: [writing], complexity: [low, medium], risk: [low], output_type: [text], tools: [], context_band: [small, medium]}
+  - {id: wri-014, prompt: "Write a changelog entry for the bug fixes this week", task_type: [writing], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: wri-015, prompt: "Draft an apology email to customers about the outage", task_type: [writing], complexity: [low], risk: [low, medium], output_type: [text], tools: [], context_band: [small]}
+  - {id: wri-016, prompt: "Write a technical blog post explaining our caching design", task_type: [writing], complexity: [medium], risk: [low], output_type: [text], tools: [], context_band: [small, medium]}
+  - {id: wri-017, prompt: "Write marketing copy for the pricing page", task_type: [writing], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: wri-018, prompt: "Write a short story about a robot learning to paint", task_type: [writing], complexity: [low, medium], risk: [low], output_type: [text], tools: [], context_band: [small]}
+
+  # ---------------------------------------------------------------- analysis
+  - {id: ana-001, prompt: "Analyze this dataset and identify sales trends", task_type: [analysis], complexity: [medium], risk: [low], output_type: [text, data], tools: [], context_band: [small, medium]}
+  - {id: ana-002, prompt: "Compare the pros and cons of React versus Vue", task_type: [analysis], complexity: [low, medium], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: ana-003, prompt: "Evaluate the security posture of this configuration", task_type: [analysis], complexity: [medium, high], risk: [medium, high], output_type: [text], tools: [], context_band: [small, medium]}
+  - {id: ana-004, prompt: "Review this pull request for code quality issues", task_type: [analysis], complexity: [medium], risk: [low, medium], output_type: [text], tools: [], context_band: [medium]}
+  - {id: ana-005, prompt: "Assess whether our test coverage is adequate", task_type: [analysis], complexity: [medium], risk: [low, medium], output_type: [text], tools: [], context_band: [medium]}
+  - {id: ana-006, prompt: "What's wrong with this database schema design", task_type: [analysis], complexity: [medium], risk: [low, medium], output_type: [text], tools: [], context_band: [small]}
+  - {id: ana-007, prompt: "Analyze the root cause of the latency spike", task_type: [analysis], complexity: [medium, high], risk: [low, medium], output_type: [text], tools: [], context_band: [small, medium]}
+  - {id: ana-008, prompt: "Compare three cloud providers for our workload", task_type: [analysis], complexity: [medium], risk: [low, medium], output_type: [text], tools: [], context_band: [small]}
+  - {id: ana-009, prompt: "Evaluate the tradeoffs of adopting GraphQL", task_type: [analysis, reasoning], complexity: [medium], risk: [low, medium], output_type: [text], tools: [], context_band: [small]}
+  - {id: ana-010, prompt: "Review the quarterly metrics and describe what changed", task_type: [analysis], complexity: [medium], risk: [low], output_type: [text, data], tools: [], context_band: [medium]}
+  - {id: ana-011, prompt: "Assess the risk of this dependency upgrade", task_type: [analysis], complexity: [medium], risk: [low, medium], output_type: [text], tools: [], context_band: [small, medium]}
+  - {id: ana-012, prompt: "Analyze user churn and describe the main drivers", task_type: [analysis], complexity: [medium], risk: [low], output_type: [text, data], tools: [], context_band: [small, medium]}
+  - {id: ana-013, prompt: "Compare the performance of these two algorithms", task_type: [analysis], complexity: [medium], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: ana-014, prompt: "Evaluate whether this architecture will scale to 1M users", task_type: [analysis, reasoning], complexity: [high], risk: [low, medium], output_type: [text], tools: [], context_band: [small, medium]}
+  - {id: ana-015, prompt: "Review the incident report and identify gaps", task_type: [analysis], complexity: [medium], risk: [low, medium], output_type: [text], tools: [], context_band: [medium]}
+
+  # ---------------------------------------------------------------- summarization
+  - {id: sum-001, prompt: "Summarize this 50-page quarterly report", task_type: [summarization], complexity: [low, medium], risk: [low], output_type: [text], tools: [], context_band: [medium, large]}
+  - {id: sum-002, prompt: "Give me a TL;DR of this research paper", task_type: [summarization], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small, medium]}
+  - {id: sum-003, prompt: "Condense these meeting notes into three bullets", task_type: [summarization], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: sum-004, prompt: "Summarize the key points from this transcript", task_type: [summarization], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [medium]}
+  - {id: sum-005, prompt: "Summarize a 300k-token codebase for a new engineer", task_type: [summarization], complexity: [medium, high], risk: [low], output_type: [text], tools: [], context_band: [large]}
+  - {id: sum-006, prompt: "Give a summary of this legal filing", task_type: [summarization], complexity: [low, medium], risk: [low], output_type: [text], tools: [], context_band: [medium]}
+  - {id: sum-007, prompt: "Condense this article into a short abstract", task_type: [summarization], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small, medium]}
+  - {id: sum-008, prompt: "Summarize the customer feedback from last month", task_type: [summarization], complexity: [low, medium], risk: [low], output_type: [text], tools: [], context_band: [small, medium]}
+  - {id: sum-009, prompt: "TL;DR this long email thread for me", task_type: [summarization], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: sum-010, prompt: "Summarize this book chapter into study notes", task_type: [summarization], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [medium]}
+  - {id: sum-011, prompt: "Condense the release history into a one-paragraph overview", task_type: [summarization], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small, medium]}
+  - {id: sum-012, prompt: "Summarize the API documentation into a cheat sheet", task_type: [summarization], complexity: [low, medium], risk: [low], output_type: [text], tools: [], context_band: [medium]}
+
+  # ---------------------------------------------------------------- general / ambiguous none-of-above
+  - {id: gen-001, prompt: "Help me with my project", task_type: [general], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: gen-002, prompt: "What should I work on next?", task_type: [general], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: gen-003, prompt: "Give me some ideas for a weekend side project", task_type: [general, reasoning], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: gen-004, prompt: "Explain how the internet works", task_type: [general, writing], complexity: [low, medium], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: gen-005, prompt: "What are best practices for naming variables?", task_type: [general], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: gen-006, prompt: "Tell me a joke about programmers", task_type: [general], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: gen-007, prompt: "How do I get better at problem solving?", task_type: [general], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: gen-008, prompt: "Recommend a good book on distributed systems", task_type: [general], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: gen-009, prompt: "What's the difference between TCP and UDP?", task_type: [general], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: gen-010, prompt: "Give me a checklist for launching a product", task_type: [general, reasoning], complexity: [low, medium], risk: [low], output_type: [text, plan], tools: [], context_band: [small]}
+  - {id: gen-011, prompt: "Help me understand recursion", task_type: [general], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: gen-012, prompt: "What questions should I ask in a system design interview?", task_type: [general], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+
+  # ---------------------------------------------------------------- mixed / ambiguous (multi-label)
+  - {id: mix-001, prompt: "Look into why signups dropped and propose a fix", task_type: [analysis, reasoning], complexity: [medium], risk: [low, medium], output_type: [text, plan], tools: [], context_band: [small, medium]}
+  - {id: mix-002, prompt: "Research vector databases and recommend one for us", task_type: [analysis, reasoning], complexity: [medium], risk: [low, medium], output_type: [text], tools: [], context_band: [small]}
+  - {id: mix-003, prompt: "Explain and then implement the observer pattern", task_type: [coding, writing], complexity: [low, medium], risk: [low], output_type: [code, text], tools: [file-edit], context_band: [small]}
+  - {id: mix-004, prompt: "Write documentation and code samples for the SDK", task_type: [writing, coding], complexity: [medium], risk: [low], output_type: [text, code], context_band: [small, medium]}
+  - {id: mix-005, prompt: "Analyze the slow endpoint and refactor it", task_type: [coding, analysis], complexity: [medium, high], risk: [low, medium], output_type: [code, text], tools: [file-edit], context_band: [medium]}
+  - {id: mix-006, prompt: "Plan and scaffold a new microservice", task_type: [coding, reasoning], complexity: [medium, high], risk: [low, medium], output_type: [plan, code], tools: [file-edit, shell], context_band: [small, medium]}
+  - {id: mix-007, prompt: "Summarize the RFC and give your recommendation", task_type: [summarization, analysis], complexity: [medium], risk: [low], output_type: [text], tools: [], context_band: [medium]}
+  - {id: mix-008, prompt: "Design and build a notification service", task_type: [coding, reasoning], complexity: [high], risk: [low, medium], output_type: [code, plan], tools: [file-edit, shell], context_band: [small, medium]}
+  - {id: mix-009, prompt: "Review the code and write a summary of issues", task_type: [analysis, summarization], complexity: [medium], risk: [low, medium], output_type: [text], tools: [], context_band: [medium]}
+  - {id: mix-010, prompt: "Evaluate options and draft an architecture decision record", task_type: [reasoning, writing, analysis], complexity: [medium, high], risk: [low, medium], output_type: [plan, text], tools: [], context_band: [small]}
+  - {id: mix-011, prompt: "Investigate the flaky test and fix it", task_type: [coding, analysis], complexity: [medium], risk: [low, medium], output_type: [code, code+tests], context_band: [medium]}
+  - {id: mix-012, prompt: "Compare frameworks then build a prototype", task_type: [coding, analysis], complexity: [medium, high], risk: [low, medium], output_type: [code, text], tools: [file-edit, shell], context_band: [small, medium]}
+  - {id: mix-013, prompt: "Draft a spec and implement the first endpoint", task_type: [coding, reasoning, writing], complexity: [medium], risk: [low, medium], output_type: [code, plan], tools: [file-edit], context_band: [small, medium]}
+  - {id: mix-014, prompt: "Explain the bug, then patch it", task_type: [coding], complexity: [low, medium], risk: [low, medium], output_type: [code, text], tools: [file-edit], context_band: [small, medium]}
+  - {id: mix-015, prompt: "Audit dependencies and upgrade the vulnerable ones", task_type: [coding, analysis], complexity: [medium], risk: [high], output_type: [code, text], context_band: [medium]}
+
+  # ---------------------------------------------------------------- security / payment / deployment (high risk)
+  - {id: sec-001, prompt: "Rotate the production database credentials", task_type: [coding, general, reasoning], complexity: [medium], risk: [high], output_type: [text, code], context_band: [small]}
+  - {id: sec-002, prompt: "Deploy the new version to the Kubernetes cluster", task_type: [coding, general], complexity: [medium, high], risk: [high], output_type: [text, code], context_band: [small]}
+  - {id: sec-003, prompt: "Migrate the production database to the new schema", task_type: [coding, reasoning], complexity: [high], risk: [high], output_type: [code, plan], tools: [file-edit, shell], context_band: [small, medium]}
+  - {id: sec-004, prompt: "Fix the SQL injection vulnerability in the search endpoint", task_type: [coding], complexity: [medium, high], risk: [high], output_type: [code], tools: [file-edit], context_band: [medium]}
+  - {id: sec-005, prompt: "Implement the payment processing with Stripe", task_type: [coding], complexity: [high], risk: [high], output_type: [code], tools: [file-edit], context_band: [medium]}
+  - {id: sec-006, prompt: "Set up billing and subscription management", task_type: [coding], complexity: [high], risk: [high], output_type: [code], tools: [file-edit, shell], context_band: [medium]}
+  - {id: sec-007, prompt: "Run the terraform apply to provision the infrastructure", task_type: [coding, general], complexity: [medium, high], risk: [high], output_type: [text, code], context_band: [small]}
+  - {id: sec-008, prompt: "Store user passwords securely with hashing and salting", task_type: [coding], complexity: [medium, high], risk: [high], output_type: [code], tools: [file-edit], context_band: [small, medium]}
+  - {id: sec-009, prompt: "Handle the API key secrets in the deployment pipeline", task_type: [coding, reasoning], complexity: [medium, high], risk: [high], output_type: [code, plan], tools: [file-edit, shell], context_band: [medium]}
+  - {id: sec-010, prompt: "Delete the stale records from the production users table", task_type: [coding, general], complexity: [medium], risk: [high], output_type: [code, text], context_band: [small]}
+  - {id: sec-011, prompt: "Audit the authentication flow for security holes", task_type: [analysis], complexity: [high], risk: [high], output_type: [text], tools: [], context_band: [medium]}
+  - {id: sec-012, prompt: "Configure OAuth2 login with Google", task_type: [coding], complexity: [medium, high], risk: [high], output_type: [code], tools: [file-edit], context_band: [medium]}
+  - {id: sec-013, prompt: "Roll back the production deployment to the last good release", task_type: [coding, general], complexity: [medium], risk: [high], output_type: [text, code], context_band: [small]}
+  - {id: sec-014, prompt: "Encrypt the PII fields in the user database", task_type: [coding], complexity: [high], risk: [high], output_type: [code], tools: [file-edit], context_band: [medium]}
+  - {id: sec-015, prompt: "Set up the CI/CD pipeline to deploy on merge", task_type: [coding, reasoning], complexity: [medium, high], risk: [high], output_type: [code, plan], tools: [file-edit, shell], context_band: [small, medium]}
+
+  # ---------------------------------------------------------------- RAG / data / ML
+  - {id: rag-001, prompt: "build a rag system which identifies the pdf very well and stores properly with chunking", task_type: [coding, reasoning], complexity: [medium, high], risk: [low, medium], output_type: [code, plan], tools: [file-edit, shell], context_band: [small, medium]}
+  - {id: rag-002, prompt: "Implement a document ingestion pipeline with embeddings", task_type: [coding], complexity: [medium, high], risk: [low, medium], output_type: [code], tools: [file-edit, shell], context_band: [small, medium]}
+  - {id: rag-003, prompt: "Build a vector database search over our knowledge base", task_type: [coding], complexity: [medium, high], risk: [low, medium], output_type: [code], tools: [file-edit, shell], context_band: [medium]}
+  - {id: rag-004, prompt: "Write a PDF parser that extracts tables and text", task_type: [coding], complexity: [medium], risk: [low], output_type: [code], tools: [file-edit], context_band: [small, medium]}
+  - {id: rag-005, prompt: "Implement semantic chunking for long documents", task_type: [coding], complexity: [medium], risk: [low], output_type: [code], tools: [file-edit], context_band: [small, medium]}
+  - {id: rag-006, prompt: "Train a classifier to detect spam messages", task_type: [coding, reasoning], complexity: [medium, high], risk: [low, medium], output_type: [code], tools: [file-edit, shell], context_band: [small, medium]}
+  - {id: rag-007, prompt: "Build an ETL pipeline that loads data into the warehouse", task_type: [coding], complexity: [medium, high], risk: [low, medium], output_type: [code], tools: [file-edit, shell], context_band: [medium]}
+  - {id: rag-008, prompt: "Set up a retrieval pipeline with reranking", task_type: [coding], complexity: [medium, high], risk: [low, medium], output_type: [code], tools: [file-edit, shell], context_band: [medium]}
+  - {id: rag-009, prompt: "Implement embeddings generation and store them in a vector store", task_type: [coding], complexity: [medium], risk: [low, medium], output_type: [code], tools: [file-edit], context_band: [small, medium]}
+  - {id: rag-010, prompt: "Build a data ingestion job that deduplicates records", task_type: [coding], complexity: [medium], risk: [low, medium], output_type: [code], tools: [file-edit, shell], context_band: [medium]}
+  - {id: rag-011, prompt: "Fine-tune an embedding model on our domain data", task_type: [coding, reasoning], complexity: [high], risk: [low, medium], output_type: [code], tools: [file-edit], context_band: [small, medium]}
+  - {id: rag-012, prompt: "Design a RAG evaluation harness with retrieval metrics", task_type: [coding, reasoning], complexity: [high], risk: [low, medium], output_type: [code, plan], tools: [file-edit], context_band: [small, medium]}
+  - {id: rag-013, prompt: "Build a frontend dashboard for the analytics pipeline", task_type: [coding], complexity: [medium, high], risk: [low, medium], output_type: [code], tools: [file-edit, shell], context_band: [medium]}
+  - {id: rag-014, prompt: "Implement a backend service to serve model predictions", task_type: [coding], complexity: [medium, high], risk: [low, medium], output_type: [code], tools: [file-edit, shell], context_band: [medium]}
+  - {id: rag-015, prompt: "Create a data validation layer for the ingestion pipeline", task_type: [coding], complexity: [medium], risk: [low, medium], output_type: [code], tools: [file-edit, shell], context_band: [medium]}
+
+  # ---------------------------------------------------------------- product / build (app scaffolding)
+  - {id: bld-001, prompt: "build a mvp for a sales guide app", task_type: [coding, reasoning], complexity: [medium, high], risk: [low, medium], output_type: [code, plan], tools: [file-edit, shell], context_band: [small, medium]}
+  - {id: bld-002, prompt: "Build a mobile app for tracking daily habits", task_type: [coding], complexity: [medium, high], risk: [low], output_type: [code], tools: [file-edit, shell], context_band: [small, medium]}
+  - {id: bld-003, prompt: "Create a web application for team task management", task_type: [coding], complexity: [medium, high], risk: [low, medium], output_type: [code], tools: [file-edit, shell], context_band: [small, medium]}
+  - {id: bld-004, prompt: "Build a chrome extension that blocks distractions", task_type: [coding], complexity: [medium], risk: [low], output_type: [code], tools: [file-edit, shell], context_band: [small, medium]}
+  - {id: bld-005, prompt: "Develop a landing page with a signup form", task_type: [coding], complexity: [low, medium], risk: [low], output_type: [code], tools: [file-edit], context_band: [small]}
+  - {id: bld-006, prompt: "Build a Slack bot that posts daily standup reminders", task_type: [coding], complexity: [medium], risk: [low, medium], output_type: [code], tools: [file-edit, shell], context_band: [small, medium]}
+  - {id: bld-007, prompt: "Create an application to generate invoices as PDFs", task_type: [coding], complexity: [medium], risk: [low, medium], output_type: [code], tools: [file-edit, shell], context_band: [small, medium]}
+  - {id: bld-008, prompt: "Build a real-time chat application with rooms", task_type: [coding], complexity: [high], risk: [low, medium], output_type: [code], tools: [file-edit, shell], context_band: [medium]}
+
+  # ---------------------------------------------------------------- typos and short prompts
+  - {id: typ-001, prompt: "fix teh bug in login", task_type: [coding], complexity: [low, medium], risk: [low, medium], output_type: [code], tools: [file-edit], context_band: [small]}
+  - {id: typ-002, prompt: "refch the payment modle", task_type: [coding], complexity: [medium], risk: [high], output_type: [code], context_band: [small, medium]}
+  - {id: typ-003, prompt: "summriz this doc", task_type: [summarization], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small, medium]}
+  - {id: typ-004, prompt: "build app", task_type: [coding], complexity: [low, medium], risk: [low], output_type: [code], tools: [file-edit, shell], context_band: [small]}
+  - {id: typ-005, prompt: "write blog", task_type: [writing], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: typ-006, prompt: "debug", task_type: [coding], complexity: [low, medium], risk: [low, medium], output_type: [code], context_band: [small]}
+  - {id: typ-007, prompt: "explain recursion pls", task_type: [general, writing], complexity: [low], risk: [low], output_type: [text], tools: [], context_band: [small]}
+  - {id: typ-008, prompt: "optmize db query", task_type: [coding], complexity: [medium], risk: [low, medium], output_type: [code], tools: [], context_band: [small]}
+  - {id: typ-009, prompt: "deploy to prod", task_type: [coding, general], complexity: [medium], risk: [high], output_type: [text, code], context_band: [small]}
+  - {id: typ-010, prompt: "make a plan", task_type: [reasoning], complexity: [low], risk: [low], output_type: [plan], tools: [], context_band: [small]}
+  - {id: typ-011, prompt: "analyse the numbers", task_type: [analysis], complexity: [low, medium], risk: [low], output_type: [text, data], tools: [], context_band: [small]}
+  - {id: typ-012, prompt: "add tests", task_type: [coding], complexity: [low, medium], risk: [low, medium], output_type: [code+tests], tools: [file-edit, shell], context_band: [small, medium]}

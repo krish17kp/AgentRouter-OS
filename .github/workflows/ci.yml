@@ -3,6 +3,7 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:  # manual trigger for the optional live-smoke job
 
 jobs:
   test:
@@ -10,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@v4
@@ -31,13 +32,36 @@ jobs:
       - name: Format check (ruff format)
         run: ruff format --check .
 
-      - name: Tests + coverage gate (80%)
-        run: pytest --cov=agentrouter
+      - name: Tests + branch coverage gate (80%)
+        run: pytest --cov=agentrouter --cov-branch
+
+      - name: Classifier + routing quality gate (offline)
+        run: python -m agentrouter evaluate --json --no-artifacts
 
       - name: CLI entrypoints smoke check
         run: |
           python -m agentrouter --help
           agentrouter --help
+
+  # Windows parity: the project targets Windows first (dev machine), so prove
+  # the suite and CLI work there too.
+  test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install project + dev tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Tests + branch coverage gate (80%)
+        run: pytest --cov=agentrouter --cov-branch
+      - name: CLI smoke check
+        run: |
+          python -m agentrouter --version
+          python -m agentrouter evaluate --no-artifacts
 
   build-smoke:
     # Post-build verification: the artifact users actually pip-install works.
@@ -64,3 +88,24 @@ jobs:
           python -c "import json; d=json.load(open('/tmp/route.json')); assert d['recommendation'], d"
           /tmp/wheelenv/bin/agentrouter stats
           /tmp/wheelenv/bin/agentrouter registry list
+
+  # Optional live provider smoke test — hits the real OpenRouter catalog.
+  # Runs ONLY on manual dispatch, never on push/PR, and never blocks normal CI.
+  live-smoke:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+      - name: Live OpenRouter catalog refresh (keyless, public endpoint)
+        run: |
+          export AGENTROUTER_HOME=/tmp/live
+          agentrouter init
+          agentrouter providers refresh openrouter --limit 5 --dry-run

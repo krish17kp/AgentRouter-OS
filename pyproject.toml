@@ -9,7 +9,7 @@ description = "CLI-first AI task-routing planner: classifies a task and recommen
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Krish Parekh" }]
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 keywords = ["ai", "routing", "cli", "llm", "model-selection"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -18,6 +18,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -43,7 +44,7 @@ agentrouter = ["seeds/*.yaml"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B"]
@@ -57,6 +58,7 @@ testpaths = ["tests"]
 
 [tool.coverage.run]
 source = ["agentrouter"]
+branch = true
 
 [tool.coverage.report]
 fail_under = 80

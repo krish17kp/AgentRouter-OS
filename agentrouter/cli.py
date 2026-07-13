@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
-from datetime import UTC
+from datetime import timezone
 from importlib import resources
 from pathlib import Path
 
@@ -403,7 +403,7 @@ def feedback(
 
     conn.execute(
         "INSERT INTO feedback (decision_id, created_at, rating, note) VALUES (?, ?, ?, ?)",
-        (int(decision_id.removeprefix("d_")), datetime.now(UTC).isoformat(), rating, note),
+        (int(decision_id.removeprefix("d_")), datetime.now(timezone.utc).isoformat(), rating, note),
     )
     conn.commit()
     conn.close()
@@ -711,6 +711,55 @@ def dashboard(port: int = typer.Option(8321, "--port", min=0, max=65535)):
         raise typer.Exit(EXIT_USAGE)
     _, models = _load_registries()
     serve(_home(), port, {m.key: m.pricing_tier.value for m in models})
+
+
+# --- evaluate (graded classifier benchmark) ------------------------------------------
+
+_DEFAULT_GOLD = Path("benchmarks") / "classifier_gold_v1.yaml"
+_DEFAULT_ARTIFACTS = Path("artifacts")
+
+
+@app.command()
+def evaluate(
+    gold: Path = typer.Option(_DEFAULT_GOLD, "--gold", help="Gold benchmark YAML."),
+    out_dir: Path = typer.Option(_DEFAULT_ARTIFACTS, "--out-dir", help="Where to write artifacts."),
+    json_out: bool = typer.Option(False, "--json", help="Print the full report as JSON."),
+    no_artifacts: bool = typer.Option(False, "--no-artifacts", help="Do not write files."),
+):
+    """Grade the classifier against a gold benchmark; write evaluation artifacts."""
+    from . import evaluate as ev
+
+    try:
+        report = ev.evaluate(gold)
+    except ev.GoldError as e:
+        typer.echo(f"Benchmark error: {e}", err=True)
+        raise typer.Exit(EXIT_REGISTRY) from e
+
+    if not no_artifacts:
+        paths = ev.write_artifacts(report, out_dir)
+        for p in paths:
+            typer.echo(f"Wrote {p}")
+
+    if json_out:
+        slim = {k: v for k, v in report.items() if k != "cases"}
+        typer.echo(json.dumps(slim, indent=2))
+        return
+
+    typer.echo(f"\nCases: {report['n_cases']}   Overall grade: {report['overall_grade']}/100")
+    typer.echo(f"Release-ready: {'YES' if report['release_ready'] else 'NO'}")
+    typer.echo("\nDimension scores (weight x score):")
+    for d, w in report["grade_weights"].items():
+        typer.echo(f"  {d:<11} w={w:<2} score={report['dimension_scores'][d]:.3f}")
+    typer.echo(
+        f"\nTask-type macro F1: {report['task_type']['macro_f1']:.3f}   "
+        f"high-risk recall: {report['risk']['high_risk_recall']}   "
+        f"tool F1: {report['tools']['f1']:.3f}   "
+        f"approval acc: {report['approval']['accuracy']:.3f}"
+    )
+    typer.echo("\nRelease thresholds:")
+    for name, ok in report["release_thresholds"].items():
+        typer.echo(f"  [{'PASS' if ok else 'FAIL'}] {name}")
+    typer.echo(f"\nFailed cases: {len(report['failures'])} (see artifacts/failures.csv)")
 
 
 if __name__ == "__main__":

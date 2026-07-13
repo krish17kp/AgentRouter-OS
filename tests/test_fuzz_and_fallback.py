@@ -59,7 +59,10 @@ def _model(model_id, provider="openrouter", tier=PricingTier.medium, fallback=()
     )
 
 
-_CLS = classify("fix a bug in the parser")  # coding / low risk / small context
+# coding / low risk / small context; tools pinned empty so these fallback-logic
+# tests stay independent of tool-eligibility (the classifier now infers file-edit
+# for a "fix the parser" task, which the tool-less test models cannot satisfy).
+_CLS = classify("fix a bug in the parser", tools=[])
 
 
 def test_single_eligible_model_has_no_fallback():
