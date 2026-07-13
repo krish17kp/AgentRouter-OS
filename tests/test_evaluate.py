@@ -190,7 +190,7 @@ def test_cli_evaluate_json_runs(tmp_path):
 
     r = runner.invoke(app, ["evaluate", "--json", "--out-dir", str(tmp_path)])
     assert r.exit_code == 0, r.output
-    report = json.loads(r.output[r.output.index("{"):])
+    report = json.loads(r.output[r.output.index("{") :])
     assert 0 <= report["overall_grade"] <= 100
     assert report["n_cases"] >= 150
     assert (tmp_path / "evaluation.json").exists()
@@ -218,5 +218,5 @@ def test_cli_evaluate_meets_release_thresholds():
     from agentrouter.cli import app
 
     r = runner.invoke(app, ["evaluate", "--json", "--no-artifacts"])
-    report = json.loads(r.output[r.output.index("{"):])
+    report = json.loads(r.output[r.output.index("{") :])
     assert report["release_ready"], report["release_thresholds"]
