@@ -715,8 +715,9 @@ def dashboard(port: int = typer.Option(8321, "--port", min=0, max=65535)):
 
 # --- evaluate (graded classifier benchmark) ------------------------------------------
 
-_DEFAULT_GOLD = Path("benchmarks") / "classifier_gold_v1.yaml"
-_DEFAULT_ARTIFACTS = Path("artifacts")
+_PROJECT_ROOT = Path(__file__).parent.parent
+_DEFAULT_GOLD = _PROJECT_ROOT / "benchmarks" / "classifier_gold_v1.yaml"
+_DEFAULT_ARTIFACTS = _PROJECT_ROOT / "artifacts"
 
 
 @app.command()
