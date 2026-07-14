@@ -1,0 +1,38 @@
+name: Security
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install project + security tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,security]"
+
+      - name: Bandit static analysis (config-aware; fails on any finding)
+        run: bandit -c pyproject.toml -r agentrouter
+
+      - name: pip-audit dependency vulnerability scan
+        run: pip-audit -r requirements.txt
+
+      - name: Injection + security regression suite
+        run: pytest -m security -q
+
+      - name: Secret scan (grep for obvious committed key patterns)
+        run: |
+          if git grep -nEI '(sk-[A-Za-z0-9]{16,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----)' \
+             -- ':!tests/**' ':!.github/**'; then
+            echo "::error::Potential secret committed"; exit 1
+          fi
+          echo "No obvious secrets found."

@@ -61,6 +61,9 @@ def run_cmd(
     out_dir: Path = typer.Option(_DEFAULT_OUT, "--out-dir", help="Artifact directory."),
     json_out: bool = typer.Option(False, "--json", help="Print full result JSON."),
     no_artifacts: bool = typer.Option(False, "--no-artifacts", help="Do not write files."),
+    measure_all: bool = typer.Option(
+        False, "--all", help="Measure every 100-point dimension (routing/safety/platform/...)."
+    ),
 ):
     """Run an evaluation profile or a single dataset and write reports."""
     if source not in ("fixture", "real"):
@@ -75,6 +78,7 @@ def run_cmd(
             seed=seed,
             languages=langs,
             source=source,
+            measure_all=measure_all,
         )
     except (KeyError, AdapterError) as e:
         typer.echo(f"Run error: {e}", err=True)

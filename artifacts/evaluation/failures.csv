@@ -52,7 +52,9 @@ mix-011,Investigate the flaky test and fix it,context,medium,small
 mix-013,Draft a spec and implement the first endpoint,complexity,medium,high
 mix-015,Audit dependencies and upgrade the vulnerable ones,context,medium,small
 sec-001,Rotate the production database credentials,complexity,medium,low
+sec-001,Rotate the production database credentials,tools,,file-edit
 sec-002,Deploy the new version to the Kubernetes cluster,complexity,medium|high,low
+sec-002,Deploy the new version to the Kubernetes cluster,tools,,file-edit|shell
 sec-003,Migrate the production database to the new schema,complexity,high,medium
 sec-004,Fix the SQL injection vulnerability in the search endpoint,complexity,medium|high,low
 sec-004,Fix the SQL injection vulnerability in the search endpoint,context,medium,small
@@ -64,6 +66,7 @@ sec-006,Set up billing and subscription management,output,code,text
 sec-006,Set up billing and subscription management,context,medium,small
 sec-006,Set up billing and subscription management,tools,file-edit|shell,
 sec-007,Run the terraform apply to provision the infrastructure,complexity,medium|high,low
+sec-007,Run the terraform apply to provision the infrastructure,tools,,file-edit|shell
 sec-009,Handle the API key secrets in the deployment pipeline,complexity,medium|high,low
 sec-009,Handle the API key secrets in the deployment pipeline,context,medium,small
 sec-010,Delete the stale records from the production users table,complexity,medium,low
@@ -72,6 +75,7 @@ sec-011,Audit the authentication flow for security holes,context,medium,small
 sec-012,Configure OAuth2 login with Google,complexity,medium|high,low
 sec-012,Configure OAuth2 login with Google,context,medium,small
 sec-013,Roll back the production deployment to the last good release,complexity,medium,low
+sec-013,Roll back the production deployment to the last good release,tools,,shell
 sec-014,Encrypt the PII fields in the user database,complexity,high,low
 sec-014,Encrypt the PII fields in the user database,context,medium,small
 rag-003,Build a vector database search over our knowledge base,context,medium,small
@@ -88,5 +92,7 @@ typ-002,refch the payment modle,task_type,coding,general
 typ-002,refch the payment modle,complexity,medium,low
 typ-002,refch the payment modle,output,code,text
 typ-005,write blog,task_type,writing,general
+typ-006,debug,tools,,file-edit
 typ-008,optmize db query,complexity,medium,low
 typ-009,deploy to prod,complexity,medium,low
+typ-009,deploy to prod,tools,,file-edit|shell

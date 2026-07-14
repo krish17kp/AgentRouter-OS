@@ -15,8 +15,9 @@ from pathlib import Path
 import typer
 import yaml
 
-from . import hosts, store
+from . import hosts, plugins, store
 from .classifier import classify
+from .controls import PREFERENCE_WEIGHTS, RouteControls, apply_controls
 from .engine import BASE_WEIGHTS
 from .engine import route as engine_route
 from .learning import learned_weights
@@ -62,11 +63,13 @@ providers_app = typer.Typer(help="Provider operations.")
 prompt_app = typer.Typer(help="Prompt generation.")
 hosts_app = typer.Typer(help="Execution host discovery.")
 models_app = typer.Typer(help="Model catalog inspection.")
+plugin_app = typer.Typer(help="Install AgentRouter host integrations (skill/plugin).")
 app.add_typer(registry_app, name="registry")
 app.add_typer(providers_app, name="providers")
 app.add_typer(prompt_app, name="prompt")
 app.add_typer(hosts_app, name="hosts")
 app.add_typer(models_app, name="models")
+app.add_typer(plugin_app, name="plugin")
 
 # Multi-dataset evaluation framework (evaluation/ package). The legacy
 # single-shot `evaluate` command below is kept for backward compatibility.
@@ -168,6 +171,24 @@ def _adapted_weights(cfg: dict) -> tuple[dict, str | None]:
     return weights, note
 
 
+def _resolve_preference(quality: bool, balanced: bool, cheap: bool, fast: bool) -> str | None:
+    """Map the four --prefer-* flags to a single preference name; at most one."""
+    chosen = [
+        n
+        for n, on in (
+            ("quality", quality),
+            ("balanced", balanced),
+            ("cheap", cheap),
+            ("fast", fast),
+        )
+        if on
+    ]
+    if len(chosen) > 1:
+        typer.echo(f"Use only one --prefer-* flag (got {', '.join(chosen)}).", err=True)
+        raise typer.Exit(EXIT_USAGE)
+    return chosen[0] if chosen else None
+
+
 def _reason_for(rec: dict, cls, shifts: list[str]) -> str:
     """One-line plain-English justification for the recommendation."""
     t = rec["terms"]
@@ -249,6 +270,69 @@ def init(force: bool = typer.Option(False, "--force", help="Overwrite existing f
     typer.echo('Ready. Try: agentrouter route "your task here"')
 
 
+def _write_preference(preference: str) -> None:
+    """Persist a cost/quality preference as scoring weights in config.yaml."""
+    cfg = _load_config()
+    cfg["weights"] = dict(PREFERENCE_WEIGHTS[preference])
+    (_home() / "config.yaml").write_text(yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
+
+
+@app.command()
+def setup(
+    preference: str = typer.Option(
+        "balanced", "--preference", help="quality | balanced | cheap | fast."
+    ),
+    sample: str = typer.Option(
+        "summarize this PDF and list the action items", "--sample", help="First sample task."
+    ),
+):
+    """Guided onboarding: init home, discover hosts, set a preference, run a sample route.
+
+    Non-interactive and idempotent — safe to re-run and to run in CI.
+    """
+    if preference not in PREFERENCE_WEIGHTS:
+        typer.echo(
+            f"Unknown --preference '{preference}'. Choose: {', '.join(PREFERENCE_WEIGHTS)}.",
+            err=True,
+        )
+        raise typer.Exit(EXIT_USAGE)
+
+    typer.echo("AgentRouter setup - everything runs locally; no task text leaves this machine.\n")
+
+    typer.echo("1. Home directory")
+    init(force=False)
+
+    typer.echo("\n2. Execution hosts (credentials detected by presence only; values never read)")
+    available = 0
+    for host in hosts.known_hosts():
+        st = hosts.detect_host(host)
+        mark = "OK " if st.availability == hosts.AVAILABLE else "-- "
+        typer.echo(f"   [{mark}] {host:<16} {st.availability:<12} {st.reason}")
+        available += st.availability == hosts.AVAILABLE
+    if not available:
+        typer.echo("   Note: no host available yet — install Claude Code/Codex or set an API key.")
+
+    typer.echo(f"\n3. Preference: {preference}")
+    _write_preference(preference)
+    typer.echo(f"   Saved scoring weights to {_home() / 'config.yaml'}")
+
+    typer.echo(f'\n4. Sample route: "{sample}"')
+    _, models = _load_registries()
+    cfg = _load_config()
+    models = _apply_policy(models, cfg)
+    cls = classify(sample)
+    result = engine_route(models, cls, _load_weights(cfg))
+    rec = result["recommendation"]
+    if rec:
+        typer.echo(f"   -> {rec['model']}  (score {rec['score']:.2f})")
+    else:
+        typer.echo("   -> no eligible model (check your registry)")
+
+    typer.echo("\n5. Install a host integration:")
+    typer.echo("   agentrouter plugin install claude-code    # or: codex")
+    typer.echo('\nDone. Next: agentrouter route "<your task>"')
+
+
 # --- route ---------------------------------------------------------------------
 
 
@@ -260,17 +344,78 @@ def route(
     ),
     risk: Level | None = typer.Option(None, "--risk", help="Override inferred risk."),
     tool: str | None = typer.Option(None, "--tool", help="Override tool needs (comma-separated)."),
+    uncertainty_threshold: float = typer.Option(
+        0.4, "--uncertainty-threshold", help="Below this confidence, route flags clarification."
+    ),
+    vendor: list[str] = typer.Option(None, "--vendor", help="Only these vendors (repeatable)."),
+    exclude_vendor: list[str] = typer.Option(
+        None, "--exclude-vendor", help="Drop these vendors (repeatable)."
+    ),
+    model: str | None = typer.Option(None, "--model", help="Pin to one model (vendor/id or id)."),
+    host: list[str] = typer.Option(
+        None, "--host", help="Only models runnable on these hosts (repeatable)."
+    ),
+    exclude_host: list[str] = typer.Option(
+        None, "--exclude-host", help="Drop models on these hosts (repeatable)."
+    ),
+    max_price: float | None = typer.Option(
+        None, "--max-price", help="Cap input price (USD per 1M tokens)."
+    ),
+    prefer_quality: bool = typer.Option(False, "--prefer-quality", help="Weight capability."),
+    prefer_balanced: bool = typer.Option(False, "--prefer-balanced", help="Balanced weights."),
+    prefer_cheap: bool = typer.Option(False, "--prefer-cheap", help="Weight cost."),
+    prefer_fast: bool = typer.Option(False, "--prefer-fast", help="Weight latency."),
+    stable_only: bool = typer.Option(False, "--stable-only", help="Only stable-channel models."),
+    allow_preview: bool = typer.Option(
+        False, "--allow-preview", help="Include preview/experimental models (default)."
+    ),
+    available_only: bool = typer.Option(
+        False, "--available-only", help="Only models with an available host."
+    ),
+    include_unavailable: bool = typer.Option(
+        False, "--include-unavailable", help="Include models without an available host (default)."
+    ),
+    prohibit_tool: list[str] = typer.Option(
+        None, "--prohibit-tool", help="Drop models supporting this tool (repeatable)."
+    ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
     no_log: bool = typer.Option(False, "--no-log", help="Do not persist the decision."),
 ):
     """Classify a task and recommend the best model/tool + fallback."""
+    prefer = _resolve_preference(prefer_quality, prefer_balanced, prefer_cheap, prefer_fast)
+    if stable_only and allow_preview:
+        typer.echo("Use only one of --stable-only / --allow-preview.", err=True)
+        raise typer.Exit(EXIT_USAGE)
+    if available_only and include_unavailable:
+        typer.echo("Use only one of --available-only / --include-unavailable.", err=True)
+        raise typer.Exit(EXIT_USAGE)
+    ctrl = RouteControls(
+        vendor=tuple(vendor or ()),
+        exclude_vendor=tuple(exclude_vendor or ()),
+        model=model,
+        host=tuple(host or ()),
+        exclude_host=tuple(exclude_host or ()),
+        max_price=max_price,
+        stable_only=stable_only,
+        available_only=available_only,
+        prohibit_tool=tuple(prohibit_tool or ()),
+    )
+
     _, models = _load_registries()
     cfg = _load_config()
     models = _apply_policy(models, cfg)
+    models, control_drops = apply_controls(models, ctrl)
     tools = [t.strip() for t in tool.split(",") if t.strip()] if tool else None
-    cls = classify(task, context_tokens=context_tokens, risk=risk, tools=tools)
+    cls = classify(
+        task,
+        context_tokens=context_tokens,
+        risk=risk,
+        tools=tools,
+        uncertainty_threshold=uncertainty_threshold,
+    )
     weights, learn_note = _adapted_weights(cfg)
-    result = engine_route(models, cls, weights)
+    result = engine_route(models, cls, weights, prefer=prefer)
+    result["excluded"] = control_drops + result["excluded"]
     if learn_note:
         result["weight_shifts"].append(learn_note)
     gates = gates_for(cls)
@@ -340,6 +485,16 @@ def _print_route(task, cls, result, gates, reason, decision_id, exec_route=None,
     )
     typer.echo(f"  tools needed: {', '.join(cls.tool_needs) or 'none'}")
     typer.echo(f"  approval: {cls.approval_level.value}")
+    typer.echo(f"  confidence: {cls.confidence:.2f}")
+    if cls.needs_clarification:
+        alt = (
+            f" (could also be {cls.alternative_task_type.value})"
+            if cls.alternative_task_type
+            else ""
+        )
+        why = f" — {cls.ambiguity_reason}" if cls.ambiguity_reason else ""
+        typer.echo(f"\nLow confidence{why}{alt}.")
+        typer.echo("  Consider clarifying the task; the recommendation below is a best guess.")
 
     typer.echo("\nRecommendation                                        score")
     if result["recommendation"]:
@@ -703,7 +858,7 @@ def _execute_via_host(rec: dict, er: dict, prompt: str, *, yes: bool, dry_run: b
 
     typer.echo(f"Running {model.name} via {tgt.host}...")
     try:
-        completed = subprocess.run(argv)  # no shell; prompt is a single argv element
+        completed = subprocess.run(argv)  # nosec B603 - argv list, shell=False, no string interpolation (test_execute_injection.py)
     except FileNotFoundError as e:
         typer.echo(f"Execution failed: command not found: {argv[0]}", err=True)
         typer.echo(f"Next: install the '{tgt.host}' CLI ({tgt.required_command}).", err=True)
@@ -890,7 +1045,7 @@ def execute(
 
     typer.echo(f"Running {rec['model']} via provider '{provider.id}'...")
     try:
-        completed = subprocess.run(argv)  # no shell; prompt passed as one argv element
+        completed = subprocess.run(argv)  # nosec B603 - argv list, shell=False, no string interpolation (test_execute_injection.py)
     except FileNotFoundError as e:
         typer.echo(f"Execution failed: command not found: {argv[0]}", err=True)
         typer.echo("Next: install the provider's CLI or fix exec_command.", err=True)
@@ -935,6 +1090,28 @@ def stats(json_out: bool = typer.Option(False, "--json")):
 
 
 # --- dashboard (M5 — read-only, stdlib) ----------------------------------------------
+
+
+@app.command()
+def server(
+    host: str = typer.Option("127.0.0.1", "--host", help="Bind address (localhost by default)."),
+    port: int = typer.Option(8000, "--port", min=0, max=65535, help="Port."),
+):
+    """Run the local REST API (Phase P7). Remote model execution stays disabled.
+
+    Set AGENTROUTER_API_KEY to require an X-API-Key header. Docs at /docs.
+    Install extras first: pip install "agentrouter-os[server]".
+    """
+    try:
+        import uvicorn
+
+        from .server.app import app as api_app
+    except ImportError as e:
+        typer.echo(f"Server extras not installed: {e}", err=True)
+        typer.echo('Next: pip install "agentrouter-os[server]"', err=True)
+        raise typer.Exit(EXIT_RUNTIME) from e
+    typer.echo(f"AgentRouter API on http://{host}:{port}  (docs: /docs)  — Ctrl+C to stop")
+    uvicorn.run(api_app, host=host, port=port)
 
 
 @app.command()
@@ -999,6 +1176,65 @@ def evaluate(
     for name, ok in report["release_thresholds"].items():
         typer.echo(f"  [{'PASS' if ok else 'FAIL'}] {name}")
     typer.echo(f"\nFailed cases: {len(report['failures'])} (see artifacts/failures.csv)")
+
+
+# --- plugin (Phase P8) ---------------------------------------------------------
+
+
+@plugin_app.command("list")
+def plugin_list():
+    """List installable host integrations and their current status."""
+    for p in plugins.PLUGINS.values():
+        typer.echo(f"{p.name:<12} [{plugins.status(p)}]  {p.description}")
+
+
+def _resolve_plugin(name: str) -> plugins.Plugin:
+    try:
+        return plugins.get_plugin(name)
+    except plugins.PluginError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(EXIT_USAGE) from e
+
+
+@plugin_app.command("install")
+def plugin_install(
+    name: str = typer.Argument(..., help="Plugin name (see `plugin list`)."),
+    force: bool = typer.Option(False, "--force", help="Back up and replace differing files."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show the exact files, change nothing."),
+):
+    """Install a host integration (idempotent, reversible)."""
+    p = _resolve_plugin(name)
+    if dry_run:
+        typer.echo(f"Would install '{p.name}':")
+        for item in plugins.plan(p):
+            typer.echo(f"  {item['action']:<24} {item['dest']}")
+        return
+    try:
+        for r in plugins.install(p, force=force):
+            typer.echo(f"  {r['result']:<28} {r['dest']}")
+    except plugins.PluginError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(EXIT_RUNTIME) from e
+    typer.echo(f"Installed '{p.name}'. Uninstall with: agentrouter plugin uninstall {p.name}")
+
+
+@plugin_app.command("uninstall")
+def plugin_uninstall(
+    name: str = typer.Argument(..., help="Plugin name (see `plugin list`)."),
+):
+    """Remove a host integration; restores any backed-up user file."""
+    p = _resolve_plugin(name)
+    for r in plugins.uninstall(p):
+        typer.echo(f"  {r['result']:<28} {r['dest']}")
+
+
+@plugin_app.command("doctor")
+def plugin_doctor():
+    """Report install status and destination paths for every plugin."""
+    for p in plugins.PLUGINS.values():
+        typer.echo(f"{p.name}: {plugins.status(p)}  (root: {plugins.dest_root(p)})")
+        for item in plugins.plan(p):
+            typer.echo(f"  {item['action']:<24} {item['dest']}")
 
 
 if __name__ == "__main__":

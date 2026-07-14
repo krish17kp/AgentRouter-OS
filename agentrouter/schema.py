@@ -212,3 +212,9 @@ class Classification(BaseModel):
     output_type: OutputType
     tool_needs: list[str]
     approval_level: ApprovalLevel
+
+    # Phase P3 confidence/abstention (additive; defaults keep old constructors valid).
+    confidence: float = Field(default=1.0, ge=0, le=1)
+    needs_clarification: bool = False
+    alternative_task_type: TaskType | None = None
+    ambiguity_reason: str | None = None

@@ -50,9 +50,14 @@ agentrouter --version             # -> agentrouter-os 0.4.0
 ### 2. Initialize
 
 ```bash
-agentrouter init                  # creates ~/.agentrouter/ with config + seed registries + DB
+agentrouter setup                 # guided: init home, discover hosts, pick a preference, sample route
+# or the low-level primitive:
+agentrouter init                  # just creates ~/.agentrouter/ with config + seed registries + DB
 agentrouter registry list         # see the models you can route to
 ```
+
+`setup` is non-interactive and safe to re-run. It never prints your API-key values —
+hosts are detected by credential *presence* only.
 
 ### 3. Route your first task
 
@@ -107,6 +112,20 @@ agentrouter route "tweak the thing" \
 ```
 
 Available overrides: `--risk {low|medium|high}`, `--tool <comma-separated>`, `--context-tokens <int>`. (There is no `--type` flag — task type is always inferred, then reflected in the score.)
+
+### Steer the route (Phase P3/P4 controls)
+
+```bash
+agentrouter route "build a scraper" --vendor anthropic --stable-only --available-only
+agentrouter route "reformat this JSON" --prefer-cheap        # or --prefer-quality|fast|balanced
+agentrouter route "write a shell script" --prohibit-tool shell
+agentrouter route "do it" --uncertainty-threshold 0.3        # low confidence => route flags clarification
+```
+
+Filters: `--vendor/--exclude-vendor`, `--model`, `--host/--exclude-host`, `--max-price`,
+`--stable-only/--allow-preview`, `--available-only/--include-unavailable`, `--prohibit-tool`.
+The classification now also carries a `confidence` score and abstains (suggests clarifying)
+when it is unsure. Full reference: [`CLI_SPEC.md`](CLI_SPEC.md); worked cases: [`examples/`](examples/).
 
 ### Replay a past decision
 
@@ -181,7 +200,16 @@ The [`integrations/`](integrations/) directory turns AgentRouter into a **skill*
 
 **The division of labor:** the host agent (an LLM) decomposes a task into subtasks → AgentRouter (rule-based, auditable) routes each subtask to a pricing tier → the host maps that tier onto whatever models it actually has and runs each subtask there.
 
-**Install into Claude Code:**
+**Install into Claude Code (one command, reversible):**
+
+```bash
+agentrouter plugin install claude-code    # -> ~/.claude/skills/agentrouter/  (idempotent; backs up any existing file)
+agentrouter plugin install codex          # -> ~/.codex/AGENTS.md
+agentrouter plugin doctor                 # status + exact paths
+agentrouter plugin uninstall claude-code  # restores any backup
+```
+
+Manual copy still works if you prefer:
 
 ```bash
 cp -r integrations/claude-code/agentrouter ~/.claude/skills/agentrouter   # all projects

@@ -1,0 +1,7 @@
+gold\pred,analysis,coding,general,reasoning,summarization,writing
+analysis,20,0,0,0,0,0
+coding,0,72,2,0,0,1
+general,0,0,12,2,0,0
+reasoning,0,0,0,20,0,0
+summarization,0,0,0,0,15,0
+writing,0,0,1,0,0,20

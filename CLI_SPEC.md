@@ -76,10 +76,34 @@ and log the decision. This is the core command.
 ```
 agentrouter route "<task>" [--context-tokens N] [--risk low|medium|high]
                             [--tool file-edit,shell] [--json] [--no-log]
+                            [--vendor V]... [--exclude-vendor V]... [--model V/ID]
+                            [--host H]... [--exclude-host H]... [--max-price USD]
+                            [--prefer-quality|--prefer-balanced|--prefer-cheap|--prefer-fast]
+                            [--stable-only|--allow-preview]
+                            [--available-only|--include-unavailable]
+                            [--uncertainty-threshold F]
 ```
 - `--context-tokens N` — override estimated context size.
 - `--risk` / `--tool` — override classifier inference.
 - `--no-log` — don't persist (skips `decision_id`).
+- `--uncertainty-threshold F` — below this task-type confidence (0–1, default 0.4) the
+  output flags the interpretation as low-confidence and suggests clarifying. The
+  classification carries `confidence`, `needs_clarification`, `alternative_task_type`
+  and `ambiguity_reason` (also in `--json`).
+
+Route controls (Phase P3) filter the candidate pool before ranking:
+- `--vendor` / `--exclude-vendor` — keep/drop by model maker (repeatable, case-insensitive).
+- `--model V/ID` — pin to one model (`vendor/id`, `provider/id`, or bare `id`).
+- `--host` / `--exclude-host` — keep/drop models runnable on given execution hosts.
+- `--max-price USD` — cap input price per 1M tokens. Models with **unknown** price are
+  excluded (never fabricated); until catalogs carry real prices this excludes all seeds.
+- `--stable-only` — only stable-channel models; mutually exclusive with `--allow-preview`.
+- `--available-only` — only models with an available host; excl. with `--include-unavailable`.
+- `--prefer-quality|cheap|fast|balanced` — fixed weight vector that overrides the
+  complexity/context weight shifts (at most one). Reflected in `weight_shifts`.
+
+Filter-excluded models appear in the JSON `excluded` list with a `control:` reason.
+An impossible filter set exits `4` (no eligible model); conflicting flags exit `2`.
 
 ```console
 $ agentrouter route "Refactor auth to use JWT rotation and add tests"
@@ -180,6 +204,27 @@ agentrouter prompt generate ["<task>" | --from <decision_id>] [--tool <id>] [--o
 $ agentrouter prompt generate --from d_00042 --out prompt.md
 Wrote execution prompt for claude-code/<frontier-coding-model> → prompt.md
 ```
+
+---
+
+## 7b. `plugin` — host integrations (Phase P8)
+
+Install AgentRouter's host integrations from bundled package data.
+
+```
+agentrouter plugin list
+agentrouter plugin install <name> [--dry-run] [--force]
+agentrouter plugin uninstall <name>
+agentrouter plugin doctor
+```
+- Plugins: `claude-code` (skill → `~/.claude/skills/agentrouter/SKILL.md`),
+  `codex` (`~/.codex/AGENTS.md`).
+- **Idempotent** (identical dest is skipped), **reversible** (a differing user file is
+  backed up to `<file>.agentrouter-bak` and restored on uninstall), **safe** (never
+  overwrites a differing user file without `--force`).
+- `--dry-run` / `doctor` print the exact files and actions without changing anything.
+- Set `AGENTROUTER_PLUGIN_ROOT` to install under a custom base (used by tests).
+- Unknown plugin → exit `2`.
 
 ---
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from . import taxonomy
+from .controls import PREFERENCE_WEIGHTS
 from .schema import (
     Classification,
     ContextBand,
@@ -61,8 +63,12 @@ _AVOID_PENALTY = 0.10
 
 
 def weights_for(
-    cls: Classification, base: dict[str, float] | None = None
+    cls: Classification, base: dict[str, float] | None = None, prefer: str | None = None
 ) -> tuple[dict, list[str]]:
+    # An explicit user preference is a fixed weight vector that wins over the
+    # complexity/context shifts below (they are skipped).
+    if prefer is not None:
+        return dict(PREFERENCE_WEIGHTS[prefer]), [f"preference={prefer} -> fixed weights"]
     w = dict(base or BASE_WEIGHTS)
     shifts: list[str] = []
     if cls.complexity is Level.high or cls.risk is Level.high:
@@ -92,7 +98,8 @@ def eligibility(
             )
             continue
         needed = [t for t in cls.tool_needs if t != "vision"]
-        missing = [t for t in needed if t not in m.tool_support]
+        support = set(m.tool_support)
+        missing = [t for t in needed if not taxonomy.satisfied_by(t, support)]
         if missing:
             excluded.append({"model": m.key, "reason": f"missing tools: {','.join(missing)}"})
             continue
@@ -193,10 +200,13 @@ def pick_fallback(
 
 
 def route(
-    models: list[ModelEntry], cls: Classification, base_weights: dict[str, float] | None = None
+    models: list[ModelEntry],
+    cls: Classification,
+    base_weights: dict[str, float] | None = None,
+    prefer: str | None = None,
 ) -> dict:
     """Full routing pass: filter -> weight -> score -> recommend + fallback."""
-    weights, shifts = weights_for(cls, base_weights)
+    weights, shifts = weights_for(cls, base_weights, prefer)
     eligible, excluded = eligibility(models, cls)
     models_by_key = {m.key: m for m in models}
 

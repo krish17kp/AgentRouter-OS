@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import date
 from pathlib import Path
@@ -52,11 +53,16 @@ class RefreshError(Exception):
 
 def _http_get_json(url: str, api_key: str | None) -> dict:
     """GET url, return parsed JSON. The key goes into the header only — never logged."""
+    # Only real network schemes — blocks a malicious/typo'd registry URL from
+    # reaching file://, ftp:// or custom handlers (SSRF / local-file read).
+    scheme = urllib.parse.urlparse(url).scheme.lower()
+    if scheme not in ("http", "https"):
+        raise RefreshError(f"refusing non-http(s) catalog URL scheme '{scheme}': {url}")
     req = urllib.request.Request(url, headers={"User-Agent": "agentrouter-os"})
     if api_key:
         req.add_header("Authorization", f"Bearer {api_key}")
     try:
-        with urllib.request.urlopen(req, timeout=_TIMEOUT_SECONDS) as resp:
+        with urllib.request.urlopen(req, timeout=_TIMEOUT_SECONDS) as resp:  # nosec B310 - scheme checked above
             body = resp.read().decode("utf-8")
     except urllib.error.HTTPError as e:
         raise RefreshError(f"provider returned HTTP {e.code} for {url}") from e

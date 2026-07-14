@@ -502,6 +502,40 @@ def _complexity(text: str, task_type: TaskType, is_build: bool) -> Level:
     return Level.low
 
 
+# Acting on an existing named software component (or reviewing existing work)
+# means the model must load surrounding code/context — realistically medium,
+# not a 2k-token snippet. "build a new X" stays small (handled by precedence).
+M_EXISTING_CODE = _matcher(
+    (
+        "codebase",
+        "repo",
+        "repository",
+        "module",
+        "files",
+        "project",
+        "system",
+        "endpoint",
+        "endpoints",
+        "package",
+        "service",
+        "microservice",
+        "middleware",
+        "controller",
+        "handler",
+        "webhook",
+        "worker",
+        "parser",
+        "api",
+        "migration",
+        "pull request",
+        "test coverage",
+        "coverage",
+        "the auth",
+        "the payment",
+    )
+)
+
+
 def _context_tokens(text: str) -> int:
     m = _TOKEN_RE.search(text)
     if m:
@@ -509,10 +543,10 @@ def _context_tokens(text: str) -> int:
     m = _TOKEN_PLAIN_RE.search(text)
     if m:
         return int(m.group(1))
-    if _hit(_matcher(("codebase", "repo", "module", "files", "project", "system")), text):
-        return 12000
     if _hit(_matcher(("document", "report", "filing", "book", "transcript", "pdf")), text):
         return 30000
+    if _hit(M_EXISTING_CODE, text):
+        return 12000
     return 2000
 
 
@@ -562,6 +596,63 @@ _APPROVAL = {
     Level.high: ApprovalLevel.human_approval_required,
 }
 
+# Below this task-type confidence, route abstains (asks to clarify) rather than
+# routing a vague/ambiguous request as if it were certain.
+DEFAULT_UNCERTAINTY_THRESHOLD = 0.4
+
+
+def _task_type_families(text: str, is_build: bool) -> list[TaskType]:
+    """Which task-type families fired, in precedence order. Used for ambiguity."""
+    fams: list[TaskType] = []
+    if _hit(M_SUMMARIZE, text):
+        fams.append(TaskType.summarization)
+    if is_build or _is_component_coding(text) or _hit(M_CODING, text):
+        fams.append(TaskType.coding)
+    if _is_documentation(text) or _hit(M_WRITING, text):
+        fams.append(TaskType.writing)
+    if _hit(M_ANALYSIS, text):
+        fams.append(TaskType.analysis)
+    if _hit(M_REASONING, text):
+        fams.append(TaskType.reasoning)
+    return fams
+
+
+def _confidence(
+    text: str, task_type: TaskType, is_build: bool
+) -> tuple[float, TaskType | None, str | None]:
+    """Task-type interpretation confidence + optional runner-up and reason.
+
+    Rule-based confidence: strong when exactly one task-type family matched and
+    the task is not trivially short; weak when the classifier fell through to
+    `general` or several competing families fired.
+    """
+    words = len(text.split())
+    fams = _task_type_families(text, is_build)
+    score = 0.5
+    alternative: TaskType | None = None
+    reason: str | None = None
+
+    if task_type is TaskType.general and not fams:
+        score = 0.25  # no signal fired — pure fallthrough
+        reason = "no distinctive task signals matched"
+    else:
+        score += 0.3  # a specific rule matched
+
+    distinct = [f for f in fams if f is not task_type]
+    if not distinct and fams:
+        score += 0.2  # single, unambiguous family
+    elif distinct:
+        score -= 0.15 * len(distinct)  # competing interpretations
+        alternative = distinct[0]
+        reason = f"also reads as {alternative.value}"
+
+    if words < 3:
+        score -= 0.25  # too terse to be sure
+        reason = reason or "task description is very short"
+
+    score = max(0.0, min(1.0, round(score, 2)))
+    return score, alternative, reason
+
 
 def classify(
     task: str,
@@ -569,6 +660,7 @@ def classify(
     context_tokens: int | None = None,
     risk: Level | None = None,
     tools: list[str] | None = None,
+    uncertainty_threshold: float = DEFAULT_UNCERTAINTY_THRESHOLD,
 ) -> Classification:
     """Classify a task; explicit overrides (--risk/--tool/--context-tokens) win over inference."""
     text = task.lower()
@@ -576,6 +668,7 @@ def classify(
     task_type = _task_type(text, is_build)
     resolved_risk = risk or _risk(text)
     tokens = context_tokens if context_tokens is not None else _context_tokens(text)
+    confidence, alternative, ambiguity = _confidence(text, task_type, is_build)
     return Classification(
         task_type=task_type,
         complexity=_complexity(text, task_type, is_build),
@@ -585,4 +678,8 @@ def classify(
         output_type=_output_type(text, task_type),
         tool_needs=tools if tools is not None else _tool_needs(text, task_type, is_build),
         approval_level=_APPROVAL[resolved_risk],
+        confidence=confidence,
+        needs_clarification=confidence < uncertainty_threshold,
+        alternative_task_type=alternative,
+        ambiguity_reason=ambiguity,
     )

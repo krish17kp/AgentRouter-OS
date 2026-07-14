@@ -16,7 +16,7 @@ from .schema import EvaluationCase
 
 def _git_sha() -> str | None:
     try:
-        out = subprocess.run(
+        out = subprocess.run(  # nosec B603 B607 - fixed argv, dev-only git SHA capture
             ["git", "rev-parse", "HEAD"], capture_output=True, text=True, timeout=5
         )
         return out.stdout.strip() or None if out.returncode == 0 else None
@@ -63,6 +63,7 @@ def run(
     seed: int = 0,
     languages: list[str] | None = None,
     source: str = "fixture",
+    measure_all: bool = False,
 ) -> dict:
     """Run an evaluation for a profile or a single dataset. Returns the result."""
     if dataset:
@@ -89,7 +90,7 @@ def run(
     else:
         cases, per_dataset = _collect(names, limit, seed, source)
 
-    result = grade(cases)
+    result = grade(cases, measure_all=measure_all)
     result["environment"] = environment_snapshot(_git_sha())
     result["datasets"] = per_dataset
     result["profile"] = profile
