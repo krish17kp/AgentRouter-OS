@@ -94,10 +94,10 @@ def test_override_unknown_key_warns_not_fails(home):
 
 def test_override_invalid_score_fails_loud(home):
     (home / "registry" / "ability_overrides.yaml").write_text(
-        yaml.safe_dump({"overrides": {"claude-code/frontier-coding-model": {"coding": 99}}}),
+        yaml.safe_dump({"overrides": {"anthropic/claude-sonnet-5": {"coding": 99}}}),
         encoding="utf-8",
     )
-    with pytest.raises(RegistryError, match="frontier-coding-model"):
+    with pytest.raises(RegistryError, match="claude-sonnet-5"):
         _load(home)
 
 

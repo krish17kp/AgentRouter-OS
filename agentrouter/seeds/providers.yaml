@@ -1,21 +1,42 @@
-# AgentRouter OS — provider registry (PROVIDER_ADAPTER_SPEC.md)
-# supports_execution ships false everywhere: `agentrouter execute` refuses to run
-# until YOU flip it to true for a provider (M6 opt-in). exec_command is the argv
-# template it runs; {prompt} is replaced with the generated prompt.
+# AgentRouter OS — provider/vendor registry (PROVIDER_ADAPTER_SPEC.md)
+#
+# Two roles now live here for backward compatibility:
+#   - model VENDORS (anthropic, openai, google, openrouter): who makes the model.
+#   - legacy execution "providers" kept so old generated registries + refresh
+#     tests keep working. Real execution HOSTS are discovered by `agentrouter
+#     hosts` (see agentrouter/hosts.py) and attached to models as execution_targets.
+#
+# supports_execution ships false everywhere; `agentrouter execute` refuses to run
+# a legacy exec_command until you flip it. New models execute via execution_targets.
 providers:
-  - id: claude-code
-    adapter: claude-code
-    auth_model: oauth
+  # --- model vendors --------------------------------------------------------
+  - id: anthropic
+    adapter: anthropic
+    auth_model: api-key
     supports_execution: false
-    exec_command: ["claude", "-p", "{prompt}"]
   - id: openai
     adapter: openai
+    auth_model: api-key
+    supports_execution: false
+  - id: google
+    adapter: google
     auth_model: api-key
     supports_execution: false
   - id: openrouter
     adapter: openrouter
     auth_model: api-key
     supports_execution: false
+  # --- always-available manual fallback -------------------------------------
+  - id: manual
+    adapter: manual
+    auth_model: manual
+    supports_execution: false
+  # --- legacy execution providers (kept for backward compatibility) ---------
+  - id: claude-code
+    adapter: claude-code
+    auth_model: oauth
+    supports_execution: false
+    exec_command: ["claude", "-p", "{prompt}"]
   - id: cursor
     adapter: cursor
     auth_model: oauth
@@ -23,8 +44,4 @@ providers:
   - id: cli-agent
     adapter: cli-agent
     auth_model: local
-    supports_execution: false
-  - id: manual
-    adapter: manual
-    auth_model: manual
     supports_execution: false

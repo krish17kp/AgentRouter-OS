@@ -56,13 +56,34 @@ def test_high_risk_is_provably_blocked(home):
     assert "MUST NOT RUN" not in r.output
 
 
-def test_execute_refused_without_provider_opt_in(home):
+def test_execute_dry_run_previews_host_command_without_running(home):
+    """Phase 7: without legacy provider opt-in, execution resolves to the model's
+    host. --dry-run previews the exact command and runs nothing (hermetic)."""
     from agentrouter.cli import app
 
     payload = _route(LOW_RISK_TASK)
+    r = runner.invoke(app, ["execute", payload["decision_id"], "--dry-run"])
+    assert r.exit_code == 0, r.output
+    assert "Dry run" in r.output
+    assert "Run through:" in r.output  # a real host was resolved, not a placeholder
+
+
+def test_execute_via_host_refused_when_host_unavailable(home, monkeypatch):
+    """Real execution is refused (exit 2) when no host is available — no fallback."""
+    from agentrouter import hosts
+    from agentrouter.cli import app
+
+    monkeypatch.setattr(
+        hosts,
+        "detect_host",
+        lambda host, required_command=None: hosts.HostStatus(
+            host, hosts.UNAVAILABLE, "test: forced unavailable"
+        ),
+    )
+    payload = _route(LOW_RISK_TASK)
     r = runner.invoke(app, ["execute", payload["decision_id"], "--yes"])
     assert r.exit_code == 2
-    assert "not enabled" in r.output
+    assert "not enabled" in r.output.lower() or "unavailable" in r.output.lower()
 
 
 def test_execute_requires_yes(home):

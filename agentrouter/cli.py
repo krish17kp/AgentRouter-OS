@@ -15,7 +15,7 @@ from pathlib import Path
 import typer
 import yaml
 
-from . import store
+from . import hosts, store
 from .classifier import classify
 from .engine import BASE_WEIGHTS
 from .engine import route as engine_route
@@ -60,9 +60,13 @@ def _main(
 registry_app = typer.Typer(help="Registry inspection.")
 providers_app = typer.Typer(help="Provider operations.")
 prompt_app = typer.Typer(help="Prompt generation.")
+hosts_app = typer.Typer(help="Execution host discovery.")
+models_app = typer.Typer(help="Model catalog inspection.")
 app.add_typer(registry_app, name="registry")
 app.add_typer(providers_app, name="providers")
 app.add_typer(prompt_app, name="prompt")
+app.add_typer(hosts_app, name="hosts")
+app.add_typer(models_app, name="models")
 
 # Multi-dataset evaluation framework (evaluation/ package). The legacy
 # single-shot `evaluate` command below is kept for backward compatibility.
@@ -185,6 +189,39 @@ def _reason_for(rec: dict, cls, shifts: list[str]) -> str:
     return "; ".join(parts)
 
 
+def _execution_route(row: dict | None, models_by_key: dict) -> dict | None:
+    """Stage-2: resolve HOW to run the selected model (program Phase 5/6).
+
+    Returns a JSON-serializable execution-route block, or None if the model has
+    no execution targets (e.g. a refreshed catalog entry without host wiring).
+    """
+    if row is None:
+        return None
+    model = models_by_key.get(row["model"])
+    if model is None or not model.execution_targets:
+        return None
+    resolved = hosts.resolve_execution_route(model, include_unavailable=True)
+    tgt, status = resolved.target, resolved.status
+    return {
+        "vendor": model.vendor,
+        "model_id": model.model_id,
+        "display_name": model.name,
+        "release_channel": model.release_channel.value,
+        "host": tgt.host if tgt else None,
+        "host_model_id": tgt.host_model_id if tgt else None,
+        "execution_mode": tgt.execution_mode.value if tgt else None,
+        "availability": status.availability if status else "unknown",
+        "availability_reason": status.reason if status else "no execution target",
+        "command_preview": hosts.command_preview(tgt) if tgt else None,
+        "required_env": tgt.required_env if tgt else [],
+        "context_window": model.context_window,
+        "max_output_tokens": model.max_output_tokens,
+        "all_hosts": [
+            {"host": s.host, "availability": s.availability} for s in resolved.all_statuses
+        ],
+    }
+
+
 # --- init --------------------------------------------------------------------
 
 
@@ -243,12 +280,18 @@ def route(
     prompt = generate_prompt(task, target, cls, gates["checklist"])
     reason = _reason_for(rec, cls, result["weight_shifts"]) if rec else None
 
+    models_by_key = {m.key: m for m in models}
+    exec_route = _execution_route(rec, models_by_key) if rec else None
+    fb_route = _execution_route(result["fallback"], models_by_key) if result["fallback"] else None
+
     payload = {
         "classification": cls.model_dump(mode="json"),
         **result,
         "reason": reason,
         "gates": gates,
         "prompt": prompt,
+        "execution_route": exec_route,
+        "fallback_execution_route": fb_route,
     }
     decision_id = None
     if not no_log:
@@ -259,13 +302,32 @@ def route(
     if json_out:
         typer.echo(json.dumps({"decision_id": decision_id, "task": task, **payload}, indent=2))
     else:
-        _print_route(task, cls, result, gates, reason, decision_id)
+        _print_route(task, cls, result, gates, reason, decision_id, exec_route, fb_route)
 
     if rec is None:
         raise typer.Exit(EXIT_NO_MODEL)
 
 
-def _print_route(task, cls, result, gates, reason, decision_id):
+def _print_exec_block(label: str, er: dict | None):
+    if not er:
+        return
+    typer.echo(f"\n{label}")
+    typer.echo(f"  Model:          {er['display_name']}")
+    typer.echo(f"  Vendor:         {er['vendor']}")
+    typer.echo(f"  Model ID:       {er['model_id']}")
+    typer.echo(f"  Run through:    {er['host'] or '(no host)'}")
+    if er.get("host_model_id"):
+        typer.echo(f"  Host model ID:  {er['host_model_id']}")
+    typer.echo(f"  Availability:   {er['availability']}")
+    typer.echo(f"  Release:        {er['release_channel']}")
+    typer.echo(f"  Context:        {er['context_window']:,} tokens")
+    if er.get("command_preview"):
+        typer.echo(f"  Command:        {er['command_preview']}")
+    if er["availability"] != hosts.AVAILABLE:
+        typer.echo(f"  Note:           {er['availability_reason']}")
+
+
+def _print_route(task, cls, result, gates, reason, decision_id, exec_route=None, fb_route=None):
     typer.echo(f'\nTask: "{task}"')
     typer.echo("\nHow I read this task")
     typer.echo(
@@ -285,6 +347,8 @@ def _print_route(task, cls, result, gates, reason, decision_id):
         typer.echo(f"  1  {rec['model']:<44} {rec['score']:.2f}   <- recommended")
         if fb:
             typer.echo(f"  2  {fb['model']:<44} {fb['score']:.2f}   <- fallback")
+        _print_exec_block("Recommendation", exec_route)
+        _print_exec_block("Fallback", fb_route)
         if reason:
             typer.echo(f"\nWhy: {reason}.")
     else:
@@ -592,10 +656,164 @@ def prompt_generate(
 # --- execute (M6 — opt-in, hard safety gate) ---------------------------------------
 
 
+def _execute_via_host(rec: dict, er: dict, prompt: str, *, yes: bool, dry_run: bool):
+    """Run the exact model on its resolved host (argv, shell=False). Phase 7."""
+    _, models = _load_registries()
+    model = next((m for m in models if m.key == rec["model"]), None)
+    if model is None:
+        typer.echo(f"Model '{rec['model']}' is no longer in the registry.", err=True)
+        raise typer.Exit(EXIT_USAGE)
+    resolved = hosts.resolve_execution_route(model, include_unavailable=True)
+    tgt, status = resolved.target, resolved.status
+    if tgt is None or status is None:
+        typer.echo(f"No execution target for {model.key}.", err=True)
+        raise typer.Exit(EXIT_USAGE)
+
+    typer.echo(f"Model:       {model.name} ({model.vendor}/{model.model_id})")
+    typer.echo(f"Run through: {tgt.host} (host model id {tgt.host_model_id})")
+    typer.echo(f"Availability: {status.availability} ({status.reason})")
+    if tgt.command_template:
+        typer.echo(f"Command:     {hosts.command_preview(tgt)}")
+
+    # --dry-run previews safely and NEVER executes, regardless of availability.
+    if dry_run:
+        typer.echo("Dry run: nothing executed.")
+        raise typer.Exit(0)
+
+    if not tgt.command_template:
+        typer.echo(
+            f"'{tgt.host}' is a {tgt.execution_mode.value} host with no local command; "
+            "use the vendor API/SDK with the generated prompt."
+        )
+        raise typer.Exit(0)
+    # never execute when availability is not confirmed (program Phase 7)
+    if status.availability != hosts.AVAILABLE:
+        typer.echo(f"Not enabled: host '{tgt.host}' is {status.availability}.", err=True)
+        typer.echo(
+            "Next: install/authenticate the host, or run the generated prompt yourself.", err=True
+        )
+        raise typer.Exit(EXIT_USAGE)
+    if not yes:
+        typer.echo("Next: re-run with --yes to execute (or --dry-run to preview).")
+        raise typer.Exit(EXIT_USAGE)
+
+    argv = [a.replace("{prompt}", prompt) for a in tgt.command_template]  # shell=False, one argv
+
+    import subprocess
+
+    typer.echo(f"Running {model.name} via {tgt.host}...")
+    try:
+        completed = subprocess.run(argv)  # no shell; prompt is a single argv element
+    except FileNotFoundError as e:
+        typer.echo(f"Execution failed: command not found: {argv[0]}", err=True)
+        typer.echo(f"Next: install the '{tgt.host}' CLI ({tgt.required_command}).", err=True)
+        raise typer.Exit(EXIT_RUNTIME) from e
+    raise typer.Exit(completed.returncode)
+
+
+# --- hosts (execution host discovery — Phase 4) --------------------------------------
+
+
+@hosts_app.command("list")
+def hosts_list():
+    """List known execution hosts and whether they are available locally."""
+    _, models = _load_registries()
+    seen: dict[str, hosts.HostStatus] = {}
+    for m in models:
+        for t in m.execution_targets:
+            if t.host not in seen:
+                seen[t.host] = hosts.target_status(t)
+    for host in hosts.known_hosts():
+        if host not in seen:
+            seen[host] = hosts.detect_host(host)
+    for host, st in seen.items():
+        typer.echo(f"{host:<16} {st.availability:<12} {st.reason}")
+
+
+@hosts_app.command("doctor")
+def hosts_doctor():
+    """Diagnose host availability; exit non-zero if no host is available."""
+    any_available = False
+    for host in hosts.known_hosts():
+        st = hosts.detect_host(host)
+        mark = "OK " if st.availability == hosts.AVAILABLE else "-- "
+        typer.echo(f"[{mark}] {host:<16} {st.availability:<12} {st.reason}")
+        any_available = any_available or st.availability == hosts.AVAILABLE
+    if not any_available:
+        typer.echo(
+            "\nNo execution host is available. Install Claude Code or Codex, or set an API key."
+        )
+        raise typer.Exit(EXIT_RUNTIME)
+
+
+@hosts_app.command("show")
+def hosts_show(host: str = typer.Argument(..., help="Host id, e.g. claude-code.")):
+    """Show a single host's availability and which models target it."""
+    st = hosts.detect_host(host)
+    typer.echo(f"{host}: {st.availability} ({st.reason})")
+    _, models = _load_registries()
+    targeting = [m.key for m in models for t in m.execution_targets if t.host == host]
+    typer.echo(f"Models using this host: {', '.join(targeting) or 'none'}")
+
+
+# --- models (catalog inspection — Phase 3 CLI; refresh is handed off) ----------------
+
+
+@models_app.command("list")
+def models_list(
+    available: bool = typer.Option(
+        False, "--available", help="Only models with an available host."
+    ),
+):
+    """List models grouped by vendor, with release channel and best host availability."""
+    _, models = _load_registries()
+    for m in sorted(models, key=lambda x: (x.vendor or "", x.model_id)):
+        route = hosts.resolve_execution_route(m, include_unavailable=True)
+        avail = route.status.availability if route.status else "unknown"
+        if available and avail != hosts.AVAILABLE:
+            continue
+        typer.echo(
+            f"{m.vendor_key:<34} {m.release_channel.value:<8} host={avail:<12} "
+            f"ability(c/r/w)={m.ability.coding}/{m.ability.reasoning}/{m.ability.writing}"
+        )
+
+
+@models_app.command("show")
+def models_show(
+    key: str = typer.Argument(..., help="vendor/model_id, e.g. anthropic/claude-sonnet-5."),
+):
+    """Show one model: metadata, provenance, and execution targets."""
+    _, models = _load_registries()
+    m = next((x for x in models if x.vendor_key == key or x.key == key), None)
+    if m is None:
+        typer.echo(f"No model '{key}'. Try: agentrouter models list", err=True)
+        raise typer.Exit(EXIT_USAGE)
+    typer.echo(f"{m.name}  ({m.vendor_key})")
+    typer.echo(
+        f"  family={m.family}  release={m.release_channel.value}  snapshot={m.snapshot_type.value}"
+    )
+    typer.echo(
+        f"  context={m.context_window:,}  max_output={m.max_output_tokens:,}  "
+        f"pricing_tier={m.pricing_tier.value}"
+    )
+    typer.echo(
+        f"  ability c/r/w = {m.ability.coding}/{m.ability.reasoning}/{m.ability.writing}"
+        f"  (source={m.ability_source.value}, confidence={m.ability_confidence})"
+    )
+    typer.echo(f"  source={m.source}  verified={m.last_verified}")
+    typer.echo("  execution targets:")
+    for t in m.execution_targets:
+        st = hosts.target_status(t)
+        typer.echo(
+            f"    - {t.host:<14} {t.execution_mode.value:<7} {st.availability:<12} {st.reason}"
+        )
+
+
 @app.command()
 def execute(
     decision_id: str = typer.Argument(..., help="Decision id to execute, e.g. d_00042."),
     yes: bool = typer.Option(False, "--yes", help="Confirm running the recommended tool."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show the exact command; run nothing."),
 ):
     """Run the recommended tool for a logged decision (opt-in; high risk never executes).
 
@@ -632,8 +850,22 @@ def execute(
     if rec is None:
         typer.echo("Nothing to execute: this decision had no eligible model.", err=True)
         raise typer.Exit(EXIT_USAGE)
+
     providers, _ = _load_registries()
     provider = providers.get(rec["provider"])
+    legacy_opt_in = (
+        provider is not None and provider.supports_execution and bool(provider.exec_command)
+    )
+
+    # Phase 7: when the vendor provider has NOT opted into the legacy exec_command
+    # path, execute the exact model via its resolved execution host (Claude Code /
+    # Codex CLI) if the decision carries a runnable execution_route.
+    if not legacy_opt_in:
+        er = payload.get("execution_route")
+        if er and er.get("command_preview") and er.get("host_model_id"):
+            _execute_via_host(rec, er, payload["prompt"], yes=yes, dry_run=dry_run)
+            return
+
     if provider is None or not provider.supports_execution or not provider.exec_command:
         typer.echo(f"Execution is not enabled for provider '{rec['provider']}'.", err=True)
         typer.echo(

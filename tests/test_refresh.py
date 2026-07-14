@@ -143,13 +143,13 @@ def test_manual_wins_on_collision(home, mock_http):
     reg_dir = home / "registry"
     providers = load_providers(reg_dir / "providers.yaml")
     manual_models, _ = load_all_models(reg_dir, providers)
-    manual_entry = next(m for m in manual_models if m.model_id == "strong-coding-model")
+    manual_entry = next(m for m in manual_models if m.model_id == "claude-sonnet-5")
 
     clone = manual_entry.model_copy(update={"pricing_tier": PricingTier.free, "source": "refresh"})
     write_generated_registry(reg_dir, "openrouter", [clone])
     merged, warnings = load_all_models(reg_dir, providers)
 
-    kept = [m for m in merged if m.model_id == "strong-coding-model"]
+    kept = [m for m in merged if m.model_id == "claude-sonnet-5"]
     assert len(kept) == 1 and kept[0].pricing_tier is PricingTier.high  # manual value
     assert any("shadowed" in w for w in warnings)
 
@@ -181,7 +181,7 @@ def test_cli_refresh_writes_and_routing_still_works(home, mock_http):
 
     lst = runner.invoke(app, ["registry", "list"])
     assert "vendor/frontier-x" in lst.output  # refreshed model visible
-    assert "strong-coding-model" in lst.output  # manual registry preserved
+    assert "claude-sonnet-5" in lst.output  # manual registry preserved
 
     route = runner.invoke(app, ["route", "write a haiku about routers"])
     assert route.exit_code == 0, route.output
