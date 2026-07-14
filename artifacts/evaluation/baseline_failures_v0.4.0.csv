@@ -1,0 +1,92 @@
+id,prompt,dimension,expected,predicted
+cod-004,Write a regex that matches valid email addresses,task_type,coding,writing
+cod-004,Write a regex that matches valid email addresses,output,code,text
+cod-006,Add pagination to the products endpoint,context,medium,small
+cod-007,Optimize this SQL query that is running slowly,complexity,medium,low
+cod-008,Debug why the unit tests are failing in the auth package,complexity,medium,low
+cod-008,Debug why the unit tests are failing in the auth package,context,medium,small
+cod-009,Create a Python script to rename files in a directory,complexity,low,medium
+cod-009,Create a Python script to rename files in a directory,context,small,medium
+cod-010,Implement JWT authentication middleware for the API,context,medium,small
+cod-011,Write unit tests for the shopping cart module,complexity,medium,low
+cod-013,Convert this callback-based code to async/await,complexity,medium,low
+cod-014,Implement rate limiting on the public endpoints,context,medium,small
+cod-018,Implement a caching layer with Redis for the product service,context,medium,small
+cod-021,Implement websocket support for real-time notifications,context,medium,small
+cod-022,Fix the memory leak in the image processing worker,complexity,high,low
+cod-022,Fix the memory leak in the image processing worker,context,medium,small
+cod-025,Implement pagination and sorting for the admin users table with tests,context,medium,small
+rea-006,Prove that this sorting algorithm terminates,output,text,plan
+rea-008,Plan the rollout of a feature flag system across teams,context,small,medium
+rea-011,Decide how to shard the users table for scale,complexity,high,medium
+rea-013,Plan a disaster recovery process for the production cluster,complexity,high,medium
+rea-016,Figure out the best deployment topology for low latency worldwide,complexity,high,medium
+rea-018,Design a permission model with roles and fine-grained scopes,complexity,high,medium
+wri-012,Draft a project proposal for stakeholders,context,small,medium
+wri-016,Write a technical blog post explaining our caching design,complexity,medium,low
+ana-004,Review this pull request for code quality issues,context,medium,small
+ana-005,Assess whether our test coverage is adequate,context,medium,small
+ana-009,Evaluate the tradeoffs of adopting GraphQL,complexity,medium,low
+ana-010,Review the quarterly metrics and describe what changed,context,medium,small
+sum-005,Summarize a 300k-token codebase for a new engineer,complexity,medium|high,low
+sum-012,Summarize the API documentation into a cheat sheet,context,medium,small
+gen-001,Help me with my project,context,small,medium
+gen-003,Give me some ideas for a weekend side project,context,small,medium
+gen-008,Recommend a good book on distributed systems,task_type,general,reasoning
+gen-008,Recommend a good book on distributed systems,complexity,low,high
+gen-008,Recommend a good book on distributed systems,output,text,plan
+gen-008,Recommend a good book on distributed systems,context,small,medium
+gen-012,What questions should I ask in a system design interview?,task_type,general,reasoning
+gen-012,What questions should I ask in a system design interview?,complexity,low,medium
+gen-012,What questions should I ask in a system design interview?,output,text,plan
+gen-012,What questions should I ask in a system design interview?,context,small,medium
+mix-002,Research vector databases and recommend one for us,output,text,plan
+mix-004,Write documentation and code samples for the SDK,complexity,medium,low
+mix-005,Analyze the slow endpoint and refactor it,context,medium,small
+mix-007,Summarize the RFC and give your recommendation,complexity,medium,low
+mix-007,Summarize the RFC and give your recommendation,context,medium,small
+mix-009,Review the code and write a summary of issues,complexity,medium,low
+mix-009,Review the code and write a summary of issues,context,medium,small
+mix-011,Investigate the flaky test and fix it,output,code|code+tests,text
+mix-011,Investigate the flaky test and fix it,context,medium,small
+mix-013,Draft a spec and implement the first endpoint,complexity,medium,high
+mix-015,Audit dependencies and upgrade the vulnerable ones,context,medium,small
+sec-001,Rotate the production database credentials,complexity,medium,low
+sec-002,Deploy the new version to the Kubernetes cluster,complexity,medium|high,low
+sec-003,Migrate the production database to the new schema,complexity,high,medium
+sec-004,Fix the SQL injection vulnerability in the search endpoint,complexity,medium|high,low
+sec-004,Fix the SQL injection vulnerability in the search endpoint,context,medium,small
+sec-005,Implement the payment processing with Stripe,complexity,high,low
+sec-005,Implement the payment processing with Stripe,context,medium,small
+sec-006,Set up billing and subscription management,task_type,coding,general
+sec-006,Set up billing and subscription management,complexity,high,low
+sec-006,Set up billing and subscription management,output,code,text
+sec-006,Set up billing and subscription management,context,medium,small
+sec-006,Set up billing and subscription management,tools,file-edit|shell,
+sec-007,Run the terraform apply to provision the infrastructure,complexity,medium|high,low
+sec-009,Handle the API key secrets in the deployment pipeline,complexity,medium|high,low
+sec-009,Handle the API key secrets in the deployment pipeline,context,medium,small
+sec-010,Delete the stale records from the production users table,complexity,medium,low
+sec-011,Audit the authentication flow for security holes,complexity,high,medium
+sec-011,Audit the authentication flow for security holes,context,medium,small
+sec-012,Configure OAuth2 login with Google,complexity,medium|high,low
+sec-012,Configure OAuth2 login with Google,context,medium,small
+sec-013,Roll back the production deployment to the last good release,complexity,medium,low
+sec-014,Encrypt the PII fields in the user database,complexity,high,low
+sec-014,Encrypt the PII fields in the user database,context,medium,small
+rag-003,Build a vector database search over our knowledge base,context,medium,small
+rag-006,Train a classifier to detect spam messages,complexity,medium|high,low
+rag-007,Build an ETL pipeline that loads data into the warehouse,context,medium,small
+rag-008,Set up a retrieval pipeline with reranking,context,medium,small
+rag-009,Implement embeddings generation and store them in a vector store,complexity,medium,high
+rag-010,Build a data ingestion job that deduplicates records,context,medium,small
+rag-013,Build a frontend dashboard for the analytics pipeline,context,medium,small
+rag-014,Implement a backend service to serve model predictions,context,medium,small
+rag-015,Create a data validation layer for the ingestion pipeline,context,medium,small
+bld-008,Build a real-time chat application with rooms,context,medium,small
+typ-002,refch the payment modle,task_type,coding,general
+typ-002,refch the payment modle,complexity,medium,low
+typ-002,refch the payment modle,output,code,text
+typ-005,write blog,task_type,writing,general
+typ-008,optmize db query,complexity,medium,low
+typ-009,deploy to prod,complexity,medium,low

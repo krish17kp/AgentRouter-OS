@@ -32,3 +32,18 @@ agentrouter_os.egg-info/
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Evaluation: generated data, caches, downloads, run outputs (keep fixtures + gold + benchmarks)
+data/
+evaluation/cache/
+evaluation/downloads/
+evaluation/reports/generated/
+artifacts/evaluation/current/
+mlruns/
+.mutmut-cache/
+.promptfoo/
+promptfoo-output/
+benchmark-results/
+*.prof
+*.benchmark.json
+.hypothesis/

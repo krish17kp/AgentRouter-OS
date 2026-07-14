@@ -64,6 +64,12 @@ app.add_typer(registry_app, name="registry")
 app.add_typer(providers_app, name="providers")
 app.add_typer(prompt_app, name="prompt")
 
+# Multi-dataset evaluation framework (evaluation/ package). The legacy
+# single-shot `evaluate` command below is kept for backward compatibility.
+from .evaluation.cli import eval_app  # noqa: E402
+
+app.add_typer(eval_app, name="eval")
+
 EXIT_RUNTIME, EXIT_USAGE, EXIT_REGISTRY, EXIT_NO_MODEL = 1, 2, 3, 4
 
 

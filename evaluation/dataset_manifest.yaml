@@ -1,0 +1,63 @@
+# Dataset manifest — source, version, license, availability for every adapter.
+# Full external runs need the listed prerequisites; fixtures run offline in CI.
+datasets:
+  - name: agentrouter-gold
+    version: v1
+    license: project-internal (MIT repo)
+    source: benchmarks/classifier_gold_v1.yaml
+    availability: ready
+    annotation: human
+    notes: 165 human-expectation cases; the only READY dataset offline.
+
+  - name: clinc150
+    version: "1.0"
+    license: CC BY 3.0
+    source: https://github.com/clinc/oos-eval
+    availability: fixture_only
+    annotation: model_assisted (fixture)
+    full_run_prereq: pip install datasets
+
+  - name: banking77
+    version: "1.0"
+    license: MIT
+    source: https://huggingface.co/datasets/banking77
+    availability: fixture_only
+    annotation: model_assisted (fixture)
+    full_run_prereq: pip install datasets
+
+  - name: massive
+    version: "1.1"
+    license: CC BY 4.0
+    source: https://huggingface.co/datasets/AmazonScience/massive
+    availability: fixture_only
+    annotation: model_assisted (fixture)
+    languages: [en, hi, fr]
+    full_run_prereq: pip install datasets
+
+  - name: longbench-v2
+    version: v2
+    license: see dataset card
+    source: https://huggingface.co/datasets/THUDM/LongBench-v2
+    availability: fixture_only
+    full_run_prereq: pip install datasets + long-context model
+
+  - name: swebench
+    version: current
+    license: SWE-bench (MIT code; per-repo licenses apply)
+    source: https://www.swebench.com
+    availability: fixture_only
+    full_run_prereq: Docker + swebench harness
+
+  - name: llmrouterbench
+    version: current
+    license: see benchmark repo
+    source: LLMRouterBench
+    availability: fixture_only
+    requires_model_mapping: true
+
+  - name: twinrouterbench
+    version: current
+    license: see benchmark repo
+    source: TwinRouterBench
+    availability: fixture_only
+    full_run_prereq: Docker (dynamic track)
