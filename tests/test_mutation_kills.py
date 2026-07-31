@@ -78,6 +78,7 @@ def _classification(**over):
     kw.update(over)
     return Classification(**kw)
 
+
 # --------------------------------------------------------------------------- #
 # agentrouter.server.limits — RateLimiter
 # --------------------------------------------------------------------------- #
@@ -240,9 +241,7 @@ def _reason_for(model, controls) -> str | None:
 def test_exclude_host_case_insensitive_drops_only_matching():
     # kills apply_controls 9/21 (host_out None), _reject_reason 21 (and->or),
     # 22 (isdisjoint inversion), 23 (isdisjoint(None)), 24/25 (reason text).
-    on_host = _seed_model(
-        execution_targets=[ExecutionTarget(host="codex-cli", host_model_id="x")]
-    )
+    on_host = _seed_model(execution_targets=[ExecutionTarget(host="codex-cli", host_model_id="x")])
     off_host = _seed_model(
         execution_targets=[ExecutionTarget(host="anthropic-api", host_model_id="y")]
     )
@@ -547,9 +546,7 @@ def _host_model(**over):
 def _call_via_host(monkeypatch, model, *, prompt="the-prompt", yes=False, dry_run=False):
     monkeypatch.setattr(cli_mod, "_load_registries", lambda: ({}, [model]))
     with pytest.raises(typer.Exit) as ei:
-        cli_mod._execute_via_host(
-            {"model": model.key}, {}, prompt, yes=yes, dry_run=dry_run
-        )
+        cli_mod._execute_via_host({"model": model.key}, {}, prompt, yes=yes, dry_run=dry_run)
     return ei.value.exit_code
 
 
@@ -802,11 +799,10 @@ def test_eligibility_context_filter_continues():
 
 def test_eligibility_continue_not_break_context():
     # kills 37-analogue via context path already; here pins the missing-tools branch.
-    bad = _emodel(
-        model_id="notools", tool_support=[], deprecation_status=DeprecationStatus.active
-    )
+    bad = _emodel(model_id="notools", tool_support=[], deprecation_status=DeprecationStatus.active)
     good = _emodel(
-        model_id="tools", tool_support=["file-edit", "shell"],
+        model_id="tools",
+        tool_support=["file-edit", "shell"],
         deprecation_status=DeprecationStatus.active,
     )
     eligible, excluded = engine_mod.eligibility(
@@ -823,9 +819,7 @@ def test_eligibility_vision_excluded_with_exact_reason():
     bad = _emodel(
         model_id="novis", vision_support=False, deprecation_status=DeprecationStatus.active
     )
-    good = _emodel(
-        model_id="vis", vision_support=True, deprecation_status=DeprecationStatus.active
-    )
+    good = _emodel(model_id="vis", vision_support=True, deprecation_status=DeprecationStatus.active)
     eligible, excluded = engine_mod.eligibility([bad, good], _cls_e(tool_needs=["vision"]))
     assert good in eligible  # break would drop `good`
     assert {"model": bad.key, "reason": "no vision support"} in excluded
@@ -847,12 +841,12 @@ def test_capability_match_blend_and_divisor():
 @pytest.mark.parametrize(
     "window,tokens,expected",
     [
-        (2, 1, 1.0),    # ratio 2 -> comfortable (kills 7 max-default, 8 `<=2`)
-        (3, 2, 0.7),    # ratio 1.5 -> barely fits (kills 10 return value)
+        (2, 1, 1.0),  # ratio 2 -> comfortable (kills 7 max-default, 8 `<=2`)
+        (3, 2, 0.7),  # ratio 1.5 -> barely fits (kills 10 return value)
         (25, 10, 1.0),  # ratio 2.5 (kills 9 `<3`)
-        (100, 10, 1.0), # ratio 10 (kills 13 return value)
-        (160, 10, 0.6), # ratio 16 -> oversized (kills 11 `<=16`, 12 `<17`, 14 return value)
-        (8, 2, 1.0),    # ratio 4 (kills 2 `/`->`*`)
+        (100, 10, 1.0),  # ratio 10 (kills 13 return value)
+        (160, 10, 0.6),  # ratio 16 -> oversized (kills 11 `<=16`, 12 `<17`, 14 return value)
+        (8, 2, 1.0),  # ratio 4 (kills 2 `/`->`*`)
     ],
 )
 def test_context_fit_boundaries(window, tokens, expected):
@@ -1040,8 +1034,16 @@ def _payload(**over):
 
 
 def _run_execute(
-    monkeypatch, tmp_path, payload, *, recent=(), providers=None, models=(),
-    yes=False, dry_run=False, decision_id="d_1",
+    monkeypatch,
+    tmp_path,
+    payload,
+    *,
+    recent=(),
+    providers=None,
+    models=(),
+    yes=False,
+    dry_run=False,
+    decision_id="d_1",
 ):
     monkeypatch.setattr(cli_mod, "_home", lambda: tmp_path)
     monkeypatch.setattr(cli_mod.store, "connect", lambda home: SimpleNamespace(close=lambda: None))
@@ -1160,7 +1162,9 @@ def _via_host_model():
                 host="codex-cli",
                 host_model_id="hm",
                 command_template=[
-                    sys.executable, "-c", "import sys; sys.stdout.write(sys.argv[1]); sys.exit(6)",
+                    sys.executable,
+                    "-c",
+                    "import sys; sys.stdout.write(sys.argv[1]); sys.exit(6)",
                     "{prompt}",
                 ],
             )
