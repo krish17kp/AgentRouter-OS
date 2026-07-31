@@ -5,6 +5,15 @@
 **Updated:** 2026-07-31
 **Canonical release ready:** NO
 
+## Branch topology
+
+- `main` — stable, untouched. No merge without explicit owner approval.
+- `release/agentrouter-v0.5-rc1` — integration branch @ `fa0a203`. NOT RELEASE READY;
+  mutation gate passes, only the honest context-band `release-gate` fails.
+- `task/TASK-011-context-band-data` — TASK-011 work branch (from RC); draft PR targets the RC.
+- `mutation-kill-safety` — deleted (local + remote); PR #1 closed as fully superseded by
+  `tests/test_mutation_kills.py`.
+
 ## Why NOT release ready
 
 `context_band_accuracy` frozen held-out = **0.6667**, below the unchanged **0.90**
