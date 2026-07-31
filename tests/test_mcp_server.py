@@ -34,7 +34,7 @@ def test_no_execute_tool_exposed():
 
 
 def test_build_server_registers_only_safe_tools():
-    pytest.importorskip("mcp")  # build_server needs the optional [mcp] extra
+    pytest.importorskip("mcp.server.fastmcp")  # build_server needs the FastMCP runtime
     server = mcp_server.build_server()
     tools = server._tool_manager.list_tools()
     reg = {t.name for t in tools}
