@@ -187,7 +187,7 @@ def generate(count: int | None = None, *, seed: int = 20260731) -> list[Candidat
     The seed only shuffles ordering, so IDs are stable for a given (count, seed).
     """
     triples = _all_unique()
-    rng = random.Random(seed)
+    rng = random.Random(seed)  # nosec B311 - deterministic ordering only, not security
     rng.shuffle(triples)
     if count is not None:
         triples = triples[:count]

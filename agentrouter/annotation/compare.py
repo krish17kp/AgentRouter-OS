@@ -30,9 +30,11 @@ class Prediction:
 
 
 def _rules_band(prompt: str) -> ContextBand:
-    # Shipped default is rules-active, so classify() yields the rule band. Assert
-    # it so a flipped flag can't silently turn this baseline into the hybrid.
-    assert classifier._USE_LEARNED_BAND is False, "rules baseline requires _USE_LEARNED_BAND=False"
+    # Shipped default is rules-active, so classify() yields the rule band. Guard it
+    # so a flipped flag can't silently turn this baseline into the hybrid. A raise
+    # (not assert) keeps the guard under `python -O`.
+    if classifier._USE_LEARNED_BAND is not False:
+        raise RuntimeError("rules baseline requires classifier._USE_LEARNED_BAND is False")
     return classifier.classify(prompt).context_band
 
 
@@ -83,7 +85,7 @@ def _bootstrap_acc_ci(
 ) -> tuple[float, float]:
     if not gold:
         return (0.0, 0.0)
-    rng = random.Random(seed)
+    rng = random.Random(seed)  # nosec B311 - bootstrap resampling, not security
     m = len(gold)
     accs = []
     for _ in range(n):

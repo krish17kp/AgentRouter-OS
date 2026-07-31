@@ -121,10 +121,11 @@ def test_committed_pool_does_not_leak_frozen_holdout():
 
 
 def test_frozen_holdout_is_untouched():
-    import hashlib
+    # Reuse the production hash (newline-canonicalised) so a Windows CRLF checkout
+    # cannot spuriously fail the freeze lock.
+    from agentrouter.evaluation.context_bands import _sha256, gold_path
 
-    raw = (resources.files("agentrouter.benchmarks") / HOLDOUT_FILE).read_bytes()
-    assert hashlib.sha256(raw).hexdigest() == HOLDOUT_SHA256
+    assert _sha256(gold_path(HOLDOUT_FILE)) == HOLDOUT_SHA256
 
 
 # --- adjudication -----------------------------------------------------------
