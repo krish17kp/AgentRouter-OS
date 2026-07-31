@@ -11,7 +11,7 @@ import json
 import pytest
 
 hypothesis = pytest.importorskip("hypothesis")
-from hypothesis import given  # noqa: E402
+from hypothesis import given, settings  # noqa: E402
 from hypothesis import strategies as st  # noqa: E402
 
 from agentrouter.classifier import DEFAULT_UNCERTAINTY_THRESHOLD, classify  # noqa: E402
@@ -69,6 +69,9 @@ def test_classify_is_deterministic(task):
 # ---- rate limiter invariant ----
 
 
+# deadline=None: injected clock means timing is irrelevant to the invariant, and the
+# up-to-100-iteration loop flakes on Hypothesis's 200ms deadline under CI/mutmut load.
+@settings(deadline=None)
 @given(limit=st.integers(min_value=1, max_value=20), n=st.integers(min_value=0, max_value=100))
 def test_rate_limiter_never_exceeds_limit(limit, n):
     # A huge window keeps every call inside one window.
@@ -80,6 +83,7 @@ def test_rate_limiter_never_exceeds_limit(limit, n):
 # ---- idempotency cache round-trip ----
 
 
+@settings(deadline=None)  # injected clock; timing variability must not fail the invariant
 @given(key=st.text(min_size=1, max_size=30), body=st.binary(max_size=200))
 def test_idempotency_roundtrip_within_ttl(key, body):
     cache = IdempotencyCache(ttl=10_000, clock=_FakeClock().time)

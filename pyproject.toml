@@ -119,6 +119,7 @@ pytest_add_cli_args_test_selection = [
     "tests/test_property.py",
     "tests/test_taxonomy.py",
     "tests/test_setup.py",
+    "tests/test_mutation_kills.py",
 ]
 timeout_multiplier = 8.0
 timeout_constant = 2.0
