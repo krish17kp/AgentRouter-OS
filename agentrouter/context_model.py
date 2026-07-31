@@ -163,6 +163,12 @@ def load_model() -> LearnedBandModel | None:
             (resources.files("agentrouter.benchmarks") / MODEL_FILE).read_text(encoding="utf-8")
         )
         return _validate(raw)
-    except (FileNotFoundError, ModuleNotFoundError, KeyError, TypeError, ValueError,
-            json.JSONDecodeError):
+    except (
+        FileNotFoundError,
+        ModuleNotFoundError,
+        KeyError,
+        TypeError,
+        ValueError,
+        json.JSONDecodeError,
+    ):
         return None

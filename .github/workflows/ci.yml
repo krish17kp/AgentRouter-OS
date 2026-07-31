@@ -24,7 +24,7 @@ jobs:
       - name: Install project + dev tools
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          pip install -e ".[dev,server]"
 
       - name: Lint (ruff check)
         run: ruff check .
@@ -35,12 +35,15 @@ jobs:
       - name: Tests + branch coverage gate (80%)
         run: pytest --cov=agentrouter --cov-branch
 
-      - name: Full evaluation including frozen context holdout (offline)
+      - name: Full evaluation including frozen context holdout (offline, informational)
+        # Runs the complete offline evaluation and checks structural invariants.
+        # It intentionally does NOT enforce release-readiness — the context-band
+        # release gate lives in its own `release-gate` job so a single honest gate
+        # failure never reddens the whole test matrix. See KNOWN_LIMITATIONS.md.
         shell: bash
         run: |
           EVAL_RESULT="$RUNNER_TEMP/evaluation-result.json"
-          python -m agentrouter eval run --all --json --no-artifacts \
-            --require-release-ready > "$EVAL_RESULT"
+          python -m agentrouter eval run --all --json --no-artifacts > "$EVAL_RESULT"
           python - <<'PY'
           import json
           import os
@@ -53,7 +56,6 @@ jobs:
           gate = result["release_gates"]["context_band_accuracy>=0.90"]
           assert gate is (held_out >= 0.90), (held_out, gate)
           assert len(result["release_gates"]) == 7, result["release_gates"]
-          assert result["release_ready"] is True, result["release_gates"]
           print(f"Held-out context accuracy: {held_out}; release-ready: {result['release_ready']}")
           PY
 
@@ -81,7 +83,7 @@ jobs:
       - name: Install project + dev tools
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          pip install -e ".[dev,server]"
       - name: Tests + branch coverage gate (80%)
         run: pytest --cov=agentrouter --cov-branch
       - name: CLI smoke check
@@ -114,6 +116,34 @@ jobs:
           python -c "import json; d=json.load(open('/tmp/route.json')); assert d['recommendation'], d"
           /tmp/wheelenv/bin/agentrouter stats
           /tmp/wheelenv/bin/agentrouter registry list
+
+  release-gate:
+    # THE v0.5 release gate. Enforces the frozen held-out context-band accuracy
+    # >= 0.90 threshold. Expected RED on release/agentrouter-v0.5-rc1: current
+    # held-out accuracy is 0.6667 — a proven dataset ceiling (rules 0.6667 /
+    # learned 0.6889 / hybrid 0.6444 all fail; learned not significantly better).
+    # See KNOWN_LIMITATIONS.md and loop/tasks/TASK-009-context-band-holdout/.
+    # This is the SINGLE honest release blocker; every other CI job must be green.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install project + dev tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Enforce release-readiness gate (context-band held-out >= 0.90)
+        run: |
+          python -m agentrouter eval run --all --json --no-artifacts \
+            --require-release-ready > "$RUNNER_TEMP/release-gate.json"
+      - name: Upload release-gate evaluation record
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-gate-evaluation
+          path: ${{ runner.temp }}/release-gate.json
 
   # Optional live provider smoke test — hits the real OpenRouter catalog.
   # Runs ONLY on manual dispatch, never on push/PR, and never blocks normal CI.

@@ -30,9 +30,11 @@ def test_model_matches_feature_extractor_shape():
 def test_classify_uses_rules_when_learned_disabled():
     # Shipped default: learned band is OFF, so classify == rule estimator.
     assert classifier._USE_LEARNED_BAND is False
-    for prompt in ("Return the larger of two integers.",
-                   "Refactor the billing subsystem already in use.",
-                   "Summarize a 96k-token compliance archive."):
+    for prompt in (
+        "Return the larger of two integers.",
+        "Refactor the billing subsystem already in use.",
+        "Summarize a 96k-token compliance archive.",
+    ):
         cls = classifier.classify(prompt)
         rules_tokens = classifier._context_tokens(prompt.lower(), cls.task_type)
         assert cls.context_band == classifier._band(rules_tokens)

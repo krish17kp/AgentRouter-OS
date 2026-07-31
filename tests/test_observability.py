@@ -6,12 +6,15 @@ import json
 import logging
 
 import pytest
-from fastapi.testclient import TestClient
-from typer.testing import CliRunner
 
-from agentrouter import observability as obs
-from agentrouter.cli import app as cli_app
-from agentrouter.server.app import create_app
+pytest.importorskip("fastapi")  # optional [server] extra
+
+from fastapi.testclient import TestClient  # noqa: E402
+from typer.testing import CliRunner  # noqa: E402
+
+from agentrouter import observability as obs  # noqa: E402
+from agentrouter.cli import app as cli_app  # noqa: E402
+from agentrouter.server.app import create_app  # noqa: E402
 
 runner = CliRunner()
 
