@@ -361,7 +361,11 @@ def _temp_file(parent: Path, data: bytes, *, mode: int = 0o600) -> Path:
     fd, raw_path = tempfile.mkstemp(prefix=".agentrouter-tmp-", dir=parent)
     path = Path(raw_path)
     try:
-        os.fchmod(fd, mode)
+        # POSIX-only: restrict the temp file to owner before writing. Windows lacks
+        # os.fchmod and NTFS ignores POSIX mode bits; mkstemp already creates the
+        # file with owner-only access there, so skipping the call is safe.
+        if hasattr(os, "fchmod"):
+            os.fchmod(fd, mode)
         with os.fdopen(fd, "wb", closefd=False) as stream:
             stream.write(data)
             stream.flush()
