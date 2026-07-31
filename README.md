@@ -1,7 +1,7 @@
 # AgentRouter OS
 
 [![CI](https://github.com/krish17kp/AgentRouter-OS/actions/workflows/ci.yml/badge.svg)](https://github.com/krish17kp/AgentRouter-OS/actions/workflows/ci.yml)
-![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Version](https://img.shields.io/badge/version-0.4.0-brightgreen)
 
@@ -206,8 +206,17 @@ The [`integrations/`](integrations/) directory turns AgentRouter into a **skill*
 agentrouter plugin install claude-code    # -> ~/.claude/skills/agentrouter/  (idempotent; backs up any existing file)
 agentrouter plugin install codex          # -> ~/.codex/AGENTS.md
 agentrouter plugin doctor                 # status + exact paths
-agentrouter plugin uninstall claude-code  # restores any backup
+agentrouter plugin uninstall claude-code  # ownership-safe removal; restores any backup
+# For a pre-v0.5 identical legacy copy only, explicitly claim ownership first:
+agentrouter plugin install claude-code --adopt-identical
 ```
+
+Install records the exact installed digest and file identity in private state below the host root.
+Uninstall removes a file only when that ownership record still matches; package upgrades therefore
+remain reversible, while user edits, unmanaged identical files, and unrelated files are preserved.
+Forced replacements use a metadata-preserving backup plus a recoverable transaction journal. The
+Claude Code `skills/agentrouter/` directory is removed only when AgentRouter created it, its identity
+still matches, and it is empty; parent directories are never removed recursively.
 
 Manual copy still works if you prefer:
 
@@ -361,6 +370,53 @@ Everything is local under `AGENTROUTER_HOME` (default `~/.agentrouter/`):
 - **Nothing leaves your machine** except explicit `providers refresh` fetches and tools you run with `execute --yes`.
 - Task text is stored locally so `explain` can replay decisions. Use `--no-log` on `route` to skip persisting a sensitive task.
 
+## Observability (opt-in)
+
+Every route decision emits a structured JSON record on the `agentrouter.route`
+logger — metadata only (`task_type`, `risk`, chosen model, score, `request_id`,
+`task_len`); **never the task text or generated prompt**. It is silent by default.
+
+| Env var | Effect |
+| --- | --- |
+| `AGENTROUTER_LOG=1` | Print the JSON route-decision records to stderr. |
+| `AGENTROUTER_OTEL=1` | Emit OpenTelemetry spans (needs `pip install agentrouter-os[otel]`; a no-op otherwise). |
+
+The server echoes `X-Request-ID` and threads it into the log record so API calls
+are traceable end to end.
+
+### Server limits (opt-in)
+
+| Env var | Effect |
+| --- | --- |
+| `AGENTROUTER_RATE_LIMIT=N` | Allow at most `N` requests per window per caller (0/unset = off). Excess → `429` + `Retry-After`. `/health` and `/ready` are exempt. |
+| `AGENTROUTER_RATE_WINDOW=S` | Rate-limit window in seconds (default 60). |
+| `AGENTROUTER_IDEMPOTENCY_TTL=S` | How long a cached response is replayable (default 300). |
+
+Send an `Idempotency-Key` header on a `POST` to make a retry safe: the first
+response is replayed (with `Idempotency-Replay: true`) instead of producing a
+second decision. The key is scoped to the caller's API key, the path, and a hash
+of the request body, and only successful (2xx) responses are cached. In-memory
+and single-process (one worker); both stores are size-bounded.
+
+## MCP server
+
+Expose routing to MCP clients (agents, IDEs) without shelling out:
+
+```bash
+pip install "agentrouter-os[mcp]"
+agentrouter mcp          # serves over stdio
+```
+
+Tools are **read-only and dry-run**: `route`, `classify`, `explain`,
+`list_models`, `list_hosts`. There is deliberately **no execute tool** — the MCP
+surface never spawns a process or runs a model.
+
+Register it with a Claude Code / MCP client, e.g.:
+
+```json
+{ "mcpServers": { "agentrouter": { "command": "agentrouter", "args": ["mcp"] } } }
+```
+
 ---
 
 ## Troubleshooting
@@ -393,7 +449,7 @@ pytest --cov=agentrouter                  # coverage report (fails under 80%)
 ruff check . && ruff format --check .     # lint + format
 ```
 
-No test needs internet or an API key — provider-refresh tests mock the HTTP layer. CI runs the same suite on Python 3.11 / 3.12 / 3.13, then a **`build-smoke` job** builds the real sdist + wheel, installs the wheel into a clean venv, and smoke-tests the *installed* artifact (`--version` → `init` → `route --json` → `stats` → `registry list`). That catches packaging bugs — a missing seed file, a broken entrypoint — that editable installs never hit. See [TESTING.md](TESTING.md).
+No test needs internet or an API key — provider-refresh tests mock the HTTP layer. CI runs the same suite on Python 3.10 / 3.11 / 3.12 / 3.13, then a **`build-smoke` job** builds the real sdist + wheel, installs the wheel into a clean venv, and smoke-tests the *installed* artifact (`--version` → `init` → `route --json` → `stats` → `registry list`). That catches packaging bugs — a missing seed file, a broken entrypoint — that editable installs never hit. See [TESTING.md](TESTING.md).
 
 ---
 

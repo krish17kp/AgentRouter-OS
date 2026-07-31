@@ -1,0 +1,28 @@
+# Keep Graphify output and sensitive/generated trees out of Claude prompt-cache scanning.
+graphify-out/
+graph.html
+graph.json
+GRAPH_REPORT.md
+raw/
+
+# Secrets / credentials / local state
+.env
+.env.*
+!.env.example
+
+# Virtual envs, caches, build output, generated artifacts
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+.mutmut-cache
+mutants/
+dist/
+build/
+*.egg-info/
+node_modules/
+data/
+artifacts/
+mlruns/

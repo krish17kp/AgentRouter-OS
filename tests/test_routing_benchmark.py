@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+import agentrouter
 from agentrouter import evaluate as ev
 from agentrouter.engine import eligibility, route
 from agentrouter.safety import gates_for
@@ -22,7 +23,9 @@ from agentrouter.schema import (
 
 
 def test_routing_gold_all_scenarios_pass():
-    report = ev.evaluate_routing(Path("benchmarks") / "routing_gold_v1.yaml")
+    report = ev.evaluate_routing(
+        Path(agentrouter.__file__).parent / "benchmarks" / "routing_gold_v1.yaml"
+    )
     assert report["all_pass"], report["failures"]
     assert report["n_scenarios"] >= 10
 

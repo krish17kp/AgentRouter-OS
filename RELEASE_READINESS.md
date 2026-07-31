@@ -1,28 +1,30 @@
 # Release Readiness
 
-**Status: NOT ready for public beta.** Recalculated from current evidence, not prior claims.
+**Status: NOT release-ready.** This is the canonical v0.5 release-candidate
+assessment as of 2026-07-20.
 
-## Public-beta gates (command.md P13 / §16)
+## Current evidence
+
 | Gate | State | Evidence |
-|------|-------|----------|
-| No production placeholder model IDs | ✅ | `test_no_placeholder_ids_in_production_seed` |
-| Exact model + host shown | ✅ | `execution_route` in route JSON |
-| Offline route works | ✅ | route runs with no network/keys |
-| High-risk execution blocked | ✅ | `test_execute*`; high-risk never auto-executes |
-| No shell injection | ✅ | `test_execute_injection.py` (argv, shell=False) |
-| Catalog refresh failure atomic | ⚠️ unverified | needs live-refresh tests (P1, blocked) |
-| Full 100-point evaluator | ✅ | all 6 evaluators implemented; `eval run --all` → 96.89/100 |
-| Overall grade ≥ 85 / macro-F1 ≥ 0.90 / high-risk recall 1.0 | ✅ | grade **98.08**; macro-F1 ✅; high-risk recall 1.0 ✅; `high_risk_gated`==1.0 ✅ (safety-evaluator over-strict bug fixed) |
-| Synthetic routing top-1 ≥ 0.95 | ✅ (proxy) | gate now set at ≥0.95 per spec; value 1.0 — **proxy** (no gold routing target until P5) |
-| context_band_accuracy ≥ 0.90 (beyond-spec internal check) | ⚠️ 0.82 | improved 0.76→0.82 via principled existing-code context heuristic; not a command.md P13 gate; one-line-prompt band inference has a natural ceiling — not overfitted to force a pass |
-| Windows + Linux green in CI | ⚠️ | local Windows green; CI status not checked this loop |
-| Wheel install verified | ⚠️ | `python -m build` not re-run this loop |
-| One-command plugin install/uninstall | ✅ | `agentrouter plugin install/uninstall` (P8), Windows-verified, in wheel |
-| Bandit / pip-audit / secret scan | ✅ (local) | bandit `-c pyproject.toml -r agentrouter` → 0 issues; pip-audit → 0 vulns; secret-scan + security CI workflow added. CI run pending merge. |
+|---|---|---|
+| Offline routing and exact model/host output | Pass at takeover baseline | Existing routing and CLI suites |
+| High-risk execution and injection protections | Pass at takeover baseline | Safety, execute, and injection suites |
+| Evaluation grade | Pass | 98.32/100 from current canonical run |
+| Six non-context evaluation gates | Pass | Current `artifacts/evaluation/result.json` |
+| Frozen held-out context generalization | **Fail** | 0.5778 accuracy versus unchanged 0.90 threshold; 95% CI 0.4330–0.7103 |
+| Safe reversible plugin lifecycle | Re-audit pending | 48 focused tests pass after the latest security repairs |
+| Real mutation thresholds | Pending | Linux mutmut workflow exists; no real score is available yet |
+| Final full local matrix | Pending | Baseline passed; current complete rerun remains |
+| Linux/Windows GitHub checks | Pending | Release branch has not yet been pushed |
+| Clean wheel install/lifecycle | Final rerun pending | Takeover baseline passed |
 
-## Production gates (P14)
-All pending — real beta feedback, holdout, runbook, rollback/backup verification,
-hosted-mode isolation, security sign-off. None met.
+The 0.945 value previously used for context readiness came from the 165-case
+in-sample gold set. The canonical generalization gate now uses the frozen,
+checksum-locked 45-case holdout and is deliberately not tuned after its final run.
 
-**Blocking themes:** evaluation completeness (P6), live catalog/host verification
-(P1/P2, external-blocked), plugin installer (P8), security scan wiring (P10).
+## External production prerequisites
+
+Live provider verification, paid-model benchmarking, hosted deployment,
+marketplace publication, beta feedback, and operational sign-off still require
+credentials, budget, infrastructure, or owner decisions. These do not excuse the
+three local/CI blockers above.

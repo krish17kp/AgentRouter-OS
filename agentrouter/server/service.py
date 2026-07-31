@@ -11,7 +11,7 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-from agentrouter import hosts, store
+from agentrouter import hosts, observability, store
 from agentrouter.classifier import classify
 from agentrouter.engine import route as engine_route
 from agentrouter.prompts import generate_prompt
@@ -30,35 +30,6 @@ def load_registry() -> list[ModelEntry]:
     providers = load_providers(h / "registry" / "providers.yaml")
     models, _warnings = load_all_models(h / "registry", providers)
     return models
-
-
-def _execution_route(row: dict | None, models_by_key: dict[str, ModelEntry]) -> dict | None:
-    """Stage-2 route block (mirrors cli._execution_route; no process is ever run)."""
-    if row is None:
-        return None
-    model = models_by_key.get(row["model"])
-    if model is None or not model.execution_targets:
-        return None
-    resolved = hosts.resolve_execution_route(model, include_unavailable=True)
-    tgt, status = resolved.target, resolved.status
-    return {
-        "vendor": model.vendor,
-        "model_id": model.model_id,
-        "display_name": model.name,
-        "release_channel": model.release_channel.value,
-        "host": tgt.host if tgt else None,
-        "host_model_id": tgt.host_model_id if tgt else None,
-        "execution_mode": tgt.execution_mode.value if tgt else None,
-        "availability": status.availability if status else "unknown",
-        "availability_reason": status.reason if status else "no execution target",
-        "command_preview": hosts.command_preview(tgt) if tgt else None,
-        "required_env": tgt.required_env if tgt else [],
-        "context_window": model.context_window,
-        "max_output_tokens": model.max_output_tokens,
-        "all_hosts": [
-            {"host": s.host, "availability": s.availability} for s in resolved.all_statuses
-        ],
-    }
 
 
 def list_models() -> list[dict]:
@@ -123,7 +94,8 @@ def route_task(
         risk=Level(risk) if risk else None,
         tools=tools,
     )
-    result = engine_route(models, cls, prefer=prefer)
+    with observability.route_span("route", task_type=cls.task_type.value, risk=cls.risk.value):
+        result = engine_route(models, cls, prefer=prefer)
     gates = gates_for(cls)
 
     rec = result["recommendation"]
@@ -131,8 +103,8 @@ def route_task(
     prompt = generate_prompt(task, target, cls, gates["checklist"])
 
     models_by_key = {m.key: m for m in models}
-    exec_route = _execution_route(rec, models_by_key)
-    fb_route = _execution_route(result["fallback"], models_by_key)
+    exec_route = hosts.execution_route_block(rec, models_by_key)
+    fb_route = hosts.execution_route_block(result["fallback"], models_by_key)
 
     payload = {
         "classification": cls.model_dump(mode="json"),
@@ -147,6 +119,7 @@ def route_task(
         conn = store.connect(home())
         decision_id = store.save_decision(conn, task, payload)
         conn.close()
+    observability.log_route_decision(task=task, payload=payload, decision_id=decision_id)
     return {"decision_id": decision_id, "task": task, **payload}
 
 

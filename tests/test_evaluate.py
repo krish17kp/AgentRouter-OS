@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+import agentrouter
 from agentrouter import evaluate as ev
 
 runner = CliRunner()
@@ -151,7 +152,7 @@ def test_empty_tools_expected_and_predicted_is_exact():
 
 
 def test_load_real_gold_and_grade_runs():
-    gold_path = Path("benchmarks") / "classifier_gold_v1.yaml"
+    gold_path = Path(agentrouter.__file__).parent / "benchmarks" / "classifier_gold_v1.yaml"
     cases = ev.load_gold(gold_path)
     assert len(cases) >= 150
     r = ev.grade_cases(cases)  # uses the real classifier
@@ -214,9 +215,11 @@ def test_cli_evaluate_missing_gold_exits_3(tmp_path):
 
 
 def test_cli_evaluate_meets_release_thresholds():
-    """The shipped gold benchmark must keep the classifier release-ready."""
+    """The legacy command scopes its passing thresholds to the in-sample gold set."""
     from agentrouter.cli import app
 
     r = runner.invoke(app, ["evaluate", "--json", "--no-artifacts"])
     report = json.loads(r.output[r.output.index("{") :])
     assert report["release_ready"], report["release_thresholds"]
+    assert report["readiness_scope"] == "legacy_gold_set_only"
+    assert report["canonical_release_ready"] is None

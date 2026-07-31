@@ -1,0 +1,19 @@
+id: TASK-008
+title: Safe plugin uninstall cleanup
+status: in_progress
+owner: codex
+started: 2026-07-20
+scope:
+  - agentrouter/plugins.py
+  - tests/test_plugins.py
+  - README.md
+  - UPGRADING.md
+acceptance:
+  - remove only unchanged AgentRouter-managed files
+  - restore backups without losing later user edits
+  - remove only explicit empty integration directories
+  - preserve unrelated files and non-empty parents
+  - reject traversal and link/reparse destinations
+  - remain idempotent and support reinstall
+  - provide stable per-path result records and clear CLI output
+

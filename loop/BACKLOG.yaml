@@ -1,0 +1,66 @@
+# AgentRouter OS production backlog.
+# Merges command.md section 9 with actual repo evidence (LOOP_STATE.json @ iter 8).
+# priority = customer_value * trust * platform_leverage * adoption / risk (relative rank)
+# status: done | local_open | blocked_external | blocked_user
+version: 1
+
+# ---- Already delivered (local slices, see LOOP_STATE.json.completed) ----
+done:
+  - {id: P3,  title: route-control filters + preference weights + confidence/abstention}
+  - {id: P4,  title: tool taxonomy (versioned labels, equivalence, alias eligibility)}
+  - {id: P6,  title: 100-point evaluator suite + eval run --all}
+  - {id: P7,  title: local FastAPI /v1 server (no remote exec) + Python httpx SDK}
+  - {id: P8a, title: plugin installer (list/install/uninstall/doctor, reversible)}
+  - {id: P9,  title: non-interactive idempotent setup wizard}
+  - {id: P10a,title: URL-scheme hardening + bandit/pip-audit/secret-scan CI}
+  - {id: P12, title: examples/README + README quickstart (verified commands)}
+
+# ---- Unblocked local work (candidates for this loop) ----
+local_open:
+  - id: L1
+    title: Structured logging + OpenTelemetry (P13 obs)
+    priority: 8
+    surfaces: [server, engine, cli]
+    risk: low
+    reason: no external creds needed; improves trust/ops readiness
+  - id: L2
+    title: MCP server exposing safe read/route/explain tools + /route* commands
+    priority: 7
+    surfaces: [server, plugins, integrations]
+    risk: medium
+  - id: L3
+    title: TypeScript SDK (contract-parity with Python SDK)
+    priority: 6
+    surfaces: [sdk]
+    risk: medium
+  - id: L4
+    title: Classifier context-band tuning + safety-gate hardening to 0.90
+    priority: 5
+    surfaces: [classifier, taxonomy]
+    risk: medium
+    note: natural ceiling on one-line-prompt band inference; avoid overfitting
+  - id: L5
+    title: Testing-stack extras (mutmut mutation, Hypothesis property tests)
+    priority: 6
+    surfaces: [tests]
+    risk: low
+  - id: L6
+    title: Rate limiting + idempotency keys on server (local, in-memory)
+    priority: 5
+    surfaces: [server]
+    risk: low
+  - id: L7
+    title: SBOM + release provenance (cyclonedx), upgrade/migration guide
+    priority: 4
+    surfaces: [packaging, docs]
+    risk: low
+
+# ---- External-blocked (need creds / paid inference / infra / owner) ----
+blocked_external:
+  - {id: P1,  title: dynamic catalog refresh (anthropic/openai/google/openrouter), needs: live authenticated APIs}
+  - {id: P2,  title: live host access verification, needs: opt-in network + credentials}
+  - {id: P5,  title: benchmark-measured model profiles + private holdout, needs: paid inference}
+  - {id: P11, title: hosted infra deploy + marketplace publication, needs: owner infra/creds}
+  - {id: P13, title: public beta feedback workflow + real-user evidence, needs: beta users}
+  - {id: P14, title: production ops runbook / incident response / backup-restore drills, needs: real infra}
+  - {id: P15, title: PostgreSQL team-mode + tenant/RBAC, needs: owner product decision + infra}

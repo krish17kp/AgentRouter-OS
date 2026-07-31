@@ -35,8 +35,34 @@ jobs:
       - name: Tests + branch coverage gate (80%)
         run: pytest --cov=agentrouter --cov-branch
 
-      - name: Classifier + routing quality gate (offline)
-        run: python -m agentrouter evaluate --json --no-artifacts
+      - name: Full evaluation including frozen context holdout (offline)
+        shell: bash
+        run: |
+          EVAL_RESULT="$RUNNER_TEMP/evaluation-result.json"
+          python -m agentrouter eval run --all --json --no-artifacts \
+            --require-release-ready > "$EVAL_RESULT"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          result = json.loads(
+              (Path(os.environ["RUNNER_TEMP"]) / "evaluation-result.json").read_text(encoding="utf-8")
+          )
+          held_out = result["context_band_generalization"]["current_holdout"]["accuracy"]
+          gate = result["release_gates"]["context_band_accuracy>=0.90"]
+          assert gate is (held_out >= 0.90), (held_out, gate)
+          assert len(result["release_gates"]) == 7, result["release_gates"]
+          assert result["release_ready"] is True, result["release_gates"]
+          print(f"Held-out context accuracy: {held_out}; release-ready: {result['release_ready']}")
+          PY
+
+      - name: Upload evaluation record
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-py${{ matrix.python-version }}
+          path: ${{ runner.temp }}/evaluation-result.json
 
       - name: CLI entrypoints smoke check
         run: |
@@ -61,7 +87,7 @@ jobs:
       - name: CLI smoke check
         run: |
           python -m agentrouter --version
-          python -m agentrouter evaluate --no-artifacts
+          python -m agentrouter eval context-band-generalization --json
 
   build-smoke:
     # Post-build verification: the artifact users actually pip-install works.

@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import uuid
 from datetime import timezone
 from importlib import resources
 from pathlib import Path
@@ -15,7 +16,7 @@ from pathlib import Path
 import typer
 import yaml
 
-from . import hosts, plugins, store
+from . import hosts, observability, plugins, store, taxonomy
 from .classifier import classify
 from .controls import PREFERENCE_WEIGHTS, RouteControls, apply_controls
 from .engine import BASE_WEIGHTS
@@ -210,39 +211,6 @@ def _reason_for(rec: dict, cls, shifts: list[str]) -> str:
     return "; ".join(parts)
 
 
-def _execution_route(row: dict | None, models_by_key: dict) -> dict | None:
-    """Stage-2: resolve HOW to run the selected model (program Phase 5/6).
-
-    Returns a JSON-serializable execution-route block, or None if the model has
-    no execution targets (e.g. a refreshed catalog entry without host wiring).
-    """
-    if row is None:
-        return None
-    model = models_by_key.get(row["model"])
-    if model is None or not model.execution_targets:
-        return None
-    resolved = hosts.resolve_execution_route(model, include_unavailable=True)
-    tgt, status = resolved.target, resolved.status
-    return {
-        "vendor": model.vendor,
-        "model_id": model.model_id,
-        "display_name": model.name,
-        "release_channel": model.release_channel.value,
-        "host": tgt.host if tgt else None,
-        "host_model_id": tgt.host_model_id if tgt else None,
-        "execution_mode": tgt.execution_mode.value if tgt else None,
-        "availability": status.availability if status else "unknown",
-        "availability_reason": status.reason if status else "no execution target",
-        "command_preview": hosts.command_preview(tgt) if tgt else None,
-        "required_env": tgt.required_env if tgt else [],
-        "context_window": model.context_window,
-        "max_output_tokens": model.max_output_tokens,
-        "all_hosts": [
-            {"host": s.host, "availability": s.availability} for s in resolved.all_statuses
-        ],
-    }
-
-
 # --- init --------------------------------------------------------------------
 
 
@@ -262,6 +230,10 @@ def init(force: bool = typer.Option(False, "--force", help="Overwrite existing f
         if dest.exists() and not force:
             typer.echo(f"exists, skipped: {dest} (use --force to overwrite)")
             continue
+        if dest.exists():  # force: back up a possibly hand-edited catalog first
+            backup = dest.with_suffix(dest.suffix + ".bak")
+            shutil.copyfile(dest, backup)
+            typer.echo(f"Backed up {dest} -> {backup}")
         with resources.as_file(seeds / name) as src:
             shutil.copyfile(src, dest)
         typer.echo(f"Created {dest}")
@@ -288,7 +260,7 @@ def setup(
 ):
     """Guided onboarding: init home, discover hosts, set a preference, run a sample route.
 
-    Non-interactive and idempotent — safe to re-run and to run in CI.
+    Non-interactive and idempotent - safe to re-run and to run in CI.
     """
     if preference not in PREFERENCE_WEIGHTS:
         typer.echo(
@@ -303,14 +275,16 @@ def setup(
     init(force=False)
 
     typer.echo("\n2. Execution hosts (credentials detected by presence only; values never read)")
-    available = 0
+    real_available = 0
     for host in hosts.known_hosts():
         st = hosts.detect_host(host)
         mark = "OK " if st.availability == hosts.AVAILABLE else "-- "
         typer.echo(f"   [{mark}] {host:<16} {st.availability:<12} {st.reason}")
-        available += st.availability == hosts.AVAILABLE
-    if not available:
-        typer.echo("   Note: no host available yet — install Claude Code/Codex or set an API key.")
+        # 'manual' is always AVAILABLE, so count only real hosts or the warning never fires
+        if host != "manual" and st.availability == hosts.AVAILABLE:
+            real_available += 1
+    if not real_available:
+        typer.echo("   Note: no host available yet - install Claude Code/Codex or set an API key.")
 
     typer.echo(f"\n3. Preference: {preference}")
     _write_preference(preference)
@@ -389,6 +363,17 @@ def route(
     if available_only and include_unavailable:
         typer.echo("Use only one of --available-only / --include-unavailable.", err=True)
         raise typer.Exit(EXIT_USAGE)
+    if prohibit_tool:  # reject typos instead of silently dropping nothing
+        import difflib
+
+        known = sorted(taxonomy.TOOLS)
+        for t in prohibit_tool:
+            if not taxonomy.is_known(t):
+                near = difflib.get_close_matches(t, known, n=1)
+                hint = f" (did you mean {near[0]!r}?)" if near else ""
+                msg = f"Unknown --prohibit-tool {t!r}{hint}. Known: {', '.join(known)}"
+                typer.echo(msg, err=True)
+                raise typer.Exit(EXIT_USAGE)
     ctrl = RouteControls(
         vendor=tuple(vendor or ()),
         exclude_vendor=tuple(exclude_vendor or ()),
@@ -414,7 +399,11 @@ def route(
         uncertainty_threshold=uncertainty_threshold,
     )
     weights, learn_note = _adapted_weights(cfg)
-    result = engine_route(models, cls, weights, prefer=prefer)
+    observability.configure_logging()
+    request_id = uuid.uuid4().hex
+    observability.set_request_id(request_id)
+    with observability.route_span("route", task_type=cls.task_type.value, risk=cls.risk.value):
+        result = engine_route(models, cls, weights, prefer=prefer)
     result["excluded"] = control_drops + result["excluded"]
     if learn_note:
         result["weight_shifts"].append(learn_note)
@@ -426,8 +415,12 @@ def route(
     reason = _reason_for(rec, cls, result["weight_shifts"]) if rec else None
 
     models_by_key = {m.key: m for m in models}
-    exec_route = _execution_route(rec, models_by_key) if rec else None
-    fb_route = _execution_route(result["fallback"], models_by_key) if result["fallback"] else None
+    exec_route = hosts.execution_route_block(rec, models_by_key) if rec else None
+    fb_route = (
+        hosts.execution_route_block(result["fallback"], models_by_key)
+        if result["fallback"]
+        else None
+    )
 
     payload = {
         "classification": cls.model_dump(mode="json"),
@@ -443,6 +436,10 @@ def route(
         conn = store.connect(_home())
         decision_id = store.save_decision(conn, task, payload)
         conn.close()
+
+    observability.log_route_decision(
+        task=task, payload=payload, decision_id=decision_id, request_id=request_id
+    )
 
     if json_out:
         typer.echo(json.dumps({"decision_id": decision_id, "task": task, **payload}, indent=2))
@@ -492,7 +489,7 @@ def _print_route(task, cls, result, gates, reason, decision_id, exec_route=None,
             if cls.alternative_task_type
             else ""
         )
-        why = f" — {cls.ambiguity_reason}" if cls.ambiguity_reason else ""
+        why = f" - {cls.ambiguity_reason}" if cls.ambiguity_reason else ""
         typer.echo(f"\nLow confidence{why}{alt}.")
         typer.echo("  Consider clarifying the task; the recommendation below is a best guess.")
 
@@ -973,7 +970,7 @@ def execute(
     """Run the recommended tool for a logged decision (opt-in; high risk never executes).
 
     Requires the recommendation's provider to have supports_execution: true and an
-    exec_command in providers.yaml — both ship disabled by default.
+    exec_command in providers.yaml - both ship disabled by default.
     """
     conn = store.connect(_home())
     payload = store.load_decision(conn, decision_id)
@@ -1100,7 +1097,7 @@ def server(
     """Run the local REST API (Phase P7). Remote model execution stays disabled.
 
     Set AGENTROUTER_API_KEY to require an X-API-Key header. Docs at /docs.
-    Install extras first: pip install "agentrouter-os[server]".
+    Install extras first: pip install "agentrouter-os\\[server]".
     """
     try:
         import uvicorn
@@ -1110,8 +1107,24 @@ def server(
         typer.echo(f"Server extras not installed: {e}", err=True)
         typer.echo('Next: pip install "agentrouter-os[server]"', err=True)
         raise typer.Exit(EXIT_RUNTIME) from e
-    typer.echo(f"AgentRouter API on http://{host}:{port}  (docs: /docs)  — Ctrl+C to stop")
+    typer.echo(f"AgentRouter API on http://{host}:{port}  (docs: /docs)  - Ctrl+C to stop")
     uvicorn.run(api_app, host=host, port=port)
+
+
+@app.command()
+def mcp():
+    """Run the MCP server over stdio: safe read/route/explain tools, no execution.
+
+    Install extras first: pip install "agentrouter-os\\[mcp]".
+    """
+    from .mcp_server import build_server
+
+    try:
+        server = build_server()
+    except RuntimeError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(EXIT_RUNTIME) from e
+    server.run()
 
 
 @app.command()
@@ -1130,9 +1143,10 @@ def dashboard(port: int = typer.Option(8321, "--port", min=0, max=65535)):
 
 # --- evaluate (graded classifier benchmark) ------------------------------------------
 
-_PROJECT_ROOT = Path(__file__).parent.parent
-_DEFAULT_GOLD = _PROJECT_ROOT / "benchmarks" / "classifier_gold_v1.yaml"
-_DEFAULT_ARTIFACTS = _PROJECT_ROOT / "artifacts"
+_DEFAULT_GOLD = Path(
+    str(resources.files("agentrouter").joinpath("benchmarks", "classifier_gold_v1.yaml"))
+)
+_DEFAULT_ARTIFACTS = Path("artifacts")  # cwd-relative output dir (never under site-packages)
 
 
 @app.command()
@@ -1142,7 +1156,7 @@ def evaluate(
     json_out: bool = typer.Option(False, "--json", help="Print the full report as JSON."),
     no_artifacts: bool = typer.Option(False, "--no-artifacts", help="Do not write files."),
 ):
-    """Grade the classifier against a gold benchmark; write evaluation artifacts."""
+    """Run the legacy gold-set benchmark; use `eval run --all` for release readiness."""
     from . import evaluate as ev
 
     try:
@@ -1162,7 +1176,10 @@ def evaluate(
         return
 
     typer.echo(f"\nCases: {report['n_cases']}   Overall grade: {report['overall_grade']}/100")
-    typer.echo(f"Release-ready: {'YES' if report['release_ready'] else 'NO'}")
+    typer.echo(
+        "Legacy gold-set thresholds: "
+        f"{'PASS' if report['release_ready'] else 'FAIL'} (not canonical release readiness)"
+    )
     typer.echo("\nDimension scores (weight x score):")
     for d, w in report["grade_weights"].items():
         typer.echo(f"  {d:<11} w={w:<2} score={report['dimension_scores'][d]:.3f}")
@@ -1200,17 +1217,22 @@ def _resolve_plugin(name: str) -> plugins.Plugin:
 def plugin_install(
     name: str = typer.Argument(..., help="Plugin name (see `plugin list`)."),
     force: bool = typer.Option(False, "--force", help="Back up and replace differing files."),
+    adopt_identical: bool = typer.Option(
+        False,
+        "--adopt-identical",
+        help="Claim an identical legacy installation so uninstall may remove it.",
+    ),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show the exact files, change nothing."),
 ):
     """Install a host integration (idempotent, reversible)."""
     p = _resolve_plugin(name)
     if dry_run:
         typer.echo(f"Would install '{p.name}':")
-        for item in plugins.plan(p):
+        for item in plugins.plan(p, adopt_identical=adopt_identical):
             typer.echo(f"  {item['action']:<24} {item['dest']}")
         return
     try:
-        for r in plugins.install(p, force=force):
+        for r in plugins.install(p, force=force, adopt_identical=adopt_identical):
             typer.echo(f"  {r['result']:<28} {r['dest']}")
     except plugins.PluginError as e:
         typer.echo(str(e), err=True)
@@ -1224,8 +1246,15 @@ def plugin_uninstall(
 ):
     """Remove a host integration; restores any backed-up user file."""
     p = _resolve_plugin(name)
-    for r in plugins.uninstall(p):
-        typer.echo(f"  {r['result']:<28} {r['dest']}")
+    try:
+        results = plugins.uninstall(p)
+    except plugins.PluginError as e:
+        for result in e.results:
+            typer.echo(f"  {result['result']:<28} {result['dest']}")
+        typer.echo(str(e), err=True)
+        raise typer.Exit(EXIT_RUNTIME) from e
+    for result in results:
+        typer.echo(f"  {result['result']:<28} {result['dest']}")
 
 
 @plugin_app.command("doctor")

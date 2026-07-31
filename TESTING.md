@@ -6,11 +6,31 @@
 pip install -e ".[dev]"
 pytest                            # all tests, offline, < 5s
 pytest --cov=agentrouter          # with coverage; fails under 80%
+agentrouter eval context-band-generalization
+agentrouter eval run --all --require-release-ready
 ```
+
+The context-band command scores a development split and a checksum-locked final holdout, reports
+accuracy, macro-F1, per-band recall and confidence intervals, and compares the frozen pre-TASK-004
+rules with the current classifier. `agentrouter eval run --all` uses final-holdout accuracy for the
+existing `context_band_accuracy>=0.90` gate; the other six release gates are unchanged.
+`--require-release-ready` turns any failed gate into a nonzero exit for CI/release enforcement.
+The current frozen-holdout accuracy is 0.5778, so this command intentionally fails until a future
+development-only classifier revision generalizes past the unchanged 0.90 threshold.
+
+Linux mutation CI is bounded to critical modules:
+
+```console
+pip install -e ".[dev,property,server,mutation]"
+python scripts/run_mutation_ci.py --timeout-seconds 2100 --max-children 4
+```
+
+Mutmut is pinned to 3.6.0. Native Windows execution is not a valid substitute; the authoritative
+score and report come from `.github/workflows/mutation.yml` on Ubuntu.
 
 No test needs internet or an API key — provider-refresh tests monkeypatch the
 HTTP layer. CI (`.github/workflows/ci.yml`) runs the same commands on Python
-3.11/3.12/3.13.
+3.10/3.11/3.12/3.13.
 
 ## Test layout
 

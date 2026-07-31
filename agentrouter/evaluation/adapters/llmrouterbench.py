@@ -10,14 +10,10 @@ file is required to translate benchmark model keys onto registry entries.
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from ..base import Availability, DatasetAdapter, DatasetMetadata
+from ..base import Availability, DatasetAdapter, DatasetMetadata, fixture_path
 from ..schema import EvaluationCase
 
-_FIXTURE = (
-    Path(__file__).resolve().parents[3] / "evaluation" / "fixtures" / "llmrouterbench_sample.jsonl"
-)
+_FIXTURE = fixture_path("llmrouterbench_sample.jsonl")
 
 
 class LLMRouterBenchAdapter(DatasetAdapter):

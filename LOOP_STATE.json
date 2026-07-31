@@ -1,43 +1,63 @@
 {
-  "loop_version": 1,
-  "current_phase": "P6/P7/P12 — evaluators, API/SDK, docs (local slices complete)",
-  "current_objective": "full 100-point evaluator + local REST API/SDK + examples/docs",
-  "status": "BLOCKED_EXTERNAL",
-  "iteration": 8,
-  "repo_sha_at_start": "476c51a821017d9ba725d832904089abc3267d40",
-  "completed": [
-    "P0 baseline observed: 276 tests green, ruff clean at start SHA",
-    "P3 route-control filters + preference weights + confidence/abstention (--uncertainty-threshold); full CLI_SPEC docs",
-    "P4 tool taxonomy: taxonomy.py versioned labels + equivalence + alias-aware eligibility + --prohibit-tool + hygiene test",
-    "P8 plugin installer: plugin list/install/uninstall/doctor; reversible+idempotent+backup; packaged in wheel",
-    "P9 setup wizard: non-interactive idempotent onboarding; secrets never printed",
-    "P10 security: URL-scheme hardening; bandit 0 issues + justified nosec; pip-audit clean; security CI workflow + secret scan",
-    "P7 API/SDK: agentrouter/server (FastAPI, 9 /v1 endpoints, request-id, optional API-key, OpenAPI/docs, NO remote exec, dry-run only) + agentrouter/sdk.py (httpx client); `agentrouter server` command; 27 tests",
-    "P6 evaluators: routing/safety/platform/provider/feedback/performance evaluators + grade(measure_all) + eval run --all; additive gates, none weakened; 13 tests; `eval run --all` => 96.89/100 on fixtures",
-    "P12 docs: examples/README.md (verified commands); README quickstart updated (setup/plugin/route-controls/confidence)"
+  "loop_version": 2,
+  "last_updated": "2026-07-31",
+  "current_phase": "Codex zero-context takeover — v0.5 release-candidate hardening",
+  "current_objective": "Owner authorized RC push despite failing context_band gate: commit inherited work to release/agentrouter-v0.5-rc1, push, run first real Linux mutation CI, repair every GitHub check except the honestly-failing context-band release gate; then open TASK-011 context-band data/annotation program.",
+  "status": "IN_PROGRESS",
+  "release_branch": "release/agentrouter-v0.5-rc1",
+  "rc_push_authorization": "GRANTED by owner 2026-07-31 — RC pushed NOT-RELEASE-READY; context_band_accuracy 0.6667 < 0.90 gate remains honestly failed; no merge/tag/publish/deploy; gate unchanged.",
+  "repo_sha_at_takeover": "602321af91ff298c0d5b59d6d36c24f845557fc1",
+  "canonical_release_ready": false,
+  "in_progress": [
+    "TASK-010 Linux mutation CI — harness + workflow locally validated (8 harness tests pass; fails clearly on non-Linux; YAML/config/allowlist valid); first real GitHub mutmut score still pending (needs push)",
+    "Release branch creation/push, and GitHub check repair — GATED: blocked while context_band held-out gate fails; owner authorization required to push RC with a failing gate"
   ],
-  "in_progress": [],
-  "blocked_external": [
-    "P1 dynamic catalog refresh (anthropic/openai/google/openrouter) — needs live authenticated APIs",
-    "P2 host access verification (live network calls) — needs opt-in checks + credentials",
-    "P5 measured model profiles — needs benchmark runs / paid inference",
-    "P11 hosted infra deploy + marketplace publication — needs owner infra/credentials",
-    "P13/P14 beta+production gates — need real user beta feedback, private holdout, ops runbook",
-    "context_band_accuracy>=0.90 and high_risk_gated==1.00 gates FAIL on fixture set — need better gold/classifier tuning (local follow-up, not blocking this handoff)"
+  "completed_iter19": [
+    "TASK-009 decision A — dev-only LEARNED context-band classifier built (multinomial LR, 14 interpretable regex features, LOOCV 0.9583, C=1.0). Runtime is pure-Python softmax over JSON weights (no sklearn/network, deterministic); shared feature extractor prevents train/serve skew. Artifact agentrouter/benchmarks/context_band_model_v1.json packaged in the wheel and verified loading from a fresh pip install.",
+    "Frozen holdout evaluated ONCE across 3 configs (config fixed a priori, no holdout tuning/selection): rules-only 0.6667 macroF1 0.6792 (recall S/M/L 0.733/0.600/0.667); learned-only 0.6889 macroF1 0.6613 (0.800/0.333/0.933 — lifts large, collapses medium); hybrid(0.45) 0.6444 macroF1 0.6188. CIs overlap heavily; learned NOT significantly better than rules and has lower macro-F1.",
+    "DECISION: ship rules-active (_USE_LEARNED_BAND=False) — best macro-F1, balanced recall, explainable, no significant loss. Learned model retained as tested, flag-gated artifact with rule fallback. PROVEN CEILING: 24 dev cases cannot generalize to 0.90; closing the gap honestly needs a larger human-labeled dev set or real-file signals, not more hand-rules.",
+    "Regression: 481 collected — 480 passed + 1 env-skip (otel), incl 7 new tests/test_context_model.py; ruff clean; bandit 0 (under -c pyproject.toml). eval run --all grade 98.23, 6/7 gates PASS, context_band gate FAIL (honest ceiling). One pre-existing plugin backup test is order-flaky on Windows (passes isolated), unrelated to TASK-009.",
+    "Graphify updated post-implementation: 2309 nodes / 4319 edges / 239 communities. context_model.py is a leaf module (stdlib-only imports); classifier depends one-way; zero reverse edges = no cycle.",
+    "Independent gates: release-auditor verdict FAIL-to-release / correctly HELD (all claims reproduced, safe to hold unpushed). security-reviewer-arros: no CRITICAL/HIGH; one LOW fixed — load_model() now catches TypeError to honor 'any error -> None' contract, covered by test_malformed_model_returns_none.",
+    "Doc reconcile: loop/QUALITY_GATES.yaml refreshed (achieved 0.5778->0.6667, grade 98.32->98.23); study doc + state files corrected to 7 tests / 480-pass."
   ],
-  "blocked_user": [],
-  "failed_verifications": [
-    "eval run --all: context_band_accuracy 0.82 < 0.90 (beyond-spec internal check, not a command.md P13 gate); improved from 0.76; not overfitted. All command.md-required gates now PASS."
+  "completed_iter18": [
+    "TASK-008 safe plugin uninstall — INDEPENDENT RE-AUDIT PASS: 49 tests pass; live sandbox cycle verified (managed file removed, empty owned dir removed, non-empty dir preserved, unrelated user file preserved, idempotent, reinstall works, state dir cleaned). No repair needed.",
+    "TASK-009 held-out context — honest dev-derived generalization: classifier M_ACT_ON_EXISTING + _DEFINITE_EXISTING_RE; holdout 0.5778->0.6667 acc, macro-F1 ->0.6792, medium recall 0.267->0.60; dev stays 1.0; one holdout measurement, no holdout tuning. Still < 0.90 (genuine gap).",
+    "TASK-010 local validation complete (see in_progress for CI-only remainder).",
+    "Baseline B311 bandit regression fixed (nosec, deterministic resampling) -> bandit 0.",
+    "Graphify activated: official graphifyy 0.9.30 (uv tool) confirmed; graph built via CLI (2271 nodes / 4262 links / 238 communities / 281 files); validated (all prod modules present, 0 excluded-dir leaks, 0 secrets, calls/imports/inherits edges); docs/GRAPHIFY.md + docs/GRAPHIFY_BASELINE.md written; graphify-out/ gitignored; .claudeignore added; no global .claude skill install (CLI-direct, hooks untouched).",
+    "Autonomy codified in AGENTS.md, command.md, .claude/skills/production-loop/SKILL.md: routine reversible local tasks auto-continue with no confirmation; owner asked only for RC-push-with-failing-gate / merge / publish / deploy / paid / credentials / destructive."
   ],
-  "next_action": "Local follow-ups: TypeScript SDK, structured logging/OpenTelemetry (P10), MCP server + /route* commands (P8), tune classifier context-band + safety gating to pass remaining eval gates, DVC/MLflow/mutmut/Hypothesis testing-stack extras. External-blocked phases need credentials/paid APIs/infra.",
-  "last_test_results": {
-    "command": "python -m pytest -q",
-    "result": "371 passed",
-    "new_tests_this_session": 95,
-    "ruff": "clean + format clean",
-    "security": "bandit 0 issues; pip-audit 0 vulns",
-    "eval_all": "grade 98.08/100; all command.md-required gates PASS; only beyond-spec context_band check <0.90 (0.82)",
-    "wheel": "agentrouter_os-0.4.0-py3-none-any.whl built; server/sdk/evaluators/integrations/seeds all included"
+  "current_measurements": {
+    "python_full_baseline": "427 passed before final audit repairs",
+    "plugin_focused": "48 passed",
+    "context_holdout_focused": "9 passed",
+    "mutation_harness_focused": "8 passed",
+    "typescript": "typecheck clean; 8/8 tests",
+    "hooks": "15 passed",
+    "evaluation": "98.23/100; 6/7 gates pass; canonical release readiness NO",
+    "context_holdout": "SHIPPED rules-active accuracy 0.6667, macro-F1 0.6792 (recall S/M/L 0.733/0.600/0.667). Learned-only 0.6889/0.6613 and hybrid 0.6444/0.6188 measured once; none reach 0.90; learned not significantly better and lower macro-F1. Proven dataset ceiling with 24 dev cases.",
+    "mutation": "not yet measured; no score claimed",
+    "bandit": "0 issues (fixed B311 nosec in evaluation/context_bands.py bootstrap resampling)",
+    "graphify": "official graphifyy v0.9.30 via uv tool; post-impl graph 2309 nodes / 4319 edges / 239 communities; context_model.py leaf module, no cycle",
+    "python_full": "481 collected — 480 passed, 1 skipped (env-only otel); includes 7 tests/test_context_model.py; one order-flaky plugin backup test on Windows (passes isolated)",
+    "clean_wheel": "context_band_model_v1.json packaged; loads + predicts from fresh pip install; shipped _USE_LEARNED_BAND=False confirmed in installed wheel"
   },
-  "last_updated": "2026-07-14"
+  "release_blockers": [
+    "context_band_accuracy 0.6667 is below the unchanged 0.90 frozen-holdout gate. Decision A tested a dev-only learned model + hybrid: PROVEN CEILING — none reach 0.90, learned not significantly better than rules (overlapping CIs) and has lower macro-F1. Closing to 0.90 honestly needs a larger human-labeled dev set or real-file context signals, NOT more hand-rules or holdout tuning. Shipped rules-active.",
+    "real Linux mutmut score and survivor review await GitHub Actions",
+    "final full local matrix and release-branch GitHub checks are pending"
+  ],
+  "external_or_owner_blocked": [
+    "live provider catalog/access verification requires credentials and opt-in network use",
+    "measured paid-model profiles require an inference budget",
+    "hosted deployment, marketplace publication, beta feedback, and production operations require owner action"
+  ],
+  "historical_work_preserved": [
+    "route controls, taxonomy, setup, safety hardening, API/Python SDK, evaluation framework, observability, rate limiting/idempotency, MCP, TypeScript SDK, SBOM/provenance, property tests",
+    "historical task records remain under loop/tasks and loop/reports",
+    "historical TASK-004 0.945 result is retained as in-sample evidence but no longer treated as canonical held-out readiness"
+  ],
+  "next_action": "Owner authorized the RC push with the failing gate. Sequence: (1) checkpoint-commit all verified inherited work on release/agentrouter-v0.5-rc1; (2) push branch; (3) inspect every GitHub Actions job; (4) run first real Linux mutation CI; (5) repair CI/packaging/mutation/platform failures on the same branch until all checks green EXCEPT the honestly-failing context-band release gate; (6) open TASK-011 context-band data + annotation program (new larger human-reviewed dev set + new private holdout; no reuse/tuning of the frozen holdout). No merge/tag/publish/deploy."
 }

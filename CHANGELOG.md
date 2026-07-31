@@ -5,13 +5,66 @@ All notable changes to AgentRouter OS. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+- **Local REST API** (`agentrouter server`, `[server]` extra): classify/route/
+  explain plus a dry-run-only execute preview. No remote execution.
+- **MCP server** (`agentrouter mcp`, `[mcp]` extra): read-only route/classify/
+  explain/list tools over stdio; deliberately no execute tool.
+- **Plugin install/uninstall/doctor** for the Claude Code and Codex agent skills.
+- **Graded evaluation** (`agentrouter eval run --all`) over a gold benchmark plus
+  public-benchmark fixtures, with release gates.
+- **Route-control flags** on `route`: `--max-price`, `--stable-only`,
+  `--available-only`, `--prohibit-tool`, `--uncertainty-threshold`.
+- **Frozen context-band generalization evaluation** with separate development/final splits,
+  checksum and leakage locks, macro-F1/recall/confidence intervals, immutable historical
+  comparison, canonical CI enforcement, and held-out failure artifacts.
+- **Bounded Linux mutation workflow** using pinned mutmut 3.6.0, critical-module score gates,
+  explicit tool-failure reporting, survivor review, timeouts, and uploaded evidence.
+
 ### Changed
-- **Minimum Python is now 3.11** (was 3.10). The floor now matches the CI test
-  matrix (3.11 / 3.12 / 3.13), so every supported version is actually verified.
+- **Python support clarified:** the minimum supported Python remains **3.10**
+  (`pyproject.toml` `requires-python = ">=3.10"`), and CI verifies every supported
+  version — **3.10 / 3.11 / 3.12 / 3.13**. (A prior draft of this entry incorrectly
+  claimed the floor had been raised to 3.11; pyproject and the CI matrix never
+  dropped 3.10, so the floor is reconciled back to 3.10.)
+- **Context-band routing:** the classifier's inferred `context_tokens` now feeds
+  model eligibility and scoring (not just the displayed context band), so the
+  recommended model may change for context-sensitive tasks. Output shape is
+  unchanged and the behavior is eval-gated (`context_band_accuracy`).
+- **Canonical readiness is held by the frozen context holdout:** the final accuracy is 0.5778
+  after a development-only generalization revision, below the unchanged 0.90 gate. The other six
+  gates pass; a valid lower result is reported instead of preserving the previous in-sample claim.
 
 ### Security
 - Clarified that the app reads API keys from **shell environment variables** and
   does not auto-load `.env`; docs and the `.env` template updated to match.
+- API-key checks now use `hmac.compare_digest` (constant-time) instead of `==`,
+  closing a timing side-channel on `AGENTROUTER_API_KEY`.
+
+### Fixed
+- Plugin install/uninstall now persists exact ownership and installed digests, journals forced
+  replacements for crash recovery, preserves backup identity/metadata, rejects traversal,
+  link/reparse, hard-link, and portable special-name hazards, preserves concurrent edits, migrates
+  historical registry paths, and removes only an empty integration directory it created. The
+  explicit `--adopt-identical` flag supports pre-manifest legacy installs.
+- **Packaging:** the gold benchmark and evaluation fixtures now ship inside the
+  package (`agentrouter/benchmarks/`, `agentrouter/evaluation/fixtures/`) and load
+  via `importlib.resources`, so `agentrouter eval run` / `evaluate` work from a
+  real `pip install` (previously they only resolved in a source checkout).
+- `init --force` now backs up an existing `models.yaml` / `providers.yaml` /
+  `config.yaml` to a `.bak` sibling before reseeding, so a hand-edited catalog
+  is no longer silently destroyed on re-init.
+- `--prohibit-tool` now rejects an unknown tool name (with a "did you mean …?"
+  hint) instead of silently dropping nothing.
+- `--help` for `server` / `mcp` renders the extras command correctly
+  (`pip install "agentrouter-os[server]"`) instead of swallowing `[server]`.
+- Replaced em-dashes in printed CLI strings and command `--help` text with ASCII
+  `-` so stock Windows consoles (cp437/cp1252) no longer show a mojibake character.
+- The `setup` "no host available yet" hint now fires correctly: it counts only
+  real execution hosts, since the always-available `manual` host previously
+  suppressed the warning on every machine.
+- `agentrouter.__version__` is sourced from installed metadata (was pinned at a
+  stale `0.1.0`); it now matches the packaged version.
 
 ## [0.4.0] - 2026-07-12
 

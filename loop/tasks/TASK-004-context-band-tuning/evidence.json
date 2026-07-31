@@ -1,0 +1,34 @@
+{
+  "criteria": [
+    {
+      "id": "AC1",
+      "text": "context_band_accuracy>=0.90 principled",
+      "status": "PASS",
+      "evidence": "0.945; architect verdict PRINCIPLED"
+    },
+    {
+      "id": "AC2",
+      "text": "no regression on other gates",
+      "status": "PASS",
+      "evidence": "verification: 6 dims byte-identical; grade 98.08->98.32; all 7 gates PASS"
+    },
+    {
+      "id": "AC3",
+      "text": "full suite green",
+      "status": "PASS",
+      "evidence": "418 passed"
+    },
+    {
+      "id": "AC4",
+      "text": "general signals not fixture keywords",
+      "status": "PASS",
+      "evidence": "architect PRINCIPLED; documentation word removed in repair"
+    }
+  ],
+  "commands": [
+    "agentrouter eval run --all => grade 98.32; all 7 gates PASS; Release-ready: YES",
+    "pytest -q => 418 passed",
+    "ruff check => clean",
+    "gold context_band_accuracy => 156/165 = 0.945"
+  ]
+}

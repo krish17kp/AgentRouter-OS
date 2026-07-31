@@ -106,3 +106,36 @@ def command_preview(target: ExecutionTarget, redact: bool = True) -> str:
 
 def known_hosts() -> list[str]:
     return [*_CLI_HOSTS, *_API_HOSTS, "manual"]
+
+
+def execution_route_block(row: dict | None, models_by_key: dict[str, ModelEntry]) -> dict | None:
+    """Stage-2 route block: resolve HOW to run the selected model (program Phase 5/6).
+
+    JSON-serializable; None if the model has no execution targets. Shared by the
+    CLI, REST, and MCP surfaces so their payloads never drift. No process is run.
+    """
+    if row is None:
+        return None
+    model = models_by_key.get(row["model"])
+    if model is None or not model.execution_targets:
+        return None
+    resolved = resolve_execution_route(model, include_unavailable=True)
+    tgt, status = resolved.target, resolved.status
+    return {
+        "vendor": model.vendor,
+        "model_id": model.model_id,
+        "display_name": model.name,
+        "release_channel": model.release_channel.value,
+        "host": tgt.host if tgt else None,
+        "host_model_id": tgt.host_model_id if tgt else None,
+        "execution_mode": tgt.execution_mode.value if tgt else None,
+        "availability": status.availability if status else "unknown",
+        "availability_reason": status.reason if status else "no execution target",
+        "command_preview": command_preview(tgt) if tgt else None,
+        "required_env": tgt.required_env if tgt else [],
+        "context_window": model.context_window,
+        "max_output_tokens": model.max_output_tokens,
+        "all_hosts": [
+            {"host": s.host, "availability": s.availability} for s in resolved.all_statuses
+        ],
+    }
