@@ -17,6 +17,26 @@ done:
 
 # ---- Unblocked local work (candidates for this loop) ----
 local_open:
+  - id: TASK-011
+    title: Context-band data + annotation program (larger human-reviewed dev set + new private holdout)
+    priority: 9
+    surfaces: [classifier, evaluation, data]
+    risk: medium
+    reason: >
+      Only failing release gate. TASK-009 proved the 24-case dev set is a ceiling
+      (rules 0.6667 / learned 0.6889 / hybrid 0.6444 all fail 0.90). Needs data, not
+      rules. See loop/tasks/TASK-011-context-band-data-annotation/. Do NOT reuse or
+      tune against the frozen holdout.
+  - id: TASK-010b
+    title: Critical-module mutation hardening to gates (safety 0.95 / engine 0.85)
+    priority: 7
+    surfaces: [tests, safety, controls, hosts, engine, cli, server.limits]
+    risk: medium
+    reason: >
+      First real Linux mutmut score (2026-07-31): overall 0.6054, safety_policy_execution
+      0.5701 (target 0.95), routing_engine 0.6512 (target 0.85); 294 unreviewed survivors.
+      Needs many new mutation-killing tests, verifiable only via ~40-min Linux CI cycles
+      (mutmut cannot run on the Win/py3.13 dev box). Owner-scoped: multi-session effort.
   - id: L1
     title: Structured logging + OpenTelemetry (P13 obs)
     priority: 8
