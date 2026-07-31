@@ -27,26 +27,33 @@ run. The gate is unchanged and remains honestly failed.
 - TypeScript SDK typecheck + 8/8 tests; hook tests pass.
 - Local evaluation grade 98.23/100; 6/7 gates PASS; context-band gate FAIL.
 
-## CI status (release/agentrouter-v0.5-rc1 @ 1dc166e)
+## CI status (release/agentrouter-v0.5-rc1 @ 156928d)
 
-- **Green:** CI test matrix (3.10–3.13), test-windows, build-smoke, Security.
+- **Green:** CI test matrix (3.10–3.13), test-windows, build-smoke, Security,
+  **`Critical Mutation Testing`**.
 - **Red (honest, by design):** `release-gate` — context-band held-out 0.6667 < 0.90.
-- **Red (honest, documented):** `Critical Mutation Testing` — first real Linux
-  mutmut score is overall 0.6054 (safety_policy_execution 0.5701 vs 0.95; routing_engine
-  0.6512 vs 0.85; 294 survivors). The tool ran cleanly; this is a genuine test-quality
-  gap, not a crash. Allowlisting cannot raise the score. Tracked as **TASK-010b**
-  (multi-session hardening; mutmut cannot run on the Win/py3.13 dev box, so each attempt
-  is a ~40-min blind Linux CI cycle).
+  This is the only failing check and is intentional; the branch stays NOT RELEASE READY.
 
-Repairs applied to reach this state: server/SDK/observability/mcp tests guarded with
+**Mutation gate now PASSES (TASK-010b closed).** Full Linux campaign (mutmut 3.6.0,
+923 selected mutants): overall **0.9837**; `safety_policy_execution` **0.985** (≥0.95);
+`routing_engine` **0.9815** (≥0.85); completeness + all-reviewed gates pass. No safety,
+auth, policy, or execution-bypass mutant survives. The 15 remaining survivors are all
+provably-equivalent mutants (dead fallback branches, `zip(strict=)` on equal-length
+iterables, `round(,2)` vs `round(,3)` on finite-decimal terms, an unread parameter),
+each documented in `mutation-survivor-allowlist.json`. Thresholds were NOT lowered and
+no valid mutant was excluded. To make the decorated `execute()` command reachable by
+mutmut, its gate + dispatch logic was extracted into an undecorated `_execute()` helper.
+
+Repairs applied across the RC: server/SDK/observability/mcp tests guarded with
 `importorskip` + `.[dev,server]` in CI test jobs; ruff format; release-readiness assertion
-split into its own `release-gate` job; and a real Windows bug fixed (`os.fchmod` guarded —
-POSIX-only, broke every atomic plugin write on Windows).
+split into its own `release-gate` job; a real Windows bug fixed (`os.fchmod` guarded —
+POSIX-only, broke every atomic plugin write on Windows); and the critical-module mutation
+hardening above.
 
 ## In progress / next
 
-- TASK-011: context-band data + annotation program (new dev set + private holdout).
-- TASK-010b: critical-module mutation hardening to gates.
+- TASK-011: context-band data + annotation program (new dev set + private holdout) —
+  the only remaining path to closing the honest release-gate.
 
 ## Owner / externally blocked
 

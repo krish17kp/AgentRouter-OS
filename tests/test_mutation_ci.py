@@ -29,7 +29,7 @@ def _complete_records(mutants: Path, *, survivor: str | None = None) -> None:
         "agentrouter/hosts.py": {"agentrouter.hosts.x_command_preview__mutmut_1": 1},
         "agentrouter/server/limits.py": {"agentrouter.server.limits.x_client_key__mutmut_1": 1},
         "agentrouter/cli.py": {
-            "agentrouter.cli.x_execute__mutmut_1": 1,
+            "agentrouter.cli.x__execute__mutmut_1": 1,
             "agentrouter.cli.x__execute_via_host__mutmut_1": 1,
         },
     }
@@ -109,5 +109,5 @@ def test_missing_selected_function_is_an_incomplete_result(tmp_path):
 
     report = mutation_ci.summarize(mutants, tmp_path / "missing-allowlist.json")
 
-    assert "agentrouter.cli.x_execute__mutmut_*" in report["missing_patterns"]
+    assert "agentrouter.cli.x__execute__mutmut_*" in report["missing_patterns"]
     assert report["passed"] is False
