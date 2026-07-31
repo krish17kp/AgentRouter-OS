@@ -28,7 +28,7 @@ MUTANT_PATTERNS = (
     "agentrouter.engine.*",
     "agentrouter.hosts.*",
     "agentrouter.server.limits.*",
-    "agentrouter.cli.x_execute__mutmut_*",
+    "agentrouter.cli.x__execute__mutmut_*",
     "agentrouter.cli.x__execute_via_host__mutmut_*",
 )
 GROUPS = {
@@ -38,7 +38,7 @@ GROUPS = {
             "agentrouter.controls.*",
             "agentrouter.hosts.*",
             "agentrouter.server.limits.*",
-            "agentrouter.cli.x_execute__mutmut_*",
+            "agentrouter.cli.x__execute__mutmut_*",
             "agentrouter.cli.x__execute_via_host__mutmut_*",
         ),
         "threshold": 0.95,

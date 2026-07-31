@@ -972,6 +972,13 @@ def execute(
     Requires the recommendation's provider to have supports_execution: true and an
     exec_command in providers.yaml - both ship disabled by default.
     """
+    # Delegate to an undecorated helper so the safety-critical execution logic is
+    # reachable by mutation testing (mutmut does not instrument @app.command funcs).
+    _execute(decision_id, yes=yes, dry_run=dry_run)
+
+
+def _execute(decision_id: str, *, yes: bool, dry_run: bool):
+    """Execution gate + dispatch for a logged decision (see ``execute``)."""
     conn = store.connect(_home())
     payload = store.load_decision(conn, decision_id)
     recent = store.recent_ids(conn)
