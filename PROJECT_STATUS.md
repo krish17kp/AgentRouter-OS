@@ -27,12 +27,26 @@ run. The gate is unchanged and remains honestly failed.
 - TypeScript SDK typecheck + 8/8 tests; hook tests pass.
 - Local evaluation grade 98.23/100; 6/7 gates PASS; context-band gate FAIL.
 
-## In progress
+## CI status (release/agentrouter-v0.5-rc1 @ 1dc166e)
 
-- First real Linux mutation CI (`.github/workflows/mutation.yml`) — score pending
-  first GitHub Actions run.
-- Release-branch GitHub check repair.
+- **Green:** CI test matrix (3.10–3.13), test-windows, build-smoke, Security.
+- **Red (honest, by design):** `release-gate` — context-band held-out 0.6667 < 0.90.
+- **Red (honest, documented):** `Critical Mutation Testing` — first real Linux
+  mutmut score is overall 0.6054 (safety_policy_execution 0.5701 vs 0.95; routing_engine
+  0.6512 vs 0.85; 294 survivors). The tool ran cleanly; this is a genuine test-quality
+  gap, not a crash. Allowlisting cannot raise the score. Tracked as **TASK-010b**
+  (multi-session hardening; mutmut cannot run on the Win/py3.13 dev box, so each attempt
+  is a ~40-min blind Linux CI cycle).
+
+Repairs applied to reach this state: server/SDK/observability/mcp tests guarded with
+`importorskip` + `.[dev,server]` in CI test jobs; ruff format; release-readiness assertion
+split into its own `release-gate` job; and a real Windows bug fixed (`os.fchmod` guarded —
+POSIX-only, broke every atomic plugin write on Windows).
+
+## In progress / next
+
 - TASK-011: context-band data + annotation program (new dev set + private holdout).
+- TASK-010b: critical-module mutation hardening to gates.
 
 ## Owner / externally blocked
 
