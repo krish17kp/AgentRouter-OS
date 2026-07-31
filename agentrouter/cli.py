@@ -78,6 +78,11 @@ from .evaluation.cli import eval_app  # noqa: E402
 
 app.add_typer(eval_app, name="eval")
 
+# Context-band data collection + annotation program (TASK-011).
+from .annotation.cli import dataset_app  # noqa: E402
+
+app.add_typer(dataset_app, name="dataset")
+
 EXIT_RUNTIME, EXIT_USAGE, EXIT_REGISTRY, EXIT_NO_MODEL = 1, 2, 3, 4
 
 
