@@ -136,6 +136,45 @@ def test_build_blocks_on_unresolved_disagreement(tmp_path):
     assert "adjudication" in r.output.lower()
 
 
+def test_build_refuses_when_a_label_leaks_the_frozen_holdout(tmp_path):
+    from importlib import resources
+
+    import yaml
+
+    from agentrouter.evaluation.context_bands import HOLDOUT_FILE
+
+    frozen = yaml.safe_load(
+        (resources.files("agentrouter.benchmarks") / HOLDOUT_FILE).read_text(encoding="utf-8")
+    )["cases"][0]["prompt"]
+    # two annotators agree, but the item is a verbatim frozen-holdout prompt
+    rows = [_label_row("leak", frozen, "coding", ann, "small", 0.9) for ann in ("a", "b")]
+    filler = [
+        _label_row(f"f{n}", f"clean distinct prompt number {n}", "coding", ann, "small", 0.8)
+        for n in range(6)
+        for ann in ("a", "b")
+    ]
+    a_path, b_path = tmp_path / "a.jsonl", tmp_path / "b.jsonl"
+    _write_jsonl(a_path, [r for r in rows + filler if r["labels"][0]["annotator"] == "a"])
+    _write_jsonl(b_path, [r for r in rows + filler if r["labels"][0]["annotator"] == "b"])
+    r = runner.invoke(
+        app,
+        [
+            "dataset",
+            "build",
+            "--labels",
+            str(a_path),
+            "--labels",
+            str(b_path),
+            "--out-dir",
+            str(tmp_path / "out"),
+            "--version",
+            "vlk",
+        ],
+    )
+    assert r.exit_code == 2  # clean refusal, not an uncaught traceback
+    assert "leak" in r.output.lower() or "frozen" in r.output.lower()
+
+
 def test_interactive_annotate_records_band_and_abstain(tmp_path):
     pool_path = tmp_path / "pool.yaml"
     runner.invoke(app, ["dataset", "gen-candidates", "--out", str(pool_path), "--count", "12"])

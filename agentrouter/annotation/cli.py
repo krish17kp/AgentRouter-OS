@@ -23,7 +23,7 @@ from .adjudicate import Adjudication, resolve
 from .compare import compare_all
 from .dedup import find_leakage
 from .schema import AdjudicatedItem, AnnotatorLabel, DatasetManifest, ItemLabels
-from .splits import partition
+from .splits import LeakageError, partition
 from .store import (
     load_candidates,
     load_dataset,
@@ -72,7 +72,7 @@ def gen_candidates(
 def annotate(
     candidates_path: Path = typer.Argument(..., help="Candidate pool YAML."),
     annotator: str = typer.Option(..., "--annotator", help="Annotator id."),
-    out: Path = typer.Option(..., "--out", help="Where to append this annotator's labels (JSONL)."),
+    out: Path = typer.Option(..., "--out", help="Where to write this annotator's labels (JSONL)."),
 ):
     """Interactively label each candidate (band S/M/L, or 'a' to abstain)."""
     pool = load_candidates(candidates_path)
@@ -159,7 +159,12 @@ def build(
         raise typer.Exit(2)
 
     frozen = _frozen_holdout_prompts()
-    result = partition(resolved, frozen_holdout_prompts=frozen)
+    try:
+        result = partition(resolved, frozen_holdout_prompts=frozen)
+    except LeakageError as exc:
+        typer.echo(f"Refusing to build: {exc}", err=True)
+        typer.echo("Remove or relabel the leaking item, then rebuild.", err=True)
+        raise typer.Exit(2) from exc
 
     out_dir.mkdir(parents=True, exist_ok=True)
     counts, shas = {}, {}
