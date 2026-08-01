@@ -1,0 +1,62 @@
+id: TASK-013
+title: Catalog provenance, freshness, deprecation and rollback
+source: Phase 3 selection 2026-07-31 (after TASK-011/012 merged); highest-value local task
+priority: 1
+status: intake
+risk: medium
+owner: unassigned
+created: 2026-07-31
+customer_impact: >
+  Dynamic catalogs already refresh live (OpenRouter/OpenAI) into
+  models.<provider>.generated.yaml with manual-wins semantics, but a user cannot
+  see how old a generated catalog is, what it was fetched from, which models the
+  provider has since dropped (deprecation), or safely roll a refresh back. This
+  task makes dynamic catalogs trustworthy and reversible.
+
+objective: >
+  Add file-level catalog provenance, a freshness/staleness check, deprecation
+  reconciliation against the live catalog, and a safe rollback — on top of the
+  existing refresh.py, without changing routing behavior or the manual-wins rule.
+
+discovery_findings:
+  - refresh.py writes models.<provider>.generated.yaml (header comment + `models:`);
+    each entry carries source="refresh" and last_updated=today. No file-level
+    provenance block, no freshness command, no rollback command, no deprecation
+    reconciliation.
+  - registry.load_all_models merges generated files; manual models.yaml wins on
+    key collision. Any new top-level `provenance:` key must be ignored by the
+    loader (verify load path tolerates extra top-level keys before adding it).
+  - CLI providers app: only `refresh`. Add `status` and `rollback`.
+
+scope:
+  - write_generated_registry emits a structured `provenance` block
+    (provider, source_url, fetched_at UTC ISO, count, tool_version, cli_args).
+  - agentrouter/catalog_ops.py: read_provenance, staleness(prov, now, max_age_days),
+    list_generated(reg_dir), deprecations(live_keys, generated_keys), rollback(path).
+  - CLI `providers status` — per generated catalog: age, fresh/stale, count, source.
+  - CLI `providers rollback <provider>` — back up then remove the generated file
+    (reverts to manual registry), with confirmation + a restore hint.
+  - refresh: report models present in the generated file but absent from the live
+    catalog (candidate deprecations) — reported, never auto-deleted.
+
+acceptance_criteria:
+  - generated files carry a provenance block; the registry loader still parses them
+    and routing is unchanged (regression green)
+  - `providers status` reports age + fresh/stale honestly (offline; no network)
+  - `providers rollback` backs up and removes the generated file idempotently and
+    reversibly; manual registry restored
+  - deprecation candidates (in generated, gone from live) are reported on refresh
+  - targeted unit tests for catalog_ops (fast) + CLI tests; full CI regression green
+  - no routing/threshold/gate changes; frozen holdout untouched
+
+dependencies:
+  - agentrouter/refresh.py, agentrouter/registry.py, providers CLI
+
+non_goals:
+  - paid inference or live-benchmark ability scores (needs budget/credentials)
+  - auto-deleting deprecated models (report only; user decides)
+  - changing the manual-wins semantics or the 0.90 gate
+
+external_blockers:
+  - live-catalog verification against real providers needs network + keys (the
+    offline provenance/freshness/rollback/status paths do not)
