@@ -110,14 +110,19 @@ def annotate(
     )
     for cand in todo:
         typer.echo(f"\n[{cand.category}] {cand.prompt}")
-        choice = typer.prompt("band (s/m/l/a=abstain)").strip().lower()
-        abstain = choice.startswith("a")
-        band = None if abstain else _BAND_CHOICE.get(choice)
-        if not abstain and band is None:
-            typer.echo("skipped (invalid band)")
-            continue
-        rationale = typer.prompt("rationale").strip() or "n/a"
-        confidence = float(typer.prompt("confidence 0-1", default="0.7"))
+        try:
+            choice = typer.prompt("band (s/m/l/a=abstain)").strip().lower()
+            abstain = choice.startswith("a")
+            band = None if abstain else _BAND_CHOICE.get(choice)
+            if not abstain and band is None:
+                typer.echo("skipped (invalid band)")
+                continue
+            rationale = typer.prompt("rationale").strip() or "n/a"
+            confidence = float(typer.prompt("confidence 0-1", default="0.7"))
+        except (EOFError, KeyboardInterrupt, typer.Abort):
+            # Pause: everything so far is already saved; resume by re-running.
+            typer.echo(f"\nPaused. {len(items)} labelled so far; saved to {out}.")
+            raise typer.Exit(0) from None
         label = AnnotatorLabel(
             annotator=annotator,
             band=band,
