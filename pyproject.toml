@@ -61,7 +61,7 @@ agentrouter = "agentrouter.cli:app"
 include = ["agentrouter*"]
 
 [tool.setuptools.package-data]
-agentrouter = ["seeds/*.yaml", "integrations/**/*", "benchmarks/*.yaml", "benchmarks/*.json", "evaluation/fixtures/*.jsonl"]
+agentrouter = ["seeds/*.yaml", "integrations/**/*", "benchmarks/*.yaml", "benchmarks/*.json", "benchmarks/context_band/*.yaml", "evaluation/fixtures/*.jsonl"]
 
 [tool.ruff]
 line-length = 100
