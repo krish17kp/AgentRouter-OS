@@ -1,13 +1,13 @@
 {
   "loop_version": 2,
   "last_updated": "2026-07-31",
-  "current_phase": "TASK-011 kickoff — context-band data/annotation/training/eval program (RC hardening complete)",
-  "current_objective": "Mutation gate CLOSED on RC (overall 0.9837; safety_policy_execution 0.985; routing_engine 0.9815; all CI checks green except the honest context-band release-gate). Branch hygiene done (PR #1 closed, mutation-kill-safety deleted, fully superseded by tests/test_mutation_kills.py). Now build a proper context-band data collection + human annotation + adjudication + training + evaluation system on task/TASK-011-context-band-data, without tuning against the frozen holdout, keeping the RC NOT RELEASE READY.",
+  "current_phase": "TASK-011 MERGED to RC (PR #2); next: TASK-012 human annotation ops + parallel local engineering",
+  "current_objective": "TASK-011 context-band annotation program merged into release/agentrouter-v0.5-rc1 (merge commit 35e616e; all commits preserved; task branch deleted). Mutation gate CLOSED (0.9837). Now: create TASK-012 (blinded annotation packs for two real annotators + adjudication over the 63-candidate pool) and continue the highest-value locally-actionable engineering in parallel, via the full graph-aware loop, merging each task to RC when its gates pass. Never reuse/tune the frozen holdout; 0.90 gate unchanged; RC stays NOT RELEASE READY; no RC->main without owner approval.",
   "status": "IN_PROGRESS",
   "branch_topology": {
-    "main": "stable, untouched — never merge without owner approval",
-    "release/agentrouter-v0.5-rc1": "integration branch @ fa0a203; NOT RELEASE READY (context_band 0.6667 < 0.90); mutation gate PASSES",
-    "task/TASK-011-context-band-data": "to be created from RC; all TASK-011 commits/pushes here; draft PR targets RC",
+    "main": "stable, untouched (602321a) — never merge without owner approval",
+    "release/agentrouter-v0.5-rc1": "integration branch @ 35e616e; TASK-011 merged; NOT RELEASE READY (context_band 0.6667 < 0.90); mutation gate PASSES",
+    "task/TASK-011-context-band-data": "MERGED to RC (PR #2) and DELETED local+remote; all commits preserved",
     "mutation-kill-safety": "DELETED (local+remote) 2026-07-31 — PR #1 closed, fully superseded by tests/test_mutation_kills.py"
   },
   "release_branch": "release/agentrouter-v0.5-rc1",
@@ -15,7 +15,12 @@
   "repo_sha_at_takeover": "602321af91ff298c0d5b59d6d36c24f845557fc1",
   "canonical_release_ready": false,
   "in_progress": [
-    "TASK-011 context-band data + annotation + adjudication + training + eval program on task/TASK-011-context-band-data (draft PR -> RC). No frozen-holdout reuse/tuning; 0.90 gate unchanged; RC stays NOT RELEASE READY."
+    "TASK-012 human annotation operations: blinded packs for two real annotators + adjudication over the 63-candidate pool (external — needs two people). Plus parallel locally-actionable engineering via the full graph-aware loop."
+  ],
+  "completed_iter21": [
+    "TASK-011 context-band annotation program MERGED to RC (PR #2 -> merge commit 35e616e; all 4 commits preserved; task branch deleted local+remote). agentrouter/annotation/ package: schema, deterministic unlabelled candidate generation (63 prompts, all ten categories, 0 frozen-holdout leaks), dedup/near-dup + cross-set leakage, two-annotator adjudication, leakage-safe train/dev/holdout splits, versioned manifests, rules/learned/hybrid comparison (accuracy/macro-F1/per-band recall/bootstrap CI/ECE), optional Graphify impact with text-only fallback, and the `agentrouter dataset` CLI. docs/CONTEXT_BAND_ANNOTATION.md. 26 annotation tests; full suite 583+ pass; clean-wheel verified (packaged pool loads). Focused pre-merge review found + fixed 2 issues (build LeakageError -> clean exit 2; annotate help wording).",
+    "CI on RC @ 35e616e: test matrix 3.10-3.13 + test-windows + build-smoke + Security + Critical Mutation Testing GREEN; only release-gate RED (honest context_band 0.6667<0.90). main untouched.",
+    "State docs reconciled from actual GitHub state: LOOP_STATE, LOOP_LOG, PROJECT_STATUS, CODEX_HANDOFF, RELEASE_READINESS, QUALITY_DASHBOARD."
   ],
   "completed_iter20": [
     "TASK-010b critical-module mutation hardening CLOSED. Full Linux campaign (mutmut 3.6.0, 923 mutants): overall 0.9837; safety_policy_execution 0.985 (>=0.95); routing_engine 0.9815 (>=0.85); completeness + all-reviewed gates green; no safety/auth/policy/execution-bypass survivor. 15 remaining survivors all provably-equivalent and allowlisted. Added tests/test_mutation_kills.py (~78 tests). Extracted cli.execute() gate logic into undecorated _execute() so mutmut can instrument it (mutmut skips @app.command funcs). Fixed a flaky 200ms Hypothesis deadline on injected-clock property tests. Iterated locally via Docker container 'armut' (mutmut cannot run on Win/py3.13).",
@@ -71,5 +76,5 @@
     "historical task records remain under loop/tasks and loop/reports",
     "historical TASK-004 0.945 result is retained as in-sample evidence but no longer treated as canonical held-out readiness"
   ],
-  "next_action": "TASK-011 via the graph-aware production loop on task/TASK-011-context-band-data (branched from RC): (1) annotation guidelines S/M/L + adjudication protocol; (2) local annotation CLI (two annotators, rationale+confidence, abstention); (3) exact + near-duplicate detection; (4) dev/validation/private-holdout partitions with leakage prevention; (5) diverse prompt corpus (coding/review/refactor/docs/summarization/analysis/data-pipeline/RAG/tool-use/ambiguous) for candidate collection only; (6) optional Graphify repo-impact signals + text-only fallback; (7) versioned datasets + model artifacts; (8) compare rules/learned/hybrid on accuracy/macro-F1/per-band recall/calibration. Draft PR -> RC; auto-repair CI; do not merge until local+CI gates pass. Never lower the 0.90 gate; never reuse/tune the frozen holdout; RC stays NOT RELEASE READY; never merge RC->main without owner approval."
+  "next_action": "(A) TASK-012 human annotation operations: build blinded annotation packs from the 63-candidate pool (independent randomized ordering per annotator; hide the other annotator's answers, rule/model predictions, and frozen-holdout labels; require band-or-abstention + rationale + confidence; pause/resume; immutable candidate IDs; per-record validation; label-free progress summaries; JSONL+CSV export; third adjudication pack for disagreements only; no auto-adjudication; never fabricate or reuse an AI label as human). Write ANNOTATOR_A_INSTRUCTIONS.md, ANNOTATOR_B_INSTRUCTIONS.md, ADJUDICATOR_INSTRUCTIONS.md, TASK_012_OWNER_ACTIONS.md (exact commands; two real people must label all 63 independently). (B) In parallel, run the full graph-aware loop on the next highest-value local task (dynamic catalogs; catalog provenance/freshness/deprecation/rollback; verified host states; provider diagnostics + 5-min onboarding; benchmark routing infra without paid inference; customer docs/examples; observability/runbooks; API/SDK compat + load testing), merging each to RC when its gates pass. Stop only for credentials, paid inference, infra deployment, publication, destructive ops, legal, or RC->main approval."
 }

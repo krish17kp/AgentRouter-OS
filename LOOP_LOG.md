@@ -616,3 +616,27 @@ score and release-branch GitHub checks are also pending. Current state lives in
   mutation CI; repair GitHub checks except the honest context-band gate.
 - Next: TASK-011 context-band data + annotation program (new dev set + private
   holdout; no reuse/tuning of frozen holdout).
+
+## 2026-07-31 — iter21: TASK-011 merged to RC; mutation gate closed
+
+- **TASK-010b (mutation) CLOSED.** Full Linux campaign (mutmut 3.6.0, 923 mutants):
+  overall 0.9837; safety_policy_execution 0.985 (>=0.95); routing_engine 0.9815
+  (>=0.85); all gates green; 15 allowlisted-equivalent survivors; no safety/policy/
+  execution-bypass survivor. `tests/test_mutation_kills.py` added; `cli.execute()`
+  gate logic extracted into an undecorated `_execute()` so mutmut can instrument it.
+- **Branch hygiene.** PR #1 closed and `mutation-kill-safety` deleted (fully
+  superseded by test_mutation_kills.py — RC passes the mutation gate without it).
+- **TASK-011 MERGED to RC** (PR #2 -> merge commit 35e616e; all commits preserved;
+  head/remote task branch deleted). Adds the `agentrouter/annotation/` program:
+  schema, deterministic unlabelled candidate generation (63 prompts, all ten
+  categories, zero frozen-holdout leaks), dedup/near-dup + cross-set leakage,
+  two-annotator adjudication, leakage-safe train/dev/holdout splits, versioned
+  manifests, rules/learned/hybrid comparison (accuracy/macro-F1/per-band recall/
+  bootstrap CI/ECE), optional Graphify impact with text-only fallback, and the
+  `agentrouter dataset ...` CLI. 26 annotation tests; full suite 583+ pass;
+  clean-wheel verified (packaged candidate pool loads).
+- **CI on RC:** test matrix 3.10-3.13 + test-windows + build-smoke + Security +
+  Critical Mutation Testing GREEN; only `release-gate` RED (context_band 0.6667 <
+  0.90, honest and unchanged). RC remains NOT RELEASE READY. main untouched.
+- **Next:** TASK-012 (human annotation operations — blinded packs for two real
+  annotators + adjudication) plus parallel locally-actionable engineering.

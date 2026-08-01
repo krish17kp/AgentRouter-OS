@@ -8,11 +8,22 @@
 ## Branch topology
 
 - `main` — stable, untouched. No merge without explicit owner approval.
-- `release/agentrouter-v0.5-rc1` — integration branch @ `fa0a203`. NOT RELEASE READY;
-  mutation gate passes, only the honest context-band `release-gate` fails.
-- `task/TASK-011-context-band-data` — TASK-011 work branch (from RC); draft PR targets the RC.
+- `release/agentrouter-v0.5-rc1` — integration branch @ `35e616e` (TASK-011 merged via
+  PR #2). NOT RELEASE READY; mutation gate passes, only the honest context-band
+  `release-gate` fails.
+- `task/TASK-011-context-band-data` — **merged to RC and deleted** (local + remote).
 - `mutation-kill-safety` — deleted (local + remote); PR #1 closed as fully superseded by
   `tests/test_mutation_kills.py`.
+
+## Delivered on the RC
+
+- **TASK-010b mutation hardening** — critical-module mutation gate passes (overall
+  0.9837; safety_policy_execution 0.985; routing_engine 0.9815).
+- **TASK-011 context-band data & annotation program** — `agentrouter/annotation/`
+  (schema, candidate generation, dedup/leakage, two-annotator adjudication,
+  leakage-safe splits, versioned manifests, rules/learned/hybrid comparison,
+  optional Graphify signal) + `agentrouter dataset` CLI + guidelines doc.
+  Final human labels are the external TASK-012 step.
 
 ## Why NOT release ready
 
@@ -36,7 +47,7 @@ run. The gate is unchanged and remains honestly failed.
 - TypeScript SDK typecheck + 8/8 tests; hook tests pass.
 - Local evaluation grade 98.23/100; 6/7 gates PASS; context-band gate FAIL.
 
-## CI status (release/agentrouter-v0.5-rc1 @ 156928d)
+## CI status (release/agentrouter-v0.5-rc1 @ 35e616e)
 
 - **Green:** CI test matrix (3.10–3.13), test-windows, build-smoke, Security,
   **`Critical Mutation Testing`**.
@@ -61,10 +72,16 @@ hardening above.
 
 ## In progress / next
 
-- TASK-011: context-band data + annotation program (new dev set + private holdout) —
-  the only remaining path to closing the honest release-gate.
+- **TASK-012: human annotation operations** — blinded packs for two real annotators
+  + adjudication over the 63-candidate pool; produces the human-labelled dev set +
+  new private holdout (the only path to closing the honest release-gate). Requires
+  two real people (external).
+- Parallel locally-actionable engineering (dynamic catalogs, provenance/freshness,
+  host-state verification, provider diagnostics, benchmark routing infra, docs,
+  observability/runbooks, API/SDK compatibility + load testing).
 
 ## Owner / externally blocked
 
-- Merge to main, tag, PyPI/marketplace publication, deployment, paid inference,
-  live provider credentials, real-user beta evidence.
+- Merge RC to main, tag, PyPI/marketplace publication, deployment, paid inference,
+  live provider credentials, real-user beta evidence, and the two human annotators
+  required by TASK-012.

@@ -1,28 +1,32 @@
 # Codex Handoff - AgentRouter OS
 
-Last updated: 2026-07-31 (iter 20 — RC mutation gate CLOSED; branch hygiene done; TASK-011 kickoff)
+Last updated: 2026-07-31 (iter 21 — TASK-011 MERGED to RC; mutation gate closed; TASK-012 next)
 
-## Current state (iter 20)
+## Current state (iter 21)
 
 - **Branch topology (authoritative):**
-  - `main` — stable, untouched. Never merge into it without explicit owner approval.
-  - `release/agentrouter-v0.5-rc1` — integration branch @ `fa0a203`. **NOT RELEASE READY**
-    (context_band held-out 0.6667 < 0.90). Mutation gate now **PASSES**.
-  - `task/TASK-011-context-band-data` — to be branched from RC for TASK-011; all TASK-011
-    commits/pushes land here; draft PR targets the RC.
-  - `mutation-kill-safety` — **DELETED** (local + remote). PR #1 **CLOSED** as fully superseded
-    by `tests/test_mutation_kills.py` (its five files were self-described mutation-hardening for
-    modules the RC already covers at 0.985; RC campaign passes without them).
-- **Mutation (TASK-010b CLOSED):** full Linux campaign (mutmut 3.6.0, 923 mutants) overall
-  **0.9837**; `safety_policy_execution` **0.985** (>=0.95); `routing_engine` **0.9815** (>=0.85);
-  completeness + all-reviewed gates green; 15 allowlisted-equivalent survivors; no safety/auth/
-  policy/execution-bypass survivor. Extracted `cli.execute()` gate logic into undecorated
-  `_execute()` so mutmut can instrument it. Local iteration via Docker container `armut`.
-- **CI on `fa0a203`:** Critical Mutation Testing GREEN, Security GREEN, test matrix 3.10-3.13 +
-  test-windows + build-smoke GREEN; only `release-gate` RED (honest context-band gate).
-- **Next:** TASK-011 context-band data/annotation/adjudication/training/eval program on
-  `task/TASK-011-context-band-data`. Do NOT reuse or tune against the frozen holdout; the 0.90
-  gate is unchanged; RC stays NOT RELEASE READY.
+  - `main` — stable, untouched (still `602321a`). Never merge into it without explicit owner approval.
+  - `release/agentrouter-v0.5-rc1` — integration branch @ `35e616e`. **NOT RELEASE READY**
+    (context_band held-out 0.6667 < 0.90). Mutation gate **PASSES**.
+  - `task/TASK-011-context-band-data` — **MERGED to RC (PR #2, merge commit `35e616e`) and
+    DELETED** local + remote; all four commits preserved.
+  - `mutation-kill-safety` — **DELETED** (local + remote); PR #1 closed as fully superseded by
+    `tests/test_mutation_kills.py`.
+- **TASK-011 on the RC:** `agentrouter/annotation/` program — schema, deterministic unlabelled
+  candidate generation (63 prompts, all ten categories, zero frozen-holdout leaks), dedup/near-dup
+  + cross-set leakage, two-annotator adjudication, leakage-safe train/dev/holdout splits, versioned
+  manifests, rules/learned/hybrid comparison, optional Graphify impact (text-only fallback), and the
+  `agentrouter dataset ...` CLI. Docs in `docs/CONTEXT_BAND_ANNOTATION.md`. 26 tests; full suite
+  583+ pass; clean-wheel verified. Generated labels are candidates only; final human labels pending.
+- **Mutation (TASK-010b CLOSED):** mutmut 3.6.0, 923 mutants — overall **0.9837**;
+  `safety_policy_execution` **0.985** (>=0.95); `routing_engine` **0.9815** (>=0.85); no safety/
+  auth/policy/execution-bypass survivor. `cli.execute()` gate logic extracted into undecorated
+  `_execute()` for mutmut reach. Local iteration via Docker container `armut`.
+- **CI on `35e616e`:** Critical Mutation Testing, Security, test matrix 3.10-3.13, test-windows,
+  build-smoke all GREEN; only `release-gate` RED (honest context-band gate).
+- **Next:** TASK-012 human annotation operations (blinded packs for two real annotators +
+  adjudication) plus parallel local engineering. Do NOT reuse/tune the frozen holdout; the 0.90
+  gate is unchanged; RC stays NOT RELEASE READY; no RC->main without owner approval.
 
 ---
 
