@@ -1,0 +1,42 @@
+id: TASK-014
+title: Split CI release-gate into non-enforcing report + promotion-only enforcement
+source: owner directive 2026-08-01 (final RC-to-main loop, section 2)
+priority: 1
+status: in_progress
+risk: low
+owner: unassigned
+created: 2026-08-01
+customer_impact: >
+  The single `release-gate` job ran on every push and always failed
+  (context_band 0.6667 < 0.90), so branch CI was permanently red even when code,
+  security, packaging and mutation all passed. This split makes ordinary CI green
+  while keeping the real gate strictly enforced at promotion time.
+
+objective: >
+  Replace the always-on enforcing release-gate with two jobs: a non-enforcing
+  release-readiness-report (push/PR/dispatch) that reports YES/NO and succeeds when
+  the software runs, and an enforce-release-gate that runs only on RC->main PRs,
+  release tags, or an explicit dispatch and enforces every gate with no
+  continue-on-error and no lowered thresholds.
+
+scope:
+  - ci.yml: add workflow_dispatch input enforce_release_gate
+  - ci.yml: release-readiness-report job (non-enforcing; prints Release-ready
+    YES/NO + failed gates; uploads artifact; fails only on malformed/missing eval)
+  - ci.yml: enforce-release-gate job (PR base==main OR tag OR dispatch+input;
+    `eval run --all --require-release-ready`; no continue-on-error)
+
+acceptance_criteria:
+  - ordinary RC/PR CI is green (no permanent red release-gate)
+  - release-readiness-report succeeds while honestly printing Release-ready NO and
+    the real context_band score, and uploads the artifact
+  - enforce-release-gate does NOT run on task/RC pushes or RC-targeted PRs
+  - enforce-release-gate runs and enforces on RC->main PR / tag / explicit dispatch
+  - thresholds unchanged; the frozen holdout and 0.90 gate are untouched
+
+non_goals:
+  - lowering any threshold or hiding the real score
+  - editing historical workflow runs
+
+dependencies:
+  - agentrouter eval run --all --require-release-ready (existing)
