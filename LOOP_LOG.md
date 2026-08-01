@@ -657,3 +657,17 @@ score and release-branch GitHub checks are also pending. Current state lives in
   as the full-suite authority. main untouched; 0.90 gate unchanged.
 - **Next:** Phase 3 local engineering — catalog provenance/freshness/deprecation/
   rollback on top of refresh.py.
+
+## 2026-07-31 — iter23: TASK-013 increment merged (catalog freshness + rollback)
+
+- **TASK-013 (increment) MERGED to RC** (PR #4 -> merge commit c8fe429; task branch
+  deleted). Additive, no refresh-format/routing/gate change:
+  - `agentrouter/catalog_ops.py` — offline freshness (`read_status`/`list_generated`
+    from newest entry last_updated vs registry.STALE_AFTER_DAYS) + safe `rollback`
+    (.bak then remove one generated file; manual models.yaml untouched).
+  - CLI `providers status` and `providers rollback <provider>`.
+  - tests/test_catalog_ops.py (9 tests). CI green except honest release-gate.
+- Deferred within TASK-013 (follow-up): file-level provenance block in
+  write_generated_registry + deprecation reconciliation on refresh (report-only).
+- **Next:** TASK-013 follow-up (provenance block + deprecation), then Phase 3
+  priority #3 (verified execution-host states).
