@@ -640,3 +640,20 @@ score and release-branch GitHub checks are also pending. Current state lives in
   0.90, honest and unchanged). RC remains NOT RELEASE READY. main untouched.
 - **Next:** TASK-012 (human annotation operations — blinded packs for two real
   annotators + adjudication) plus parallel locally-actionable engineering.
+
+## 2026-07-31 — iter22: TASK-012 merged to RC (annotation operations)
+
+- **TASK-012 MERGED to RC** (PR #3 -> merge commit 0ddf401; task branch deleted).
+  Adds blinded annotation operations so two real annotators can label the
+  63-candidate pool independently: `agentrouter/annotation/packs.py` +
+  `dataset {pack,progress,export,adjudication-pack}` and a resumable `annotate`
+  (per-item save; Ctrl-C/EOF = clean pause). Disagreements-only adjudication pack,
+  no auto-adjudication, label-free progress, JSONL+CSV export. Operator docs:
+  ANNOTATOR_A/B, ADJUDICATOR, TASK_012_OWNER_ACTIONS (exact commands; two real
+  people must label all 63). tests/test_annotation_packs.py.
+- CI on the PR: matrix 3.10-3.13 + test-windows + build-smoke + Security +
+  Critical Mutation Testing GREEN; only release-gate RED (honest). RC @ 0ddf401.
+- Env note: local pytest was killed for multi-second runs this session; CI served
+  as the full-suite authority. main untouched; 0.90 gate unchanged.
+- **Next:** Phase 3 local engineering — catalog provenance/freshness/deprecation/
+  rollback on top of refresh.py.

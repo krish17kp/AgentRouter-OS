@@ -1,7 +1,7 @@
 {
   "loop_version": 2,
   "last_updated": "2026-07-31",
-  "current_phase": "TASK-011 MERGED to RC (PR #2); next: TASK-012 human annotation ops + parallel local engineering",
+  "current_phase": "TASK-011 + TASK-012 MERGED to RC (PR #2, #3); next: Phase 3 local engineering (catalog provenance/freshness/deprecation/rollback) + external human annotation round",
   "current_objective": "TASK-011 context-band annotation program merged into release/agentrouter-v0.5-rc1 (merge commit 35e616e; all commits preserved; task branch deleted). Mutation gate CLOSED (0.9837). Now: create TASK-012 (blinded annotation packs for two real annotators + adjudication over the 63-candidate pool) and continue the highest-value locally-actionable engineering in parallel, via the full graph-aware loop, merging each task to RC when its gates pass. Never reuse/tune the frozen holdout; 0.90 gate unchanged; RC stays NOT RELEASE READY; no RC->main without owner approval.",
   "status": "IN_PROGRESS",
   "branch_topology": {
@@ -15,7 +15,10 @@
   "repo_sha_at_takeover": "602321af91ff298c0d5b59d6d36c24f845557fc1",
   "canonical_release_ready": false,
   "in_progress": [
-    "TASK-012 human annotation operations: blinded packs for two real annotators + adjudication over the 63-candidate pool (external — needs two people). Plus parallel locally-actionable engineering via the full graph-aware loop."
+    "Phase 3 local engineering via the full graph-aware loop (catalog provenance/freshness/deprecation/rollback first). The human annotation round (TASK-012 tooling shipped) is external — needs two real annotators + adjudicator per TASK_012_OWNER_ACTIONS.md."
+  ],
+  "completed_iter22": [
+    "TASK-012 human annotation operations MERGED to RC (PR #3 -> merge commit 0ddf401; task branch deleted). agentrouter/annotation/packs.py + dataset {pack,progress,export,adjudication-pack} and a resumable annotate (per-item save; Ctrl-C/EOF clean pause). Blinded independent packs; label-free progress; disagreements-only adjudication pack with no auto-adjudication; JSONL+CSV export. Operator docs ANNOTATOR_A/B, ADJUDICATOR, TASK_012_OWNER_ACTIONS. tests/test_annotation_packs.py. CI green except honest release-gate. Env: local pytest killed for multi-second runs this session; CI was the full-suite authority."
   ],
   "completed_iter21": [
     "TASK-011 context-band annotation program MERGED to RC (PR #2 -> merge commit 35e616e; all 4 commits preserved; task branch deleted local+remote). agentrouter/annotation/ package: schema, deterministic unlabelled candidate generation (63 prompts, all ten categories, 0 frozen-holdout leaks), dedup/near-dup + cross-set leakage, two-annotator adjudication, leakage-safe train/dev/holdout splits, versioned manifests, rules/learned/hybrid comparison (accuracy/macro-F1/per-band recall/bootstrap CI/ECE), optional Graphify impact with text-only fallback, and the `agentrouter dataset` CLI. docs/CONTEXT_BAND_ANNOTATION.md. 26 annotation tests; full suite 583+ pass; clean-wheel verified (packaged pool loads). Focused pre-merge review found + fixed 2 issues (build LeakageError -> clean exit 2; annotate help wording).",
