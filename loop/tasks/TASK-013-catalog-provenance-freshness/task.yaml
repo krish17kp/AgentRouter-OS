@@ -2,7 +2,7 @@ id: TASK-013
 title: Catalog provenance, freshness, deprecation and rollback
 source: Phase 3 selection 2026-07-31 (after TASK-011/012 merged); highest-value local task
 priority: 1
-status: intake
+status: in_progress
 risk: medium
 owner: unassigned
 created: 2026-07-31

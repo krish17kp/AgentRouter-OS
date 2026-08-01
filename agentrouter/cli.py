@@ -16,7 +16,7 @@ from pathlib import Path
 import typer
 import yaml
 
-from . import hosts, observability, plugins, store, taxonomy
+from . import catalog_ops, hosts, observability, plugins, store, taxonomy
 from .classifier import classify
 from .controls import PREFERENCE_WEIGHTS, RouteControls, apply_controls
 from .engine import BASE_WEIGHTS
@@ -749,6 +749,42 @@ def providers_refresh(
         f"Delete the {GENERATED_SUFFIX} file to revert."
     )
     typer.echo("Next: agentrouter registry list")
+
+
+@providers_app.command("status")
+def providers_status():
+    """Show freshness of each refreshed catalog (offline; reads generated files)."""
+    reg_dir = _home() / "registry"
+    if not reg_dir.is_dir():
+        typer.echo(f"Registry directory not found: {reg_dir}", err=True)
+        typer.echo("Next: run agentrouter init first.", err=True)
+        raise typer.Exit(EXIT_REGISTRY)
+    statuses = catalog_ops.list_generated(reg_dir)
+    if not statuses:
+        typer.echo("No refreshed catalogs. Manual models.yaml is authoritative.")
+        typer.echo("Next: agentrouter providers refresh openrouter")
+        return
+    for st in statuses:
+        typer.echo(st.summary)
+    if any(st.stale for st in statuses):
+        typer.echo("\nSome catalogs are stale; re-run 'agentrouter providers refresh <provider>'.")
+
+
+@providers_app.command("rollback")
+def providers_rollback(
+    provider: str = typer.Argument(..., help="Provider whose refreshed catalog to revert."),
+):
+    """Revert a provider's refreshed catalog (back up + remove the generated file)."""
+    reg_dir = _home() / "registry"
+    backup = catalog_ops.rollback(reg_dir, provider)
+    if backup is None:
+        missing = reg_dir / f"models.{provider}.generated.yaml"
+        typer.echo(f"No generated catalog for '{provider}' to roll back.", err=True)
+        typer.echo(f"Why: {missing} does not exist.", err=True)
+        raise typer.Exit(EXIT_USAGE)
+    typer.echo(f"Rolled back '{provider}'; backed up to {backup.name}.")
+    typer.echo("Manual models.yaml is now authoritative. Re-refresh to restore, or")
+    typer.echo(f"restore the backup: move {backup.name} back to {backup.with_suffix('').name}.")
 
 
 # --- prompt generate ---------------------------------------------------------------
