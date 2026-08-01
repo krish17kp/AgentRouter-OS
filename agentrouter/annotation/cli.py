@@ -19,6 +19,7 @@ import yaml
 from ..schema import ContextBand
 from . import CATEGORIES
 from . import candidates as candidates_mod
+from . import packs as packs_mod
 from .adjudicate import Adjudication, resolve
 from .compare import compare_all
 from .dedup import find_leakage
@@ -68,26 +69,60 @@ def gen_candidates(
     typer.echo(f"Wrote {len(pool)} candidates to {out} (unlabelled; humans assign bands).")
 
 
+@dataset_app.command("pack")
+def pack(
+    annotator: str = typer.Option(..., "--annotator", help="Annotator id (A / B)."),
+    seed: int = typer.Option(..., "--seed", help="Ordering seed; distinct per annotator."),
+    candidates_path: Path = typer.Option(
+        Path("agentrouter/benchmarks/context_band/candidates_v1.yaml"), "--candidates"
+    ),
+    out: Path = typer.Option(..., "--out", help="Blinded pack YAML for this annotator."),
+):
+    """Build a blinded, independently-ordered candidate pack for one annotator.
+
+    Packs carry only id/prompt/category — no bands, no predictions, no other
+    annotator's answers.
+    """
+    pool = load_candidates(candidates_path)
+    ordered = packs_mod.build_pack(pool, seed=seed)
+    save_candidates(out, ordered)
+    typer.echo(f"Wrote blinded pack of {len(ordered)} candidates for '{annotator}' -> {out}.")
+
+
 @dataset_app.command("annotate")
 def annotate(
-    candidates_path: Path = typer.Argument(..., help="Candidate pool YAML."),
+    candidates_path: Path = typer.Argument(..., help="Blinded pack (or candidate pool) YAML."),
     annotator: str = typer.Option(..., "--annotator", help="Annotator id."),
-    out: Path = typer.Option(..., "--out", help="Where to write this annotator's labels (JSONL)."),
+    out: Path = typer.Option(..., "--out", help="Labels JSONL (resumes if it already exists)."),
 ):
-    """Interactively label each candidate (band S/M/L, or 'a' to abstain)."""
+    """Interactively label each candidate (band S/M/L, or 'a' to abstain).
+
+    Resumable: already-labelled candidate ids in ``out`` are skipped, and new
+    labels are appended, so a session can be paused and continued.
+    """
     pool = load_candidates(candidates_path)
-    items: list[ItemLabels] = []
-    typer.echo(f"Annotating {len(pool)} candidates as '{annotator}'. Ctrl-C to stop.")
-    for cand in pool:
+    existing = load_labels(out) if out.exists() else []
+    todo = packs_mod.pending(pool, existing)
+    items: list[ItemLabels] = list(existing)
+    typer.echo(
+        f"Annotating {len(todo)} of {len(pool)} candidates as '{annotator}' "
+        f"({len(existing)} already done). Ctrl-C to pause."
+    )
+    for cand in todo:
         typer.echo(f"\n[{cand.category}] {cand.prompt}")
-        choice = typer.prompt("band (s/m/l/a=abstain)").strip().lower()
-        abstain = choice.startswith("a")
-        band = None if abstain else _BAND_CHOICE.get(choice)
-        if not abstain and band is None:
-            typer.echo("skipped (invalid band)")
-            continue
-        rationale = typer.prompt("rationale").strip() or "n/a"
-        confidence = float(typer.prompt("confidence 0-1", default="0.7"))
+        try:
+            choice = typer.prompt("band (s/m/l/a=abstain)").strip().lower()
+            abstain = choice.startswith("a")
+            band = None if abstain else _BAND_CHOICE.get(choice)
+            if not abstain and band is None:
+                typer.echo("skipped (invalid band)")
+                continue
+            rationale = typer.prompt("rationale").strip() or "n/a"
+            confidence = float(typer.prompt("confidence 0-1", default="0.7"))
+        except (EOFError, KeyboardInterrupt, typer.Abort):
+            # Pause: everything so far is already saved; resume by re-running.
+            typer.echo(f"\nPaused. {len(items)} labelled so far; saved to {out}.")
+            raise typer.Exit(0) from None
         label = AnnotatorLabel(
             annotator=annotator,
             band=band,
@@ -104,8 +139,43 @@ def annotate(
                 labels=[label],
             )
         )
-    save_labels(out, items)
+        save_labels(out, items)  # persist after every item so a pause loses nothing
     typer.echo(f"Wrote {len(items)} labels to {out}.")
+
+
+@dataset_app.command("progress")
+def progress(
+    pack_path: Path = typer.Argument(..., help="The annotator's pack YAML."),
+    labels: Path = typer.Option(..., "--labels", help="The annotator's labels JSONL."),
+):
+    """Show label-free progress (counts only — never reveals the bands)."""
+    pool = load_candidates(pack_path)
+    done = load_labels(labels) if labels.exists() else []
+    p = packs_mod.progress(pool, done)
+    typer.echo(f"{p['done']}/{p['total']} labelled, {p['remaining']} remaining.")
+
+
+@dataset_app.command("export")
+def export(
+    labels: Path = typer.Argument(..., help="A labels JSONL file."),
+    csv_out: Path = typer.Option(..., "--csv", help="Where to write the CSV export."),
+):
+    """Export a labels JSONL file to CSV (JSONL is already the native format)."""
+    items = load_labels(labels)
+    csv_out.write_text(packs_mod.labels_to_csv(items), encoding="utf-8")
+    typer.echo(f"Exported {len(items)} labelled items to {csv_out}.")
+
+
+@dataset_app.command("adjudication-pack")
+def adjudication_pack(
+    labels: list[Path] = typer.Option(..., "--labels", help="Each annotator's labels JSONL."),
+    out: Path = typer.Option(..., "--out", help="Blinded adjudication pack YAML."),
+):
+    """Build a blinded pack of ONLY the items where annotators disagree."""
+    label_sets = [load_labels(p) for p in labels]
+    disputed = packs_mod.adjudication_candidates(*label_sets)
+    save_candidates(out, disputed)
+    typer.echo(f"Wrote {len(disputed)} disagreed item(s) to {out} (no auto-adjudication).")
 
 
 def _merge_label_files(paths: list[Path]) -> list[ItemLabels]:

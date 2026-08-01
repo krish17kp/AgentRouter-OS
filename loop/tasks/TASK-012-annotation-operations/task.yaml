@@ -1,0 +1,50 @@
+id: TASK-012
+title: Human annotation operations for context bands
+source: user request 2026-07-31 (post TASK-011 merge)
+priority: 1
+status: in_progress
+risk: low
+owner: unassigned
+created: 2026-07-31
+customer_impact: >
+  TASK-011 delivered the annotation system; the sole remaining path to the
+  context-band release gate is a real human-labelled dataset. This task prepares
+  the blinded packs, resumable labelling, progress/export tooling, and adjudication
+  workflow so two real annotators can label all 63 candidates independently.
+
+objective: >
+  Provide everything needed to run a real two-annotator context-band annotation
+  round over the 63-candidate pool: independent blinded packs, resumable labelling
+  with mandatory band-or-abstention + rationale + confidence, label-free progress,
+  JSONL/CSV export, a disagreements-only adjudication pack (no auto-adjudication),
+  and exact owner/annotator/adjudicator instructions.
+
+scope:
+  - blinded packs (independent randomized ordering per annotator; no bands/predictions)
+  - resumable annotate (pause/resume; per-item save; immutable candidate IDs)
+  - schema-validated records; band or abstention; rationale; confidence
+  - label-free progress summaries
+  - JSONL + CSV export
+  - disagreements-only adjudication pack; no auto-adjudication
+  - ANNOTATOR_A / ANNOTATOR_B / ADJUDICATOR / TASK_012_OWNER_ACTIONS docs
+
+acceptance_criteria:
+  - `dataset pack` builds independent, blinded, same-set packs per annotator
+  - `dataset annotate` resumes and appends; every record validated
+  - `dataset progress` reveals counts only, never bands
+  - `dataset export` writes CSV; JSONL is native
+  - `dataset adjudication-pack` surfaces only disagreements (and single-annotator
+    items), blinded, with no auto-adjudication
+  - four instruction docs exist with exact commands
+  - never fabricate a human label; never use an AI label as a human label; the
+    frozen holdout is untouched; the 0.90 gate is unchanged
+
+dependencies:
+  - TASK-011 annotation package (schema, candidates, adjudicate, store)
+
+non_goals:
+  - performing the human labelling itself (external — needs two real people)
+  - reducing/altering the 0.90 gate; reusing or tuning the frozen holdout
+
+external_blockers:
+  - two real human annotators + an adjudicator are required to produce final labels
