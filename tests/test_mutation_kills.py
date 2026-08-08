@@ -370,19 +370,25 @@ def test_detect_host_manual_is_always_available():
     assert s.reason == "manual execution is always available"
 
 
-def test_detect_host_cli_available_and_unavailable(monkeypatch):
+def test_detect_host_cli_available_and_unavailable(monkeypatch, tmp_path):
     # kills detect_host 12/13/14 (cmd resolution), 15/19 (or/and), 21-26 (args),
     # 27/29 (unavailable branch host/reason).
+    # Hermetic home: no host config/credentials, so the state is deterministic
+    # here and on every CI runner (TASK-016).
+    monkeypatch.setattr(hosts_mod, "_home_dir", lambda: tmp_path)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.setattr(hosts_mod.shutil, "which", lambda c: f"/usr/bin/{c}")
     s = detect_host("codex-cli")
     assert s.host == "codex-cli"
     assert s.availability == AVAILABLE
-    assert s.reason == "'codex' found on PATH"  # cmd resolved via _CLI_HOSTS
+    assert s.state == hosts_mod.INSTALLED  # on PATH, nothing configured yet
+    assert s.reason == "'codex' found on PATH; not configured yet"  # cmd via _CLI_HOSTS
     # Not on PATH -> UNAVAILABLE (mutant 19 `cmd or which` wrongly reports AVAILABLE).
     monkeypatch.setattr(hosts_mod.shutil, "which", lambda c: None)
     s2 = detect_host("codex-cli")
     assert s2.host == "codex-cli"
     assert s2.availability == UNAVAILABLE
+    assert s2.state == hosts_mod.MISSING
     assert s2.reason == "'codex' not found on PATH"
 
 
@@ -500,8 +506,13 @@ def test_execution_route_block_missing_model_returns_none():
     assert execution_route_block(None, {}) is None
 
 
-def test_execution_route_block_payload_keys_and_values(monkeypatch):
+def test_execution_route_block_payload_keys_and_values(monkeypatch, tmp_path):
     # kills execution_route_block 28/29,34/35,41/42,45/46,47-52 (dict key/value text).
+    # Hermetic: no host config/credentials and no stray key, so the state is the
+    # same here and on a clean CI runner (a set-but-blank OPENAI_API_KEY would
+    # otherwise make codex-cli `degraded` and flip `availability`).
+    monkeypatch.setattr(hosts_mod, "_home_dir", lambda: tmp_path)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.setattr(hosts_mod.shutil, "which", lambda c: f"/usr/bin/{c}")
     t = _target(
         host="codex-cli",
@@ -525,8 +536,14 @@ def test_execution_route_block_payload_keys_and_values(monkeypatch):
     assert block["max_output_tokens"] == m.max_output_tokens
     assert block["required_env"] == ["FOO"]
     assert block["availability"] == AVAILABLE
-    # all_hosts entries use lowercase host/availability keys (mutants 49-52).
-    assert block["all_hosts"] == [{"host": "codex-cli", "availability": AVAILABLE}]
+    # all_hosts entries use lowercase host/availability/state keys (mutants 49-52).
+    # Pinned to literals — a self-referential expectation would assert nothing.
+    assert block["all_hosts"] == [
+        {"host": "codex-cli", "availability": AVAILABLE, "state": hosts_mod.INSTALLED}
+    ]
+    # additive TASK-016 detail; `availability` above keeps its original meaning.
+    assert block["host_state"] == hosts_mod.INSTALLED
+    assert block["host_remedy"]  # on PATH but unauthenticated -> actionable next step
 
 
 # --------------------------------------------------------------------------- #
@@ -627,8 +644,10 @@ def test_execute_via_host_refuses_unavailable(monkeypatch, capfd):
     code = _call_via_host(monkeypatch, m, yes=True, dry_run=False)
     assert code == 2  # never executes an unavailable host
     err = capfd.readouterr().err
-    assert "Not enabled: host 'codex-cli' is unavailable." in err
-    assert "Next: install/authenticate the host, or run the generated prompt yourself." in err
+    # TASK-016: the refusal now names the precise state and a concrete remedy.
+    assert "Not enabled: host 'codex-cli' is missing" in err
+    assert "'codex' not found on PATH" in err
+    assert "Next: install the Codex CLI, then authenticate it" in err
     assert "XX" not in err  # mutant 62 wraps the string in XX...XX
 
 

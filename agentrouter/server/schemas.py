@@ -38,6 +38,10 @@ class HostStatusResponse(BaseModel):
     host: str
     availability: str
     reason: str
+    # additive (TASK-016): finer readiness state + concrete fix. Defaulted so
+    # older clients and any caller building this model positionally still work.
+    state: str = "unknown"
+    remedy: str | None = None
 
 
 class ClassifyRequest(BaseModel):

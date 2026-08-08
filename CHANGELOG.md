@@ -27,6 +27,14 @@ All notable changes to AgentRouter OS. Format loosely follows
   rotating backups, `restore` reverses a rollback, and `doctor` validates every generated
   catalog and exits non-zero only on real corruption. Refreshing a provider with an existing
   generated catalog reports candidate deprecations (report-only, never auto-deleted).
+- **Verified execution-host states** (`agentrouter hosts doctor/list/show`): every host now
+  reports a precise readiness state — `missing`, `installed`, `configured`, `authenticated`,
+  `authorized` or `degraded` — with a concrete next step, instead of only
+  available/unavailable/unknown. Detection stays offline and read-only: it checks whether a
+  binary is on PATH and whether a credential/config path or env var *exists*, never opening a
+  credential file, printing a key, or making a network call. `authorized` requires an opt-in
+  live check and is never inferred from local evidence. `hosts doctor` now ends with the
+  closest concrete fix and exits non-zero only when no real host is ready.
 - **CI release-gate semantics:** the release-readiness check is now split into a non-enforcing
   `release-readiness-report` (every push/PR, always green, reports the honest YES/NO) and
   `enforce-release-gate` (RC-to-main PRs, release tags, or explicit dispatch only, full
@@ -53,6 +61,10 @@ All notable changes to AgentRouter OS. Format loosely follows
   closing a timing side-channel on `AGENTROUTER_API_KEY`.
 
 ### Fixed
+- **A blank API key no longer reports a host as available.** Host detection tested the env var
+  for truthiness, so `OPENAI_API_KEY="   "` (set but empty/whitespace) counted as available and
+  `execute` would target a host that cannot possibly authenticate. Such a value now reports
+  `degraded` / unavailable with a fix-it message.
 - Plugin install/uninstall now persists exact ownership and installed digests, journals forced
   replacements for crash recovery, preserves backup identity/metadata, rejects traversal,
   link/reparse, hard-link, and portable special-name hazards, preserves concurrent edits, migrates

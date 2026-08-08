@@ -1,0 +1,85 @@
+id: TASK-016
+title: Verified execution-host states plus provider diagnostics and onboarding
+source: Phase 3 selection 2026-08-08 (after TASK-015 merged, PR #6); command.md PHASE C line 526
+priority: 1
+status: in_progress
+risk: low
+owner: unassigned
+created: 2026-08-08
+customer_impact: >
+  command.md PHASE C requires host reporting to distinguish
+  installed / configured / authenticated / authorized / degraded, but hosts.py
+  still reports only available / unavailable / unknown. A first-run user
+  therefore cannot tell "the Claude CLI is not installed" from "it is installed
+  but you are not logged in", and `hosts doctor` offers no concrete recovery
+  action. Worse, a blank-but-set API key currently reports available, so
+  `execute` will happily target a host that cannot authenticate.
+
+objective: >
+  Report a precise, offline-derived readiness state and a concrete remedy for
+  every execution host, fix the blank-credential false positive, and turn
+  `hosts doctor` into a real diagnostic that tells a new user exactly what to do
+  next — without changing routing behavior, without any network call, and
+  without ever reading or printing a credential value.
+
+discovery_findings:
+  - "agentrouter/hosts.py detect_host returns HostStatus(host, availability, reason)
+    with availability in available/unavailable/unknown. CLI hosts are detected by
+    shutil.which, API hosts by presence of an env var, manual is always available."
+  - "BUG (reproduced): API-host detection uses a truthiness check on the env var, so
+    a whitespace-only key such as OPENAI_API_KEY='   ' reports available. Verified
+    locally: detect_host('openai-api') returns available with reason 'OPENAI_API_KEY
+    is set'. execute would then treat the host as runnable."
+  - "availability is load-bearing well beyond display - cli.py gates `execute` on it
+    (line ~963), models list --available filters on it, execution_route_block exports
+    it to the REST and MCP payloads, and tests/test_mutation_kills.py asserts on it.
+    It must keep its exact current meaning; the finer state has to be additive."
+  - "HostStatus is a frozen dataclass constructed positionally in several places, so
+    new fields need defaults to stay backward compatible."
+  - "command.md PHASE C lists opt-in live checks separately from the state vocabulary;
+    authorized cannot be established offline and must not be inferred."
+
+scope:
+  - "hosts.py gains a state vocabulary (missing, installed, configured,
+    authenticated, authorized, degraded, unknown) plus a per-host remedy string;
+    availability stays the coarse routing signal and is derived from state."
+  - "CLI-host detection distinguishes not-on-PATH (missing), on PATH but not
+    executable (degraded), on PATH with no config (installed), config directory
+    present (configured), and credential file or fallback env var present
+    (authenticated)."
+  - "API-host detection distinguishes unset (missing), set-but-blank (degraded,
+    fixing the false positive) and set (authenticated). The value is never read
+    beyond an emptiness test and never printed."
+  - "authorized is defined but never returned by offline detection - it requires
+    the opt-in live check that PHASE C lists separately, which is out of scope."
+  - "execution_route_block exports an additive host_state key; existing keys are
+    untouched so REST/MCP consumers do not break."
+  - "hosts list / hosts doctor / hosts show display the state and remedy;
+    hosts doctor ends with a single concrete next step and keeps its non-zero exit
+    when no host is available. `execute` includes the remedy when it refuses."
+
+acceptance_criteria:
+  - "every host reports one of the documented states with an actionable remedy"
+  - "a blank or whitespace-only API key reports degraded and unavailable, not
+    available (regression test for the reproduced bug)"
+  - "availability keeps its exact current meaning for every previously-supported
+    case, so routing, `execute` gating and models list --available are unchanged"
+  - "offline detection never returns authorized (asserted by test)"
+  - "no network call and no credential value is read or printed on any path"
+  - "hosts doctor exits non-zero only when no host is available, and prints a
+    concrete next step"
+  - "targeted unit tests plus CLI tests; full local and CI regression green;
+    ruff, bandit and pip-audit clean; clean-wheel verified"
+
+dependencies:
+  - agentrouter/hosts.py, agentrouter/cli.py, agentrouter/schema.py (read-only)
+
+non_goals:
+  - live connectivity, auth or quota checks (needs network and credentials)
+  - changing routing scores, thresholds, gates or the frozen holdout
+  - inferring authorized without a real authorization check
+  - a setup wizard rewrite (agentrouter setup already exists)
+
+external_blockers:
+  - "proving authorized needs an opt-in live call with real credentials; the
+    offline state, remedy and diagnostic paths do not"

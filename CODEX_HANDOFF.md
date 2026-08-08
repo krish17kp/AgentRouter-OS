@@ -1,17 +1,18 @@
 # Codex Handoff - AgentRouter OS
 
-Last updated: 2026-08-08 (iter 24 — TASK-014 MERGED to RC; CI release-gate split; TASK-015 next)
+Last updated: 2026-08-08 (iter 25 — TASK-015 MERGED to RC; git guardrail repaired; TASK-016 next)
 
-## Current state (iter 24)
+## Current state (iter 25)
 
 - **Branch topology (authoritative):**
   - `main` — stable, untouched (still `602321a`). Never merge into it without explicit owner approval.
-  - `release/agentrouter-v0.5-rc1` — integration branch @ `b62ffd7`. **NOT RELEASE READY**
+  - `release/agentrouter-v0.5-rc1` — integration branch @ `8661629`. **NOT RELEASE READY**
     (context_band held-out 0.6667 < 0.90, unchanged). Mutation gate **PASSES**. CI is **green** on
     ordinary pushes/PRs (see below).
   - `task/TASK-011-context-band-data`, `task/TASK-012-annotation-operations`,
-    `task/TASK-013-catalog-provenance`, `task/TASK-014-ci-release-semantics` — **all MERGED to RC
-    (PR #2/#3/#4/#5) and DELETED** local + remote; all commits preserved via merge commits.
+    `task/TASK-013-catalog-provenance`, `task/TASK-014-ci-release-semantics`,
+    `task/TASK-015-trusted-catalogs` — **all MERGED to RC (PR #2/#3/#4/#5/#6) and DELETED**
+    local + remote; all commits preserved via merge commits.
   - `mutation-kill-safety` — **DELETED** (local + remote); PR #1 closed as fully superseded by
     `tests/test_mutation_kills.py`.
 - **TASK-011 on the RC:** `agentrouter/annotation/` program — schema, deterministic unlabelled
@@ -24,8 +25,15 @@ Last updated: 2026-08-08 (iter 24 — TASK-014 MERGED to RC; CI release-gate spl
   (`TASK_012_OWNER_ACTIONS.md`) — the only path to closing the honest release-gate.
 - **TASK-013 on the RC:** `agentrouter/catalog_ops.py` (freshness/staleness vs
   `registry.STALE_AFTER_DAYS`, safe rollback with `.bak` backup) + `providers status` /
-  `providers rollback` CLI. Structured provenance block + deprecation reconciliation were
-  deferred — now TASK-015.
+  `providers rollback` CLI.
+- **TASK-015 on the RC:** trusted catalogs — generated catalogs carry a `provenance` block
+  (source_url, fetched_at UTC, count, tool_version, cli_args) the loader ignores; atomic
+  refresh (`tempfile.mkstemp` + `os.replace`); candidate-deprecation reporting on refresh
+  (report-only); non-destructive backup rotation + new `providers restore`; new
+  `providers doctor` that schema-validates every generated catalog and exits 3 only on real
+  corruption. Independent security review: 0 critical / 3 medium / 2 low, all medium+low
+  fixed and regression-tested (symlink-race on temp/backup writes, crash-instead-of-clean-fail
+  on corrupt catalogs, same-second backup-rotation data loss).
 - **TASK-014 on the RC:** split the always-on enforcing `release-gate` into
   `release-readiness-report` (push/PR/dispatch, non-enforcing, honest YES/NO) and
   `enforce-release-gate` (RC->main PR / release tag / explicit dispatch only, full enforcement).
@@ -34,15 +42,25 @@ Last updated: 2026-08-08 (iter 24 — TASK-014 MERGED to RC; CI release-gate spl
   `safety_policy_execution` **0.985** (>=0.95); `routing_engine` **0.9815** (>=0.85); no safety/
   auth/policy/execution-bypass survivor. `cli.execute()` gate logic extracted into undecorated
   `_execute()` for mutmut reach. Local iteration via Docker container `armut`.
-- **CI on `b62ffd7`:** test matrix 3.10-3.13, test-windows, build-smoke, Security, and
-  `release-readiness-report` all GREEN; `enforce-release-gate`/`live-smoke` correctly SKIP (not run)
-  on task/RC pushes by design.
-- **Local env blocker resolved (2026-08-08):** full pytest now runs cleanly on this machine (595
-  passed, 3 skipped, ~18s); ruff and bandit clean. No longer CI-only for regression evidence.
-- **Next:** TASK-015 trusted catalogs (provenance block, deprecation reconciliation, atomic
-  refresh, rollback hardening, provider doctor/status) plus parallel local engineering. Do NOT
-  reuse/tune the frozen holdout; the 0.90 gate is unchanged; RC stays NOT RELEASE READY; no
-  RC->main without owner approval.
+- **CI on `8661629`:** test matrix 3.10-3.13, test-windows, build-smoke, Security,
+  `release-readiness-report` and **Critical Mutation Testing** all GREEN;
+  `enforce-release-gate`/`live-smoke` correctly SKIP (not run) on task/RC pushes by design.
+- **Local env blocker resolved (2026-08-08):** full pytest now runs cleanly on this machine (629
+  passed, 3 skipped, ~35s); 33 hook tests; ruff, bandit and pip-audit clean. No longer CI-only
+  for regression evidence.
+- **GIT GUARDRAIL REPAIRED (2026-08-08, owner-authorized):** `.claude/hooks/pre_tool_guard.py`
+  had blocked `git add`/`commit`/`push` unconditionally, contradicting command.md §14 and the
+  AGENTS.md git policy and making this loop impossible to execute. Now branch-aware:
+  add/commit only on `task/*`; push only from a `task/*` branch for that same branch, never
+  forced, never to a protected branch. **Direct writes to `main` and `release/*` are still
+  refused** — record state and land every change through a task branch + PR, not by committing
+  on the RC. Force push, remote-branch deletion, tags, history rewriting, `reset --hard`,
+  `git clean`, recursive deletes, deployment, publication and secret printing stay blocked.
+- **Next:** TASK-016 verified execution-host states + provider diagnostics/onboarding
+  (installed/configured/authenticated/authorized/degraded rather than
+  available/unavailable/unknown; offline, credential-free detection only), plus the remaining
+  local engineering. Do NOT reuse/tune the frozen holdout; the 0.90 gate is unchanged; RC stays
+  NOT RELEASE READY; no RC->main without owner approval.
 
 ---
 

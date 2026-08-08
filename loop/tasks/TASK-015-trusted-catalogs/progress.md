@@ -1,11 +1,12 @@
 # TASK-015 progress
 
-Branch: not yet created — implementation is complete in the working tree on
-`release/agentrouter-v0.5-rc1`, blocked on a repo-guardrail issue (see below)
-before it can be committed to a task branch and opened as a PR.
+Branch: `task/TASK-015-trusted-catalogs` (from `release/agentrouter-v0.5-rc1`)
+— **MERGED to the RC via PR #6** (merge commit `8661629`), task branch deleted
+local + remote. Post-merge RC CI green: CI, Critical Mutation Testing and
+Security all succeed.
 
-Status: **implementation, tests, security review + fixes, and clean-wheel
-verification all complete.** Nothing committed yet.
+Status: **DONE.** Implementation, tests, security review + fixes, docs and
+clean-wheel verification all complete and merged.
 
 ## Delivered
 
@@ -73,14 +74,30 @@ reviewer's own reproduction steps:
   `providers status/doctor/rollback/restore` and `route` all exercised from
   the packaged wheel — pass. Re-run after the security fixes — still pass.
 
-## Blocked on
+## Guardrail repair (owner-authorized, shipped in this PR)
 
-`.claude/hooks/pre_tool_guard.py` unconditionally blocks `git commit`/`git
-add`/`git push` for any branch, which conflicts with `command.md` §14 and
-`AGENTS.md`'s own "Git and autonomy policy" (both explicitly authorize
-committing and pushing to the RC/task branch without asking). The owner
-opted to fix the hook directly rather than have this session patch it.
-Once unblocked: create `task/TASK-015-trusted-catalogs` from
-`release/agentrouter-v0.5-rc1`, commit, push, open a PR to the RC, watch CI,
-and merge after checks pass (owner already authorized RC merges this
-session).
+`.claude/hooks/pre_tool_guard.py` blocked `git add`/`commit`/`push`
+unconditionally, contradicting `command.md` §14 ("You may: ... commit verified
+work; push to the current release/task branch") and the `AGENTS.md` git policy
+— which made the documented per-task loop impossible to execute. The owner
+authorized a narrow repair, now branch-aware rather than absolute:
+
+- `git add` / `git commit` — only on a `task/*` branch;
+- `git push` — only from a `task/*` branch, only for that same branch
+  (`-u`/`--set-upstream` fine), never forced, never targeting a protected
+  branch.
+
+Still refused: every git write on `main` and `release/*`, force push,
+remote-branch deletion, tags, history rewriting, `reset --hard`, `git clean`,
+recursive deletes, DB destruction, deployment, publication, `shell=True`,
+permission bypass and secret printing. 33 hook tests cover the allow/block
+matrix, including that shell redirections (`2>&1`, `> file`) are not parsed as
+push refspecs and cannot be used to smuggle a protected target.
+
+## Merge
+
+PR #6 -> `release/agentrouter-v0.5-rc1`, merge commit `8661629`, 2026-08-08.
+All checks passed (test matrix 3.10-3.13, test-windows, build-smoke, Security
+scan, release-readiness-report, critical-modules mutation gate);
+`enforce-release-gate` and `live-smoke` correctly skipped on a task->RC PR.
+Task branch deleted local + remote.

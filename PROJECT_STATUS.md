@@ -8,13 +8,14 @@
 ## Branch topology
 
 - `main` — stable, untouched. No merge without explicit owner approval.
-- `release/agentrouter-v0.5-rc1` — integration branch @ `b62ffd7` (TASK-011 PR #2,
-  TASK-012 PR #3, TASK-013 PR #4, TASK-014 PR #5 all merged). NOT RELEASE READY;
-  mutation gate passes, only the honest context-band `release-gate` fails (by design,
-  and no longer blocks ordinary CI — see CI status below).
+- `release/agentrouter-v0.5-rc1` — integration branch @ `8661629` (TASK-011 PR #2,
+  TASK-012 PR #3, TASK-013 PR #4, TASK-014 PR #5, TASK-015 PR #6 all merged). NOT
+  RELEASE READY; mutation gate passes, only the honest context-band gate fails (by
+  design, and no longer blocks ordinary CI — see CI status below).
 - `task/TASK-011-context-band-data`, `task/TASK-012-annotation-operations`,
-  `task/TASK-013-catalog-provenance`, `task/TASK-014-ci-release-semantics` —
-  **all merged to RC and deleted** (local + remote).
+  `task/TASK-013-catalog-provenance`, `task/TASK-014-ci-release-semantics`,
+  `task/TASK-015-trusted-catalogs` — **all merged to RC and deleted**
+  (local + remote).
 - `mutation-kill-safety` — deleted (local + remote); PR #1 closed as fully superseded by
   `tests/test_mutation_kills.py`.
 
@@ -31,8 +32,14 @@
   annotator round is still an external/owner step (`TASK_012_OWNER_ACTIONS.md`).
 - **TASK-013 catalog freshness + rollback** — `agentrouter/catalog_ops.py`
   (freshness/staleness vs `registry.STALE_AFTER_DAYS`, safe rollback with backup) +
-  `providers status` / `providers rollback` CLI. Provenance block and deprecation
-  reconciliation were deferred and are now TASK-015's scope.
+  `providers status` / `providers rollback` CLI.
+- **TASK-015 trusted catalogs** — closes TASK-013's deferred scope: generated
+  catalogs carry a `provenance` block (source URL, UTC fetch time, count, tool
+  version, CLI args), are written atomically, report candidate deprecations on
+  refresh (never auto-deleting), roll back/restore without losing backup history,
+  and are validated by `providers doctor` (exits non-zero only on real corruption).
+  An independent security review of the diff found 0 critical / 3 medium / 2 low;
+  all medium and low findings are fixed and regression-tested.
 - **TASK-014 CI release-gate semantics** — split the single always-on enforcing
   `release-gate` into a non-enforcing `release-readiness-report` (push/PR/dispatch;
   honestly prints Release-ready YES/NO) and `enforce-release-gate` (RC->main PR /
@@ -55,19 +62,21 @@ run. The gate is unchanged and remains honestly failed.
 
 ## Verified locally (2026-08-08, this session, reproduced)
 
-- Python suite: 598 collected, 595 passed, 3 env-only skips. Prior env watchdog issue
-  that killed multi-second local pytest runs is **resolved** — full suite now runs in
-  ~18s on this machine.
-- ruff check + ruff format --check clean; bandit 0 (under `-c pyproject.toml`).
-- Clean-wheel install + packaged data (`context_band_model_v1.json`) verified in
-  earlier sessions; re-verification tracked under TASK-015.
+- Python suite: **629 passed, 3 env-only skips**. Prior env watchdog issue that
+  killed multi-second local pytest runs is **resolved** — full suite runs in ~35s.
+- Hook suite: **33 passed** (`.claude/hooks/test_hooks.py`).
+- ruff check + ruff format --check clean; bandit 0 (under `-c pyproject.toml`);
+  `pip-audit -r requirements.txt` reports no known vulnerabilities.
+- Clean-wheel: built, installed into a fresh venv outside the repo, exercised
+  `providers status/doctor/rollback/restore` and `route`, including the
+  corrupt-catalog path (exit 3).
 - Local evaluation grade 98.23/100; 6/7 gates PASS; context-band gate FAIL (unchanged).
 
-## CI status (release/agentrouter-v0.5-rc1 @ b62ffd7)
+## CI status (release/agentrouter-v0.5-rc1 @ 8661629)
 
 - **Green:** CI test matrix (3.10–3.13), test-windows, build-smoke, Security scan,
   `release-readiness-report` (non-enforcing; correctly prints Release-ready NO with
-  the real context_band score).
+  the real context_band score), and **Critical Mutation Testing**.
 - **Skipped by design:** `enforce-release-gate` and `live-smoke` — these now run only
   on RC->main PRs, release tags, or an explicit `workflow_dispatch` with
   `enforce_release_gate=true` (TASK-014). They do not run on task->RC pushes/PRs.
@@ -92,15 +101,29 @@ hardening above.
 
 ## In progress / next
 
-- **TASK-015: trusted catalogs** — file-level provenance block, deprecation
-  reconciliation on refresh, atomic refresh, rollback hardening, provider
-  doctor/status. Extends TASK-013's deferred scope.
+- **TASK-016: verified execution-host states + provider diagnostics** — report
+  installed / configured / authenticated / authorized / degraded instead of the
+  current available / unavailable / unknown, and give a first-run user one
+  actionable path to a working route. Offline and credential-free (detection only,
+  never a live auth call).
 - **TASK-012 human round** — two real annotators + adjudicator still needed
   (external/owner step per `TASK_012_OWNER_ACTIONS.md`); this is the only path to
   closing the honest release-gate.
-- Parallel locally-actionable engineering (host-state verification, provider
-  diagnostics, benchmark routing infra, docs,
-  observability/runbooks, API/SDK compatibility + load testing).
+- Remaining locally-actionable engineering: benchmark routing infra without paid
+  inference, customer docs/examples, observability/runbooks, API/SDK compatibility
+  + load testing.
+
+## Git guardrail (repaired 2026-08-08, owner-authorized)
+
+`.claude/hooks/pre_tool_guard.py` previously blocked `git add`/`commit`/`push`
+unconditionally, contradicting `command.md` §14 and the `AGENTS.md` git policy and
+making the per-task loop impossible to execute. It is now **branch-aware**:
+add/commit only on `task/*`; push only from a `task/*` branch for that same branch,
+never forced, never targeting a protected branch. Direct writes to `main` and
+`release/*` remain refused — the RC advances only through reviewed PR merges — as do
+force push, remote-branch deletion, tags, history rewriting, `reset --hard`,
+`git clean`, recursive deletes, deployment, publication, and secret printing.
+33 hook tests cover the allow/block matrix.
 
 ## Owner / externally blocked
 

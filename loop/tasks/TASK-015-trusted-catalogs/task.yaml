@@ -2,7 +2,8 @@ id: TASK-015
 title: Trusted catalogs — provenance block, deprecation reconciliation, atomic refresh, rollback hardening, provider doctor
 source: owner directive 2026-08-08 (continuation after TASK-014 merged, PR #5); extends TASK-013's deferred scope
 priority: 1
-status: in_progress
+status: done
+merged: PR #6, merge commit 86616297b37a6d5b301c6b429cb84689e36e7c7c, 2026-08-08
 risk: medium
 owner: unassigned
 created: 2026-08-08
