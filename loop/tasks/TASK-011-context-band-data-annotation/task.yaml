@@ -2,7 +2,8 @@ id: TASK-011
 title: Context-band data and annotation program
 source: user request 2026-07-31 (post RC-branch); follows TASK-009 proven dataset ceiling
 priority: 1
-status: in_progress
+status: done
+merged: PR #2, merge commit 35e616ef7198236560ba2983d14e3bbdccb496ba, 2026-08-01
 risk: medium
 owner: unassigned
 created: 2026-07-31

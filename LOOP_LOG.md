@@ -1,5 +1,70 @@
 # LOOP_LOG
 
+## Iteration 24 — 2026-08-08 — TASK-014: CI release-gate report/enforce split; state docs reconciled
+
+**Goal:** verify and merge PR #5 (TASK-014), reconcile stale project-state docs against real
+GitHub state, then open TASK-015.
+
+**PR #5 verification:** all checks green (test 3.10-3.13, test-windows, build-smoke, Security
+scan, release-readiness-report); `enforce-release-gate`/`live-smoke` correctly SKIPPED on a
+task->RC PR by design. Marked ready for review, merged (merge commit `b62ffd7`), branch deleted
+local+remote. Post-merge push CI on the RC head reproduced green with the same skip pattern.
+
+**Environment note:** the working tree initially showed ~169 files "modified" versus HEAD; this
+was confirmed byte-for-byte identical content with only CRLF vs LF line endings (`git diff
+--ignore-cr-at-eol` showed zero diff; `core.autocrlf` was unset). Not real work — restored to
+match HEAD (`git restore .`) before touching any branch operations.
+
+**Local env blocker (recorded in prior iterations) re-checked and resolved:** full `pytest` now
+completes in ~18s on this machine (595 passed, 3 skipped); ruff check/format and bandit both
+clean. CI remains an independent cross-platform authority but is no longer the only usable
+regression signal.
+
+**Docs reconciled:** LOOP_STATE.json, PROJECT_STATUS.md, CODEX_HANDOFF.md, RELEASE_READINESS.md,
+QUALITY_DASHBOARD.md, loop/BACKLOG.yaml, and `status:` fields on TASK-011/012/013/014 task.yaml
+files — all updated from "TASK-011 merged" (iter21 snapshot) to the current true state
+(TASK-011/012/013/014 all merged; RC @ `b62ffd7`). loop/BACKLOG.yaml's L1/L2/L3/L5/L6/L7 entries
+were stale duplicates of already-done TASK-001/002/003/005/006/007 — moved to `done`; L4
+(classifier tuning) marked superseded by the TASK-009 proven ceiling + TASK-011/012 data program.
+
+**Next:** TASK-015 trusted catalogs (provenance block, deprecation reconciliation, atomic
+refresh, rollback hardening, provider doctor/status), extending TASK-013's deferred scope.
+
+## Iteration 23 — 2026-08-01 — TASK-013: catalog freshness status + rollback
+
+**Goal:** make dynamic provider catalogs trustworthy and reversible — freshness/staleness
+reporting and a safe rollback, on top of the existing `refresh.py`, without changing routing
+behavior or manual-wins semantics.
+
+**Built:** `agentrouter/catalog_ops.py` (offline, read-only except rollback) —
+`read_status`/`list_generated` (freshness of each `models.<provider>.generated.yaml` judged
+against `registry.STALE_AFTER_DAYS`) and `rollback` (backup-then-remove one generated file;
+manual `models.yaml` untouched so routing reverts cleanly). CLI: `agentrouter providers status`
+and `agentrouter providers rollback <provider>`. `tests/test_catalog_ops.py` (9 tests).
+
+**Deferred (this increment, to keep it low-risk and independently verifiable):** a structured
+file-level `provenance` block in `write_generated_registry` and deprecation reconciliation
+(models present in the generated file but gone from the live catalog, reported on refresh).
+Picked up by TASK-015.
+
+**Merged:** PR #4, merge commit `c8fe429`, branch deleted local+remote.
+
+## Iteration 22 — 2026-08-01 — TASK-012: human annotation operations
+
+**Goal:** build blinded annotation packs for two real annotators + adjudication over the
+63-candidate pool from TASK-011, producing the human-labelled dev set + new private holdout that
+is the only honest path to closing the release-gate.
+
+**Built:** `agentrouter/annotation/packs.py` + `agentrouter dataset {pack,progress,export,
+adjudication-pack}`; a resumable `annotate` flow (per-item save; clean Ctrl-C/EOF pause);
+blinded independent packs (randomized order, no cross-visibility, no rule/model predictions, no
+frozen-holdout labels); disagreements-only adjudication pack with no auto-adjudication; JSONL+CSV
+export. Operator docs: `ANNOTATOR_A_INSTRUCTIONS.md`, `ANNOTATOR_B_INSTRUCTIONS.md`,
+`ADJUDICATOR_INSTRUCTIONS.md`, `TASK_012_OWNER_ACTIONS.md`.
+
+**Merged:** PR #3, merge commit `0ddf401`, branch deleted local+remote. The real two-person
+labeling round remains an external/owner step.
+
 ## Iteration 19 — 2026-07-31 — TASK-009 decision A: learned context-band classifier + proven ceiling
 
 **Goal (decision A):** build a principled dev-only learned context-band classifier, compare

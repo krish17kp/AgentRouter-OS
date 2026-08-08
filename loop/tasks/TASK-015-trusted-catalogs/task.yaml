@@ -1,0 +1,99 @@
+id: TASK-015
+title: Trusted catalogs — provenance block, deprecation reconciliation, atomic refresh, rollback hardening, provider doctor
+source: owner directive 2026-08-08 (continuation after TASK-014 merged, PR #5); extends TASK-013's deferred scope
+priority: 1
+status: in_progress
+risk: medium
+owner: unassigned
+created: 2026-08-08
+customer_impact: >
+  TASK-013 delivered freshness/status + a one-way rollback for refreshed provider
+  catalogs, but explicitly deferred: (a) a structured provenance block recording
+  where a generated catalog actually came from, (b) deprecation reconciliation
+  (models a provider has since dropped), (c) crash-safety during refresh writes,
+  and (d) a single health-check command a user can run before trusting a
+  refreshed catalog. This task closes those gaps so a dynamic catalog is
+  trustworthy, auditable, and safely reversible end to end.
+
+objective: >
+  Add a structured provenance block to every generated catalog, report
+  deprecation candidates on refresh (never auto-delete), make the refresh write
+  atomic (crash-safe), hardened rollback (does not destroy prior backup history)
+  with a matching restore path, and a `providers doctor` command that validates
+  every generated catalog and exits non-zero on real corruption — without
+  changing routing behavior, the manual-wins rule, or any evaluation gate.
+
+discovery_findings:
+  - "agentrouter/refresh.py:write_generated_registry(reg_dir, provider, entries) writes
+    only a models list, no provenance block, and writes directly to the
+    final path (not atomic: a crash mid-write can leave a truncated/corrupt file
+    that load_all_models will fail loudly on)."
+  - agentrouter/registry.py:load_models only reads data.get("models", []) — an
+    extra top-level `provenance` key is silently ignored by the loader (verified;
+    safe to add without a loader change).
+  - "agentrouter/catalog_ops.py (from TASK-013) — read_status/list_generated derive
+    freshness from entry-level last_updated only; no provenance awareness.
+    rollback() always writes to a single .bak file, silently overwriting any
+    prior backup, and there is no programmatic restore — the CLI only prints
+    manual mv instructions."
+  - CLI providers app has refresh/status/rollback; no doctor command (hosts and
+    plugin already have a `doctor` subcommand — same pattern to follow).
+  - agentrouter.__version__ (agentrouter/__init__.py) is available for
+    tool_version; refresh.py already has OPENROUTER_MODELS_URL/OPENAI_MODELS_URL
+    per-provider source URLs.
+
+scope:
+  - refresh.write_generated_registry emits a top-level `provenance` block
+    (provider, source_url, fetched_at UTC ISO-8601, count, tool_version, cli_args)
+    and writes atomically (temp file in the same directory + os.replace).
+  - "providers_refresh: when a generated file for the provider already exists,
+    diff its model ids against the freshly fetched ids and report ids present
+    before but absent now as candidate deprecations (report-only, never
+    auto-deleted)."
+  - catalog_ops.read_provenance(path) -> dict | None (tolerates pre-TASK-015
+    generated files with no provenance block).
+  - catalog_ops.CatalogStatus gains provenance-derived fields (source_url,
+    fetched_at, tool_version) surfaced by `providers status`, still None-safe
+    for legacy files.
+  - catalog_ops.deprecations(previous_ids, current_ids) -> sorted list[str].
+  - catalog_ops.rollback hardening — rotate an existing `.bak` instead of
+    silently overwriting it; add catalog_ops.restore(reg_dir, provider) to
+    reverse the most recent rollback.
+  - "CLI: `providers rollback` keeps current behavior plus backup rotation;
+    `providers restore <provider>` (new) undoes the last rollback."
+  - "CLI: `providers doctor` validates every generated catalog parses and
+    matches the registry schema, prints provenance + freshness per provider,
+    and exits non-zero only on real corruption (unparseable/invalid), not on staleness."
+
+acceptance_criteria:
+  - generated catalogs carry a provenance block; registry loader still parses
+    them unchanged and routing/regression stays green
+  - a killed/interrupted refresh cannot leave a corrupt generated file (atomic
+    write verified by test)
+  - refresh reports candidate deprecations for a provider that already has a
+    generated file, without deleting anything
+  - "providers status shows provenance (source, fetched_at) when present and
+    degrades cleanly for pre-existing generated files without it"
+  - "providers rollback no longer destroys a previous backup; providers
+    restore reverses the most recent rollback"
+  - "providers doctor exits 0 when all generated catalogs are valid (even if
+    stale) and non-zero when one is corrupt, with an actionable message"
+  - targeted unit tests (catalog_ops, refresh) + CLI tests; full local + CI
+    regression green; ruff/bandit clean
+  - no routing/threshold/gate change; frozen holdout untouched; clean-wheel
+    install still exercises the providers CLI
+
+dependencies:
+  - agentrouter/refresh.py, agentrouter/registry.py, agentrouter/catalog_ops.py,
+    providers CLI (agentrouter/cli.py)
+
+non_goals:
+  - paid inference or live-benchmark ability scores (needs budget/credentials)
+  - auto-deleting deprecated models (report only; user decides)
+  - changing the manual-wins semantics, STALE_AFTER_DAYS, or the 0.90 gate
+  - a provenance/rollback UI beyond the existing CLI
+
+external_blockers:
+  - live-catalog verification against real provider APIs needs network + keys;
+    the offline provenance/deprecation-report/atomic-write/rollback/restore/doctor
+    paths do not

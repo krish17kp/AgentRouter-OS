@@ -113,3 +113,11 @@ def test_override_survives_refresh_overwrite(home):
         models, _ = _load(home)
         m = next(m for m in models if m.model_id == "test/stale-model")
         assert m.ability.coding == 10
+
+
+def test_non_utf8_generated_file_fails_loud_not_crash(home):
+    """A corrupt (non-UTF-8) generated catalog must raise RegistryError, not crash."""
+    reg_dir = home / "registry"
+    (reg_dir / "models.openrouter.generated.yaml").write_bytes(b"\xff\xfe\x00bad")
+    with pytest.raises(RegistryError, match="not valid UTF-8"):
+        _load(home)

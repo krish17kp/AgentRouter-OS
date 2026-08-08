@@ -2,7 +2,11 @@ id: TASK-013
 title: Catalog provenance, freshness, deprecation and rollback
 source: Phase 3 selection 2026-07-31 (after TASK-011/012 merged); highest-value local task
 priority: 1
-status: in_progress
+status: done
+merged: PR #4, merge commit c8fe429b10cde180db26d54a03700ee0c7830017, 2026-08-01
+follow_up: >
+  Provenance block + deprecation reconciliation deferred here were picked up by
+  TASK-015 (trusted catalogs), created 2026-08-08.
 risk: medium
 owner: unassigned
 created: 2026-07-31

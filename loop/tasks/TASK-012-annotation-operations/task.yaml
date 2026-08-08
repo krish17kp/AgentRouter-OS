@@ -2,7 +2,8 @@ id: TASK-012
 title: Human annotation operations for context bands
 source: user request 2026-07-31 (post TASK-011 merge)
 priority: 1
-status: in_progress
+status: done
+merged: PR #3, merge commit 0ddf4018b57510a273fcd256e963af9841f12535, 2026-08-01
 risk: low
 owner: unassigned
 created: 2026-07-31

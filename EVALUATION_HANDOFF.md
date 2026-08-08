@@ -1,11 +1,17 @@
 # Evaluation Handoff
 
+_Historical snapshot, pre-TASK-009. Numbers below are SUPERSEDED — current canonical
+context-band figures (accuracy 0.6667, macro-F1 0.6792, grade 98.23/100) are in
+`RELEASE_READINESS.md`, `QUALITY_DASHBOARD.md`, and `EVALUATION_STATUS.md`. The
+gate remains below the unchanged 0.90 threshold and release readiness is still NO._
+
 The evaluation implementation and canonical artifacts are complete. The important
 handoff fact is that measurement succeeded while the product gate did not:
 
-- Grade: 98.32/100.
+- Grade (as of this snapshot): 98.32/100; current 98.23/100.
 - Canonical gates: 6/7 pass.
-- Frozen context holdout: 0.5778 accuracy and 0.5739 macro-F1.
+- Frozen context holdout (as of this snapshot): 0.5778 accuracy and 0.5739 macro-F1;
+  current 0.6667 accuracy / 0.6792 macro-F1 (TASK-009, 2026-07-31).
 - Context threshold: unchanged at 0.90; therefore release readiness is NO.
 - No further classifier tuning was performed after the final holdout run.
 

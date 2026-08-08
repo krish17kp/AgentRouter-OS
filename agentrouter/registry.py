@@ -25,6 +25,8 @@ def _load_yaml(path: Path) -> dict:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
     except yaml.YAMLError as e:
         raise RegistryError(f"Invalid YAML in {path}: {e}") from e
+    except UnicodeDecodeError as e:
+        raise RegistryError(f"{path}: not valid UTF-8: {e}") from e
     if not isinstance(data, dict):
         raise RegistryError(f"{path}: expected a mapping at top level")
     return data
