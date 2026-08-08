@@ -53,9 +53,16 @@ def list_models() -> list[dict]:
 
 
 def list_hosts() -> list[dict]:
-    """Availability for every known host (read-only; never runs a tool)."""
+    """Readiness for every known host (read-only; never runs a tool or reads a secret)."""
     return [
-        {"host": name, "availability": st.availability, "reason": st.reason}
+        {
+            "host": name,
+            "availability": st.availability,
+            "reason": st.reason,
+            # additive (TASK-016): finer state + the concrete fix, if any
+            "state": st.state,
+            "remedy": st.remedy,
+        }
         for name in hosts.known_hosts()
         for st in (hosts.detect_host(name),)
     ]

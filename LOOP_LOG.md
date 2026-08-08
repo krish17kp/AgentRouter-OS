@@ -1,5 +1,61 @@
 # LOOP_LOG
 
+## Iteration 25 — 2026-08-08 — TASK-015 trusted catalogs merged; git guardrail repaired
+
+**Goal:** close TASK-013's deferred catalog scope, then land it — which first required
+repairing a repo guardrail that made landing anything impossible.
+
+**Built (TASK-015):** file-level `provenance` block on every generated catalog
+(provider, source_url, fetched_at UTC, count, tool_version, cli_args) that the registry
+loader ignores; atomic refresh via `tempfile.mkstemp` + `os.replace` with cleanup on
+failure; candidate-deprecation reporting on refresh (report-only, never auto-deletes);
+`rollback` with non-destructive backup rotation plus a new `providers restore`; and a new
+`providers doctor` that parses and schema-validates every generated catalog, exiting 3
+only on real corruption (a merely stale catalog still reports OK).
+
+**Independent security review of the diff — 0 CRITICAL, 3 MEDIUM, 2 LOW.** All
+medium/low fixed, regression-tested, and re-verified against the reviewer's own
+reproductions:
+- *Predictable temp filename + symlink-following writes* (verified exploitable): a
+  pre-planted symlink at the fixed `…tmp<pid>` / `.bak` path redirected a catalog write
+  to an out-of-tree file. Fixed with `mkstemp` for the refresh temp file and an
+  `O_CREAT|O_EXCL` exclusive create for the backup — neither follows a planted symlink.
+- *Crash instead of clean failure*: `doctor`/`status`/`route` raised a raw traceback
+  (exit 1) on a non-mapping YAML root or non-UTF-8 bytes, so CI could not distinguish
+  "catalog is corrupt" from "the tool broke". Fixed with a typed `CatalogError` +
+  `_load_raw`, plus a `registry._load_yaml` `UnicodeDecodeError` catch; all three now
+  fail cleanly with exit 3. (The `route` crash was a pre-existing gap, fixed here since
+  it is the same corruption class `doctor` exists to catch.)
+- *Silent backup loss*: rotation used 1-second granularity and moved over an existing
+  name, so two rollbacks in the same second destroyed history — contradicting the
+  charter's own acceptance criterion. Fixed with a nanosecond key + collision probe;
+  five rapid cycles now keep five distinct backups.
+- LOW: provider-id allowlist for `rollback`/`restore` (defense in depth); control
+  characters stripped from provenance before it is echoed to a terminal.
+
+**Guardrail repair (explicitly owner-authorized this session):**
+`.claude/hooks/pre_tool_guard.py` blocked `git add`/`commit`/`push` unconditionally,
+directly contradicting `command.md` §14 ("You may: … commit verified work; push to the
+current release/task branch") and the `AGENTS.md` git policy — the repo's own history
+(PR #2–#5) could only have been produced by the very operations the hook forbade. Now
+branch-aware: add/commit only on `task/*`; push only from a `task/*` branch for that same
+branch, never forced, never targeting a protected branch. Direct writes to `main` and
+`release/*` stay refused, as do force push, remote-branch deletion, tags, history
+rewriting, `reset --hard`, `git clean`, recursive deletes, deployment, publication,
+`shell=True`, permission bypass and secret printing. 33 hook tests cover the matrix,
+including a bug found while using it — shell redirections (`2>&1`, `> file`) were being
+parsed as push refspecs — with a test proving redirection stripping cannot smuggle a
+protected target.
+
+**Verified:** 629 passed / 3 skipped; 33 hook tests; ruff check + format clean; bandit 0;
+pip-audit no known vulnerabilities; clean-wheel install outside the repo exercising
+`providers status/doctor/rollback/restore` and `route` incl. the corrupt-catalog path.
+
+**Merged:** PR #6 → RC, merge commit `8661629`, task branch deleted local+remote.
+Post-merge RC CI green (CI matrix, Security, Critical Mutation Testing).
+
+**Next:** TASK-016 verified execution-host states + provider diagnostics/onboarding.
+
 ## Iteration 24 — 2026-08-08 — TASK-014: CI release-gate report/enforce split; state docs reconciled
 
 **Goal:** verify and merge PR #5 (TASK-014), reconcile stale project-state docs against real

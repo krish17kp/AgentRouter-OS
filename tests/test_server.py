@@ -66,6 +66,29 @@ def test_hosts(client):
     assert any(h["host"] == "manual" and h["availability"] == "available" for h in hosts)
 
 
+def test_hosts_expose_state_and_remedy(client):
+    """TASK-016: additive readiness detail; `availability` keeps its meaning."""
+    from agentrouter import hosts as hosts_mod
+
+    payload = client.get("/v1/hosts").json()
+    valid_states = {
+        hosts_mod.MISSING,
+        hosts_mod.INSTALLED,
+        hosts_mod.CONFIGURED,
+        hosts_mod.AUTHENTICATED,
+        hosts_mod.AUTHORIZED,
+        hosts_mod.DEGRADED,
+        hosts_mod.STATE_UNKNOWN,
+    }
+    for h in payload:
+        assert h["state"] in valid_states
+        assert "remedy" in h  # may be null when nothing needs fixing
+        # the coarse signal stays derivable from the finer one
+        assert h["availability"] == hosts_mod._availability_for(h["state"])
+    # an offline API response must never claim a verified authorization
+    assert all(h["state"] != hosts_mod.AUTHORIZED for h in payload)
+
+
 def test_classify(client):
     r = client.post("/v1/classify", json={"task": "write a haiku about routers"})
     assert r.status_code == 200

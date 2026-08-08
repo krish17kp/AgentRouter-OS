@@ -285,12 +285,13 @@ def setup(
     for host in hosts.known_hosts():
         st = hosts.detect_host(host)
         mark = "OK " if st.availability == hosts.AVAILABLE else "-- "
-        typer.echo(f"   [{mark}] {host:<16} {st.availability:<12} {st.reason}")
+        typer.echo(f"   [{mark}] {host:<16} {st.state:<14} {st.reason}")
         # 'manual' is always AVAILABLE, so count only real hosts or the warning never fires
         if host != "manual" and st.availability == hosts.AVAILABLE:
             real_available += 1
     if not real_available:
         typer.echo("   Note: no host available yet - install Claude Code/Codex or set an API key.")
+        typer.echo("   Run 'agentrouter hosts doctor' for the exact next step per host.")
 
     typer.echo(f"\n3. Preference: {preference}")
     _write_preference(preference)
@@ -961,9 +962,12 @@ def _execute_via_host(rec: dict, er: dict, prompt: str, *, yes: bool, dry_run: b
         raise typer.Exit(0)
     # never execute when availability is not confirmed (program Phase 7)
     if status.availability != hosts.AVAILABLE:
-        typer.echo(f"Not enabled: host '{tgt.host}' is {status.availability}.", err=True)
+        typer.echo(f"Not enabled: host '{tgt.host}' is {status.state} ({status.reason}).", err=True)
         typer.echo(
-            "Next: install/authenticate the host, or run the generated prompt yourself.", err=True
+            f"Next: {status.remedy}"
+            if status.remedy
+            else "Next: install/authenticate the host, or run the generated prompt yourself.",
+            err=True,
         )
         raise typer.Exit(EXIT_USAGE)
     if not yes:
@@ -1000,30 +1004,48 @@ def hosts_list():
         if host not in seen:
             seen[host] = hosts.detect_host(host)
     for host, st in seen.items():
-        typer.echo(f"{host:<16} {st.availability:<12} {st.reason}")
+        typer.echo(f"{host:<16} {st.state:<14} {st.reason}")
 
 
 @hosts_app.command("doctor")
 def hosts_doctor():
-    """Diagnose host availability; exit non-zero if no host is available."""
-    any_available = False
+    """Diagnose every execution host; exit non-zero if none is available."""
+    ready: list[str] = []
+    fixable: list[tuple[str, hosts.HostStatus]] = []
     for host in hosts.known_hosts():
         st = hosts.detect_host(host)
-        mark = "OK " if st.availability == hosts.AVAILABLE else "-- "
-        typer.echo(f"[{mark}] {host:<16} {st.availability:<12} {st.reason}")
-        any_available = any_available or st.availability == hosts.AVAILABLE
-    if not any_available:
-        typer.echo(
-            "\nNo execution host is available. Install Claude Code or Codex, or set an API key."
-        )
-        raise typer.Exit(EXIT_RUNTIME)
+        mark = "OK  " if st.availability == hosts.AVAILABLE else "--  "
+        typer.echo(f"[{mark}] {host:<16} {st.state:<14} {st.reason}")
+        if st.remedy:
+            typer.echo(f"{'':22} -> {st.remedy}")
+        # 'manual' is always available, so it must not mask a real host being ready
+        if st.availability == hosts.AVAILABLE and host != "manual":
+            ready.append(host)
+        elif st.remedy:
+            fixable.append((host, st))
+
+    if ready:
+        typer.echo(f"\nReady to execute: {', '.join(ready)}.")
+        typer.echo('Next: agentrouter route "your task here"')
+        return
+
+    typer.echo("\nNo execution host is ready — routing still works, execution does not.")
+    if fixable:
+        # cheapest real fix first (correct a blank key < export one < install a tool),
+        # not simply whichever host happens to be listed first
+        host, st = min(fixable, key=lambda pair: hosts.fix_cost(pair[1]))
+        typer.echo(f"Easiest fix ({host}): {st.remedy}")
+    typer.echo("Then re-check with: agentrouter hosts doctor")
+    raise typer.Exit(EXIT_RUNTIME)
 
 
 @hosts_app.command("show")
 def hosts_show(host: str = typer.Argument(..., help="Host id, e.g. claude-code.")):
-    """Show a single host's availability and which models target it."""
+    """Show a single host's readiness and which models target it."""
     st = hosts.detect_host(host)
-    typer.echo(f"{host}: {st.availability} ({st.reason})")
+    typer.echo(f"{host}: {st.state} ({st.availability}) - {st.reason}")
+    if st.remedy:
+        typer.echo(f"Next: {st.remedy}")
     _, models = _load_registries()
     targeting = [m.key for m in models for t in m.execution_targets if t.host == host]
     typer.echo(f"Models using this host: {', '.join(targeting) or 'none'}")

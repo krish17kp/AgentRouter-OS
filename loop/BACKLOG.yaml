@@ -25,21 +25,22 @@ done:
   - {id: TASK-005, title: MCP server exposing safe read/route/explain tools (was L2)}
   - {id: TASK-006, title: TypeScript SDK, contract-parity with Python SDK (was L3)}
   - {id: TASK-007, title: SBOM + release provenance upgrade (was L7)}
+  - {id: TASK-015, title: "trusted catalogs — provenance, atomic refresh, deprecation reporting, rollback/restore, providers doctor (PR #6, merge commit 8661629)"}
 
 # ---- Unblocked local work (candidates for this loop) ----
 local_open:
-  - id: TASK-015
-    title: Trusted catalogs — provenance block, deprecation reconciliation, atomic refresh, rollback hardening, provider doctor/status
+  - id: TASK-016
+    title: Verified execution-host states + provider diagnostics and onboarding
     priority: 9
-    surfaces: [catalog_ops, refresh, registry, cli]
-    risk: medium
+    surfaces: [hosts, cli, docs]
+    risk: low
     reason: >
-      Extends TASK-013's deferred scope. Generated catalogs need a structured
-      provenance block (source_url, fetched_at, count, tool_version), deprecation
-      reconciliation reported on refresh, an atomic (write-temp-then-rename) refresh
-      so a crash mid-write cannot corrupt a generated catalog, rollback hardening,
-      and provider doctor/status surfaced in the CLI. See
-      loop/tasks/TASK-015-trusted-catalogs/.
+      command.md section 10 (line 526) requires host reporting to distinguish
+      installed / configured / authenticated / authorized / degraded, but
+      hosts.py still reports only available / unavailable / unknown, so a
+      first-run user cannot tell "CLI missing" from "CLI present but not logged
+      in" and has no single actionable path to a working route. Offline and
+      credential-free: detection only, never a live auth call. Supersedes L8.
   - id: L4
     title: Classifier context-band tuning + safety-gate hardening to 0.90
     priority: 5
@@ -51,11 +52,6 @@ local_open:
       significantly better). The only honest path to 0.90 is TASK-011/012's
       human-labelled dataset + new private holdout; the external two-annotator
       round is the live blocker (TASK_012_OWNER_ACTIONS.md).
-  - id: L8
-    title: Verified execution-host states, provider diagnostics + 5-min onboarding
-    priority: 6
-    surfaces: [hosts, cli, docs]
-    risk: low
   - id: L9
     title: Observability runbooks + API/SDK compatibility and load testing
     priority: 5

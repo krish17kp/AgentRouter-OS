@@ -370,19 +370,25 @@ def test_detect_host_manual_is_always_available():
     assert s.reason == "manual execution is always available"
 
 
-def test_detect_host_cli_available_and_unavailable(monkeypatch):
+def test_detect_host_cli_available_and_unavailable(monkeypatch, tmp_path):
     # kills detect_host 12/13/14 (cmd resolution), 15/19 (or/and), 21-26 (args),
     # 27/29 (unavailable branch host/reason).
+    # Hermetic home: no host config/credentials, so the state is deterministic
+    # here and on every CI runner (TASK-016).
+    monkeypatch.setattr(hosts_mod, "_home_dir", lambda: tmp_path)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.setattr(hosts_mod.shutil, "which", lambda c: f"/usr/bin/{c}")
     s = detect_host("codex-cli")
     assert s.host == "codex-cli"
     assert s.availability == AVAILABLE
-    assert s.reason == "'codex' found on PATH"  # cmd resolved via _CLI_HOSTS
+    assert s.state == hosts_mod.INSTALLED  # on PATH, nothing configured yet
+    assert s.reason == "'codex' found on PATH; not configured yet"  # cmd via _CLI_HOSTS
     # Not on PATH -> UNAVAILABLE (mutant 19 `cmd or which` wrongly reports AVAILABLE).
     monkeypatch.setattr(hosts_mod.shutil, "which", lambda c: None)
     s2 = detect_host("codex-cli")
     assert s2.host == "codex-cli"
     assert s2.availability == UNAVAILABLE
+    assert s2.state == hosts_mod.MISSING
     assert s2.reason == "'codex' not found on PATH"
 
 
@@ -500,8 +506,13 @@ def test_execution_route_block_missing_model_returns_none():
     assert execution_route_block(None, {}) is None
 
 
-def test_execution_route_block_payload_keys_and_values(monkeypatch):
+def test_execution_route_block_payload_keys_and_values(monkeypatch, tmp_path):
     # kills execution_route_block 28/29,34/35,41/42,45/46,47-52 (dict key/value text).
+    # Hermetic: no host config/credentials and no stray key, so the state is the
+    # same here and on a clean CI runner (a set-but-blank OPENAI_API_KEY would
+    # otherwise make codex-cli `degraded` and flip `availability`).
+    monkeypatch.setattr(hosts_mod, "_home_dir", lambda: tmp_path)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.setattr(hosts_mod.shutil, "which", lambda c: f"/usr/bin/{c}")
     t = _target(
         host="codex-cli",
@@ -525,8 +536,14 @@ def test_execution_route_block_payload_keys_and_values(monkeypatch):
     assert block["max_output_tokens"] == m.max_output_tokens
     assert block["required_env"] == ["FOO"]
     assert block["availability"] == AVAILABLE
-    # all_hosts entries use lowercase host/availability keys (mutants 49-52).
-    assert block["all_hosts"] == [{"host": "codex-cli", "availability": AVAILABLE}]
+    # all_hosts entries use lowercase host/availability/state keys (mutants 49-52).
+    # Pinned to literals — a self-referential expectation would assert nothing.
+    assert block["all_hosts"] == [
+        {"host": "codex-cli", "availability": AVAILABLE, "state": hosts_mod.INSTALLED}
+    ]
+    # additive TASK-016 detail; `availability` above keeps its original meaning.
+    assert block["host_state"] == hosts_mod.INSTALLED
+    assert block["host_remedy"]  # on PATH but unauthenticated -> actionable next step
 
 
 # --------------------------------------------------------------------------- #
@@ -627,8 +644,10 @@ def test_execute_via_host_refuses_unavailable(monkeypatch, capfd):
     code = _call_via_host(monkeypatch, m, yes=True, dry_run=False)
     assert code == 2  # never executes an unavailable host
     err = capfd.readouterr().err
-    assert "Not enabled: host 'codex-cli' is unavailable." in err
-    assert "Next: install/authenticate the host, or run the generated prompt yourself." in err
+    # TASK-016: the refusal now names the precise state and a concrete remedy.
+    assert "Not enabled: host 'codex-cli' is missing" in err
+    assert "'codex' not found on PATH" in err
+    assert "Next: install the Codex CLI, then authenticate it" in err
     assert "XX" not in err  # mutant 62 wraps the string in XX...XX
 
 
@@ -1211,3 +1230,328 @@ def test_execute_legacy_opt_in_requires_all_three(monkeypatch, tmp_path, capfd):
         monkeypatch, tmp_path, payload, providers=providers, models=[model], yes=True
     )
     assert code == 6  # legacy_opt_in is False -> host dispatch runs (mutant 76 -> "not enabled")
+
+
+# --------------------------------------------------------------------------- #
+# agentrouter.hosts — TASK-016 readiness states (safety_policy_execution group)
+# --------------------------------------------------------------------------- #
+#
+# `availability` gates `execute`, so every branch, state constant and message in
+# host detection is security-relevant. These pin exact values so a mutated
+# string, flipped comparison or altered return is observable. All are hermetic:
+# `_home_dir` is redirected and `shutil.which` stubbed, so nothing depends on
+# what is installed on the machine running the suite.
+
+
+@pytest.fixture()
+def hostenv(monkeypatch, tmp_path):
+    for env in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY", "OPENROUTER_API_KEY"):
+        monkeypatch.delenv(env, raising=False)
+    monkeypatch.setattr(hosts_mod, "_home_dir", lambda: tmp_path)
+    monkeypatch.setattr(hosts_mod.shutil, "which", lambda c: None)
+    return tmp_path
+
+
+def _found(monkeypatch):
+    monkeypatch.setattr(hosts_mod.shutil, "which", lambda c: f"/usr/bin/{c}")
+
+
+# --- _safe_exists / _safe_is_dir: return values and the OSError guard --------
+
+
+def test_safe_exists_true_false_and_oserror(hostenv, monkeypatch):
+    f = hostenv / "present"
+    f.write_text("x", encoding="utf-8")
+    assert hosts_mod._safe_exists(f) is True
+    assert hosts_mod._safe_exists(hostenv / "absent") is False
+
+    def boom(*_a, **_k):
+        raise PermissionError(13, "denied")
+
+    monkeypatch.setattr(hosts_mod.Path, "exists", boom)
+    assert hosts_mod._safe_exists(f) is False  # swallowed, never True
+
+
+def test_safe_is_dir_true_false_and_oserror(hostenv, monkeypatch):
+    d = hostenv / "adir"
+    d.mkdir()
+    assert hosts_mod._safe_is_dir(d) is True
+    assert hosts_mod._safe_is_dir(hostenv / "nodir") is False
+
+    def boom(*_a, **_k):
+        raise OSError(36, "name too long")
+
+    monkeypatch.setattr(hosts_mod.Path, "is_dir", boom)
+    assert hosts_mod._safe_is_dir(d) is False
+
+
+# --- _sanitize: replacement character and the length cap ---------------------
+
+
+def test_sanitize_replaces_control_chars_exactly():
+    assert hosts_mod._sanitize("ok") == "ok"
+    assert hosts_mod._sanitize("a\x1b[2Kb") == "a?[2Kb"  # ESC -> '?', rest kept
+    assert hosts_mod._sanitize("a\rb\nc\td") == "a?b?c?d"
+
+
+def test_sanitize_truncates_at_120_chars():
+    assert len(hosts_mod._sanitize("x" * 500)) == 120
+    assert hosts_mod._sanitize("y" * 120) == "y" * 120
+
+
+# --- _env_is_set / _env_is_blank: exact truth table -------------------------
+
+
+def test_env_is_set_and_blank_truth_table(hostenv, monkeypatch):
+    monkeypatch.delenv("SOME_KEY", raising=False)
+    assert hosts_mod._env_is_set("SOME_KEY") is False
+    assert hosts_mod._env_is_blank("SOME_KEY") is False  # unset is NOT blank
+    monkeypatch.setenv("SOME_KEY", "")
+    assert hosts_mod._env_is_set("SOME_KEY") is False
+    assert hosts_mod._env_is_blank("SOME_KEY") is True
+    monkeypatch.setenv("SOME_KEY", "   ")
+    assert hosts_mod._env_is_set("SOME_KEY") is False
+    assert hosts_mod._env_is_blank("SOME_KEY") is True
+    monkeypatch.setenv("SOME_KEY", "v")
+    assert hosts_mod._env_is_set("SOME_KEY") is True
+    assert hosts_mod._env_is_blank("SOME_KEY") is False
+
+
+# --- fix_cost: exact ordering values ----------------------------------------
+
+
+def test_fix_cost_exact_values():
+    mk = lambda host, state: hosts_mod.HostStatus(host, UNAVAILABLE, "", state, "r")  # noqa: E731
+    assert hosts_mod.fix_cost(mk("openrouter", hosts_mod.DEGRADED)) == 0
+    assert hosts_mod.fix_cost(mk("openai-api", hosts_mod.MISSING)) == 1  # env host
+    assert hosts_mod.fix_cost(mk("claude-code", hosts_mod.MISSING)) == 2  # binary host
+    assert hosts_mod.fix_cost(mk("claude-code", hosts_mod.INSTALLED)) == 3
+
+
+# --- _availability_for: the gate mapping ------------------------------------
+
+
+def test_availability_for_exact_mapping():
+    assert hosts_mod._availability_for(hosts_mod.INSTALLED) == AVAILABLE
+    assert hosts_mod._availability_for(hosts_mod.CONFIGURED) == AVAILABLE
+    assert hosts_mod._availability_for(hosts_mod.AUTHENTICATED) == AVAILABLE
+    assert hosts_mod._availability_for(hosts_mod.AUTHORIZED) == AVAILABLE
+    assert hosts_mod._availability_for(hosts_mod.MISSING) == UNAVAILABLE
+    assert hosts_mod._availability_for(hosts_mod.DEGRADED) == UNAVAILABLE
+    assert hosts_mod._availability_for(hosts_mod.STATE_UNKNOWN) == UNKNOWN
+    assert hosts_mod._availability_for("nonsense") == UNKNOWN  # fails closed
+
+
+# --- _detect_cli_host: every branch, exact reason + remedy ------------------
+
+
+def test_cli_host_missing_exact_strings(hostenv):
+    s = detect_host("claude-code")
+    assert s.host == "claude-code"  # host argument preserved (host -> None mutant)
+    assert (s.state, s.availability) == (hosts_mod.MISSING, UNAVAILABLE)
+    assert s.reason == "'claude' not found on PATH"
+    assert s.remedy == "install Claude Code, then run: claude login"
+
+
+def test_cli_host_missing_unknown_host_uses_generic_hint(hostenv):
+    s = detect_host("custom-cli", required_command="zzcli")
+    assert s.host == "custom-cli"
+    assert s.state == hosts_mod.MISSING
+    assert s.reason == "'zzcli' not found on PATH"
+    assert s.remedy == "install 'zzcli' and make sure it is on PATH"
+
+
+def test_cli_host_no_meta_is_installed_with_no_remedy(hostenv, monkeypatch):
+    _found(monkeypatch)
+    s = detect_host("custom-cli", required_command="zzcli")
+    assert s.host == "custom-cli"
+    assert (s.state, s.availability) == (hosts_mod.INSTALLED, AVAILABLE)
+    assert s.reason == "'zzcli' found on PATH"
+    assert s.remedy is None
+
+
+def test_cli_host_credentials_file_exact_strings(hostenv, monkeypatch):
+    _found(monkeypatch)
+    (hostenv / ".claude").mkdir()
+    (hostenv / ".claude" / ".credentials.json").write_text("{}", encoding="utf-8")
+    s = detect_host("claude-code")
+    assert s.host == "claude-code"
+    assert (s.state, s.availability) == (hosts_mod.AUTHENTICATED, AVAILABLE)
+    assert s.reason == "'claude' on PATH; credentials found in ~/.claude"
+    assert s.remedy is None
+
+
+def test_cli_host_env_fallback_exact_strings(hostenv, monkeypatch):
+    _found(monkeypatch)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "k")
+    s = detect_host("claude-code")
+    assert s.host == "claude-code"
+    assert (s.state, s.availability) == (hosts_mod.AUTHENTICATED, AVAILABLE)
+    assert s.reason == "'claude' on PATH; ANTHROPIC_API_KEY is set"
+
+
+def test_cli_host_configured_exact_strings(hostenv, monkeypatch):
+    _found(monkeypatch)
+    (hostenv / ".claude").mkdir()
+    s = detect_host("claude-code")
+    assert s.host == "claude-code"
+    assert (s.state, s.availability) == (hosts_mod.CONFIGURED, AVAILABLE)
+    assert s.reason == "'claude' on PATH; ~/.claude exists but no credentials found"
+    assert s.remedy == "run: claude login"
+
+
+def test_cli_host_blank_fallback_exact_strings(hostenv, monkeypatch):
+    _found(monkeypatch)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+    s = detect_host("claude-code")
+    assert s.host == "claude-code"
+    assert (s.state, s.availability) == (hosts_mod.DEGRADED, UNAVAILABLE)
+    assert s.reason == "'claude' on PATH but ANTHROPIC_API_KEY is set to an empty value"
+    assert s.remedy == "unset ANTHROPIC_API_KEY, or set it to a real key"
+
+
+def test_cli_host_installed_exact_strings(hostenv, monkeypatch):
+    _found(monkeypatch)
+    s = detect_host("claude-code")
+    assert s.host == "claude-code"
+    assert (s.state, s.availability) == (hosts_mod.INSTALLED, AVAILABLE)
+    assert s.reason == "'claude' found on PATH; not configured yet"
+    assert s.remedy == "run: claude login"
+
+
+def test_cli_host_evidence_precedence(hostenv, monkeypatch):
+    """Credential file > real env key > config dir > blank env."""
+    _found(monkeypatch)
+    (hostenv / ".claude").mkdir()
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")  # blank must not win over config dir
+    assert detect_host("claude-code").state == hosts_mod.CONFIGURED
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "k")  # a real key outranks the config dir
+    assert detect_host("claude-code").reason.endswith("ANTHROPIC_API_KEY is set")
+    (hostenv / ".claude" / ".credentials.json").write_text("{}", encoding="utf-8")
+    assert detect_host("claude-code").reason.endswith("credentials found in ~/.claude")
+
+
+# --- _detect_api_host: every branch, exact strings --------------------------
+
+
+def test_api_host_exact_strings(hostenv, monkeypatch):
+    s = detect_host("openai-api")
+    assert (s.state, s.availability) == (hosts_mod.MISSING, UNAVAILABLE)
+    assert s.reason == "OPENAI_API_KEY is not set"
+    assert s.remedy == "export OPENAI_API_KEY=<your key>"
+
+    monkeypatch.setenv("OPENAI_API_KEY", "  ")
+    s2 = detect_host("openai-api")
+    assert s2.host == "openai-api"  # host preserved in the degraded branch
+    assert (s2.state, s2.availability) == (hosts_mod.DEGRADED, UNAVAILABLE)
+    assert s2.reason == "OPENAI_API_KEY is set but empty"
+    assert s2.remedy == "set OPENAI_API_KEY to a real key, or unset it to use another host"
+
+    monkeypatch.setenv("OPENAI_API_KEY", "k")
+    s3 = detect_host("openai-api")
+    assert (s3.state, s3.availability) == (hosts_mod.AUTHENTICATED, AVAILABLE)
+    assert s3.reason == "OPENAI_API_KEY is set"
+    assert s3.remedy is None
+
+
+# --- detect_host dispatch ----------------------------------------------------
+
+
+def test_detect_host_manual_exact(hostenv):
+    s = detect_host("manual")
+    assert (s.state, s.availability) == (hosts_mod.CONFIGURED, AVAILABLE)
+    assert s.reason == "manual execution is always available"
+    assert s.remedy is None
+
+
+def test_detect_host_unrecognized_exact(hostenv):
+    s = detect_host("nope")
+    assert (s.state, s.availability) == (hosts_mod.STATE_UNKNOWN, UNKNOWN)
+    assert s.reason == "unrecognized host; cannot verify availability"
+    assert s.remedy == "check the host id in your registry, or run: agentrouter hosts list"
+
+
+def test_detect_host_required_command_wins_over_meta(hostenv, monkeypatch):
+    """An explicit required_command overrides the built-in command for the host."""
+    seen = []
+    monkeypatch.setattr(hosts_mod.shutil, "which", lambda c: seen.append(c) or None)
+    detect_host("claude-code", required_command="othercli")
+    assert seen == ["othercli"]
+
+
+def test_detect_host_api_host_ignores_required_command(hostenv, monkeypatch):
+    """An API host is env-detected even if a required_command is supplied."""
+    monkeypatch.setenv("OPENAI_API_KEY", "k")
+    s = detect_host("openai-api", required_command="zzcli")
+    assert s.state == hosts_mod.AUTHENTICATED
+    assert s.reason == "OPENAI_API_KEY is set"
+
+
+def test_detect_host_no_command_declared_is_unknown(hostenv, monkeypatch):
+    monkeypatch.setitem(
+        hosts_mod._CLI_HOSTS, "brokenhost", hosts_mod.CliHost(command="", config_dir=".broken")
+    )
+    s = detect_host("brokenhost")
+    assert s.host == "brokenhost"
+    assert (s.state, s.availability) == (hosts_mod.STATE_UNKNOWN, UNKNOWN)
+    assert s.reason == "no command declared; cannot verify"
+
+
+def test_cli_host_generic_auth_hint_for_a_host_without_a_hint_entry(hostenv, monkeypatch):
+    """A CLI host absent from _AUTH_HINT must still get a usable remedy.
+
+    Kills the `_AUTH_HINT.get(host, <default>)` default-removal mutants: with
+    claude-code/codex-cli the table always hits, so the fallback is only
+    observable for a host that has metadata but no curated hint.
+    """
+    _found(monkeypatch)
+    monkeypatch.setitem(
+        hosts_mod._CLI_HOSTS,
+        "customhost",
+        hosts_mod.CliHost(command="ccli", config_dir=".ccli", env_fallback=("CCLI_KEY",)),
+    )
+    monkeypatch.delenv("CCLI_KEY", raising=False)
+
+    # installed branch: no config dir at all
+    s = detect_host("customhost")
+    assert s.host == "customhost"
+    assert s.state == hosts_mod.INSTALLED
+    assert s.remedy == "authenticate 'ccli'"  # generic default, not None
+
+    # configured branch: config dir exists, still no credentials
+    (hostenv / ".ccli").mkdir()
+    s2 = detect_host("customhost")
+    assert s2.host == "customhost"
+    assert s2.state == hosts_mod.CONFIGURED
+    assert s2.remedy == "authenticate 'ccli'"
+
+
+def test_execute_via_host_refusal_without_a_remedy_uses_the_generic_next_line(monkeypatch, capfd):
+    """When a status carries no remedy, execute must still print the generic Next line.
+
+    Kills the fallback-message mutants (62-64): every other refusal path supplies
+    a remedy, so the `else` branch is otherwise never exercised.
+    """
+    m = _host_model(
+        execution_targets=[
+            ExecutionTarget(
+                host="codex-cli", host_model_id="x", command_template=["codex", "{prompt}"]
+            )
+        ]
+    )
+    monkeypatch.setattr(
+        hosts_mod,
+        "detect_host",
+        lambda host, required_command=None: hosts_mod.HostStatus(
+            host, UNKNOWN, "cannot verify", hosts_mod.STATE_UNKNOWN, None
+        ),
+    )
+    code = _call_via_host(monkeypatch, m, yes=True, dry_run=False)
+    assert code == 2  # never executes when availability is not confirmed
+    err = capfd.readouterr().err
+    # exact line, not a substring: an "XX...XX"-wrapped mutant still *contains*
+    # the original text, so `in` would let it survive.
+    assert (
+        "Next: install/authenticate the host, or run the generated prompt yourself."
+        in err.splitlines()
+    )
