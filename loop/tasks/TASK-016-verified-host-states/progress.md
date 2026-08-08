@@ -3,8 +3,29 @@
 Branch: `task/TASK-016-verified-host-states` (from `release/agentrouter-v0.5-rc1`
 @ `8661629`, i.e. after TASK-015 merged).
 
-Status: **implemented, tested, documented, security-reviewed and repaired;
-clean-wheel verified.**
+Status: **DONE — MERGED to the RC via PR #7** (merge commit `5847c22`), task
+branch deleted local + remote. Post-merge RC CI green: CI, Critical Mutation
+Testing and Security all success.
+
+## Mutation gate: failed, then repaired honestly
+
+The first CI run failed `critical-modules`: the new detection code added mutants
+the suite did not kill, dropping `safety_policy_execution` to **0.8895** (target
+0.95) with **72 unreviewed survivors**. Repaired with real tests, not allowlist
+entries or a lowered threshold — 30 exact-value tests over every branch, state
+constant, reason, remedy and helper return in the new code, plus `.host`
+assertions (their absence is exactly what let the `host -> None` mutants live),
+the generic `_AUTH_HINT` fallback via an injected CLI host with no curated hint,
+and the execute-refusal path that carries no remedy.
+
+One assertion was itself the bug: a substring check let the `"XX...XX"`-wrapped
+message mutant survive, because the wrapped text still contains the original.
+Now matched as an exact line.
+
+Verified by reproducing the campaign locally (mutmut 3.6.0, same runner and
+flags as CI, 1057 mutants) before pushing: **overall 0.9858,
+safety_policy_execution 0.9877, routing_engine 0.9815, 0 unreviewed survivors,
+all five gates PASS** — then confirmed green on CI.
 
 ## Delivered
 
