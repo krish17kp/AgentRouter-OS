@@ -20,6 +20,17 @@ All notable changes to AgentRouter OS. Format loosely follows
   comparison, canonical CI enforcement, and held-out failure artifacts.
 - **Bounded Linux mutation workflow** using pinned mutmut 3.6.0, critical-module score gates,
   explicit tool-failure reporting, survivor review, timeouts, and uploaded evidence.
+- **Trusted catalogs** (`agentrouter providers status/rollback/restore/doctor`): every
+  `providers refresh` catalog now carries a structured `provenance` block (source URL, UTC
+  fetch time, count, tool version, CLI args) and is written atomically; `status` reports
+  age/freshness and provenance offline; `rollback` safely reverts a generated catalog with
+  rotating backups, `restore` reverses a rollback, and `doctor` validates every generated
+  catalog and exits non-zero only on real corruption. Refreshing a provider with an existing
+  generated catalog reports candidate deprecations (report-only, never auto-deleted).
+- **CI release-gate semantics:** the release-readiness check is now split into a non-enforcing
+  `release-readiness-report` (every push/PR, always green, reports the honest YES/NO) and
+  `enforce-release-gate` (RC-to-main PRs, release tags, or explicit dispatch only, full
+  enforcement, no lowered thresholds).
 
 ### Changed
 - **Python support clarified:** the minimum supported Python remains **3.10**

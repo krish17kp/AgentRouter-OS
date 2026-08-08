@@ -1,32 +1,48 @@
 # Codex Handoff - AgentRouter OS
 
-Last updated: 2026-07-31 (iter 21 — TASK-011 MERGED to RC; mutation gate closed; TASK-012 next)
+Last updated: 2026-08-08 (iter 24 — TASK-014 MERGED to RC; CI release-gate split; TASK-015 next)
 
-## Current state (iter 21)
+## Current state (iter 24)
 
 - **Branch topology (authoritative):**
   - `main` — stable, untouched (still `602321a`). Never merge into it without explicit owner approval.
-  - `release/agentrouter-v0.5-rc1` — integration branch @ `35e616e`. **NOT RELEASE READY**
-    (context_band held-out 0.6667 < 0.90). Mutation gate **PASSES**.
-  - `task/TASK-011-context-band-data` — **MERGED to RC (PR #2, merge commit `35e616e`) and
-    DELETED** local + remote; all four commits preserved.
+  - `release/agentrouter-v0.5-rc1` — integration branch @ `b62ffd7`. **NOT RELEASE READY**
+    (context_band held-out 0.6667 < 0.90, unchanged). Mutation gate **PASSES**. CI is **green** on
+    ordinary pushes/PRs (see below).
+  - `task/TASK-011-context-band-data`, `task/TASK-012-annotation-operations`,
+    `task/TASK-013-catalog-provenance`, `task/TASK-014-ci-release-semantics` — **all MERGED to RC
+    (PR #2/#3/#4/#5) and DELETED** local + remote; all commits preserved via merge commits.
   - `mutation-kill-safety` — **DELETED** (local + remote); PR #1 closed as fully superseded by
     `tests/test_mutation_kills.py`.
 - **TASK-011 on the RC:** `agentrouter/annotation/` program — schema, deterministic unlabelled
   candidate generation (63 prompts, all ten categories, zero frozen-holdout leaks), dedup/near-dup
   + cross-set leakage, two-annotator adjudication, leakage-safe train/dev/holdout splits, versioned
   manifests, rules/learned/hybrid comparison, optional Graphify impact (text-only fallback), and the
-  `agentrouter dataset ...` CLI. Docs in `docs/CONTEXT_BAND_ANNOTATION.md`. 26 tests; full suite
-  583+ pass; clean-wheel verified. Generated labels are candidates only; final human labels pending.
+  `agentrouter dataset ...` CLI. Docs in `docs/CONTEXT_BAND_ANNOTATION.md`.
+- **TASK-012 on the RC:** blinded per-annotator packs, resumable annotate flow, disagreements-only
+  adjudication pack, JSONL+CSV export. The real two-annotator + adjudicator round is still external
+  (`TASK_012_OWNER_ACTIONS.md`) — the only path to closing the honest release-gate.
+- **TASK-013 on the RC:** `agentrouter/catalog_ops.py` (freshness/staleness vs
+  `registry.STALE_AFTER_DAYS`, safe rollback with `.bak` backup) + `providers status` /
+  `providers rollback` CLI. Structured provenance block + deprecation reconciliation were
+  deferred — now TASK-015.
+- **TASK-014 on the RC:** split the always-on enforcing `release-gate` into
+  `release-readiness-report` (push/PR/dispatch, non-enforcing, honest YES/NO) and
+  `enforce-release-gate` (RC->main PR / release tag / explicit dispatch only, full enforcement).
+  Ordinary CI is green; promotion stays strictly gated.
 - **Mutation (TASK-010b CLOSED):** mutmut 3.6.0, 923 mutants — overall **0.9837**;
   `safety_policy_execution` **0.985** (>=0.95); `routing_engine` **0.9815** (>=0.85); no safety/
   auth/policy/execution-bypass survivor. `cli.execute()` gate logic extracted into undecorated
   `_execute()` for mutmut reach. Local iteration via Docker container `armut`.
-- **CI on `35e616e`:** Critical Mutation Testing, Security, test matrix 3.10-3.13, test-windows,
-  build-smoke all GREEN; only `release-gate` RED (honest context-band gate).
-- **Next:** TASK-012 human annotation operations (blinded packs for two real annotators +
-  adjudication) plus parallel local engineering. Do NOT reuse/tune the frozen holdout; the 0.90
-  gate is unchanged; RC stays NOT RELEASE READY; no RC->main without owner approval.
+- **CI on `b62ffd7`:** test matrix 3.10-3.13, test-windows, build-smoke, Security, and
+  `release-readiness-report` all GREEN; `enforce-release-gate`/`live-smoke` correctly SKIP (not run)
+  on task/RC pushes by design.
+- **Local env blocker resolved (2026-08-08):** full pytest now runs cleanly on this machine (595
+  passed, 3 skipped, ~18s); ruff and bandit clean. No longer CI-only for regression evidence.
+- **Next:** TASK-015 trusted catalogs (provenance block, deprecation reconciliation, atomic
+  refresh, rollback hardening, provider doctor/status) plus parallel local engineering. Do NOT
+  reuse/tune the frozen holdout; the 0.90 gate is unchanged; RC stays NOT RELEASE READY; no
+  RC->main without owner approval.
 
 ---
 

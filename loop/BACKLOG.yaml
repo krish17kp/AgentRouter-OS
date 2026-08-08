@@ -14,65 +14,52 @@ done:
   - {id: P9,  title: non-interactive idempotent setup wizard}
   - {id: P10a,title: URL-scheme hardening + bandit/pip-audit/secret-scan CI}
   - {id: P12, title: examples/README + README quickstart (verified commands)}
+  - {id: TASK-011, title: "context-band data + annotation program (PR #2, merge commit 35e616e)"}
+  - {id: TASK-012, title: "human annotation operations tooling (PR #3, merge commit 0ddf401); human labeling round itself remains external"}
+  - {id: TASK-010b, title: "critical-module mutation hardening (0.9837 overall; safety 0.985; engine 0.9815)"}
+  - {id: TASK-013, title: "catalog freshness status + rollback (PR #4, merge commit c8fe429); provenance block + deprecation reconciliation deferred to TASK-015"}
+  - {id: TASK-014, title: "CI release-gate report/enforce split (PR #5, merge commit b62ffd7)"}
+  - {id: TASK-001, title: structured logging + OpenTelemetry (was L1)}
+  - {id: TASK-002, title: rate limiting + idempotency keys (was L6)}
+  - {id: TASK-003, title: property-based + mutation testing stack (was L5)}
+  - {id: TASK-005, title: MCP server exposing safe read/route/explain tools (was L2)}
+  - {id: TASK-006, title: TypeScript SDK, contract-parity with Python SDK (was L3)}
+  - {id: TASK-007, title: SBOM + release provenance upgrade (was L7)}
 
 # ---- Unblocked local work (candidates for this loop) ----
 local_open:
-  - id: TASK-011
-    title: Context-band data + annotation program (larger human-reviewed dev set + new private holdout)
+  - id: TASK-015
+    title: Trusted catalogs — provenance block, deprecation reconciliation, atomic refresh, rollback hardening, provider doctor/status
     priority: 9
-    surfaces: [classifier, evaluation, data]
+    surfaces: [catalog_ops, refresh, registry, cli]
     risk: medium
     reason: >
-      Only failing release gate. TASK-009 proved the 24-case dev set is a ceiling
-      (rules 0.6667 / learned 0.6889 / hybrid 0.6444 all fail 0.90). Needs data, not
-      rules. See loop/tasks/TASK-011-context-band-data-annotation/. Do NOT reuse or
-      tune against the frozen holdout.
-  - id: TASK-010b
-    title: Critical-module mutation hardening to gates (safety 0.95 / engine 0.85)
-    priority: 7
-    surfaces: [tests, safety, controls, hosts, engine, cli, server.limits]
-    risk: medium
-    reason: >
-      First real Linux mutmut score (2026-07-31): overall 0.6054, safety_policy_execution
-      0.5701 (target 0.95), routing_engine 0.6512 (target 0.85); 294 unreviewed survivors.
-      Needs many new mutation-killing tests, verifiable only via ~40-min Linux CI cycles
-      (mutmut cannot run on the Win/py3.13 dev box). Owner-scoped: multi-session effort.
-  - id: L1
-    title: Structured logging + OpenTelemetry (P13 obs)
-    priority: 8
-    surfaces: [server, engine, cli]
-    risk: low
-    reason: no external creds needed; improves trust/ops readiness
-  - id: L2
-    title: MCP server exposing safe read/route/explain tools + /route* commands
-    priority: 7
-    surfaces: [server, plugins, integrations]
-    risk: medium
-  - id: L3
-    title: TypeScript SDK (contract-parity with Python SDK)
-    priority: 6
-    surfaces: [sdk]
-    risk: medium
+      Extends TASK-013's deferred scope. Generated catalogs need a structured
+      provenance block (source_url, fetched_at, count, tool_version), deprecation
+      reconciliation reported on refresh, an atomic (write-temp-then-rename) refresh
+      so a crash mid-write cannot corrupt a generated catalog, rollback hardening,
+      and provider doctor/status surfaced in the CLI. See
+      loop/tasks/TASK-015-trusted-catalogs/.
   - id: L4
     title: Classifier context-band tuning + safety-gate hardening to 0.90
     priority: 5
     surfaces: [classifier, taxonomy]
     risk: medium
-    note: natural ceiling on one-line-prompt band inference; avoid overfitting
-  - id: L5
-    title: Testing-stack extras (mutmut mutation, Hypothesis property tests)
+    note: >
+      SUPERSEDED as a rules/tuning task — TASK-009 proved a hand-rules ceiling
+      (rules 0.6667 / learned 0.6889 / hybrid 0.6444, none reach 0.90, learned not
+      significantly better). The only honest path to 0.90 is TASK-011/012's
+      human-labelled dataset + new private holdout; the external two-annotator
+      round is the live blocker (TASK_012_OWNER_ACTIONS.md).
+  - id: L8
+    title: Verified execution-host states, provider diagnostics + 5-min onboarding
     priority: 6
-    surfaces: [tests]
+    surfaces: [hosts, cli, docs]
     risk: low
-  - id: L6
-    title: Rate limiting + idempotency keys on server (local, in-memory)
+  - id: L9
+    title: Observability runbooks + API/SDK compatibility and load testing
     priority: 5
-    surfaces: [server]
-    risk: low
-  - id: L7
-    title: SBOM + release provenance (cyclonedx), upgrade/migration guide
-    priority: 4
-    surfaces: [packaging, docs]
+    surfaces: [server, sdk, docs]
     risk: low
 
 # ---- External-blocked (need creds / paid inference / infra / owner) ----

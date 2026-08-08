@@ -127,6 +127,34 @@ Fetches OpenRouter's live model catalog and writes it to
 - Entries whose `last_updated` ages past 90 days trigger a load-time warning.
 - Other providers (`claude-code`, `cursor`, …) are not refreshable; the
   command says so and exits with code 2.
+- Every generated file carries a `provenance` block (source URL, UTC fetch
+  time, count, tool version, the CLI args used) — an extra top-level key the
+  registry loader ignores. If a provider already has a generated catalog,
+  refreshing it reports any model ids that were there before but are missing
+  from the new fetch as **candidate deprecations** — reported only, never
+  auto-deleted.
+
+### Trusting and reverting a refreshed catalog
+
+```console
+$ agentrouter providers status                 # freshness + provenance, offline
+$ agentrouter providers doctor                 # validates every generated catalog;
+                                                # exits non-zero only on real corruption
+$ agentrouter providers rollback openrouter    # back up + remove the generated file
+$ agentrouter providers restore openrouter     # undo the most recent rollback
+```
+
+- `status` shows each generated catalog's age, fresh/stale (90-day window), and
+  where it came from (when the provenance block is present).
+- `doctor` re-parses and schema-validates every generated file; a catalog that
+  is merely stale still reports `[OK]` — only a genuinely corrupt or invalid
+  file fails it (exit code 3) and suggests `rollback`.
+- `rollback` reverts to the manual registry by removing the generated file,
+  after backing it up (`.bak`); rolling back twice in a row rotates the older
+  backup aside instead of overwriting it, so backup history isn't lost.
+- `restore` reverses the most recent `rollback`. It refuses to overwrite a
+  generated file that was re-refreshed since the rollback — remove or roll
+  that one back first.
 
 ### Live smoke test (needs internet; pytest never does)
 

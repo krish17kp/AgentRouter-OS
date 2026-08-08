@@ -2,7 +2,8 @@ id: TASK-014
 title: Split CI release-gate into non-enforcing report + promotion-only enforcement
 source: owner directive 2026-08-01 (final RC-to-main loop, section 2)
 priority: 1
-status: in_progress
+status: done
+merged: PR #5, merge commit b62ffd7a08d69fefb70e117379de39a734e4c237, 2026-08-08
 risk: low
 owner: unassigned
 created: 2026-08-01

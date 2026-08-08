@@ -28,9 +28,10 @@ from .refresh import (
     GENERATED_SUFFIX,
     SUPPORTED_PROVIDERS,
     RefreshError,
+    previous_model_ids,
     write_generated_registry,
 )
-from .registry import RegistryError, load_all_models, load_providers
+from .registry import RegistryError, load_all_models, load_models, load_providers
 from .safety import gates_for
 from .schema import Classification, Level, PricingTier
 
@@ -739,10 +740,22 @@ def providers_refresh(
     typer.echo(f"Fetched {len(entries)} models from {provider}:")
     for e in entries:
         typer.echo(f"  {e.key:<52} ctx {e.context_window:>9}  {e.pricing_tier.value}")
+
+    deprecated = sorted(previous_model_ids(reg_dir, provider) - {e.model_id for e in entries})
+    if deprecated:
+        typer.echo(
+            f"\n{len(deprecated)} candidate deprecation(s) — in the previous generated "
+            "catalog but not in this fetch (reported only; nothing is deleted):"
+        )
+        for model_id in deprecated:
+            typer.echo(f"  {model_id}")
+
     if dry_run:
         typer.echo("\nDry run - nothing written.")
         return
-    path = write_generated_registry(reg_dir, provider, entries)
+    path = write_generated_registry(
+        reg_dir, provider, entries, cli_args={"limit": limit, "match": match}
+    )
     typer.echo(f"\nWrote {path}")
     typer.echo(
         "Manual models.yaml is untouched and wins on collision. "
@@ -759,7 +772,12 @@ def providers_status():
         typer.echo(f"Registry directory not found: {reg_dir}", err=True)
         typer.echo("Next: run agentrouter init first.", err=True)
         raise typer.Exit(EXIT_REGISTRY)
-    statuses = catalog_ops.list_generated(reg_dir)
+    try:
+        statuses = catalog_ops.list_generated(reg_dir)
+    except catalog_ops.CatalogError as e:
+        typer.echo(f"Cannot read catalog status: {e}", err=True)
+        typer.echo("Next: agentrouter providers doctor  (isolates which catalog is bad)", err=True)
+        raise typer.Exit(EXIT_REGISTRY) from e
     if not statuses:
         typer.echo("No refreshed catalogs. Manual models.yaml is authoritative.")
         typer.echo("Next: agentrouter providers refresh openrouter")
@@ -776,7 +794,11 @@ def providers_rollback(
 ):
     """Revert a provider's refreshed catalog (back up + remove the generated file)."""
     reg_dir = _home() / "registry"
-    backup = catalog_ops.rollback(reg_dir, provider)
+    try:
+        backup = catalog_ops.rollback(reg_dir, provider)
+    except ValueError as e:
+        typer.echo(f"Cannot roll back: {e}", err=True)
+        raise typer.Exit(EXIT_USAGE) from e
     if backup is None:
         missing = reg_dir / f"models.{provider}.generated.yaml"
         typer.echo(f"No generated catalog for '{provider}' to roll back.", err=True)
@@ -784,7 +806,65 @@ def providers_rollback(
         raise typer.Exit(EXIT_USAGE)
     typer.echo(f"Rolled back '{provider}'; backed up to {backup.name}.")
     typer.echo("Manual models.yaml is now authoritative. Re-refresh to restore, or")
-    typer.echo(f"restore the backup: move {backup.name} back to {backup.with_suffix('').name}.")
+    typer.echo(f"Next: agentrouter providers restore {provider}")
+
+
+@providers_app.command("restore")
+def providers_restore(
+    provider: str = typer.Argument(..., help="Provider whose last rollback to reverse."),
+):
+    """Reverse the most recent rollback (moves the .bak generated file back)."""
+    reg_dir = _home() / "registry"
+    try:
+        restored = catalog_ops.restore(reg_dir, provider)
+    except (FileExistsError, ValueError) as e:
+        typer.echo(f"Cannot restore '{provider}': {e}", err=True)
+        raise typer.Exit(EXIT_USAGE) from e
+    if restored is None:
+        typer.echo(f"No rollback backup for '{provider}' to restore.", err=True)
+        typer.echo(
+            f"Why: {reg_dir / f'models.{provider}.generated.yaml.bak'} does not exist.", err=True
+        )
+        raise typer.Exit(EXIT_USAGE)
+    typer.echo(f"Restored {restored}.")
+    typer.echo("Next: agentrouter providers status")
+
+
+@providers_app.command("doctor")
+def providers_doctor():
+    """Validate every refreshed catalog; exit non-zero if one is corrupt or invalid."""
+    reg_dir = _home() / "registry"
+    if not reg_dir.is_dir():
+        typer.echo(f"Registry directory not found: {reg_dir}", err=True)
+        typer.echo("Next: run agentrouter init first.", err=True)
+        raise typer.Exit(EXIT_REGISTRY)
+    gen_paths = sorted(reg_dir.glob(catalog_ops.GENERATED_GLOB))
+    if not gen_paths:
+        typer.echo("No refreshed catalogs to check. Manual models.yaml is authoritative.")
+        return
+    try:
+        providers = load_providers(reg_dir / "providers.yaml")
+    except RegistryError as e:
+        typer.echo(f"Cannot validate: {e}", err=True)
+        raise typer.Exit(EXIT_REGISTRY) from e
+
+    broken = 0
+    for path in gen_paths:
+        provider = path.name[len("models.") : -len(".generated.yaml")]
+        try:
+            st = catalog_ops.read_status(path)
+            load_models(path, providers)
+        except (RegistryError, catalog_ops.CatalogError, yaml.YAMLError, OSError) as e:
+            typer.echo(f"[FAIL ] {provider:<12} {e}")
+            broken += 1
+            continue
+        mark = "STALE" if st.stale else "OK   "
+        typer.echo(f"[{mark}] {st.summary}")
+
+    if broken:
+        typer.echo(f"\n{broken} generated catalog(s) are corrupt or invalid.")
+        typer.echo("Next: agentrouter providers rollback <provider>, then re-refresh.")
+        raise typer.Exit(EXIT_REGISTRY)
 
 
 # --- prompt generate ---------------------------------------------------------------
