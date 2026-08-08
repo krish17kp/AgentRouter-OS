@@ -2,7 +2,8 @@ id: TASK-016
 title: Verified execution-host states plus provider diagnostics and onboarding
 source: Phase 3 selection 2026-08-08 (after TASK-015 merged, PR #6); command.md PHASE C line 526
 priority: 1
-status: in_progress
+status: done
+merged: PR #7, merge commit 5847c2201aa8627ba6b649734e058e1d9d2805bc, 2026-08-08
 risk: low
 owner: unassigned
 created: 2026-08-08

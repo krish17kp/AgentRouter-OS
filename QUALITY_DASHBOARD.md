@@ -1,12 +1,12 @@
 # Quality Dashboard — AgentRouter OS
 
-_Last refreshed: 2026-08-08 (iter25, after TASK-011/012/013/014/015 merged to the
-RC @ `8661629`). Current measurements supersede historical TASK-004 in-sample
+_Last refreshed: 2026-08-08 (iter26, after TASK-011/012/013/014/015/016 merged to
+the RC @ `5847c22`). Current measurements supersede historical TASK-004 in-sample
 readiness claims._
 
 | Dimension | Current state | Evidence |
 |---|---|---|
-| Python tests | Pass | `pytest` 629 passed, 3 env-skips (2026-08-08, local); includes TASK-011/012/013/015 tests; local env watchdog issue that previously killed multi-second runs is resolved |
+| Python tests | Pass | `pytest` 684 passed, 3 env-skips (2026-08-08, local); includes TASK-011/012/013/015/016 tests; local env watchdog issue that previously killed multi-second runs is resolved |
 | TypeScript SDK | Pass (prior session) | `npm test` 8/8 and `npm run typecheck`; unaffected by TASK-015 |
 | Hooks | Pass | `.claude/hooks/test_hooks.py`: **33 passed** (git guardrail allow/block matrix) |
 | Lint | Pass | Ruff check + format clean across the tree (verified 2026-08-08) |
@@ -16,7 +16,7 @@ readiness claims._
 | Mutation | **Pass** | Linux mutmut 3.6.0, 923 mutants: overall 0.9837; safety_policy_execution 0.985; routing_engine 0.9815; no safety/policy/execution-bypass survivor |
 | Security | Pass | Bandit 0 (config-aware, verified locally 2026-08-08) + pip-audit green on RC CI |
 | Packaging | Pass (re-verified 2026-08-08) | Wheel + clean-venv smoke outside the repo: `providers status/doctor/rollback/restore`, `route`, packaged resources |
-| GitHub CI (RC) | Pass; enforce-release-gate correctly gated to promotion only | Matrix 3.10-3.13 + test-windows + build-smoke + Security + release-readiness-report + Critical Mutation Testing green on `8661629`; `enforce-release-gate`/`live-smoke` skip on task/RC pushes by design (TASK-014) |
+| GitHub CI (RC) | Pass; enforce-release-gate correctly gated to promotion only | Matrix 3.10-3.13 + test-windows + build-smoke + Security + release-readiness-report + Critical Mutation Testing green on `5847c22`; `enforce-release-gate`/`live-smoke` skip on task/RC pushes by design (TASK-014) |
 | Context-band dataset program | Delivered | TASK-011/012 merged (annotation CLI, adjudication, leakage-safe splits, comparison); final human labels are the external TASK-012 step |
 | Catalog trust + reversibility | Delivered | TASK-013 + TASK-015 merged: provenance block, atomic refresh, deprecation reporting, rollback/restore, `providers doctor` |
 | CI release-gate semantics | Delivered | TASK-014 merged: report/enforce split |

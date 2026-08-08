@@ -8,14 +8,14 @@
 ## Branch topology
 
 - `main` — stable, untouched. No merge without explicit owner approval.
-- `release/agentrouter-v0.5-rc1` — integration branch @ `8661629` (TASK-011 PR #2,
-  TASK-012 PR #3, TASK-013 PR #4, TASK-014 PR #5, TASK-015 PR #6 all merged). NOT
-  RELEASE READY; mutation gate passes, only the honest context-band gate fails (by
+- `release/agentrouter-v0.5-rc1` — integration branch @ `5847c22` (TASK-011 PR #2,
+  TASK-012 PR #3, TASK-013 PR #4, TASK-014 PR #5, TASK-015 PR #6, TASK-016 PR #7 all
+  merged). NOT RELEASE READY; mutation gate passes, only the honest context-band gate fails (by
   design, and no longer blocks ordinary CI — see CI status below).
 - `task/TASK-011-context-band-data`, `task/TASK-012-annotation-operations`,
   `task/TASK-013-catalog-provenance`, `task/TASK-014-ci-release-semantics`,
-  `task/TASK-015-trusted-catalogs` — **all merged to RC and deleted**
-  (local + remote).
+  `task/TASK-015-trusted-catalogs`, `task/TASK-016-verified-host-states` —
+  **all merged to RC and deleted** (local + remote).
 - `mutation-kill-safety` — deleted (local + remote); PR #1 closed as fully superseded by
   `tests/test_mutation_kills.py`.
 
@@ -62,7 +62,7 @@ run. The gate is unchanged and remains honestly failed.
 
 ## Verified locally (2026-08-08, this session, reproduced)
 
-- Python suite: **629 passed, 3 env-only skips**. Prior env watchdog issue that
+- Python suite: **684 passed, 3 env-only skips**. Prior env watchdog issue that
   killed multi-second local pytest runs is **resolved** — full suite runs in ~35s.
 - Hook suite: **33 passed** (`.claude/hooks/test_hooks.py`).
 - ruff check + ruff format --check clean; bandit 0 (under `-c pyproject.toml`);
@@ -72,7 +72,7 @@ run. The gate is unchanged and remains honestly failed.
   corrupt-catalog path (exit 3).
 - Local evaluation grade 98.23/100; 6/7 gates PASS; context-band gate FAIL (unchanged).
 
-## CI status (release/agentrouter-v0.5-rc1 @ 8661629)
+## CI status (release/agentrouter-v0.5-rc1 @ 5847c22)
 
 - **Green:** CI test matrix (3.10–3.13), test-windows, build-smoke, Security scan,
   `release-readiness-report` (non-enforcing; correctly prints Release-ready NO with

@@ -25,22 +25,11 @@ done:
   - {id: TASK-005, title: MCP server exposing safe read/route/explain tools (was L2)}
   - {id: TASK-006, title: TypeScript SDK, contract-parity with Python SDK (was L3)}
   - {id: TASK-007, title: SBOM + release provenance upgrade (was L7)}
+  - {id: TASK-016, title: "verified execution-host states + provider diagnostics (PR #7, merge commit 5847c22)"}
   - {id: TASK-015, title: "trusted catalogs — provenance, atomic refresh, deprecation reporting, rollback/restore, providers doctor (PR #6, merge commit 8661629)"}
 
 # ---- Unblocked local work (candidates for this loop) ----
 local_open:
-  - id: TASK-016
-    title: Verified execution-host states + provider diagnostics and onboarding
-    priority: 9
-    surfaces: [hosts, cli, docs]
-    risk: low
-    reason: >
-      command.md section 10 (line 526) requires host reporting to distinguish
-      installed / configured / authenticated / authorized / degraded, but
-      hosts.py still reports only available / unavailable / unknown, so a
-      first-run user cannot tell "CLI missing" from "CLI present but not logged
-      in" and has no single actionable path to a working route. Offline and
-      credential-free: detection only, never a live auth call. Supersedes L8.
   - id: L4
     title: Classifier context-band tuning + safety-gate hardening to 0.90
     priority: 5

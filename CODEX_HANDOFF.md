@@ -1,12 +1,12 @@
 # Codex Handoff - AgentRouter OS
 
-Last updated: 2026-08-08 (iter 25 — TASK-015 MERGED to RC; git guardrail repaired; TASK-016 next)
+Last updated: 2026-08-08 (iter 26 — TASK-016 MERGED to RC; mutation gate repaired)
 
-## Current state (iter 25)
+## Current state (iter 26)
 
 - **Branch topology (authoritative):**
   - `main` — stable, untouched (still `602321a`). Never merge into it without explicit owner approval.
-  - `release/agentrouter-v0.5-rc1` — integration branch @ `8661629`. **NOT RELEASE READY**
+  - `release/agentrouter-v0.5-rc1` — integration branch @ `5847c22`. **NOT RELEASE READY**
     (context_band held-out 0.6667 < 0.90, unchanged). Mutation gate **PASSES**. CI is **green** on
     ordinary pushes/PRs (see below).
   - `task/TASK-011-context-band-data`, `task/TASK-012-annotation-operations`,
@@ -42,11 +42,11 @@ Last updated: 2026-08-08 (iter 25 — TASK-015 MERGED to RC; git guardrail repai
   `safety_policy_execution` **0.985** (>=0.95); `routing_engine` **0.9815** (>=0.85); no safety/
   auth/policy/execution-bypass survivor. `cli.execute()` gate logic extracted into undecorated
   `_execute()` for mutmut reach. Local iteration via Docker container `armut`.
-- **CI on `8661629`:** test matrix 3.10-3.13, test-windows, build-smoke, Security,
+- **CI on `5847c22`:** test matrix 3.10-3.13, test-windows, build-smoke, Security,
   `release-readiness-report` and **Critical Mutation Testing** all GREEN;
   `enforce-release-gate`/`live-smoke` correctly SKIP (not run) on task/RC pushes by design.
-- **Local env blocker resolved (2026-08-08):** full pytest now runs cleanly on this machine (629
-  passed, 3 skipped, ~35s); 33 hook tests; ruff, bandit and pip-audit clean. No longer CI-only
+- **Local env blocker resolved (2026-08-08):** full pytest now runs cleanly on this machine (684
+  passed, 3 skipped); 33 hook tests; ruff, bandit and pip-audit clean. No longer CI-only
   for regression evidence.
 - **GIT GUARDRAIL REPAIRED (2026-08-08, owner-authorized):** `.claude/hooks/pre_tool_guard.py`
   had blocked `git add`/`commit`/`push` unconditionally, contradicting command.md §14 and the
@@ -56,10 +56,16 @@ Last updated: 2026-08-08 (iter 25 — TASK-015 MERGED to RC; git guardrail repai
   refused** — record state and land every change through a task branch + PR, not by committing
   on the RC. Force push, remote-branch deletion, tags, history rewriting, `reset --hard`,
   `git clean`, recursive deletes, deployment, publication and secret printing stay blocked.
-- **Next:** TASK-016 verified execution-host states + provider diagnostics/onboarding
-  (installed/configured/authenticated/authorized/degraded rather than
-  available/unavailable/unknown; offline, credential-free detection only), plus the remaining
-  local engineering. Do NOT reuse/tune the frozen holdout; the 0.90 gate is unchanged; RC stays
+- **TASK-016 on the RC:** hosts report installed/configured/authenticated/authorized/degraded
+  with a concrete remedy (offline, credential-free; existence checks only, never a network call
+  or a credential read). `authorized` is never inferred offline — it needs the opt-in live check
+  PHASE C lists separately, which is not implemented. Fixed a real bug: a set-but-blank API key
+  used to report *available*, so `execute` would target a host that cannot authenticate.
+  The critical-module mutation gate failed on the first CI run (safety_policy_execution 0.8895)
+  and was repaired to 0.9877 with real tests — no threshold lowered, no mutant allowlisted.
+- **Next:** remaining local backlog — benchmark routing infrastructure that needs no paid
+  inference, customer docs/examples, observability runbooks, API/SDK compatibility + load
+  testing (loop/BACKLOG.yaml L4/L9). Do NOT reuse/tune the frozen holdout; the 0.90 gate is unchanged; RC stays
   NOT RELEASE READY; no RC->main without owner approval.
 
 ---

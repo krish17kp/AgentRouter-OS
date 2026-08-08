@@ -1,5 +1,59 @@
 # LOOP_LOG
 
+## Iteration 26 — 2026-08-08 — TASK-016 verified host states; mutation gate repaired
+
+**Goal:** close the command.md PHASE C gap — hosts reported only
+available/unavailable/unknown, so a first-run user could not tell "CLI not installed" from
+"installed but not logged in", and `hosts doctor` offered no recovery action.
+
+**Built:** a readiness `state` (missing / installed / configured / authenticated /
+authorized / degraded / unknown) plus a per-host `remedy`. `availability` keeps its exact
+prior meaning and is now *derived* from the state, so routing, `execute` gating and
+`models list --available` are untouched. `hosts list/doctor/show`, the setup wizard and the
+execute refusal all report the state and the fix; `hosts doctor` ends with the cheapest
+concrete fix and exits non-zero only when no real host is ready. REST/MCP gained additive
+`state`/`remedy` and `host_state`/`host_remedy`. New USER_GUIDE section 8.
+
+**Bug fixed:** detection tested the API-key env var for *truthiness*, so a set-but-blank key
+(`OPENAI_API_KEY="   "`) reported **available** and `execute` would target a host that cannot
+possibly authenticate. Now `degraded`/unavailable with a fix-it message.
+
+**Honesty:** `authorized` means a real authorization check succeeded. That check is not
+implemented (PHASE C lists opt-in live checks separately), so no offline path returns it —
+asserted by test. `authenticated` means a credential *exists*, never that it was accepted.
+
+**Security review — 0 critical, 1 HIGH, 1 MEDIUM, 3 LOW, all fixed and regression-tested:**
+- *HIGH:* this task introduced the first filesystem access into `detect_host`, and
+  `Path.exists()`/`is_dir()` propagate `EACCES`/`ENAMETOOLONG` — so a container or NFS `HOME`
+  the user cannot traverse turned `hosts doctor`, `route` **and the REST `/v1/hosts` endpoint**
+  into a raw traceback (unhandled 500). Detection could not raise at all before, so this was a
+  genuine regression I introduced; now degrades to "no evidence".
+- *MEDIUM:* a blank env fallback outranked a working CLI login, so `ANTHROPIC_API_KEY=` plus
+  keychain auth reported `degraded` and refused to execute. Evidence is now positive-first.
+- *LOW:* registry-controlled `required_command` was echoed unsanitized and could emit ANSI
+  escapes to forge an "authenticated" line; a mutation-kill test was non-hermetic (passed only
+  because this machine has `~/.codex/auth.json`); "closest fix" was really "first in list order".
+- Reviewer verified **zero file opens** during detection, no credential in any output field, and
+  an exhaustive **4320-case differential** showing **0 cases more permissive** than before (912
+  strictly stricter — all blank-key cases).
+
+**CI repair (the honest kind):** `critical-modules` failed on the first run —
+`safety_policy_execution` fell to **0.8895** (target 0.95) with **72 unreviewed survivors**,
+because the new code added mutants the suite did not kill. Repaired with **30 exact-value
+mutation-killing tests**, not by lowering a threshold or allowlisting anything. Pinning `.host`
+on each assertion is what killed the `host -> None` family; one assertion was itself the bug (a
+substring check let an `"XX...XX"`-wrapped mutant survive, since the wrapped text still contains
+the original — now an exact line match). Reproduced the campaign locally (mutmut 3.6.0, same
+runner and flags, 1057 mutants) before pushing: **overall 0.9858, safety_policy_execution
+0.9877, routing_engine 0.9815, 0 unreviewed survivors, all five gates PASS.**
+
+**Verified:** 684 passed / 3 skipped; 33 hook tests; ruff + format clean; bandit 0 with no new
+`nosec`; pip-audit clean; clean-wheel install outside the repo exercising `hosts doctor/show`,
+the blank-key path, the unreadable-`HOME` path and `route`.
+
+**Merged:** PR #7 → RC, merge commit `5847c22`, branch deleted local+remote. Post-merge RC CI
+green across CI, Critical Mutation Testing and Security.
+
 ## Iteration 25 — 2026-08-08 — TASK-015 trusted catalogs merged; git guardrail repaired
 
 **Goal:** close TASK-013's deferred catalog scope, then land it — which first required
