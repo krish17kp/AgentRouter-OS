@@ -5,6 +5,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Scanning is read-only work; the token never needs write access here.
+permissions:
+  contents: read
+
 jobs:
   scan:
     runs-on: ubuntu-latest

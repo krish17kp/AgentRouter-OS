@@ -19,6 +19,8 @@ import contextvars
 import json
 import logging
 import os
+import re
+import traceback
 from collections.abc import Iterator
 from typing import Any
 
@@ -116,6 +118,57 @@ def log_route_decision(
         task=task, payload=payload, decision_id=decision_id, request_id=request_id
     )
     logger.info(json.dumps(record, sort_keys=True))
+    return record
+
+
+_SECRET_RE = re.compile(
+    r"(sk-[A-Za-z0-9_\-]{8,}|gh[pousr]_[A-Za-z0-9]{16,}|Bearer\s+\S+|AKIA[0-9A-Z]{16})"
+)
+
+
+def redact(text: str) -> str:
+    """Mask credential-shaped substrings before anything is written to a log."""
+    return _SECRET_RE.sub("[redacted]", text)
+
+
+def log_event(event: str, **fields: Any) -> dict[str, Any]:
+    """Emit one structured event record. Returns the record for testing.
+
+    Pass metadata only — never raw task text, prompts or credential values. The
+    current request id is attached automatically so an operator can correlate an
+    event with the API response the client saw. String values are passed through
+    ``redact`` as a backstop, because the most valuable events (unexpected
+    failures) carry text nobody enumerated in advance.
+    """
+    record: dict[str, Any] = {"event": event, "request_id": get_request_id(), **fields}
+    record = {
+        k: (redact(v) if isinstance(v, str) else v) for k, v in record.items() if v is not None
+    }
+    logger.info(json.dumps(record, sort_keys=True, default=str))
+    return record
+
+
+def log_api_error(event: str, exc: BaseException) -> dict[str, Any]:
+    """Record a server-side failure so it is diagnosable even though the client is told nothing.
+
+    Emitted at ERROR with the traceback. The module is silent by design at INFO,
+    which is right for routine records but wrong here: catching an unhandled API
+    error to return a typed 500 also stops the ASGI server from logging it, so
+    without an ERROR-level record the fault would be invisible to the operator.
+
+    The traceback is rendered and redacted here rather than passed as
+    ``exc_info``: logging would otherwise render the raw exception message, and
+    that message is precisely where a stray credential or path shows up.
+    """
+    record = {
+        "event": event,
+        "request_id": get_request_id(),
+        "error_type": type(exc).__name__,
+        "message": redact(str(exc))[:500],
+    }
+    record = {k: v for k, v in record.items() if v is not None}
+    trace = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    logger.error("%s\n%s", json.dumps(record, sort_keys=True, default=str), redact(trace))
     return record
 
 

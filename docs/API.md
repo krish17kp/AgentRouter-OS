@@ -46,8 +46,26 @@ Non-2xx responses use a structured envelope:
 { "error": { "code": "not_found", "message": "no decision 'd_99999'" } }
 ```
 
-Codes: `unauthorized` (401), `not_found` (404), `validation_error` (422),
-`unavailable` (503), `error` (other).
+| Code | Status | Meaning |
+|------|--------|---------|
+| `unauthorized` | 401 | Missing or wrong `X-API-Key` while `AGENTROUTER_API_KEY` is set |
+| `not_found` | 404 | No such decision, or no such route |
+| `validation_error` | 422 | The request body failed validation; `message` names the field |
+| `rate_limited` | 429 | Opt-in rate limit exceeded; retry after `Retry-After` seconds |
+| `registry_unavailable` | 503 | The local registry is missing or malformed — run `agentrouter doctor` |
+| `unavailable` | 503 | A dependency the request needs is not ready |
+| `internal_error` | 500 | An unexpected server-side fault |
+| `error` | other | Any other HTTP error |
+
+`message` is safe to display but is **not** a stable API: match on `code`.
+
+Two codes deliberately say less than the server knows. `registry_unavailable`
+and `internal_error` both carry a fixed message, because the underlying text
+quotes registry file paths and the offending source line — and a registry is
+only malformed at exactly the moment someone has pasted a credential into it.
+The detail is written to the server log at `ERROR` with the request id, so run
+`agentrouter doctor` locally, or correlate the `X-Request-ID` with the log.
+**No traceback is ever returned to a client.**
 
 ## Endpoints
 
@@ -155,11 +173,54 @@ with AgentRouterClient("http://127.0.0.1:8000", api_key="your-secret") as client
 
 Non-2xx responses raise `AgentRouterError` (with `.status_code` and `.code`).
 
+## Compatibility promise
+
+`GET /openapi.json` describes whatever the running process happens to serve. The
+**contract** is the committed artifact at `contracts/http/v1/openapi.json`, with
+its provenance in `contracts/http/v1/manifest.json`. It is regenerated from the
+real app, canonicalised (recursively sorted, environment-dependent fields
+dropped) so it is byte-stable, and carries no timestamp or commit — those live in
+the manifest, so an unchanged API produces an unchanged file.
+
+```bash
+agentrouter contract check          # live app vs the committed contract
+agentrouter contract check --json   # machine-readable report
+agentrouter contract export         # regenerate after an intentional change
+```
+
+`contract check` exits `0` when compatible, `1` on a breaking change and `3` when
+the baseline is missing — a missing baseline is a failure, never a pass. CI runs
+it on every push, and the enforced release gate depends on it.
+
+Changes are classified into three bands:
+
+| Band | Examples | Effect |
+|------|----------|--------|
+| **breaking** | endpoint/method/field/media-type/parameter removed, optional field becomes required, type change, enum narrowed, a request constraint tightened, authentication changed, `servers` relocated | Fails CI |
+| **risky** | enum expanded, `default`/`format` changed, `operationId` renamed, an operation deprecated, response-side constraint changes, description changes | Reported, does not fail |
+| **additive** | new endpoint, new optional field, newly documented response status, a request constraint relaxed | Reported, does not fail |
+
+A deliberate breaking change is not silently absorbed: `contract export` refuses
+to overwrite the baseline while a breaking change is present, and recording one
+requires `--accept-breaking --reason "<owner-reviewed justification>"`. That
+appends to `accepted_breaking_changes` in the manifest — an append-only history
+that a later routine export cannot erase, and that cannot record a break the
+checker did not actually detect.
+
+### SDK parity
+
+`contracts/sdk/capabilities.json` is the versioned record of which operations
+each SDK supports. Both suites drive a real in-process AgentRouter app: every
+operation listed as supported is *exercised*, so an entry cannot claim coverage
+the SDK does not have.
+
 ## Limitations
 
-- **Rate limiting** is documented as a requirement but not enforced in-process;
-  put the app behind a reverse proxy if you need it. The API is intended for
-  localhost use.
+- **Rate limiting** is enforced in-process but opt-in and single-process: set
+  `AGENTROUTER_RATE_LIMIT` (requests per `AGENTROUTER_RATE_WINDOW`, default 60s)
+  to enable it. The counters live in one process's memory, so behind multiple
+  workers each gets its own budget — put the app behind a reverse proxy if you
+  need a shared limit. The API is intended for localhost use.
 - **Feedback** is stored in the existing SQLite `feedback` table via a direct
   insert (no new storage layer added); it is validated against an existing
   decision first.

@@ -41,11 +41,40 @@ local_open:
       significantly better). The only honest path to 0.90 is TASK-011/012's
       human-labelled dataset + new private holdout; the external two-annotator
       round is the live blocker (TASK_012_OWNER_ACTIONS.md).
+  - id: TASK-018A
+    title: Versioned HTTP API contract, semantic compatibility gate and SDK parity
+    priority: 1
+    surfaces: [server, sdk, ci, docs]
+    risk: medium
+    status: in_progress
+    note: >
+      EPIC TASK-018 part 1 of 3. Implemented and fully verified on
+      task/TASK-018A-api-contract-sdk-compatibility; draft PR to the RC pending.
+      Supersedes the API/SDK-compatibility half of L9.
+  - id: TASK-018B
+    title: Reliability, load, concurrency, soak and failure-injection lab
+    priority: 2
+    surfaces: [server, ci]
+    risk: medium
+    note: >
+      EPIC TASK-018 part 2 of 3. Repo-native and deterministic; CI correctness
+      gates, race/state checks, baselines and reports. Starts only after 018A
+      merges — one implementation branch at a time.
+  - id: TASK-018C
+    title: Unified doctor, safe diagnostic bundle, observability correctness and runbooks
+    priority: 3
+    surfaces: [cli, server, docs]
+    risk: low
+    note: >
+      EPIC TASK-018 part 3 of 3. Supersedes the observability-runbooks half of L9.
   - id: L9
     title: Observability runbooks + API/SDK compatibility and load testing
     priority: 5
     surfaces: [server, sdk, docs]
     risk: low
+    note: >
+      SUPERSEDED by EPIC TASK-018 (018A contract/SDK compatibility, 018B load and
+      reliability, 018C observability and runbooks). Kept for traceability.
 
 # ---- External-blocked (need creds / paid inference / infra / owner) ----
 blocked_external:

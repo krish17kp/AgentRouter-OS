@@ -1,5 +1,80 @@
 # LOOP_LOG
 
+## Iteration 27 — 2026-08-09 — TASK-018A versioned API contract + SDK compatibility
+
+**Goal:** the REST API is a product surface with two published SDKs, and nothing stopped a
+refactor from renaming a response field, tightening a request constraint or dropping
+authentication on an endpoint. `GET /openapi.json` describes whatever the process happens to
+serve, so the API could not detect its own regression.
+
+**Built:** a committed, byte-stable contract at `contracts/http/v1/openapi.json` with its
+provenance in a sibling `manifest.json` (so an unchanged API produces an unchanged file), a
+semantic checker that classifies every change as breaking / risky / additive, and
+`agentrouter contract export|check` — exit `0` compatible, `1` breaking, `3` missing or
+untrustworthy baseline. A missing baseline is a failure, never a pass. `export` refuses to
+overwrite the baseline while a breaking change is present; accepting one needs
+`--accept-breaking --reason` and appends to a history a later export cannot erase. New CI
+job `api-compatibility`; `enforce-release-gate` now depends on it.
+
+**The gate was guarding nothing, twice.** Four of nine operations were declared `-> dict`,
+so the contract said only "an object" for their responses — a renamed field on `/v1/route`
+produced *no diff at all*. And auth was a bare `X-API-Key` header, indistinguishable in the
+export from any other optional header, so adding or removing authentication on an endpoint
+was invisible. Both are fixed: typed response envelopes with `extra="allow"` (so nothing is
+stripped from the wire — verified against live payloads), and a declared `APIKeyHeader`
+security scheme.
+
+**Two HIGH security findings on the existing server, both real:**
+- `@app.exception_handler(Exception)` was registered on Starlette's *outermost* middleware,
+  above the request-id middleware, so it never ran. An unhandled fault was answered by
+  `ServerErrorMiddleware` with no error envelope and no `X-Request-ID`. Now converted inside
+  `request_id_middleware` — and logged at ERROR with a redacted traceback, because catching
+  it there also stops the ASGI server from logging it, which would have traded a leaky 500
+  for a silent one.
+- The `RegistryError` handler returned `str(exc)`, which interpolates the registry path *and
+  the offending YAML source line*. A registry is malformed at exactly the moment somebody has
+  pasted a credential into it, so this returned that credential to an unauthenticated caller
+  on `/v1/models` and `/ready`. Both now answer `registry_unavailable` with a fixed message;
+  the detail goes to the log only.
+
+**A gate you can edit is not a gate.** An unresolvable, self-referential or remote `$ref`
+inlined as `{}`, so a one-character edit to the committed baseline made a schema look
+permissive and turned CI green — the baseline is now refused outright if it contains one.
+`$ref` expansion is bounded (a fan-out document would otherwise OOM), export refuses to
+follow a symlink or write outside the repo root, and the acceptance history records only the
+changes the checker itself found, so it cannot assert a break that never happened.
+
+**My own test found the next bug.** A 26-level fan-out document took 66 seconds to validate
+because `validate_refs` re-walked every path — 2**26 steps on a contract small enough to read
+by eye. The check meant to protect CI would have hung it. Memoising validated refs (the DFS
+stack still catches cycles) took the contract suite from 66s to 3.5s.
+
+**And one classification bug.** Adding `maxLength` where there was none was reported as
+merely "risky", because the comparison treated an absent bound as unknown. An absent bound is
+the *unbounded end of the range*, so introducing one rejects every longer request that used
+to be valid. It is now the strongest tightening: **breaking**.
+
+**SDK parity is evidence, not a claim.** `contracts/sdk/capabilities.json` lists nine
+operations, and every one is exercised against the real app — Python via in-process uvicorn,
+TypeScript via `scripts/serve_for_parity.py` over loopback. The TS suite previously only
+asserted the requests it *built*, which cannot catch a well-formed request the server
+rejects. CI sets `AGENTROUTER_REQUIRE_LIVE=1` so a skipped live suite fails rather than
+passing quietly.
+
+**Verification:** 775 passed / 3 skipped; branch coverage 85.32% (gate 80%), `contract.py`
+92%; 33 hook tests; ruff check + format clean; bandit 0 with no new `nosec`; pip-audit clean
+on both the env and `requirements.txt`; the CI secret scan mirrored locally with 0 findings
+outside `tests/`; `pytest -m security` green; wheel + sdist built; **`contract export` from a
+clean wheel install in an unrelated directory is byte-identical to the committed contract**;
+a core-only install (no `[server]` extra) gives guidance and exit 1 rather than a traceback;
+npm typecheck clean and 18/18 TS tests with the live app, 0 skipped. Critical-module mutation
+gate re-run locally: **PASS** — overall 0.9858, safety_policy_execution 0.9877, routing_engine
+0.9815, 0 unreviewed survivors, no threshold lowered and no new allowlist entry.
+
+**Unchanged and still honest:** `context_band_accuracy` is 0.6667 against the unchanged 0.90
+frozen-holdout gate. The RC remains NOT RELEASE READY. Nothing was tagged, published or
+deployed; `main` is untouched.
+
 ## Iteration 26 — 2026-08-08 — TASK-016 verified host states; mutation gate repaired
 
 **Goal:** close the command.md PHASE C gap — hosts reported only

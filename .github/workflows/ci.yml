@@ -10,6 +10,12 @@ on:
         type: boolean
         default: false
 
+# No job in this workflow writes to the repository, posts a comment or reads a
+# secret — only checkout and artifact upload use the token. Pin it read-only so
+# a compromised action in the dependency chain cannot push or open a PR.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -122,6 +128,54 @@ jobs:
           /tmp/wheelenv/bin/agentrouter stats
           /tmp/wheelenv/bin/agentrouter registry list
 
+  api-compatibility:
+    # The HTTP API is a product contract. This job regenerates it from the real
+    # app and fails on any UNDOCUMENTED breaking change, so an incompatible API
+    # edit cannot reach the RC without an owner-reviewed decision recorded in the
+    # contract manifest. Apart from installing dependencies, nothing here reaches
+    # the network: the API under test is an in-process ASGI app, so there is no
+    # deployed environment, no credential and no paid inference call.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,server]"
+      - name: Check the live API against the committed contract
+        run: |
+          mkdir -p artifacts/contract
+          python -m agentrouter contract check --out artifacts/contract/compatibility.json
+      - name: Python SDK + contract tests
+        run: python -m pytest -q tests/test_contract.py tests/test_sdk_parity.py tests/test_sdk.py
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: TypeScript SDK contract tests
+        working-directory: sdk/typescript
+        # AGENTROUTER_REQUIRE_LIVE=1 makes the live-app suite fail rather than
+        # skip if the Python server cannot start — a skipped parity check must
+        # never read as a pass.
+        env:
+          AGENTROUTER_REQUIRE_LIVE: "1"
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+      - name: Upload compatibility report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-compatibility-report
+          path: artifacts/contract/
+          if-no-files-found: warn
+          retention-days: 14
+
   release-readiness-report:
     # NON-ENFORCING product-readiness report. Runs on every push/PR/dispatch and
     # SUCCEEDS whenever the software executes correctly — even when Release-ready is
@@ -183,6 +237,10 @@ jobs:
     # It enforces context_band_accuracy >= 0.90 AND every other release gate,
     # fails when any gate fails, never uses continue-on-error, never lowers a
     # threshold, and treats a missing/failed evaluation as failure.
+    #
+    # Depends on api-compatibility: promoting an RC that breaks the published
+    # HTTP contract is a release failure, not a separate concern.
+    needs: [api-compatibility]
     if: >-
       (github.event_name == 'pull_request' && github.base_ref == 'main') ||
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) ||

@@ -15,9 +15,10 @@ import hmac
 import os
 import uuid
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response, Security
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.security import APIKeyHeader
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from agentrouter import observability
@@ -26,7 +27,10 @@ from agentrouter.registry import RegistryError
 from . import limits, service
 from .schemas import (
     ClassifyRequest,
+    ClassifyResponse,
+    DecisionResponse,
     DryRunRequest,
+    DryRunResponse,
     ErrorResponse,
     FeedbackRequest,
     FeedbackResponse,
@@ -34,6 +38,7 @@ from .schemas import (
     HostStatusResponse,
     ModelSummary,
     RouteRequest,
+    RouteResponse,
 )
 
 API_KEY_ENV = "AGENTROUTER_API_KEY"
@@ -51,7 +56,13 @@ def _api_key_ok(provided: str | None, expected: str | None) -> bool:
     return provided is not None and hmac.compare_digest(provided, expected)
 
 
-def require_api_key(x_api_key: str | None = Header(default=None)) -> None:
+# Declared as a security scheme (not a bare Header) so the exported OpenAPI
+# records authentication explicitly — otherwise adding or removing auth on an
+# endpoint is invisible to the compatibility checker.
+api_key_scheme = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+def require_api_key(x_api_key: str | None = Security(api_key_scheme)) -> None:
     """Local-mode auth: open unless AGENTROUTER_API_KEY is set, then key must match."""
     if not _api_key_ok(x_api_key, os.environ.get(API_KEY_ENV)):
         raise HTTPException(status_code=401, detail="invalid or missing API key")
@@ -142,6 +153,16 @@ def create_app() -> FastAPI:
         observability.set_request_id(rid)
         try:
             response = await call_next(request)
+        except Exception as exc:
+            # Starlette registers Exception handlers on its OUTERMOST middleware,
+            # above this one — so a failure handled there would answer without an
+            # X-Request-ID and the client could not correlate it. Convert here,
+            # where the id is still in scope. The exception text is never returned
+            # (it can carry paths or user data); it is logged at ERROR *with* the
+            # traceback, because catching here also stops the ASGI server from
+            # logging it — without this the fault would be silent server-side.
+            observability.log_api_error("api.unhandled_error", exc)
+            response = _error(500, "internal_error", "internal server error")
         finally:
             observability.set_request_id(None)  # avoid a stale id bleeding across contexts
         response.headers[REQUEST_ID_HEADER] = rid
@@ -163,6 +184,24 @@ def create_app() -> FastAPI:
         message = f"{loc}: {first.get('msg')}" if loc else str(first.get("msg"))
         return _error(422, "validation_error", message)
 
+    @app.exception_handler(RegistryError)
+    async def registry_exc_handler(_request: Request, exc: RegistryError):
+        """A bad registry is the user's data, not a server bug — but its text is unsafe.
+
+        Registry errors interpolate the file path and the underlying YAML/pydantic
+        error, which quotes the offending source line. A registry only fails this
+        way when it is malformed, which is exactly when someone has pasted a
+        credential into it — so echoing the message would return that secret to
+        the caller. The detail goes to the server log; the client gets a fixed,
+        actionable message.
+        """
+        observability.log_api_error("api.registry_error", exc)
+        return _error(
+            503,
+            "registry_unavailable",
+            "registry unavailable or invalid; run 'agentrouter doctor' locally for details",
+        )
+
     protected = [Depends(require_api_key)]
 
     @app.get("/health", response_model=HealthResponse, tags=["meta"])
@@ -171,10 +210,9 @@ def create_app() -> FastAPI:
 
     @app.get("/ready", response_model=HealthResponse, tags=["meta"])
     def ready() -> dict:
-        try:
-            service.load_registry()
-        except RegistryError as e:
-            raise HTTPException(status_code=503, detail=f"registry not ready: {e}") from e
+        # Let the RegistryError handler answer, so readiness and the /v1 routes
+        # report the same code for the same condition (and leak the same nothing).
+        service.load_registry()
         return {"status": "ready"}
 
     @app.get("/v1/models", response_model=list[ModelSummary], dependencies=protected, tags=["v1"])
@@ -187,7 +225,7 @@ def create_app() -> FastAPI:
     def hosts_() -> list[dict]:
         return service.list_hosts()
 
-    @app.post("/v1/classify", dependencies=protected, tags=["v1"])
+    @app.post("/v1/classify", response_model=ClassifyResponse, dependencies=protected, tags=["v1"])
     def classify_(body: ClassifyRequest) -> dict:
         return service.classify_task(
             body.task,
@@ -196,7 +234,7 @@ def create_app() -> FastAPI:
             tools=body.tools,
         )
 
-    @app.post("/v1/route", dependencies=protected, tags=["v1"])
+    @app.post("/v1/route", response_model=RouteResponse, dependencies=protected, tags=["v1"])
     def route_(body: RouteRequest) -> dict:
         return service.route_task(
             body.task,
@@ -207,7 +245,12 @@ def create_app() -> FastAPI:
             no_log=body.no_log,
         )
 
-    @app.get("/v1/decisions/{decision_id}", dependencies=protected, tags=["v1"])
+    @app.get(
+        "/v1/decisions/{decision_id}",
+        response_model=DecisionResponse,
+        dependencies=protected,
+        tags=["v1"],
+    )
     def decision_(decision_id: str) -> dict:
         payload = service.get_decision(decision_id)
         if payload is None:
@@ -221,7 +264,9 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=404, detail=f"no decision '{body.decision_id}'")
         return {"decision_id": body.decision_id, "recorded": True}
 
-    @app.post("/v1/execute/dry-run", dependencies=protected, tags=["v1"])
+    @app.post(
+        "/v1/execute/dry-run", response_model=DryRunResponse, dependencies=protected, tags=["v1"]
+    )
     def dry_run_(body: DryRunRequest) -> dict:
         plan = service.execute_dry_run(body.decision_id)
         if plan is None:

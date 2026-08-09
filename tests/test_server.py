@@ -45,7 +45,12 @@ def test_ready_503_without_registry(tmp_path, monkeypatch):
     monkeypatch.delenv("AGENTROUTER_API_KEY", raising=False)
     r = TestClient(create_app()).get("/ready")
     assert r.status_code == 503
-    assert r.json()["error"]["code"] == "unavailable"
+    # Readiness and the /v1 routes must report the same code for the same
+    # condition — /ready used to answer a vaguer "unavailable".
+    assert r.json()["error"]["code"] == "registry_unavailable"
+    # The registry path is local filesystem detail; it belongs in the log, not
+    # in a response any unauthenticated caller can read.
+    assert str(tmp_path) not in r.text
 
 
 def test_models(client):
@@ -188,3 +193,83 @@ def test_auth_correct_key(auth_client):
 def test_health_open_even_with_key(auth_client):
     # health/ready are unauthenticated liveness probes
     assert auth_client.get("/health").status_code == 200
+
+
+# --- unexpected failures: typed to the client, diagnosable to the operator ----
+#
+# TASK-018A review: an unhandled exception was answered by Starlette's outermost
+# ServerErrorMiddleware — above the request-id middleware — so the client got a
+# response with no X-Request-ID, and the @app.exception_handler(Exception) that
+# was supposed to shape it never ran at all.
+
+
+def test_unhandled_error_returns_a_typed_envelope_with_a_request_id(client, monkeypatch):
+    from agentrouter.server import service
+
+    def boom(*_a, **_k):
+        raise RuntimeError("token sk-livekey0123456789abcdef at /home/someone/secret.yaml")
+
+    monkeypatch.setattr(service, "classify_task", boom)
+    r = TestClient(client.app, raise_server_exceptions=False).post(
+        "/v1/classify", json={"task": "x"}, headers={"X-Request-ID": "trace-me"}
+    )
+    assert r.status_code == 500
+    assert r.json() == {"error": {"code": "internal_error", "message": "internal server error"}}
+    assert r.headers["X-Request-ID"] == "trace-me"  # correlatable
+    # No raw traceback may reach the API client.
+    for leak in ("Traceback", "RuntimeError", "sk-live", "/home/someone"):
+        assert leak not in r.text
+
+
+def test_unhandled_error_is_logged_with_a_redacted_traceback(client, monkeypatch, caplog):
+    from agentrouter.server import service
+
+    def boom(*_a, **_k):
+        raise RuntimeError("token sk-livekey0123456789abcdef")
+
+    monkeypatch.setattr(service, "classify_task", boom)
+    with caplog.at_level("ERROR", logger="agentrouter.route"):
+        TestClient(client.app, raise_server_exceptions=False).post(
+            "/v1/classify", json={"task": "x"}
+        )
+    text = "\n".join(r.getMessage() for r in caplog.records)
+    # Catching the error here also stops uvicorn logging it, so an ERROR record
+    # is the only thing standing between a 500 and a silent fault.
+    assert "api.unhandled_error" in text
+    assert "Traceback (most recent call last)" in text
+    assert "sk-livekey" not in text and "[redacted]" in text
+
+
+def test_registry_error_does_not_echo_the_file_or_its_contents(tmp_path, monkeypatch):
+    """A registry only fails this way when malformed — exactly when a pasted
+    credential is sitting in it. The message is for the log, not the caller."""
+    monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
+    monkeypatch.delenv("AGENTROUTER_API_KEY", raising=False)
+    assert runner.invoke(cli_app, ["init"]).exit_code == 0
+    bad = tmp_path / "registry" / "providers.yaml"
+    bad.write_text("api_key: sk-livekey0123456789abcdef\n  bad: [indent\n", encoding="utf-8")
+
+    c = TestClient(create_app())
+    for path in ("/ready", "/v1/models"):
+        r = c.get(path)
+        assert r.status_code == 503, path
+        assert r.json()["error"]["code"] == "registry_unavailable", path
+        for leak in ("sk-livekey", "providers.yaml", str(tmp_path), "indent"):
+            assert leak not in r.text, f"{path} leaked {leak}"
+
+
+def test_response_models_do_not_strip_engine_owned_fields(client):
+    """The typed envelopes exist to make the contract meaningful — if they also
+    truncated the payload they would be a silent breaking change of their own."""
+    routed = client.post("/v1/route", json={"task": "refactor the parser"})
+    assert routed.status_code == 200
+    body = routed.json()
+    # `scores` and `weights` are engine-owned and not worth re-modelling, but
+    # they must still reach the client.
+    for key in ("classification", "recommendation", "scores", "weights", "gates"):
+        assert key in body, key
+
+    did = body["decision_id"]
+    stored = client.get(f"/v1/decisions/{did}").json()
+    assert stored["created_at"]  # DecisionResponse adds fields, drops none
+    assert set(body) <= set(stored)

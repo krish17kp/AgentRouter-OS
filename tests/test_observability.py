@@ -148,3 +148,70 @@ def test_server_route_logs_with_request_id(client, caplog):
     assert records, "expected a route_decision log record"
     assert records[-1]["request_id"] == "req-777"
     assert "summarize a PR" not in caplog.text  # no raw task text in logs
+
+
+# ---- redaction (TASK-018A) ----
+#
+# log_event/log_api_error exist to make a typed 500 diagnosable. They carry text
+# nobody enumerated in advance, which is exactly where a stray credential shows
+# up — so redaction is a property of the sink, not of each call site.
+
+
+@pytest.mark.parametrize(
+    "secret",
+    [
+        "sk-livekey0123456789abcdef",
+        "ghp_0123456789abcdefghijklmnop",
+        "Bearer eyJhbGciOiJIUzI1NiJ9.abc",
+        "AKIAIOSFODNN7EXAMPLE",
+    ],
+)
+def test_redact_masks_credential_shapes(secret):
+    masked = obs.redact(f"failed while using {secret} here")
+    assert secret not in masked
+    assert "[redacted]" in masked
+    assert "failed while using" in masked  # the diagnosable part survives
+
+
+def test_redact_leaves_ordinary_text_alone():
+    text = "Registry file not found: providers.yaml (run: agentrouter init)"
+    assert obs.redact(text) == text
+
+
+def test_log_event_redacts_string_values(caplog):
+    caplog.set_level(logging.INFO, logger="agentrouter.route")
+    obs.set_request_id("req-redact")
+    try:
+        record = obs.log_event("catalog.refresh_failed", detail="key sk-livekey0123456789abcdef")
+    finally:
+        obs.set_request_id(None)
+    assert "[redacted]" in record["detail"]
+    assert "sk-livekey" not in caplog.text
+    assert record["request_id"] == "req-redact"
+
+
+def test_log_api_error_records_the_traceback_at_error_level(caplog):
+    caplog.set_level(logging.INFO, logger="agentrouter.route")
+    try:
+        raise ValueError("boom with sk-livekey0123456789abcdef")
+    except ValueError as exc:
+        record = obs.log_api_error("api.unhandled_error", exc)
+
+    assert record["error_type"] == "ValueError"
+    errors = [r for r in caplog.records if r.levelname == "ERROR"]
+    assert errors, "an unhandled API error must be logged at ERROR, not INFO"
+    text = "\n".join(r.getMessage() for r in errors)
+    assert "Traceback (most recent call last)" in text  # diagnosable
+    assert "sk-livekey" not in text and "[redacted]" in text
+
+
+def test_log_api_error_does_not_pass_exc_info(caplog):
+    """exc_info would let logging render the *raw* exception message, which is
+    precisely the string redaction is protecting."""
+    caplog.set_level(logging.INFO, logger="agentrouter.route")
+    try:
+        raise ValueError("sk-livekey0123456789abcdef")
+    except ValueError as exc:
+        obs.log_api_error("api.unhandled_error", exc)
+    assert all(r.exc_info is None for r in caplog.records)
+    assert "sk-livekey" not in caplog.text
