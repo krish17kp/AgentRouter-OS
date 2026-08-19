@@ -14,11 +14,11 @@ authoritative for Claude sessions; where the two disagree, this file wins.
 
 | Field | Value |
 |---|---|
-| Last updated | 2026-08-19 |
+| Last updated | 2026-08-19 (session 2) |
 | Repository | `/media/krish/New Volume/Krish/04 - Dev Projects/Agentrouteros` |
 | Filesystem | NTFS/fuseblk, verified **rw** this session |
 | Active branch | `task/TASK-018B-reliability-load-lab` |
-| Current commit | `0db82cd` (**local only — not pushed**) |
+| Current commit | `8221cf4` (**local only — not pushed**) |
 | Remote branch | none yet for TASK-018B |
 | RC | `release/agentrouter-v0.5-rc1` @ `c11ddec`, post-merge CI **green** (CI, Security, Critical Mutation Testing) |
 | `main` | `602321a`, untouched |
@@ -36,6 +36,10 @@ against; the threshold must not be lowered.
 
 ## Completed
 
+- **Durable memory installed** — `CLAUDE.md` bootstrap + this canonical handoff
+  (`fffb716`). `CODEX_HANDOFF.md` now defers to this file.
+- **Graphify 0.9.47** installed and the graph built/verified (see Graph below).
+
 - **TASK-018A** — versioned HTTP contract, semantic compatibility gate, SDK
   parity. Merged via PR #9 (`c11ddec`). Two independent review rounds; every
   finding reproduced then fixed. See `loop/tasks/TASK-018A-*/progress.md`.
@@ -48,14 +52,27 @@ against; the threshold must not be lowered.
   200/200 OK, zero lost writes, p95 4539 ms → 2630 ms.
   Tests were verified to have teeth — reverting only the two PRAGMA lines makes
   two of them fail with the original error.
+- **TASK-018B, second defect** — WAL sidecar hazard, fixed via `store.snapshot`.
+- **TASK-018B, third defect** — unbounded request fields (see finding 0).
+- **Failure-injection suite** — `tests/test_failure_injection.py`, 21 tests, one
+  shared survivability contract per injected failure.
 
 ## In progress / open findings
 
-1. **WAL sidecar hazard (new, caused by the 018B fix).** With a WAL active,
-   copying only `agentrouter.db` produces a database with **no tables at all**
-   (`no such table: decisions`) — total data loss for a naive backup or
-   diagnostic bundle. Needs a WAL-safe snapshot helper in `store.py`, a test, and
-   it must be what TASK-018C's diagnostic bundle uses. **Not yet implemented.**
+0. **OWNER DECISION PENDING — a deliberate breaking API change is staged.**
+   `8221cf4` bounds previously-unbounded request fields and records eight
+   `constraint_tightened` acceptances in `contracts/http/v1/manifest.json`.
+   Justification is measured, not theoretical: a 2 MB `task` returned 200 OK,
+   produced a 4,004,603-byte response and a 4,005,888-byte database row, from one
+   caller, unbounded — the API is local and open by default. Bounds are generous
+   (100k chars ≈ 25k tokens). **Do not merge the TASK-018B PR without flagging
+   this acceptance for owner sign-off**; it is visible in the manifest diff.
+
+1. ~~WAL sidecar hazard~~ — **FIXED** in `fffb716`. `store.snapshot()` uses
+   SQLite's online backup API. Measured before the fix: a plain copy of
+   `agentrouter.db` after `init` + 5 writes reported **0 rows, silently**.
+   TASK-018C's diagnostic bundle and any backup runbook must go through
+   `store.snapshot`, never a filesystem copy.
 2. **TASK-018A security re-review never returned** — the previous session hit a
    usage limit. The 018A security fixes have regression tests, but no fresh
    adversarial pass has covered the merged diff. Must be closed before the
@@ -85,9 +102,9 @@ assume a single-file database — they only check `agentrouter.db` exists.
 
 | Check | Result |
 |---|---|
-| pytest | 844 passed, 3 skipped |
+| pytest | 868 passed, 3 skipped |
 | branch coverage (gate 80%) | 85.65% |
-| ruff check / format | clean, 319 files |
+| ruff check / format | clean, 322 files |
 | bandit (`agentrouter` + `scripts`) | 0 issues |
 | mutation gate (at `c11ddec`) | PASS — 0.9858 overall, safety 0.9877, engine 0.9815, 0 unreviewed survivors |
 
@@ -100,16 +117,16 @@ source "$HOME/.venvs/agentrouter/bin/activate"
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-Then: implement a **WAL-safe snapshot** in `agentrouter/store.py` (SQLite backup
-API or an explicit checkpoint), prove a snapshot taken with a WAL active is
-complete, and add the regression test.
+Then: finish the remaining TASK-018B surface — idempotency replay/conflict under
+contention, rate-limit window boundaries and burst isolation, concurrent host
+detection, catalog read during atomic replacement, and a **soak profile** that is
+explicitly not mandatory on ordinary PRs. Then wire a deterministic CI reliability
+profile.
 
 Following actions:
 
-1. Extend the reliability lab: failure injection (read-only data dir, corrupt
-   catalog, oversized body, malformed Unicode, idempotency conflict, rate-limit
-   burst, cancelled request), concurrency/state-integrity properties, and a soak
-   profile that is **not** mandatory on ordinary PRs.
+1. Push TASK-018B, open a **draft** PR to the RC, and flag the accepted breaking
+   change (finding 0) for owner sign-off in the PR body.
 2. Push TASK-018B, open a **draft** PR to the RC, repair CI, merge, delete the
    branch, refresh the graph from the new RC.
 3. Close the missing TASK-018A adversarial security review (finding 2 above).
