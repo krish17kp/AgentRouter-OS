@@ -40,7 +40,37 @@ All notable changes to AgentRouter OS. Format loosely follows
   `enforce-release-gate` (RC-to-main PRs, release tags, or explicit dispatch only, full
   enforcement, no lowered thresholds).
 
+- **Versioned HTTP API contract + compatibility gate** (`agentrouter contract export|check`):
+  the REST surface is exported to a committed, byte-stable artifact at
+  `contracts/http/v1/openapi.json` (provenance in a sibling `manifest.json`, so an
+  unchanged API produces an unchanged file). A semantic checker classifies every
+  difference as **breaking / risky / additive** and CI fails on breaking. Exit codes:
+  `0` compatible, `1` breaking, `3` missing or untrustworthy baseline, `4` no
+  `[server]` extra installed. A missing baseline is a failure, never a pass; export
+  refuses to overwrite the baseline while a breaking change is present, and accepting
+  one requires `--accept-breaking --reason` recorded in the manifest.
+- **SDK capability manifest** (`contracts/sdk/capabilities.json`): both SDKs must
+  *exercise* every operation they claim, against the real app — Python via in-process
+  uvicorn, TypeScript via `scripts/serve_for_parity.py` over loopback.
+
 ### Changed
+- **`/ready` reports `registry_unavailable` instead of `unavailable`** when the local
+  registry is missing or malformed, matching what the `/v1` routes already returned for
+  the same condition. **Breaking for any client branching on `code == "unavailable"`**
+  for this case; neither SDK does — both pass `code` through opaquely. A new
+  `internal_error` (500) code covers unexpected server-side faults. Both carry a fixed
+  message on purpose: see the Security notes below.
+- **Four previously untyped endpoints now declare their response shape**
+  (`/v1/classify`, `/v1/route`, `/v1/decisions/{id}`, `/v1/execute/dry-run`). They were
+  declared `-> dict`, so the exported contract said only "an object" and a renamed or
+  removed field on them was undetectable. Nothing is stripped from the wire
+  (`extra="allow"`), and the engine-owned payloads are typed `Any` rather than
+  `dict`/`list` so a decision persisted by an older engine version still replays as 200
+  instead of failing validation. Top-level key *order* changed on these four responses;
+  JSON objects are unordered, but a snapshot-based consumer will see a diff.
+- **Authentication is declared as an `APIKeyHeader` security scheme** rather than a bare
+  header parameter, so adding or removing auth on an endpoint is visible in the contract.
+  The wire protocol is unchanged: still `X-API-Key`.
 - **Python support clarified:** the minimum supported Python remains **3.10**
   (`pyproject.toml` `requires-python = ">=3.10"`), and CI verifies every supported
   version — **3.10 / 3.11 / 3.12 / 3.13**. (A prior draft of this entry incorrectly
@@ -55,6 +85,39 @@ All notable changes to AgentRouter OS. Format loosely follows
   gates pass; a valid lower result is reported instead of preserving the previous in-sample claim.
 
 ### Security
+- **A malformed registry no longer returns its own contents to the caller.** The
+  `RegistryError` handler echoed `str(exc)`, which interpolates the registry path *and
+  the offending YAML source line* — and a registry is malformed at exactly the moment
+  somebody has pasted a credential into it, so this returned that credential to an
+  **unauthenticated** caller on `/v1/models` and `/ready`. Both now answer a fixed
+  message; run `agentrouter doctor` locally for the detail.
+- **The same text is no longer written to the log on every request.** `/ready` is
+  unauthenticated *and* rate-limit exempt, and an ERROR record reaches stderr even with
+  no handler installed, so logging the exception let any caller write ~8 KB of registry
+  content into the operator's log per request. Now ~200 bytes with no path and no
+  content.
+- **Unhandled server faults are typed and correlatable.** The `Exception` handler was
+  registered on Starlette's outermost middleware, above the request-id middleware, so it
+  never ran — faults were answered without an error envelope or `X-Request-ID`. They are
+  now converted where the request id is still in scope, and logged at ERROR with a
+  redacted traceback. **No raw traceback reaches an API client.**
+- **Log redaction widened well beyond four vendor prefixes.** It previously missed
+  Google, GitLab, Slack, HuggingFace, fine-grained GitHub PATs, AWS *temporary* keys,
+  JWTs, connection-string passwords and generic `password=` pairs, and skipped non-string
+  values entirely; redaction now also recurses into nested structures.
+- **Echoed identifiers are bounded and sanitised.** A 5 KB `decision_id` produced a 5 KB
+  error body, and CR/LF or a bidi override (U+202E) in one was reflected verbatim —
+  usable for log forging and display spoofing.
+- **The compatibility gate cannot be turned green by editing what it checks.** A baseline
+  containing an unresolvable, self-referential or remote `$ref` is refused (such a ref
+  inlines as `{}` and makes a schema look permissive); a baseline that exists but cannot
+  be parsed is no longer treated as absent, which would have let corruption bypass the
+  breaking-change refusal; export refuses to follow a symlink *or a hardlink* and to
+  write outside the repo root; and CI additionally checks against the contract on the
+  **base branch**, which the PR author does not control.
+- **`$ref` expansion is bounded by one budget for the whole comparison**, not per call —
+  a crafted fan-out document previously took 73 s from an 11 KB file and grew with the
+  API. Bandit now also scans `scripts/`.
 - Clarified that the app reads API keys from **shell environment variables** and
   does not auto-load `.env`; docs and the `.env` template updated to match.
 - API-key checks now use `hmac.compare_digest` (constant-time) instead of `==`,

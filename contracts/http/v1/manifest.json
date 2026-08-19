@@ -2,11 +2,11 @@
   "api_title": "AgentRouter OS — Local API",
   "api_version": "1",
   "contract_version": "v1",
-  "generated_at": "2026-08-08T18:23:26.480814+00:00",
+  "generated_at": "2026-08-19T07:51:28.839046+00:00",
   "generation_command": "agentrouter contract export",
   "generation_tool": "fastapi 0.141.1",
   "openapi_version": "3.1.0",
   "operation_count": 9,
   "product_version": "0.4.0",
-  "source_commit": "45e1d9e1ec92552204a054b835334a16bda972ab"
+  "source_commit": "4409810aff23b4ef1865bdc4f933a49d5e46bbe8"
 }

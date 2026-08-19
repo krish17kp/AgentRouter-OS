@@ -215,3 +215,89 @@ def test_log_api_error_does_not_pass_exc_info(caplog):
         obs.log_api_error("api.unhandled_error", exc)
     assert all(r.exc_info is None for r in caplog.records)
     assert "sk-livekey" not in caplog.text
+
+
+# --- widened redaction (second review round) ---------------------------------
+#
+# The first version matched four vendor prefixes. A reviewer passed 16 of 23 real
+# credential formats straight through it. Redaction is the ONLY control between a
+# malformed registry and the log, so the list is now generic (keyword adjacency +
+# long high-entropy runs) rather than a catalogue of prefixes.
+
+
+@pytest.mark.parametrize(
+    "secret",
+    [
+        "sk-livekey0123456789abcdef",
+        "sk_live_51H8xYzAbCdEfGhIj",
+        "github_pat_11ABCDEFG0aBcDeFgHiJkLmN",
+        "ghp_0123456789abcdefghijklmnop",
+        "glpat-ABCDEFghijkl1234567890",
+        "xoxb-1234567890-abcdefghij",
+        "hf_ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+        "AIzaSyA1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P",
+        "AKIAIOSFODNN7EXAMPLE",
+        "ASIAIOSFODNN7EXAMPLE",
+        "Bearer eyJhbGciOiJIUzI1NiJ9.abcdefgh.signature",
+        "Basic dXNlcjpwYXNzd29yZA==",
+        "postgres://user:hunter2@db.internal:5432/x",
+        'password="hunter2secret"',
+        "api_key: AbC123dEf456",
+        "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY1",
+    ],
+)
+def test_redact_masks_real_credential_formats(secret):
+    masked = obs.redact(f"failed while using {secret} here")
+    # the distinctive part of the credential must not survive
+    assert secret.split()[-1][:14] not in masked
+    assert "[redacted]" in masked
+    assert "failed while using" in masked  # the diagnosable part survives
+
+
+def test_redact_leaves_ordinary_diagnostics_intact():
+    for text in (
+        "Registry file not found: providers.yaml (run: agentrouter init)",
+        "no decision 'd_00001'",
+        "context_band_accuracy 0.6667 below 0.90",
+    ):
+        assert obs.redact(text) == text
+
+
+def test_redaction_recurses_into_nested_values():
+    """`log_event` used to redact only values that were already strings."""
+    record = obs.redact_value(
+        {
+            "headers": {"authorization": "Bearer supersecrettoken1234"},
+            "items": [1, "ghp_0123456789abcdefghijklmnop", {"k": "AKIAIOSFODNN7EXAMPLE"}],
+        }
+    )
+    flat = json.dumps(record)
+    assert "supersecret" not in flat
+    assert "ghp_0123" not in flat
+    assert "AKIAIOSF" not in flat
+
+
+def test_log_event_redacts_non_string_values(caplog):
+    caplog.set_level(logging.INFO, logger="agentrouter.route")
+    obs.log_event("catalog.failed", detail={"authorization": "Bearer supersecrettoken1234"})
+    assert "supersecret" not in caplog.text
+    assert "[redacted]" in caplog.text
+
+
+def test_quiet_api_error_omits_message_and_traceback(caplog):
+    """`detail=False` is for the user's data being wrong, not a bug: the text
+    quotes the offending file, and the endpoint may be unauthenticated."""
+    caplog.set_level(logging.INFO, logger="agentrouter.route")
+    try:
+        raise ValueError("Invalid YAML in /home/u/registry/models.yaml: token: AIzaSyABCDEFG")
+    except ValueError as exc:
+        record = obs.log_api_error("api.registry_error", exc, detail=False, remedy="run doctor")
+
+    assert record["error_type"] == "ValueError"
+    assert "message" not in record
+    assert record["remedy"] == "run doctor"
+    text = caplog.text
+    assert "Traceback" not in text
+    assert "/home/u/registry" not in text
+    assert "AIzaSy" not in text
+    assert "run doctor" in text  # still actionable

@@ -71,6 +71,99 @@ npm typecheck clean and 18/18 TS tests with the live app, 0 skipped. Critical-mo
 gate re-run locally: **PASS** — overall 0.9858, safety_policy_execution 0.9877, routing_engine
 0.9815, 0 unreviewed survivors, no threshold lowered and no new allowlist entry.
 
+**Second review round — the reviewers were right twice more.** PR #9 was already green on
+every CI job. That was not treated as evidence.
+
+*Security, 2 HIGH.* `/ready` is unauthenticated **and** rate-limit exempt, and it logged the
+registry error at ERROR with a full traceback. Python's `lastResort` handler writes ERROR to
+stderr even with no handler configured — so any caller could push ~**8 KB per request** of
+registry path, offending source line and any pasted credential into the operator's log, with
+no auth and no rate limit. A malformed registry is the user's data being wrong, not a bug, so
+it now logs a type and a remedy and nothing else: **8016 → 202 bytes**, no path, no content.
+And `_SECRET_RE` turned out to match four vendor prefixes while **16 of 23** real credential
+formats walked straight through it — Google, GitLab, Slack, HuggingFace, fine-grained GitHub
+PATs, AWS *temporary* keys, JWTs, connection-string passwords. Replaced with a generic
+keyword-and-entropy detector that also recurses into non-string values.
+
+*The gate could still be deleted.* `rm contracts/http/v1/openapi.json` turned four breaking
+changes into a green build — and my own commit message had claimed the acceptance history was
+unerasable, which was false. CI now checks the live app against the contract on the **base
+branch**, which the author of a pull request does not control. Fixing that surfaced a second
+form of the same hole: `contract export` treated an *unreadable* baseline as an absent one, so
+corrupting the file bypassed the refusal that deleting it triggers — exit 0, silent overwrite.
+
+*The checker was still half-blind.* `_compare_schema` never descended into
+`anyOf`/`oneOf`/`allOf` — which is exactly what FastAPI emits for **every** optional field, so
+the fields the response models were added to protect were guarded for presence only. You could
+delete a value from the `risk` enum and CI stayed green. `components.securitySchemes` was never
+compared either, so renaming the auth header to `Authorization` was invisible while the
+requirement still read `APIKeyHeader`. Both fixed. Three *false reds* were corrected in the
+other direction, the important one being a new required **response** field: FastAPI marks every
+non-defaulted response field required, so adding a field to `ModelSummary` failed CI and pushed
+maintainers toward `--accept-breaking`. `required` is now read per direction — on a request it
+is an obligation on the caller, on a response it is a guarantee from the server.
+
+*And I had broken real user data.* Typing the four response models made `/v1/decisions/{id}`
+return **500** for any persisted decision whose engine payload had drifted. Decisions are opaque
+JSON in SQLite with no schema version, so asserting today's shape over yesterday's data breaks
+what the user already has — the one failure a *compatibility* change must not introduce. The
+engine-owned fields are `Any` now; their names, which are what the checker protects, are
+unchanged.
+
+*Bounds that were not bounds.* `_MAX_EXPANDED_NODES` was allocated per call while the traversal
+re-entered it per property, so cost still grew with the API: 73 s from an 11 KB crafted file.
+One shared budget on `Report` took that to **0.20 s**, flat from 1 to 256 paths.
+
+*And the scan I widened caught me.* Adding `scripts/` to bandit immediately produced a HIGH
+`B613:trojansource` — in my own new sanitising regex, because I had written the bidi ranges as
+literal characters. That finding is the argument for the change.
+
+Documentation was corrected rather than defended: AD-5 no longer claims an unerasable history,
+AD-6 explains the directional `required` rule, and `docs/API.md` now carries an explicit
+**"What the checker still cannot see"** list.
+
+**Final battery:** 821 passed / 3 skipped; coverage 85.29%; 33 hook tests; ruff clean over 316
+files; bandit 0 across `agentrouter` **and** `scripts`; pip-audit clean; credential scan clean;
+clean-wheel export byte-identical; installed-wheel server smoke correct; 18/18 TS tests against
+the live app, 0 skipped, 0 temp dirs leaked.
+
+**Third review round — my own fix was incomplete, and the reviewer caught it.**
+`prompt` was still `str | None`, so `/v1/decisions/{id}` *still* returned 500 for a
+decision persisted when `prompt` was a dict. I had fixed the fields I thought of and
+missed one, which is exactly how this class of bug survives a fix. The rule now admits no
+exceptions: every field on a passthrough envelope is `Any`. Nine drift shapes, zero
+non-200s.
+
+The same pass found eleven more false greens and seven false reds. The worst were
+structural: **`allOf` was treated as a union**, so every `allOf` change was classified
+backwards — a conjunction gets *narrower* with more branches, not wider. Introducing an
+enum on a free-form request field reported nothing at all, because the comparison required
+an enum on *both* sides — and that is the most extreme narrowing there is. `const` was
+never compared, though pydantic emits it for every `Literal`. And the enum block turned
+out to be the only classifier in the whole function that ignored request-vs-response
+direction, contradicting AD-6's own stated principle two files away.
+
+**And the acceptance workflow was a dead end I had built without testing end to end.**
+`contract check` never *read* `accepted_breaking_changes` — the field was only ever
+written. So `export --accept-breaking` moved the branch baseline and turned the in-branch
+check green, while the base-branch check I had added in the previous round still reported
+the same break, forever. A breaking change could be formally accepted by the owner and
+could never merge. `check` now reads the manifest in the tree under review and downgrades
+a break matching a recorded `(kind, location)` to an `accepted` severity: loud, but not
+blocking. An unrecorded break in the same change still fails.
+
+Documentation was corrected a second time. AD-6 had justified untyped engine payloads by
+claiming the union is all that gets compared — `_unwrap` was added *in the same change* to
+make that false. The claim is gone; the reason stands without it.
+
+**One gap, stated plainly:** the independent security re-review hit a session limit before
+returning findings. The second-round security fixes have their own regression tests, but
+no fresh adversarial security pass ran against this final diff.
+
+**Third-round battery:** 839 passed / 3 skipped; coverage 85.53%; 33 hook tests; ruff
+clean; bandit 0 across `agentrouter` and `scripts`; pip-audit clean; clean-wheel export
+byte-identical; 18/18 live TS tests, 0 skipped, 0 temp dirs leaked.
+
 **Unchanged and still honest:** `context_band_accuracy` is 0.6667 against the unchanged 0.90
 frozen-holdout gate. The RC remains NOT RELEASE READY. Nothing was tagged, published or
 deployed; `main` is untouched.

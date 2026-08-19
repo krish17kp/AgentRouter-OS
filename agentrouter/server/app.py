@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import os
+import re
 import uuid
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, Security
@@ -47,6 +48,27 @@ REQUEST_ID_HEADER = "X-Request-ID"
 
 def _error(status: int, code: str, message: str) -> JSONResponse:
     return JSONResponse(status_code=status, content={"error": {"code": code, "message": message}})
+
+
+# Identifiers we echo back are caller-supplied, so they are bounded and stripped
+# before they reach a message. Unbounded, a 5 KB id produced a 5 KB error body;
+# unsanitised, CR/LF forged extra lines in anything that logs the message, and a
+# bidi override (U+202E) reversed the display of everything after it. Real ids
+# look like `d_00001`, so this never truncates a legitimate one.
+_ECHO_LIMIT = 64
+# The ranges are written as escapes on purpose: spelling them literally puts real
+# bidi overrides into this source file, which is the Trojan Source problem in
+# miniature (bandit B613 flags exactly that). C0/C1 controls, zero-width and
+# directional marks, embeddings/overrides, isolates, and the BOM.
+_UNSAFE_ECHO = re.compile(
+    "[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]"
+)
+
+
+def _echo(value: str) -> str:
+    """Make a caller-supplied identifier safe to place in an error message."""
+    cleaned = _UNSAFE_ECHO.sub("", str(value))
+    return cleaned if len(cleaned) <= _ECHO_LIMIT else cleaned[:_ECHO_LIMIT] + "…"
 
 
 def _api_key_ok(provided: str | None, expected: str | None) -> bool:
@@ -172,6 +194,10 @@ def create_app() -> FastAPI:
     # base HTTPException, not FastAPI's subclass) also get the error envelope.
     @app.exception_handler(StarletteHTTPException)
     async def http_exc_handler(_request: Request, exc: StarletteHTTPException):
+        # 503 maps to a generic `unavailable` only as a defensive default; nothing
+        # currently raises HTTPException(503) — the registry case has its own
+        # `registry_unavailable` handler — so this code is not documented as one a
+        # client should expect to see.
         code = {401: "unauthorized", 404: "not_found", 503: "unavailable"}.get(
             exc.status_code, "error"
         )
@@ -192,10 +218,21 @@ def create_app() -> FastAPI:
         error, which quotes the offending source line. A registry only fails this
         way when it is malformed, which is exactly when someone has pasted a
         credential into it — so echoing the message would return that secret to
-        the caller. The detail goes to the server log; the client gets a fixed,
-        actionable message.
+        the caller.
+
+        The text is kept out of the LOG for the same reason. `/ready` is
+        unauthenticated and rate-limit exempt, and an ERROR record reaches
+        stderr even with no handler installed, so logging the message would let
+        any caller write that registry content into the operator's log on every
+        request — roughly 8 KB a time, credentials included. `agentrouter
+        doctor` reads the file directly and is the right place for the detail.
         """
-        observability.log_api_error("api.registry_error", exc)
+        observability.log_api_error(
+            "api.registry_error",
+            exc,
+            detail=False,
+            remedy="run 'agentrouter doctor' on the host to see the offending registry file",
+        )
         return _error(
             503,
             "registry_unavailable",
@@ -254,14 +291,14 @@ def create_app() -> FastAPI:
     def decision_(decision_id: str) -> dict:
         payload = service.get_decision(decision_id)
         if payload is None:
-            raise HTTPException(status_code=404, detail=f"no decision '{decision_id}'")
+            raise HTTPException(status_code=404, detail=f"no decision '{_echo(decision_id)}'")
         return payload
 
     @app.post("/v1/feedback", response_model=FeedbackResponse, dependencies=protected, tags=["v1"])
     def feedback_(body: FeedbackRequest) -> dict:
         recorded = service.save_feedback(body.decision_id, body.rating, body.note)
         if not recorded:
-            raise HTTPException(status_code=404, detail=f"no decision '{body.decision_id}'")
+            raise HTTPException(status_code=404, detail=f"no decision '{_echo(body.decision_id)}'")
         return {"decision_id": body.decision_id, "recorded": True}
 
     @app.post(
@@ -270,7 +307,7 @@ def create_app() -> FastAPI:
     def dry_run_(body: DryRunRequest) -> dict:
         plan = service.execute_dry_run(body.decision_id)
         if plan is None:
-            raise HTTPException(status_code=404, detail=f"no decision '{body.decision_id}'")
+            raise HTTPException(status_code=404, detail=f"no decision '{_echo(body.decision_id)}'")
         return plan
 
     return app

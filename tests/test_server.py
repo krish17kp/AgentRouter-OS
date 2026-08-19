@@ -273,3 +273,84 @@ def test_response_models_do_not_strip_engine_owned_fields(client):
     stored = client.get(f"/v1/decisions/{did}").json()
     assert stored["created_at"]  # DecisionResponse adds fields, drops none
     assert set(body) <= set(stored)
+
+
+# --- second review round: amplification, echo bounds --------------------------
+
+
+def test_registry_failure_does_not_amplify_into_the_log(tmp_path, monkeypatch, caplog):
+    """`/ready` is unauthenticated AND rate-limit exempt.
+
+    Logging the registry exception meant any caller could write ~8 KB of registry
+    content — path, offending source line, pasted credential — into the
+    operator's log on every request. ERROR records reach stderr even with no
+    handler installed, so this needed no opt-in to be exploitable.
+    """
+    monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
+    monkeypatch.delenv("AGENTROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("AGENTROUTER_LOG", raising=False)
+    assert runner.invoke(cli_app, ["init"]).exit_code == 0
+    (tmp_path / "registry" / "models.yaml").write_text(
+        'models:\n  - key: x\n    token: "AIzaSyA1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q\n',
+        encoding="utf-8",
+    )
+
+    client = TestClient(create_app())
+    with caplog.at_level("ERROR", logger="agentrouter.route"):
+        for _ in range(20):
+            r = client.get("/ready")
+    assert r.status_code == 503
+
+    logged = "\n".join(rec.getMessage() for rec in caplog.records)
+    per_request = len(logged) / 20
+    assert per_request < 600, f"{per_request:.0f} bytes/request is an amplifier"
+    assert "Traceback" not in logged
+    assert str(tmp_path) not in logged  # no registry path
+    assert "AIzaSy" not in logged and "token" not in logged  # no registry content
+    assert "doctor" in logged  # still actionable for the operator
+
+
+def test_unhandled_error_still_logs_its_traceback(client, monkeypatch, caplog):
+    """The quiet path is only for user-data errors. A genuine bug must stay loud —
+    catching it to return a typed 500 also stops the ASGI server logging it."""
+    from agentrouter.server import service
+
+    monkeypatch.setattr(
+        service, "classify_task", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("kaboom"))
+    )
+    with caplog.at_level("ERROR", logger="agentrouter.route"):
+        TestClient(client.app, raise_server_exceptions=False).post(
+            "/v1/classify", json={"task": "x"}
+        )
+    logged = "\n".join(rec.getMessage() for rec in caplog.records)
+    assert "api.unhandled_error" in logged
+    assert "Traceback (most recent call last)" in logged
+
+
+def test_echoed_decision_id_is_bounded(client):
+    import urllib.parse
+
+    r = client.get("/v1/decisions/" + urllib.parse.quote("A" * 5000))
+    assert r.status_code == 404
+    assert len(r.text) < 300, "an oversized id must not produce an oversized body"
+
+
+@pytest.mark.parametrize(
+    "hostile",
+    [
+        "x\n\rFAKE-LOG-LINE: approved",  # log forging
+        "x‮detuces-eb-dluow",  # bidi override flips the display
+        "x​​hidden",  # zero-width padding
+        "x﻿bom",
+    ],
+)
+def test_echoed_decision_id_is_sanitised(client, hostile):
+    r = client.post("/v1/feedback", json={"decision_id": hostile, "rating": 3})
+    assert r.status_code == 404
+    message = r.json()["error"]["message"]
+    assert not any(ch in message for ch in "\n\r‮​﻿")
+
+
+def test_a_real_decision_id_is_echoed_untouched(client):
+    r = client.get("/v1/decisions/d_99999")
+    assert r.json()["error"]["message"] == "no decision 'd_99999'"

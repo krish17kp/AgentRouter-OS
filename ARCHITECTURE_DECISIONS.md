@@ -52,8 +52,58 @@ removing auth on an endpoint was invisible.
 **A gate you can edit is not a gate.** The baseline is refused outright if it contains
 an unresolvable, self-referential or remote `$ref`, because such a ref inlines as `{}`
 and would make the whole schema look permissive — a one-character edit could turn the
-build green. Ref expansion is bounded, and validation memoises resolved refs so a
-document with fan-out references cannot hang CI. Export refuses to follow a symlink or
-write outside the repo root. Accepting a breaking change requires an explicit reason,
-appends to a history a later export cannot erase, and records only the changes the
-checker itself found — so the audit trail cannot assert a break that never happened.
+build green. A baseline that exists but cannot be *parsed* is likewise refused rather
+than treated as absent: collapsing "missing" into "unreadable" would let corrupting the
+file bypass the same refusal that deleting it is meant to trigger. Ref expansion is
+bounded by one budget for the whole comparison (a per-call budget bounded nothing, since
+the traversal re-enters it for every property), validation memoises resolved refs so a
+fan-out document cannot hang CI, and the comparison has its own depth ceiling
+independent of `$ref`. Export refuses to follow a symlink *or a hardlink* — a hardlink
+is invisible to `is_symlink()` and resolves inside the root — and refuses to write
+outside that root.
+
+Accepting a breaking change requires an explicit reason and records only changes the
+checker itself found, so the trail cannot assert a break that never happened. But the
+honest limit is this: **`contracts/` is a committed text file, and code review is what
+protects it.** A routine `contract export` will not erase the history; an editor will.
+The control that does not depend on good behaviour is in CI, which compares the live app
+against the contract on the **base branch** — a file the author of the pull request does
+not control. That, not `validate_refs`, is what catches a doctored or deleted baseline.
+
+**`contracts/http/v1/` versions the artifact, not the API.** There is one app and one
+exported document, covering every path served — including the unversioned `/health` and
+`/ready`. A `contracts/http/v2/` directory would not bring a `/v2` API into existence;
+it would describe the same app twice and orphan the v1 baseline at the exact moment v1
+most needs protecting. A genuinely incompatible API is versioned in the URL space
+(`/v2/...` alongside `/v1/...`, both in the one contract, with `endpoint_removed`
+guarding the old paths), and this directory stays as it is.
+
+
+## AD-6 — `required` is read per direction, and engine-owned payloads stay untyped
+Two classification rules in the compatibility checker look asymmetric and are deliberately
+so.
+
+`required` means opposite things on each side of a call. On a request it is an obligation
+on the caller, so making a field required breaks them and dropping the obligation is
+additive. On a response it is a guarantee from the server, so *adding* a required field is
+a stronger promise (additive) and removing one withdraws a guarantee (breaking). Reading
+it symmetrically had a concrete cost: FastAPI marks every non-defaulted response field
+required, so adding a field to `ModelSummary` — the most likely future change to this API,
+and unambiguously safe for clients — failed CI and forced `--accept-breaking`. A gate that
+cries wolf gets routed around, and then it protects nothing.
+
+The response envelopes declare the engine-owned payloads as `Any` rather than `dict` or
+`list`. `/v1/decisions/{id}` replays a blob persisted by whatever engine version wrote the
+row; the store keeps opaque JSON with no schema version. Asserting today's shape over
+yesterday's data turns a working `200` into a `500` the first time any historical row
+drifts — a regression on data the user already has, which is the one failure a
+*compatibility* change must not introduce. The field **names** are what the checker
+protects, and a rename or removal is still detected.
+
+An earlier draft of this note justified the choice by claiming the checker only compares
+the `anyOf[T, null]` union and never its interior. That was true when it was written and
+is false now — `_unwrap` was added precisely so the interior *is* compared. The reason
+stands on its own without that crutch: these values are replayed, not produced, so a type
+here is a promise about data we did not write and cannot migrate. The rule admits no
+exceptions, because the first pass left `prompt` as `str | None` and a decision persisted
+when `prompt` was a dict returned 500.

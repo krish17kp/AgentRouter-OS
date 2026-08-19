@@ -1431,8 +1431,14 @@ if __name__ == "__main__":
 
 # The API is a product contract: exported to a byte-stable artifact, and every
 # change classified before it can land. Exit codes are stable for CI:
-#   0 compatible (additive/risky only) | 1 breaking change | 3 no/unreadable baseline.
+#   0 compatible (additive/risky only)
+#   1 breaking change
+#   3 no baseline, or a baseline that cannot be trusted
+#   4 this install has no HTTP API to describe (the [server] extra is missing)
+# 4 is deliberately NOT 1: CI must be able to tell "the API broke" from "the
+# optional extra was not installed", and the second must never read as the first.
 EXIT_CONTRACT_BREAKING = 1
+EXIT_CONTRACT_NO_SERVER = 4
 
 
 def _repo_root() -> Path:
@@ -1477,8 +1483,19 @@ def contract_export(
 
     try:
         baseline = contract.load_baseline(root)
-    except contract.ContractError:
-        baseline = None  # first export: nothing to protect yet
+    except contract.BaselineMissing:
+        baseline = None  # genuinely the first export: nothing to protect yet
+    except contract.ContractError as e:
+        # A baseline that exists but cannot be read must NOT be treated as
+        # absent. Doing so turns "corrupt the file" into a way to erase the
+        # breaking-change refusal and have export overwrite it with exit 0.
+        typer.echo(f"Refusing to overwrite an unreadable baseline: {e}", err=True)
+        typer.echo(
+            "Why: it may still describe a contract this change breaks. Restore it "
+            "from git (git checkout -- contracts/) and re-run.",
+            err=True,
+        )
+        raise typer.Exit(EXIT_REGISTRY) from e
 
     if baseline is not None:
         report = contract.diff_contracts(baseline, current)
@@ -1558,22 +1575,30 @@ def contract_export(
 def contract_check(
     as_json: bool = typer.Option(False, "--json", help="Machine-readable report on stdout."),
     out: Path | None = typer.Option(None, "--out", help="Also write the JSON report here."),
+    baseline: Path | None = typer.Option(
+        None,
+        "--baseline",
+        help="Compare against this contract file instead of the committed one. "
+        "CI uses it to check against the PR's base branch, so deleting the "
+        "committed contract cannot turn a breaking change green.",
+    ),
 ):
     """Compare the live API against the committed contract. Never regenerates it."""
     root = _repo_root()
     try:
-        report, _current = contract.check(root)
+        report, _current = contract.check(root, baseline_path=baseline)
     except RecursionError as e:  # pathological $ref nesting in a baseline
         typer.echo("Contract check failed: baseline is nested too deeply to compare.", err=True)
         raise typer.Exit(EXIT_REGISTRY) from e
     except contract.ServerExtraMissing as e:
         # Not a contract problem: there is no API to describe in this install, so
-        # `contract export` would fail the same way. Say that instead.
+        # `contract export` would fail the same way. Say that instead, with an
+        # exit code CI cannot confuse with a real breaking change.
         if as_json:
             typer.echo(json.dumps({"ok": False, "error": str(e)}, indent=2))
         else:
             typer.echo(f"Contract check failed: {e}", err=True)
-        raise typer.Exit(EXIT_RUNTIME) from e
+        raise typer.Exit(EXIT_CONTRACT_NO_SERVER) from e
     except contract.ContractError as e:  # missing or untrustworthy baseline
         # A missing or unreadable baseline is a hard failure, never a silent pass.
         if as_json:
@@ -1595,12 +1620,17 @@ def contract_check(
         if not report.changes:
             typer.echo("Contract unchanged: the live API matches the committed contract.")
         else:
-            for c in report.breaking + report.risky + report.additive:
+            for c in report.breaking + report.accepted + report.risky + report.additive:
                 typer.echo(f"[{c.severity:<9}] {c.location}: {c.kind} — {c.detail}")
             typer.echo(
-                f"\n{counts['breaking']} breaking, {counts['risky']} risky, "
-                f"{counts['additive']} additive."
+                f"\n{counts['breaking']} breaking, {counts['accepted']} owner-accepted, "
+                f"{counts['risky']} risky, {counts['additive']} additive."
             )
+            if report.accepted:
+                typer.echo(
+                    "Owner-accepted breaks are recorded in the contract manifest and do "
+                    "not fail this check. They are still breaking changes for clients."
+                )
         if report.breaking:
             typer.echo(
                 "\nBreaking changes require an owner-reviewed decision: revert them, or "

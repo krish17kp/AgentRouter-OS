@@ -1,11 +1,17 @@
 """Request/response models for the local REST API (Phase P7).
 
-Response payloads that pass through engine/classifier output verbatim are typed
-as `dict` on purpose — those shapes are owned by engine.py/classifier.py and
-re-modeling them here would just drift. Request bodies are validated strictly.
+Request bodies are validated strictly. Responses split in two:
+
+* models we **construct** (HealthResponse, ModelSummary, HostStatusResponse,
+  FeedbackResponse) carry real types — we own the values, so a type is a promise
+  we can keep;
+* models that **replay** an engine or persisted payload (the `_Passthrough`
+  envelopes at the bottom) declare key names only. See the comment there.
 """
 
 from __future__ import annotations
+
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -86,52 +92,72 @@ class DryRunRequest(BaseModel):
 
 # --- response envelopes for the engine/classifier-owned payloads --------------
 #
-# These endpoints used to be declared `-> dict`, so the exported contract said
-# only "an object" and the compatibility checker could not detect a renamed or
-# removed field on four of the nine operations. Declaring the stable top-level
-# keys makes those changes visible; `extra="allow"` (from `_Passthrough`) means
-# nothing is stripped from the wire.
+# These four endpoints used to be declared `-> dict`, so the exported contract
+# said only "an object" and the compatibility checker could not detect a renamed
+# or removed field on four of the nine operations. Declaring the stable top-level
+# keys makes those changes visible; `extra="allow"` keeps everything else flowing
+# through untouched.
+#
+# EVERY field here is `Any`, with no exceptions, and that is the whole design:
+#
+#   * These models do not construct their payload — they *replay* one. `/v1/route`
+#     passes the engine's dict straight through, and `/v1/decisions/{id}` replays a
+#     blob persisted by whatever engine version wrote the row (store.py keeps opaque
+#     JSON with no schema version).
+#   * So a type here is an assertion about data we did not produce and cannot
+#     migrate. The first time a historical row disagrees, a working 200 becomes a
+#     500 — a regression on data the user already has, which is the one failure a
+#     *compatibility* change must not introduce.
+#   * A single missed field is enough: `prompt` was left as `str | None` in the
+#     first pass, and a decision written when `prompt` was a dict returned 500.
+#     A rule with exceptions is a rule that gets one wrong, so there are none.
+#
+# What the contract gets from these models is therefore the **key names**, and that
+# is what the checker protects: renaming or removing one is a detectable breaking
+# change. Models we genuinely construct ourselves — HealthResponse, ModelSummary,
+# HostStatusResponse, FeedbackResponse — keep their real types, because there we
+# own the values and a type is a promise we can actually keep.
 
 
 class ClassifyResponse(_Passthrough):
-    task_type: str | None = None
-    complexity: str | None = None
-    risk: str | None = None
-    context_band: str | None = None
-    context_tokens: int | None = None
-    output_type: str | None = None
-    tool_needs: list[str] | None = None
-    approval_level: str | None = None
-    confidence: float | None = None
-    needs_clarification: bool | None = None
+    task_type: Any = None
+    complexity: Any = None
+    risk: Any = None
+    context_band: Any = None
+    context_tokens: Any = None
+    output_type: Any = None
+    tool_needs: Any = None
+    approval_level: Any = None
+    confidence: Any = None
+    needs_clarification: Any = None
 
 
 class RouteResponse(_Passthrough):
-    task: str | None = None
-    decision_id: str | None = None
-    classification: dict | None = None
-    recommendation: dict | None = None
-    fallback: dict | None = None
-    execution_route: dict | None = None
-    fallback_execution_route: dict | None = None
-    scores: list | None = None
-    excluded: list | None = None
-    gates: dict | list | None = None
-    prompt: str | None = None
-    weights: dict | None = None
-    weight_shifts: list | None = None
+    task: Any = None
+    decision_id: Any = None
+    classification: Any = None
+    recommendation: Any = None
+    fallback: Any = None
+    execution_route: Any = None
+    fallback_execution_route: Any = None
+    scores: Any = None
+    excluded: Any = None
+    gates: Any = None
+    prompt: Any = None
+    weights: Any = None
+    weight_shifts: Any = None
 
 
 class DecisionResponse(RouteResponse):
-    created_at: str | None = None
-    user: str | None = None
+    created_at: Any = None
+    user: Any = None
 
 
 class DryRunResponse(_Passthrough):
-    decision_id: str | None = None
-    recommendation: dict | None = None
-    execution_route: dict | None = None
-    argv: list[str] | None = None
-    would_execute: bool | None = None
-    auto_execute_allowed: bool | None = None
-    note: str | None = None
+    decision_id: Any = None
+    recommendation: Any = None
+    execution_route: Any = None
+    argv: Any = None
+    would_execute: Any = None
+    auto_execute_allowed: Any = None
+    note: Any = None
