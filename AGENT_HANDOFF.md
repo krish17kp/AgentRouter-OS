@@ -18,11 +18,11 @@ authoritative for Claude sessions; where the two disagree, this file wins.
 | Repository | `/media/krish/New Volume/Krish/04 - Dev Projects/Agentrouteros` |
 | Filesystem | NTFS/fuseblk, verified **rw** this session |
 | Active branch | `task/TASK-018B-reliability-load-lab` |
-| Current commit | `8221cf4` (**local only — not pushed**) |
-| Remote branch | none yet for TASK-018B |
+| Current commit | `7ad153a` (pushed) |
+| Remote branch | `origin/task/TASK-018B-reliability-load-lab` @ `7ad153a` |
 | RC | `release/agentrouter-v0.5-rc1` @ `c11ddec`, post-merge CI **green** (CI, Security, Critical Mutation Testing) |
 | `main` | `602321a`, untouched |
-| Open PR | none. PR #9 (TASK-018A) **merged**; its branch deleted local + remote |
+| Open PR | **#10 (draft)** → RC. PR #9 (TASK-018A) merged, branch deleted |
 | Milestone | EPIC TASK-018 — production reliability & operational resilience |
 | Phase | TASK-018B (reliability/load lab) in progress |
 
@@ -56,6 +56,10 @@ against; the threshold must not be lowered.
 - **TASK-018B, third defect** — unbounded request fields (see finding 0).
 - **Failure-injection suite** — `tests/test_failure_injection.py`, 21 tests, one
   shared survivability contract per injected failure.
+- **TASK-018B, fourth defect** — idempotent POSTs were not idempotent: 12
+  concurrent requests with the same key + body produced **6 distinct decisions**
+  (`get`/`put` each locked, the window between them was not). Fixed with per-key
+  single-flight in `7ad153a`.
 
 ## In progress / open findings
 
@@ -67,6 +71,7 @@ against; the threshold must not be lowered.
    caller, unbounded — the API is local and open by default. Bounds are generous
    (100k chars ≈ 25k tokens). **Do not merge the TASK-018B PR without flagging
    this acceptance for owner sign-off**; it is visible in the manifest diff.
+   Flagged at the top of PR #10's description. PR is **draft and unmerged**.
 
 1. ~~WAL sidecar hazard~~ — **FIXED** in `fffb716`. `store.snapshot()` uses
    SQLite's online backup API. Measured before the fix: a plain copy of
@@ -102,7 +107,7 @@ assume a single-file database — they only check `agentrouter.db` exists.
 
 | Check | Result |
 |---|---|
-| pytest | 868 passed, 3 skipped |
+| pytest | 873 passed, 3 skipped |
 | branch coverage (gate 80%) | 85.65% |
 | ruff check / format | clean, 322 files |
 | bandit (`agentrouter` + `scripts`) | 0 issues |
@@ -117,16 +122,14 @@ source "$HOME/.venvs/agentrouter/bin/activate"
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-Then: finish the remaining TASK-018B surface — idempotency replay/conflict under
-contention, rate-limit window boundaries and burst isolation, concurrent host
-detection, catalog read during atomic replacement, and a **soak profile** that is
-explicitly not mandatory on ordinary PRs. Then wire a deterministic CI reliability
-profile.
+Then: watch CI on **PR #10** and repair genuine failures. Remaining TASK-018B
+surface still to build: a **soak profile** (explicitly not mandatory on ordinary
+PRs), concurrent host detection, catalog read during atomic replacement, and a
+deterministic CI reliability job wired into `.github/workflows/ci.yml`.
 
 Following actions:
 
-1. Push TASK-018B, open a **draft** PR to the RC, and flag the accepted breaking
-   change (finding 0) for owner sign-off in the PR body.
+1. Close the missing TASK-018A adversarial security review (finding 2).
 2. Push TASK-018B, open a **draft** PR to the RC, repair CI, merge, delete the
    branch, refresh the graph from the new RC.
 3. Close the missing TASK-018A adversarial security review (finding 2 above).
