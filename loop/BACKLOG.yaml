@@ -60,13 +60,38 @@ local_open:
       EPIC TASK-018 part 2 of 3. Repo-native and deterministic; CI correctness
       gates, race/state checks, baselines and reports. Starts only after 018A
       merges — one implementation branch at a time.
-  - id: TASK-018C
-    title: Unified doctor, safe diagnostic bundle, observability correctness and runbooks
-    priority: 3
-    surfaces: [cli, server, docs]
-    risk: low
+  - id: TASK-019
+    title: Plugin installer hardening — the largest under-tested security surface
+    priority: 1
+    surfaces: [plugins, cli, security]
+    risk: high
     note: >
-      EPIC TASK-018 part 3 of 3. Supersedes the observability-runbooks half of L9.
+      SELECTED BY GRAPH-DRIVEN GAP ANALYSIS of the RC at d81ad94 (2026-08-20),
+      not by picking a convenient cleanup. Three independent signals agree:
+
+      (1) SIZE + COVERAGE. agentrouter/plugins.py is 818 statements at 67.7%
+      branch coverage — by a wide margin the largest under-tested module in the
+      project. The next biggest gap is evaluation/cli.py at 129 statements.
+
+      (2) CENTRALITY. Graphify god-nodes on the final RC puts four plugin
+      symbols in the top 14 architectural hubs: install() 47 edges,
+      get_plugin() 40, uninstall() 40, _dest() 34.
+
+      (3) BLAST RADIUS. This is the only module that writes into directories
+      OUTSIDE the project — user agent-config directories — and then removes
+      files from them. Its own docstring claims it "refuses links/reparse points
+      and ambiguous hard links" and "never recursively removes directories".
+      Those are exactly the class of claims TASK-018A/B/C repeatedly found to be
+      true in intent and incomplete in practice, and they have never been
+      adversarially tested.
+
+      Scope: reproduce before fixing, as in 018. Attack symlink and hardlink
+      targets, ownership forgery, partial/interrupted installs, concurrent
+      install+uninstall, a destination that becomes read-only mid-write, path
+      traversal in a plugin name, and uninstall on a path the user edited.
+      Raise coverage by killing real defects, never by writing tests that assert
+      current behaviour.
+
   - id: L9
     title: Observability runbooks + API/SDK compatibility and load testing
     priority: 5

@@ -1,5 +1,101 @@
 # LOOP_LOG
 
+## Iteration 28 — 2026-08-20 — EPIC TASK-018 complete; graph-first loop established
+
+**Goal:** finish the production reliability and operational resilience milestone —
+TASK-018B and TASK-018C — and put a navigation layer and durable memory under the loop
+so a fresh session can continue without conversation state.
+
+**What the reliability lab actually found.** Five defects, none of them hypothesised in
+advance; each was reproduced first, then fixed, then pinned by a test proven to fail
+without the fix.
+
+200 concurrent `POST /v1/route` against a real uvicorn server returned **3 × HTTP 500**,
+`sqlite3.OperationalError: database is locked`. SQLite's default busy timeout is **zero**,
+so the first contended write fails outright rather than waiting. The detail that mattered
+methodologically: **this does not reproduce through `TestClient`** at 40 concurrent
+requests. A harness built on TestClient would have declared the API healthy, which is why
+the lab drives real loopback sockets.
+
+Fixing it created a quieter problem. With a WAL active, `cp agentrouter.db` is **not a
+backup** and fails silently — after `init` plus five writes a plain copy reports **0 rows**,
+no error. That one was found by asking the graph what else touched the change:
+`graphify affected "connect"` showed 8 CLI commands, 3 service functions and an evaluator,
+which prompted "what else assumes this is one file?".
+
+Failure injection then found an unbounded `task` field. It is echoed **and** persisted, so
+2 MB in produced a 4,004,603-byte response and a 4,005,888-byte row — from one caller, on a
+service open by default, with no ceiling. Bounding it is a breaking change; the checker
+caught all eight tightenings and refused, which is the **first real use of the acceptance
+workflow built in 018A**. It works end to end, including the base-branch check that would
+otherwise block an accepted change forever. The owner was asked rather than self-approved.
+
+And idempotent POSTs were not idempotent: **12 concurrent requests with the same key and
+body produced 6 distinct decisions**, because `get` and `put` were each locked but the
+window between them was not.
+
+**CI caught what this machine could not.** WAL plus a 5 s timeout was enough here and not
+enough on slower 3.10/3.11/Windows runners. Raising the timeout would have treated the
+symptom; the shape was wrong. SQLite takes one writer at a time, so N threads racing for
+the file lock is wrong by construction — they now queue in-process. Verified at double CI's
+concurrency: 400 requests across 64 workers, zero errors.
+
+Two CI repairs, neither by weakening anything. The mutation gate failed with 8 unreviewed
+survivors, all inside the new single-flight lock. Allowlisting would have been wrong —
+these were live mutants in new concurrency logic attacking exactly the properties the fix
+depends on. Six real unit tests instead; `safety_policy_execution` 0.9772 → **0.9879**.
+Then `test-windows` failed on a Unix-only `resource` import, which this project's
+Windows-first stance makes a genuine portability bug rather than a CI quirk.
+
+**018C: operations.** Three doctors already existed, each printing and exiting, so nothing
+could answer "is this install healthy?" as data. `agentrouter doctor` aggregates the
+primitives they call rather than reimplementing them, with stable check ids and a remedy on
+every finding. Two rules with no exceptions: a check never raises (a diagnostic that
+crashes is useless precisely when it is needed) and never prints a secret. Warnings
+deliberately do **not** fail — open local mode with no API key is the documented default, so
+exiting non-zero on a fresh healthy install would cry wolf on the happy path.
+
+The diagnostic bundle is built from an **allowlist**, never a directory glob, because a glob
+picks up whatever is sitting there — a `.env`, a credentials file. Ten tests each attack one
+way something private could get in.
+
+The redaction over-match from 018B is fixed without weakening detection. The discriminator
+is a digit: path segments are words, opaque tokens are not, and every realistic
+slash-containing secret carries one. Sixteen credential formats still masked, four real
+paths preserved.
+
+Twelve runbooks, each labelled **Verified** (with the backing test named), **Local
+procedure**, or **Hypothetical**. Production incident response is Hypothetical and says so —
+this project has no hosted deployment, and inventing backup rotation would be fabricating
+operational experience it does not have.
+
+**The security gap was closed, not dropped.** The 018A re-review that never returned was
+executed: baseline tampering, `$ref` bombs, complexity DoS, `/ready` amplification,
+redaction, malicious identifiers, symlink and hardlink write targets, parity temp resources.
+No new critical or high findings. The honest caveat is recorded — I ran it myself, so it is
+reproducible but not independent.
+
+**Graph-first loop established.** Graphify 0.9.47 into a dedicated user venv (uv and pipx
+absent, `pip --user` PEP 668-blocked), AST-only extraction so no LLM and no paid inference:
+3623 nodes / 7084 edges from the final RC. Verified rather than trusted, and it earned its
+keep on the silent-backup defect. `CLAUDE.md` + `AGENT_HANDOFF.md` now carry the state a
+fresh session needs.
+
+**Next milestone chosen by evidence, not convenience.** TASK-019, plugin installer
+hardening: `plugins.py` is 818 statements at **67.7%** coverage (the next largest gap is
+129 statements), owns four of the graph's top-14 hubs, and is the only module that writes
+into directories outside the project and then removes files from them — while claiming in
+its docstring exactly the class of safety property that 018A/B/C repeatedly found true in
+intent and incomplete in practice.
+
+**Final gates at `d81ad94`:** 936 passed / 3 skipped; branch coverage 85.42%; ruff clean
+over 331 files; bandit 0 across `agentrouter` and `scripts`; mutation gate PASS (0.986
+overall, 0 unreviewed survivors); contract unchanged.
+
+**Unchanged and still honest:** `context_band_accuracy` is 0.6667 against the unchanged
+0.90 gate. The RC remains NOT RELEASE READY, and only the two-real-human annotation round
+can change that.
+
 ## Iteration 27 — 2026-08-09 — TASK-018A versioned API contract + SDK compatibility
 
 **Goal:** the REST API is a product surface with two published SDKs, and nothing stopped a
