@@ -14,17 +14,17 @@ authoritative for Claude sessions; where the two disagree, this file wins.
 
 | Field | Value |
 |---|---|
-| Last updated | 2026-08-19 (session 2) |
+| Last updated | 2026-08-20 |
 | Repository | `/media/krish/New Volume/Krish/04 - Dev Projects/Agentrouteros` |
 | Filesystem | NTFS/fuseblk, verified **rw** this session |
-| Active branch | `task/TASK-018B-reliability-load-lab` |
-| Current commit | `a138f67` (pushed) |
-| Remote branch | `origin/task/TASK-018B-reliability-load-lab` @ `a138f67` |
-| RC | `release/agentrouter-v0.5-rc1` @ `c11ddec`, post-merge CI **green** (CI, Security, Critical Mutation Testing) |
+| Active branch | `task/TASK-018C-operations-observability` |
+| Current commit | RC `ff06910` (branch just created, no commits yet) |
+| Remote branch | none yet for TASK-018C |
+| RC | `release/agentrouter-v0.5-rc1` @ **`ff06910`** (PR #10 merged) |
 | `main` | `602321a`, untouched |
-| Open PR | **#10 (draft)** → RC |
+| Open PR | none. PR #9 and #10 both **merged**; branches deleted |
 | Milestone | EPIC TASK-018 — production reliability & operational resilience |
-| Phase | TASK-018B (reliability/load lab) in progress |
+| Phase | **TASK-018C** (operations + observability) starting |
 
 ## Release truth
 
@@ -63,15 +63,9 @@ against; the threshold must not be lowered.
 
 ## In progress / open findings
 
-0. **OWNER DECISION PENDING — a deliberate breaking API change is staged.**
-   `8221cf4` bounds previously-unbounded request fields and records eight
-   `constraint_tightened` acceptances in `contracts/http/v1/manifest.json`.
-   Justification is measured, not theoretical: a 2 MB `task` returned 200 OK,
-   produced a 4,004,603-byte response and a 4,005,888-byte database row, from one
-   caller, unbounded — the API is local and open by default. Bounds are generous
-   (100k chars ≈ 25k tokens). **Do not merge the TASK-018B PR without flagging
-   this acceptance for owner sign-off**; it is visible in the manifest diff.
-   Flagged at the top of PR #10's description. PR is **draft and unmerged**.
+0. ~~Owner decision on the breaking change~~ — **APPROVED** by the owner and
+   merged in PR #10. The eight `constraint_tightened` acceptances stand in
+   `contracts/http/v1/manifest.json`.
 
 1. ~~WAL sidecar hazard~~ — **FIXED** in `fffb716`. `store.snapshot()` uses
    SQLite's online backup API. Measured before the fix: a plain copy of
@@ -111,25 +105,34 @@ assume a single-file database — they only check `agentrouter.db` exists.
 
 | Check | Result |
 |---|---|
-| pytest | 881 passed, 3 skipped |
+| pytest | 881 passed, 3 skipped (at `ff06910`) |
 | branch coverage (gate 80%) | 85.65% |
 | ruff check / format | clean, 322 files |
 | bandit (`agentrouter` + `scripts`) | 0 issues |
 | mutation gate (at `c11ddec`) | PASS — 0.9858 overall, safety 0.9877, engine 0.9815, 0 unreviewed survivors |
 
-## CI state on PR #10
+## TASK-018B outcome (merged, PR #10 → `ff06910`)
 
-At `7ad153a` everything passed except **`critical-modules`** — not a threshold
-miss (scores passed), but `all_survivors_reviewed_non_bypass` with **8 unreviewed
-survivors**, all inside the new `IdempotencyCache.flight`/`.release_flight`.
+Five real defects, each **reproduced before being fixed**, each pinned by a test
+proven to fail without the fix:
 
-**Repaired in `a138f67`** with six real unit tests pinning the semantics the
-mutants attack. Local campaign confirms **0 unreviewed survivors**,
-`safety_policy_execution` 0.9772 → **0.9879**, overall **0.986**, all five gates
-PASS. Nothing lowered, nothing allowlisted — allowlisting would have been wrong,
-since these were live mutants in new concurrency logic.
+1. Concurrent routing returned HTTP 500 (`database is locked`) — no WAL, no
+   `busy_timeout`. Does **not** reproduce through `TestClient`; only against a
+   real loopback server at 200 concurrent.
+2. The WAL fix introduced a silent backup hazard — a plain copy of
+   `agentrouter.db` reports **0 rows, no error**. Fixed with `store.snapshot()`.
+3. An unbounded `task` was a disk-fill primitive (2 MB → 4 MB response + 4 MB
+   row). Fixed with bounded request fields — the accepted breaking change.
+4. Idempotent POSTs were not idempotent: 12 concurrent same-key requests →
+   **6 decisions**. Fixed with per-key single-flight.
+5. **CI caught what the dev machine could not**: WAL + 5s timeout was enough
+   locally and not on slower runners. Writers are now serialised in-process —
+   SQLite takes one writer anyway, so queueing beats racing. Verified at double
+   CI's concurrency: 400 requests / 64 workers, zero errors.
 
-CI re-running at `a138f67` at time of writing.
+Two CI repairs along the way, neither by weakening anything: 8 mutants killed
+with real unit tests (`safety_policy_execution` 0.9772 → **0.9879**), and the
+soak's Unix-only `resource` import made portable for the Windows matrix.
 
 ## Next action
 
@@ -140,19 +143,26 @@ source "$HOME/.venvs/agentrouter/bin/activate"
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-Then: watch CI on **PR #10** and repair genuine failures. Remaining TASK-018B
-surface still to build: a **soak profile** (explicitly not mandatory on ordinary
-PRs), concurrent host detection, catalog read during atomic replacement, and a
-deterministic CI reliability job wired into `.github/workflows/ci.yml`.
+Build **TASK-018C**. Three doctors already exist and must be *aggregated*, not
+duplicated: `providers doctor` (`cli.py:842`), `hosts doctor` (`cli.py:1018`),
+`plugin doctor` (`cli.py:1418`).
 
-Following actions:
-
-1. Close the missing TASK-018A adversarial security review (finding 2).
-2. Push TASK-018B, open a **draft** PR to the RC, repair CI, merge, delete the
-   branch, refresh the graph from the new RC.
-3. Close the missing TASK-018A adversarial security review (finding 2 above).
-4. TASK-018C: unified `agentrouter doctor`, secret-safe diagnostic bundle,
-   correlation-ID tracing, redaction fix, tested runbooks.
+1. Unified `agentrouter doctor` / `--json` with stable check ids and actionable
+   remedies, covering version, runtime, writable data, database + schema,
+   registry, generated catalogs, provider freshness, host readiness, plugins,
+   MCP, server config, observability, contract version, SDK parity. **Never**
+   print a secret value.
+2. Secret-safe **diagnostic bundle** — must use `store.snapshot()`, never a
+   filesystem copy of the database (that silently loses every row). Defend
+   against `.env`/credential collection, symlink attacks, arbitrary paths.
+3. **Fix the redaction path over-match** (finding 3) without weakening secret
+   detection.
+4. Correlation-ID tracing API → service → store → logs → SDK; keep metrics free
+   of high-cardinality labels.
+5. Tested operational runbooks, explicit about which are verified local
+   procedures versus hypothetical production ones.
+6. Then: PR to RC, repair CI, merge, delete branch, refresh graph, and run the
+   post-milestone Graphify gap analysis to pick the next large milestone.
 
 ## Prohibited
 
