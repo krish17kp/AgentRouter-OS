@@ -18,11 +18,11 @@ authoritative for Claude sessions; where the two disagree, this file wins.
 | Repository | `/media/krish/New Volume/Krish/04 - Dev Projects/Agentrouteros` |
 | Filesystem | NTFS/fuseblk, verified **rw** this session |
 | Active branch | `task/TASK-018B-reliability-load-lab` |
-| Current commit | `7ad153a` (pushed) |
-| Remote branch | `origin/task/TASK-018B-reliability-load-lab` @ `7ad153a` |
+| Current commit | `a138f67` (pushed) |
+| Remote branch | `origin/task/TASK-018B-reliability-load-lab` @ `a138f67` |
 | RC | `release/agentrouter-v0.5-rc1` @ `c11ddec`, post-merge CI **green** (CI, Security, Critical Mutation Testing) |
 | `main` | `602321a`, untouched |
-| Open PR | **#10 (draft)** → RC — `critical-modules` FAILED, fix staged locally |
+| Open PR | **#10 (draft)** → RC |
 | Milestone | EPIC TASK-018 — production reliability & operational resilience |
 | Phase | TASK-018B (reliability/load lab) in progress |
 
@@ -78,10 +78,14 @@ against; the threshold must not be lowered.
    `agentrouter.db` after `init` + 5 writes reported **0 rows, silently**.
    TASK-018C's diagnostic bundle and any backup runbook must go through
    `store.snapshot`, never a filesystem copy.
-2. **TASK-018A security re-review never returned** — the previous session hit a
-   usage limit. The 018A security fixes have regression tests, but no fresh
-   adversarial pass has covered the merged diff. Must be closed before the
-   milestone is called done.
+2. ~~TASK-018A security re-review never returned~~ — **CLOSED**. An adversarial
+   pass was executed against the merged surfaces; results in
+   `loop/tasks/TASK-018B-reliability-load-lab/security-review-018a.md`.
+   **No new critical or high findings.** All eight attacks (baseline tampering,
+   `$ref` bombs, complexity DoS, `/ready` amplification, redaction, malicious
+   ids, symlink/hardlink write targets, parity temp resources) behaved
+   correctly. Caveat recorded there: I ran it myself, so it is reproducible but
+   not independent — the delegated attempt is what failed.
 3. **Redaction over-matches file paths.** The widened `observability._SECRET_RE`
    matches long `[A-Za-z0-9+/]{40,}` runs, so traceback paths render as
    `04 - Dev [redacted].py`. Safe direction, but it costs diagnosability. Fix in
@@ -107,29 +111,25 @@ assume a single-file database — they only check `agentrouter.db` exists.
 
 | Check | Result |
 |---|---|
-| pytest | 873 passed, 3 skipped |
+| pytest | 881 passed, 3 skipped |
 | branch coverage (gate 80%) | 85.65% |
 | ruff check / format | clean, 322 files |
 | bandit (`agentrouter` + `scripts`) | 0 issues |
 | mutation gate (at `c11ddec`) | PASS — 0.9858 overall, safety 0.9877, engine 0.9815, 0 unreviewed survivors |
 
-## CI state on PR #10 (at `7ad153a`)
+## CI state on PR #10
 
-All green except **`critical-modules` (mutation gate): FAIL**. Not a threshold
-miss — scores still pass (`safety_policy_execution` 0.9772 ≥ 0.95, overall
-0.9785). The failing gate is `all_survivors_reviewed_non_bypass`: **8 unreviewed
-survivors**, every one in the new `IdempotencyCache.flight` / `.release_flight`
-added by `7ad153a`.
+At `7ad153a` everything passed except **`critical-modules`** — not a threshold
+miss (scores passed), but `all_survivors_reviewed_non_bypass` with **8 unreviewed
+survivors**, all inside the new `IdempotencyCache.flight`/`.release_flight`.
 
-Repaired locally (uncommitted at time of writing) with six real unit tests in
-`tests/test_server_limits.py` that pin the semantics the mutants attack: same
-lock for the same key, different locks for different keys, an idle lock is
-dropped, a **held** lock is not dropped, an unknown key is a no-op, and the locks
-genuinely serialise the same key with no interleaving. **No threshold lowered and
-nothing allowlisted** — allowlisting would have been wrong here, since these are
-live mutants in new logic, not equivalent ones.
+**Repaired in `a138f67`** with six real unit tests pinning the semantics the
+mutants attack. Local campaign confirms **0 unreviewed survivors**,
+`safety_policy_execution` 0.9772 → **0.9879**, overall **0.986**, all five gates
+PASS. Nothing lowered, nothing allowlisted — allowlisting would have been wrong,
+since these were live mutants in new concurrency logic.
 
-Local mutation re-run in progress to confirm before pushing.
+CI re-running at `a138f67` at time of writing.
 
 ## Next action
 
