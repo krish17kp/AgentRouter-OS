@@ -15,7 +15,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import resource
 import sys
 import tempfile
 import time
@@ -24,6 +23,11 @@ from pathlib import Path
 from typing import Any
 
 from .harness import LoadSpec, run_load, serve_app
+
+try:  # `resource` is Unix-only, and this project targets Windows first.
+    import resource
+except ImportError:  # pragma: no cover - exercised on Windows CI
+    resource = None
 
 
 @dataclass
@@ -72,6 +76,17 @@ class SoakResult:
         }
 
 
+def _rss_kb() -> int:
+    """Peak RSS, or -1 where the platform does not expose it.
+
+    Reported, never asserted: memory on a shared machine is noise. File
+    descriptors are the measure that actually signals a leak.
+    """
+    if resource is None:
+        return -1
+    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+
+
 def _open_fds() -> int:
     try:
         return len(os.listdir(f"/proc/{os.getpid()}/fd"))
@@ -100,7 +115,7 @@ def soak(home: Path, *, seconds: float, workers: int, batch: int) -> SoakResult:
             result.samples.append(
                 Sample(
                     at_seconds=round(time.perf_counter() - started, 1),
-                    rss_kb=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
+                    rss_kb=_rss_kb(),
                     open_fds=_open_fds(),
                     db_bytes=_size(home / "agentrouter.db"),
                     wal_bytes=_size(home / "agentrouter.db-wal"),

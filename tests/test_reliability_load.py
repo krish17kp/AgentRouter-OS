@@ -370,9 +370,11 @@ def test_a_short_soak_completes_without_server_errors_or_fd_leaks(home):
     assert result.transport_errors == {}, result.as_dict()
 
     # File descriptors are the resource that actually signals a leak here; RSS on
-    # a shared machine is noise, so it is reported and not asserted.
+    # a shared machine is noise, so it is reported and not asserted. Both degrade
+    # to -1 where the platform does not expose them (Windows has no `resource`,
+    # and no /proc), which is a skip rather than a failure.
     first_fds, last_fds, _ = result.growth("open_fds")
-    if first_fds > 0:  # -1 on platforms without /proc
+    if first_fds > 0:
         assert last_fds <= first_fds + 5, f"file descriptors grew {first_fds} -> {last_fds}"
 
 
