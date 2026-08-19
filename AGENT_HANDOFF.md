@@ -18,7 +18,7 @@ authoritative for Claude sessions; where the two disagree, this file wins.
 | Repository | `/media/krish/New Volume/Krish/04 - Dev Projects/Agentrouteros` |
 | Filesystem | NTFS/fuseblk, verified **rw** this session |
 | Active branch | `task/TASK-018C-operations-observability` |
-| Current commit | RC `ff06910` (branch just created, no commits yet) |
+| Current commit | `6662791` (**local only — not pushed**) |
 | Remote branch | none yet for TASK-018C |
 | RC | `release/agentrouter-v0.5-rc1` @ **`ff06910`** (PR #10 merged) |
 | `main` | `602321a`, untouched |
@@ -80,10 +80,11 @@ against; the threshold must not be lowered.
    ids, symlink/hardlink write targets, parity temp resources) behaved
    correctly. Caveat recorded there: I ran it myself, so it is reproducible but
    not independent — the delegated attempt is what failed.
-3. **Redaction over-matches file paths.** The widened `observability._SECRET_RE`
-   matches long `[A-Za-z0-9+/]{40,}` runs, so traceback paths render as
-   `04 - Dev [redacted].py`. Safe direction, but it costs diagnosability. Fix in
-   TASK-018C **without weakening secret redaction**.
+3. ~~Redaction over-matches file paths~~ — **FIXED** in `2dfbf96`. The
+   discriminator is a digit: path segments are words, opaque tokens are not, and
+   every realistic slash-containing secret (AWS secret access key, base64 blob)
+   carries a digit. Only the catch-all was narrowed; 16 credential formats are
+   asserted still masked and four real paths preserved.
 
 ## Graph
 
@@ -105,7 +106,7 @@ assume a single-file database — they only check `agentrouter.db` exists.
 
 | Check | Result |
 |---|---|
-| pytest | 881 passed, 3 skipped (at `ff06910`) |
+| pytest | 925 passed, 3 skipped |
 | branch coverage (gate 80%) | 85.65% |
 | ruff check / format | clean, 322 files |
 | bandit (`agentrouter` + `scripts`) | 0 issues |
@@ -143,26 +144,31 @@ source "$HOME/.venvs/agentrouter/bin/activate"
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-Build **TASK-018C**. Three doctors already exist and must be *aggregated*, not
-duplicated: `providers doctor` (`cli.py:842`), `hosts doctor` (`cli.py:1018`),
-`plugin doctor` (`cli.py:1418`).
+**TASK-018C is partly built.** Done so far (all local, unpushed):
 
-1. Unified `agentrouter doctor` / `--json` with stable check ids and actionable
-   remedies, covering version, runtime, writable data, database + schema,
-   registry, generated catalogs, provider freshness, host readiness, plugins,
-   MCP, server config, observability, contract version, SDK parity. **Never**
-   print a secret value.
-2. Secret-safe **diagnostic bundle** — must use `store.snapshot()`, never a
-   filesystem copy of the database (that silently loses every row). Defend
-   against `.env`/credential collection, symlink attacks, arbitrary paths.
-3. **Fix the redaction path over-match** (finding 3) without weakening secret
-   detection.
-4. Correlation-ID tracing API → service → store → logs → SDK; keep metrics free
-   of high-cardinality labels.
-5. Tested operational runbooks, explicit about which are verified local
-   procedures versus hypothetical production ones.
-6. Then: PR to RC, repair CI, merge, delete branch, refresh graph, and run the
-   post-milestone Graphify gap analysis to pick the next large milestone.
+- `agentrouter/diagnostics.py` + `agentrouter doctor [--json]` — 11 checks with
+  stable ids and remedies, aggregating the primitives the three existing doctors
+  call rather than reimplementing them. A check never raises and never prints a
+  secret; both are tested. Warnings do not fail (open local mode is the
+  documented default), exit 0 healthy / 1 broken.
+- Redaction narrowed so tracebacks keep their paths (finding 3, closed).
+- `agentrouter/bundle.py` + `doctor --bundle [--include-database]` — allowlisted,
+  never globbed; `.env` and credential files provably excluded; database via
+  `store.snapshot`; refuses overwrite and symlinked destinations.
+
+Remaining for TASK-018C:
+
+1. **Correlation-ID tracing** end to end: API → service → store → logs → SDK
+   response. Assert one id appears at every layer for a single request.
+2. **Metrics cardinality** — ensure no label derives from request ids, prompts,
+   users or arbitrary model text.
+3. **Operational runbooks**, tested where they are local procedures, and
+   explicitly labelled where they are hypothetical production ones. Cover at
+   minimum: SQLite locked, database recovery, corrupted catalog + rollback,
+   rate-limit overload, idempotency conflict, degraded host, diagnostic-bundle
+   collection, and the **NTFS read-only remount** this project has actually hit.
+4. Push, draft PR to RC, repair CI, merge, delete branch, refresh graph.
+5. Then the post-milestone Graphify gap analysis to choose the next milestone.
 
 ## Prohibited
 
