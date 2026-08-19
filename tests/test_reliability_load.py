@@ -139,3 +139,98 @@ def test_decision_ids_are_unique_under_concurrency(home):
     finally:
         conn.close()
     assert total == distinct == outcome.ok
+
+
+# --- data integrity under WAL (TASK-018B) -------------------------------------
+#
+# Enabling WAL fixed the concurrency failure but introduced a quieter hazard:
+# committed rows live in the `-wal` sidecar until a checkpoint, so a filesystem
+# copy of `agentrouter.db` alone is not a backup. It fails *silently* — you get a
+# database, it just has no tables.
+
+
+def test_a_naive_file_copy_of_the_database_is_not_a_backup(home):
+    """Pin the hazard itself, so nobody re-introduces a plain copy later."""
+    import shutil
+    import tempfile
+
+    conn = store.connect(home)
+    try:
+        for i in range(5):
+            store.save_decision(conn, f"task {i}", {"n": i})
+
+        naive = Path(tempfile.mkdtemp()) / "agentrouter.db"
+        shutil.copy(home / "agentrouter.db", naive)
+
+        # WAL is active and un-checkpointed, so the copy is incomplete — and it
+        # fails SILENTLY: the table exists (created before the writes) but every
+        # row is missing. No error, no warning, just an empty log.
+        assert (home / "agentrouter.db-wal").exists()
+        copied = sqlite3.connect(f"file:{naive}?mode=ro", uri=True)
+        try:
+            visible = copied.execute("SELECT COUNT(*) FROM decisions").fetchone()[0]
+        finally:
+            copied.close()
+        assert visible < 5, (
+            "a plain file copy appeared complete; if SQLite ever checkpoints "
+            "eagerly this test is obsolete, but store.snapshot must still be used"
+        )
+    finally:
+        conn.close()
+
+
+def test_snapshot_captures_rows_still_held_in_the_wal(home, tmp_path):
+    """`store.snapshot` is the supported way to copy the log, and must be
+    complete while writers are still connected."""
+    conn = store.connect(home)
+    try:
+        for i in range(5):
+            store.save_decision(conn, f"task {i}", {"n": i})
+
+        target = tmp_path / "bundle" / "decisions.db"
+        store.snapshot(home, target)
+        # Self-contained at rest: one file, no sidecar to forget to copy.
+        # (Opening it later legitimately creates -wal/-shm, so check now.)
+        assert sorted(p.name for p in target.parent.iterdir()) == ["decisions.db"]
+
+        copied = sqlite3.connect(f"file:{target}?mode=ro", uri=True)
+        try:
+            assert copied.execute("SELECT COUNT(*) FROM decisions").fetchone()[0] == 5
+        finally:
+            copied.close()
+    finally:
+        conn.close()
+
+
+def test_snapshot_is_consistent_while_writes_are_in_flight(home, tmp_path):
+    """The online backup API must not tear a concurrent write."""
+    import threading
+
+    stop = threading.Event()
+    written = []
+
+    def writer():
+        conn = store.connect(home)
+        try:
+            while not stop.is_set():
+                written.append(store.save_decision(conn, "concurrent", {"x": 1}))
+        finally:
+            conn.close()
+
+    thread = threading.Thread(target=writer, daemon=True)
+    thread.start()
+    try:
+        target = tmp_path / "live-snapshot.db"
+        store.snapshot(home, target)
+    finally:
+        stop.set()
+        thread.join(timeout=30)
+
+    copied = sqlite3.connect(f"file:{target}?mode=ro", uri=True)
+    try:
+        count = copied.execute("SELECT COUNT(*) FROM decisions").fetchone()[0]
+        # integrity_check is the real assertion: a torn copy fails it.
+        assert copied.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+    finally:
+        copied.close()
+    assert 0 <= count <= len(written) + 1

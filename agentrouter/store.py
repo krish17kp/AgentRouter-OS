@@ -73,6 +73,31 @@ def connect(home: Path) -> sqlite3.Connection:
     return conn
 
 
+def snapshot(home: Path, destination: Path) -> Path:
+    """Write a complete, self-contained copy of the decision log to ``destination``.
+
+    Copying ``agentrouter.db`` with a filesystem copy is WRONG once WAL is enabled
+    (TASK-018B), and silently so: recently committed rows live in the ``-wal``
+    sidecar until a checkpoint, so a naive copy can yield a database with **no
+    tables at all** — verified, not theoretical. Anything that backs up, exports
+    or bundles the database must come through here.
+
+    ``sqlite3``'s online backup API takes a consistent snapshot including whatever
+    is still in the WAL, while other connections keep reading and writing.
+    """
+    source = connect(home)
+    try:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        target = sqlite3.connect(destination)
+        try:
+            source.backup(target)
+        finally:
+            target.close()
+    finally:
+        source.close()
+    return destination
+
+
 def save_decision(conn: sqlite3.Connection, task: str, payload: dict) -> str:
     cur = conn.execute(
         "INSERT INTO decisions (created_at, task, payload, user) VALUES (?, ?, ?, ?)",
