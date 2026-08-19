@@ -16,7 +16,17 @@ from pathlib import Path
 import typer
 import yaml
 
-from . import __version__, catalog_ops, contract, hosts, observability, plugins, store, taxonomy
+from . import (
+    __version__,
+    catalog_ops,
+    contract,
+    diagnostics,
+    hosts,
+    observability,
+    plugins,
+    store,
+    taxonomy,
+)
 from .classifier import classify
 from .controls import PREFERENCE_WEIGHTS, RouteControls, apply_controls
 from .engine import BASE_WEIGHTS
@@ -225,6 +235,62 @@ def _reason_for(rec: dict, cls, shifts: list[str]) -> str:
 
 
 # --- init --------------------------------------------------------------------
+
+
+@app.command()
+def doctor(
+    as_json: bool = typer.Option(False, "--json", help="Machine-readable report on stdout."),
+):
+    """Check the whole local installation and say exactly what to fix.
+
+    Aggregates the checks that `providers doctor`, `hosts doctor` and
+    `plugin doctor` each cover, plus the runtime, data directory, database,
+    contract and observability state — one command, one answer.
+
+    Exit code: 0 when the installation works, 1 when something is broken.
+
+    Warnings deliberately do NOT fail. Open local mode with no API key is the
+    documented default, so exiting non-zero on a fresh healthy install would
+    make this command useless in a script — it would cry wolf on the happy path.
+    A warning is something worth knowing; a failure is something that stops the
+    tool working.
+    """
+    home = _home()
+    checks = diagnostics.run_all(home)
+    overall = diagnostics.worst(checks)
+
+    if as_json:
+        typer.echo(
+            json.dumps(
+                {
+                    "status": overall,
+                    "home": str(home),
+                    "checks": [c.as_dict() for c in checks],
+                },
+                indent=2,
+            )
+        )
+    else:
+        marks = {diagnostics.OK: "OK  ", diagnostics.WARN: "WARN", diagnostics.FAIL: "FAIL"}
+        for check in checks:
+            typer.echo(f"[{marks[check.status]}] {check.id:<22} {check.summary}")
+            if check.remedy:
+                typer.echo(f"{'':9}-> {check.remedy}")
+
+        failures = [c for c in checks if c.status == diagnostics.FAIL]
+        warnings = [c for c in checks if c.status == diagnostics.WARN]
+        typer.echo("")
+        if failures:
+            noun = "problem" if len(failures) == 1 else "problems"
+            typer.echo(f"{len(failures)} {noun} to fix. Start with: {failures[0].remedy}")
+        elif warnings:
+            noun = "note" if len(warnings) == 1 else "notes"
+            typer.echo(f"Everything works. {len(warnings)} {noun} above worth knowing about.")
+        else:
+            typer.echo('All clear. Next: agentrouter route "your task here"')
+
+    if overall == diagnostics.FAIL:
+        raise typer.Exit(EXIT_RUNTIME)
 
 
 @app.command()

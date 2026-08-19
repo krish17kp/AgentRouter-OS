@@ -151,9 +151,33 @@ _SECRET_RE = re.compile(
 _MAX_REDACT_DEPTH = 6
 
 
+def _is_probably_a_path(run: str) -> bool:
+    """True for a filesystem path that the catch-all pattern would otherwise mask.
+
+    The last alternative in `_SECRET_RE` is a deliberate catch-all for long
+    opaque runs, and it did its job too well: `.../Projects/Agentrouteros/
+    agentrouter/server/app` is 44 characters of `[A-Za-z0-9+/]` and was redacted
+    out of every traceback, exactly where a path is the most useful thing on the
+    line.
+
+    The discriminator is a digit. Path segments are words; opaque tokens are
+    not, and every realistic long secret that contains a slash (an AWS secret
+    access key, a base64 blob) also contains at least one digit. This narrows
+    only the catch-all — the vendor prefixes, keyword adjacency, JWT, PEM and
+    connection-string rules are untouched, so nothing that was named before is
+    unmasked now.
+    """
+    return "/" in run and not any(character.isdigit() for character in run)
+
+
 def redact(text: str) -> str:
     """Mask credential-shaped substrings before anything is written to a log."""
-    return _SECRET_RE.sub("[redacted]", text)
+
+    def mask(match: re.Match[str]) -> str:
+        run = match.group(0)
+        return run if _is_probably_a_path(run) else "[redacted]"
+
+    return _SECRET_RE.sub(mask, text)
 
 
 def redact_value(value: Any, _depth: int = 0) -> Any:

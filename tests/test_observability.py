@@ -301,3 +301,68 @@ def test_quiet_api_error_omits_message_and_traceback(caplog):
     assert "/home/u/registry" not in text
     assert "AIzaSy" not in text
     assert "run doctor" in text  # still actionable
+
+
+# --- redaction must stay secure AND usable (TASK-018C) ------------------------
+#
+# The widened catch-all did its job too well: a 44-character run like
+# `Projects/Agentrouteros/agentrouter/server/app` matched, so file paths vanished
+# from tracebacks — exactly where a path is the most useful thing on the line.
+# The narrowing must not unmask anything that was masked before, so both
+# directions are asserted together.
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/media/krish/New Volume/Krish/04 - Dev Projects/Agentrouteros/agentrouter/server/app.py",
+        "agentrouter/evaluation/evaluators/context_bands.py",
+        "/usr/lib/python3/dist-packages/something/deeply/nested/module/handler.py",
+        "New Volume/Krish/Dev Projects/Agentrouteros/agentrouter/reliability/harness.py",
+    ],
+)
+def test_file_paths_survive_redaction(path):
+    """A redacted traceback is a traceback nobody can act on."""
+    assert "[redacted]" not in obs.redact(path), path
+
+
+@pytest.mark.parametrize(
+    "secret",
+    [
+        "sk-livekey0123456789abcdef",
+        "sk_live_51H8xYzAbCdEfGhIj",
+        "github_pat_11ABCDEFG0aBcDeFgHiJkLmN",
+        "ghp_0123456789abcdefghijklmnop",
+        "glpat-ABCDEFghijkl1234567890",
+        "xoxb-1234567890-abcdefghij",
+        "hf_ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+        "AIzaSyA1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P",
+        "AKIAIOSFODNN7EXAMPLE",
+        "ASIAIOSFODNN7EXAMPLE",
+        # An AWS secret access key contains slashes AND digits — the case the
+        # path discriminator must NOT let through.
+        "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY1",
+        "Bearer eyJhbGciOiJIUzI1NiJ9.abcdefgh.signature",
+        "Basic dXNlcjpwYXNzd29yZA==",
+        "postgres://user:hunter2@db.internal:5432/x",
+        'password="hunter2secret"',
+        "api_key: AbC123dEf456",
+    ],
+)
+def test_narrowing_the_catch_all_unmasked_nothing(secret):
+    """Every format masked before the narrowing is still masked after it."""
+    masked = obs.redact(f"failed while using {secret} here")
+    assert "[redacted]" in masked, secret
+    assert secret.split()[-1][:14] not in masked, secret
+
+
+def test_a_traceback_keeps_its_paths_but_loses_its_secrets():
+    """The end-to-end property: diagnosable and safe at the same time."""
+    trace = (
+        'File "/media/krish/New Volume/Krish/04 - Dev Projects/Agentrouteros'
+        '/agentrouter/server/service.py", line 127, in route_task\n'
+        "    raise RuntimeError('bad key AIzaSyA1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P')\n"
+    )
+    masked = obs.redact(trace)
+    assert "service.py" in masked and "route_task" in masked
+    assert "AIzaSy" not in masked and "[redacted]" in masked
