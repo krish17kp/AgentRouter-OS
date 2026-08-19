@@ -22,7 +22,7 @@ authoritative for Claude sessions; where the two disagree, this file wins.
 | Remote branch | `origin/task/TASK-018B-reliability-load-lab` @ `7ad153a` |
 | RC | `release/agentrouter-v0.5-rc1` @ `c11ddec`, post-merge CI **green** (CI, Security, Critical Mutation Testing) |
 | `main` | `602321a`, untouched |
-| Open PR | **#10 (draft)** → RC. PR #9 (TASK-018A) merged, branch deleted |
+| Open PR | **#10 (draft)** → RC — `critical-modules` FAILED, fix staged locally |
 | Milestone | EPIC TASK-018 — production reliability & operational resilience |
 | Phase | TASK-018B (reliability/load lab) in progress |
 
@@ -112,6 +112,24 @@ assume a single-file database — they only check `agentrouter.db` exists.
 | ruff check / format | clean, 322 files |
 | bandit (`agentrouter` + `scripts`) | 0 issues |
 | mutation gate (at `c11ddec`) | PASS — 0.9858 overall, safety 0.9877, engine 0.9815, 0 unreviewed survivors |
+
+## CI state on PR #10 (at `7ad153a`)
+
+All green except **`critical-modules` (mutation gate): FAIL**. Not a threshold
+miss — scores still pass (`safety_policy_execution` 0.9772 ≥ 0.95, overall
+0.9785). The failing gate is `all_survivors_reviewed_non_bypass`: **8 unreviewed
+survivors**, every one in the new `IdempotencyCache.flight` / `.release_flight`
+added by `7ad153a`.
+
+Repaired locally (uncommitted at time of writing) with six real unit tests in
+`tests/test_server_limits.py` that pin the semantics the mutants attack: same
+lock for the same key, different locks for different keys, an idle lock is
+dropped, a **held** lock is not dropped, an unknown key is a no-op, and the locks
+genuinely serialise the same key with no interleaving. **No threshold lowered and
+nothing allowlisted** — allowlisting would have been wrong here, since these are
+live mutants in new logic, not equivalent ones.
+
+Local mutation re-run in progress to confirm before pushing.
 
 ## Next action
 

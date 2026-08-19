@@ -349,3 +349,37 @@ def test_probes_are_never_rate_limited(tmp_path, monkeypatch):
         )
     assert outcome.ok == 60, outcome.as_dict()
     assert outcome.statuses.get(429, 0) == 0
+
+
+# --- soak tooling -------------------------------------------------------------
+#
+# The soak itself is a wall-clock experiment and is NOT a CI gate — gating every
+# PR on one buys flakiness, not confidence. What is tested here is that the
+# tooling works and that its one unambiguous failure signal is wired up.
+
+
+@pytest.mark.slow
+def test_a_short_soak_completes_without_server_errors_or_fd_leaks(home):
+    from agentrouter.reliability.soak import soak
+
+    result = soak(home, seconds=4, workers=4, batch=15)
+
+    assert result.samples, "the soak recorded no cycles"
+    assert result.total_ok > 0
+    assert result.total_server_errors == 0, result.as_dict()
+    assert result.transport_errors == {}, result.as_dict()
+
+    # File descriptors are the resource that actually signals a leak here; RSS on
+    # a shared machine is noise, so it is reported and not asserted.
+    first_fds, last_fds, _ = result.growth("open_fds")
+    if first_fds > 0:  # -1 on platforms without /proc
+        assert last_fds <= first_fds + 5, f"file descriptors grew {first_fds} -> {last_fds}"
+
+
+def test_the_soak_report_marks_timing_as_indicative(home):
+    """Guards against someone later turning these into a threshold."""
+    from agentrouter.reliability.soak import soak
+
+    payload = soak(home, seconds=0, workers=2, batch=4).as_dict()
+    assert "resource_trend_indicative_only" in payload
+    assert "total_server_errors" in payload
