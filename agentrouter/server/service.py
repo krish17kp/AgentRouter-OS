@@ -148,11 +148,14 @@ def save_feedback(decision_id: str, rating: int, note: str | None = None) -> boo
         if store.load_decision(conn, decision_id) is None:
             return False
         rowid = int(decision_id.removeprefix("d_"))
-        conn.execute(
-            "INSERT INTO feedback (decision_id, created_at, rating, note) VALUES (?, ?, ?, ?)",
-            (rowid, datetime.now(timezone.utc).isoformat(), rating, note),
-        )
-        conn.commit()
+        # Same contention as save_decision: SQLite takes one writer at a time, so
+        # queue here rather than race for the file lock and lose (TASK-018B).
+        with store.write_lock():
+            conn.execute(
+                "INSERT INTO feedback (decision_id, created_at, rating, note) VALUES (?, ?, ?, ?)",
+                (rowid, datetime.now(timezone.utc).isoformat(), rating, note),
+            )
+            conn.commit()
         return True
     finally:
         conn.close()

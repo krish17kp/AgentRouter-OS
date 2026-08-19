@@ -7,6 +7,7 @@ import getpass
 import json
 import os
 import sqlite3
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -38,7 +39,25 @@ def current_user() -> str:
 # concurrent routing returned HTTP 500 "database is locked" (TASK-018B). Five
 # seconds is far longer than any write here takes and still bounded, so a truly
 # wedged database still fails rather than hanging a request forever.
-_BUSY_TIMEOUT_MS = 5_000
+_BUSY_TIMEOUT_MS = 15_000
+
+# SQLite permits exactly one writer at a time, so N threads racing for the file
+# lock is the wrong shape: they compete, and whoever loses for longer than
+# busy_timeout gets an error instead of a turn. WAL + busy_timeout alone was
+# enough on a fast machine and NOT enough on slower CI runners, where 200
+# concurrent routes still produced 3 x "database is locked" at p99 9s.
+#
+# Serialising writers inside the process converts "compete and sometimes fail"
+# into "queue and always succeed". It costs nothing in throughput, because
+# SQLite was going to serialise them anyway — it just does the queuing somewhere
+# that can wait politely. busy_timeout still matters for a SECOND process (the
+# CLI writing while the server runs), which this lock cannot coordinate.
+_WRITE_LOCK = threading.Lock()
+
+
+def write_lock() -> threading.Lock:
+    """The process-wide serialiser for SQLite writes. See `_WRITE_LOCK`."""
+    return _WRITE_LOCK
 
 
 def _ensure_schema(conn: sqlite3.Connection) -> None:
@@ -99,6 +118,11 @@ def snapshot(home: Path, destination: Path) -> Path:
 
 
 def save_decision(conn: sqlite3.Connection, task: str, payload: dict) -> str:
+    with _WRITE_LOCK:
+        return _save_decision_locked(conn, task, payload)
+
+
+def _save_decision_locked(conn: sqlite3.Connection, task: str, payload: dict) -> str:
     cur = conn.execute(
         "INSERT INTO decisions (created_at, task, payload, user) VALUES (?, ?, ?, ?)",
         (datetime.now(timezone.utc).isoformat(), task, json.dumps(payload), current_user()),
