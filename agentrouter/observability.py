@@ -19,6 +19,8 @@ import contextvars
 import json
 import logging
 import os
+import re
+import traceback
 from collections.abc import Iterator
 from typing import Any
 
@@ -116,6 +118,117 @@ def log_route_decision(
         task=task, payload=payload, decision_id=decision_id, request_id=request_id
     )
     logger.info(json.dumps(record, sort_keys=True))
+    return record
+
+
+# Credential shapes. A vendor-prefix list alone is a losing game — it missed
+# Google, GitLab, Slack, HuggingFace, fine-grained GitHub PATs, AWS *temporary*
+# keys and every `password=` pair — so the last two alternatives are generic:
+# a keyword adjacent to a value, and any long high-entropy run. Over-redaction
+# is the correct failure direction here; a log is not worth a leaked key.
+_SECRET_RE = re.compile(
+    r"""(
+      -----BEGIN[ A-Z]*PRIVATE\ KEY-----.*?-----END[ A-Z]*PRIVATE\ KEY-----
+    | sk-[A-Za-z0-9_\-]{8,}
+    | sk_(?:live|test)_[A-Za-z0-9]{8,}
+    | github_pat_[A-Za-z0-9_]{20,}
+    | gh[pousr]_[A-Za-z0-9]{16,}
+    | glpat-[A-Za-z0-9_\-]{16,}
+    | xox[baprs]-[A-Za-z0-9\-]{10,}
+    | hf_[A-Za-z0-9]{16,}
+    | AIza[A-Za-z0-9_\-]{20,}
+    | A(?:KIA|SIA|ROA|IDA|NPA|NVA)[0-9A-Z]{12,}
+    | (?:Bearer|Basic)\s+[A-Za-z0-9+/=._\-]{8,}
+    | ey[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]+
+    | [a-z][a-z0-9+.\-]*://[^\s/@]+:[^\s/@]+@
+    | (?i:api[_\-]?key|secret|passwd|password|token|credential)
+      (?-i:)["'\s]*[:=]["'\s]*[^\s"',}\]]{6,}
+    | [A-Za-z0-9+/]{40,}={0,2}
+    )""",
+    re.VERBOSE | re.DOTALL,
+)
+
+_MAX_REDACT_DEPTH = 6
+
+
+def redact(text: str) -> str:
+    """Mask credential-shaped substrings before anything is written to a log."""
+    return _SECRET_RE.sub("[redacted]", text)
+
+
+def redact_value(value: Any, _depth: int = 0) -> Any:
+    """Redact recursively, so a credential inside a dict or list cannot slip past.
+
+    ``log_event`` used to redact only values that were already strings, so
+    ``detail={"authorization": "Bearer secret"}`` was serialised untouched.
+    """
+    if isinstance(value, str):
+        return redact(value)
+    if _depth >= _MAX_REDACT_DEPTH:
+        return redact(str(value))
+    if isinstance(value, dict):
+        return {k: redact_value(v, _depth + 1) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [redact_value(v, _depth + 1) for v in value]
+    return value
+
+
+def log_event(event: str, **fields: Any) -> dict[str, Any]:
+    """Emit one structured event record. Returns the record for testing.
+
+    Pass metadata only — never raw task text, prompts or credential values. The
+    current request id is attached automatically so an operator can correlate an
+    event with the API response the client saw. String values are passed through
+    ``redact`` as a backstop, because the most valuable events (unexpected
+    failures) carry text nobody enumerated in advance.
+    """
+    record: dict[str, Any] = {"event": event, "request_id": get_request_id(), **fields}
+    record = {k: redact_value(v) for k, v in record.items() if v is not None}
+    logger.info(json.dumps(record, sort_keys=True, default=str))
+    return record
+
+
+def log_api_error(
+    event: str, exc: BaseException, *, detail: bool = True, remedy: str | None = None
+) -> dict[str, Any]:
+    """Record a server-side failure so it is diagnosable even though the client is told nothing.
+
+    Emitted at ERROR. The module is silent by design at INFO, which is right for
+    routine records but wrong here: catching an unhandled API error to return a
+    typed 500 also stops the ASGI server from logging it, so without an
+    ERROR-level record the fault would be invisible to the operator. Note that
+    ERROR records are *not* silent even with no handler installed — Python's
+    ``lastResort`` handler writes them to stderr. That is deliberate for a fault,
+    and it is why ``detail`` exists.
+
+    ``detail=False`` logs the type and a remedy but neither the exception text
+    nor a traceback. Use it when the exception is **the user's data being wrong
+    rather than a bug**: such messages quote the offending file and its contents,
+    so logging them turns any caller who can reach the failing endpoint into an
+    unauthenticated amplifier that writes that content — credentials included —
+    into the operator's log on every request. A malformed registry is exactly
+    that case, and `/ready` is both unauthenticated and rate-limit exempt.
+
+    When ``detail`` is on, the traceback is rendered and redacted here rather
+    than passed as ``exc_info``: logging would otherwise render the raw exception
+    message, and that message is precisely where a stray credential shows up.
+    """
+    record: dict[str, Any] = {
+        "event": event,
+        "request_id": get_request_id(),
+        "error_type": type(exc).__name__,
+    }
+    if detail:
+        record["message"] = redact(str(exc))[:500]
+    if remedy:
+        record["remedy"] = remedy
+    record = {k: v for k, v in record.items() if v is not None}
+    line = json.dumps(record, sort_keys=True, default=str)
+    if not detail:
+        logger.error("%s", line)
+        return record
+    trace = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    logger.error("%s\n%s", line, redact(trace))
     return record
 
 

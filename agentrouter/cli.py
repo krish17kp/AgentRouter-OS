@@ -16,7 +16,7 @@ from pathlib import Path
 import typer
 import yaml
 
-from . import catalog_ops, hosts, observability, plugins, store, taxonomy
+from . import __version__, catalog_ops, contract, hosts, observability, plugins, store, taxonomy
 from .classifier import classify
 from .controls import PREFERENCE_WEIGHTS, RouteControls, apply_controls
 from .engine import BASE_WEIGHTS
@@ -66,12 +66,19 @@ prompt_app = typer.Typer(help="Prompt generation.")
 hosts_app = typer.Typer(help="Execution host discovery.")
 models_app = typer.Typer(help="Model catalog inspection.")
 plugin_app = typer.Typer(help="Install AgentRouter host integrations (skill/plugin).")
+# Maintainer tooling: it operates on repository artifacts (contracts/), not on a
+# user's installation, so it is hidden from the top-level help rather than
+# advertised to someone who pip-installed the wheel.
+contract_app = typer.Typer(
+    help="Versioned HTTP API contract (export / compatibility check). Maintainer tooling."
+)
 app.add_typer(registry_app, name="registry")
 app.add_typer(providers_app, name="providers")
 app.add_typer(prompt_app, name="prompt")
 app.add_typer(hosts_app, name="hosts")
 app.add_typer(models_app, name="models")
 app.add_typer(plugin_app, name="plugin")
+app.add_typer(contract_app, name="contract", hidden=True)
 
 # Multi-dataset evaluation framework (evaluation/ package). The legacy
 # single-shot `evaluate` command below is kept for backward compatibility.
@@ -1418,3 +1425,218 @@ def plugin_doctor():
 
 if __name__ == "__main__":
     app()
+
+
+# --- contract (versioned HTTP API contract — TASK-018A) ------------------------------
+
+# The API is a product contract: exported to a byte-stable artifact, and every
+# change classified before it can land. Exit codes are stable for CI:
+#   0 compatible (additive/risky only)
+#   1 breaking change
+#   3 no baseline, or a baseline that cannot be trusted
+#   4 this install has no HTTP API to describe (the [server] extra is missing)
+# 4 is deliberately NOT 1: CI must be able to tell "the API broke" from "the
+# optional extra was not installed", and the second must never read as the first.
+EXIT_CONTRACT_BREAKING = 1
+EXIT_CONTRACT_NO_SERVER = 4
+
+
+def _repo_root() -> Path:
+    """Repository root holding the contract artifacts.
+
+    Walks up from the working directory so the command behaves the same from a
+    subdirectory; falls back to cwd (first export in a fresh tree). Override with
+    AGENTROUTER_CONTRACT_ROOT.
+    """
+    override = os.environ.get("AGENTROUTER_CONTRACT_ROOT")
+    if override:
+        return Path(override)
+    start = Path.cwd().resolve()
+    for candidate in (start, *start.parents):
+        if (candidate / contract.CONTRACT_DIR).is_dir() or (candidate / ".git").exists():
+            return candidate
+    return start
+
+
+@contract_app.command("export")
+def contract_export(
+    accept_breaking: bool = typer.Option(
+        False,
+        "--accept-breaking",
+        help="Deliberately record a breaking change (requires --reason).",
+    ),
+    reason: str | None = typer.Option(
+        None, "--reason", help="Why the breaking change is intended; stored in the manifest."
+    ),
+):
+    """Write the canonical OpenAPI contract + provenance manifest.
+
+    Refuses to overwrite a baseline when doing so would silently record a
+    breaking change: that needs an explicit, reviewed decision.
+    """
+    root = _repo_root()
+    try:
+        current = contract.canonical_openapi()
+    except contract.ContractError as e:
+        typer.echo(f"Contract export failed: {e}", err=True)
+        raise typer.Exit(EXIT_RUNTIME) from e
+
+    try:
+        baseline = contract.load_baseline(root)
+    except contract.BaselineMissing:
+        baseline = None  # genuinely the first export: nothing to protect yet
+    except contract.ContractError as e:
+        # A baseline that exists but cannot be read must NOT be treated as
+        # absent. Doing so turns "corrupt the file" into a way to erase the
+        # breaking-change refusal and have export overwrite it with exit 0.
+        typer.echo(f"Refusing to overwrite an unreadable baseline: {e}", err=True)
+        typer.echo(
+            "Why: it may still describe a contract this change breaks. Restore it "
+            "from git (git checkout -- contracts/) and re-run.",
+            err=True,
+        )
+        raise typer.Exit(EXIT_REGISTRY) from e
+
+    if baseline is not None:
+        report = contract.diff_contracts(baseline, current)
+        if report.breaking and not accept_breaking:
+            typer.echo(
+                f"Refusing to update the baseline: {len(report.breaking)} breaking change(s).",
+                err=True,
+            )
+            for c in report.breaking:
+                typer.echo(f"  [breaking] {c.location}: {c.kind} — {c.detail}", err=True)
+            typer.echo(
+                "Why: overwriting the baseline would erase the incompatibility instead of "
+                "surfacing it to API clients.",
+                err=True,
+            )
+            typer.echo(
+                "Next: revert the incompatible change, or re-run with "
+                '--accept-breaking --reason "<owner-reviewed justification>".',
+                err=True,
+            )
+            raise typer.Exit(EXIT_CONTRACT_BREAKING)
+        if report.breaking and accept_breaking and not reason:
+            typer.echo("--accept-breaking requires --reason.", err=True)
+            raise typer.Exit(EXIT_USAGE)
+
+    # Preserve any prior acceptances BEFORE the manifest is rewritten: the record
+    # is an append-only history, not a slot the next routine export can erase.
+    manifest_path = root / contract.CONTRACT_DIR / contract.MANIFEST_FILE
+    history: list = []
+    if manifest_path.exists():
+        try:
+            history = (
+                json.loads(manifest_path.read_text(encoding="utf-8")).get(
+                    "accepted_breaking_changes"
+                )
+                or []
+            )
+        except (OSError, ValueError):
+            history = []
+
+    try:
+        path, doc = contract.export_contract(root)
+    except contract.ContractError as e:
+        typer.echo(f"Contract export failed: {e}", err=True)
+        raise typer.Exit(EXIT_RUNTIME) from e
+
+    # Only a real, detected incompatibility may be recorded — otherwise the
+    # provenance could assert a breaking change that never happened.
+    breaking_now = (
+        contract.diff_contracts(baseline, current).breaking if baseline is not None else []
+    )
+    if breaking_now and accept_breaking and reason:
+        history.append(
+            {
+                "reason": reason,
+                "product_version": __version__,
+                "changes": [c.as_dict() for c in breaking_now],
+            }
+        )
+        typer.echo(f"Recorded an accepted breaking change: {reason}")
+    if history:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["accepted_breaking_changes"] = history
+        manifest_path.write_text(contract.dumps(manifest), encoding="utf-8")
+
+    ops = sum(
+        1
+        for methods in doc.get("paths", {}).values()
+        for m in methods
+        if m in ("get", "put", "post", "delete", "patch")
+    )
+    typer.echo(f"Wrote {path} ({ops} operations).")
+    typer.echo("Next: commit the contract, then: agentrouter contract check")
+
+
+@contract_app.command("check")
+def contract_check(
+    as_json: bool = typer.Option(False, "--json", help="Machine-readable report on stdout."),
+    out: Path | None = typer.Option(None, "--out", help="Also write the JSON report here."),
+    baseline: Path | None = typer.Option(
+        None,
+        "--baseline",
+        help="Compare against this contract file instead of the committed one. "
+        "CI uses it to check against the PR's base branch, so deleting the "
+        "committed contract cannot turn a breaking change green.",
+    ),
+):
+    """Compare the live API against the committed contract. Never regenerates it."""
+    root = _repo_root()
+    try:
+        report, _current = contract.check(root, baseline_path=baseline)
+    except RecursionError as e:  # pathological $ref nesting in a baseline
+        typer.echo("Contract check failed: baseline is nested too deeply to compare.", err=True)
+        raise typer.Exit(EXIT_REGISTRY) from e
+    except contract.ServerExtraMissing as e:
+        # Not a contract problem: there is no API to describe in this install, so
+        # `contract export` would fail the same way. Say that instead, with an
+        # exit code CI cannot confuse with a real breaking change.
+        if as_json:
+            typer.echo(json.dumps({"ok": False, "error": str(e)}, indent=2))
+        else:
+            typer.echo(f"Contract check failed: {e}", err=True)
+        raise typer.Exit(EXIT_CONTRACT_NO_SERVER) from e
+    except contract.ContractError as e:  # missing or untrustworthy baseline
+        # A missing or unreadable baseline is a hard failure, never a silent pass.
+        if as_json:
+            typer.echo(json.dumps({"ok": False, "error": str(e)}, indent=2))
+        else:
+            typer.echo(f"Contract check failed: {e}", err=True)
+            typer.echo("Next: agentrouter contract export, then commit the contract.", err=True)
+        raise typer.Exit(EXIT_REGISTRY) from e
+
+    payload = report.as_dict()
+    if out is not None:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(contract.dumps(payload), encoding="utf-8")
+
+    if as_json:
+        typer.echo(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        counts = payload["counts"]
+        if not report.changes:
+            typer.echo("Contract unchanged: the live API matches the committed contract.")
+        else:
+            for c in report.breaking + report.accepted + report.risky + report.additive:
+                typer.echo(f"[{c.severity:<9}] {c.location}: {c.kind} — {c.detail}")
+            typer.echo(
+                f"\n{counts['breaking']} breaking, {counts['accepted']} owner-accepted, "
+                f"{counts['risky']} risky, {counts['additive']} additive."
+            )
+            if report.accepted:
+                typer.echo(
+                    "Owner-accepted breaks are recorded in the contract manifest and do "
+                    "not fail this check. They are still breaking changes for clients."
+                )
+        if report.breaking:
+            typer.echo(
+                "\nBreaking changes require an owner-reviewed decision: revert them, or "
+                're-export with --accept-breaking --reason "...".',
+                err=True,
+            )
+
+    if report.breaking:
+        raise typer.Exit(EXIT_CONTRACT_BREAKING)

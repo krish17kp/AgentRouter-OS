@@ -2,15 +2,15 @@
 
 **Status:** IN_PROGRESS
 **Branch:** `release/agentrouter-v0.5-rc1`
-**Updated:** 2026-08-08
+**Updated:** 2026-08-09
 **Canonical release ready:** NO
 
 ## Branch topology
 
 - `main` — stable, untouched. No merge without explicit owner approval.
-- `release/agentrouter-v0.5-rc1` — integration branch @ `5847c22` (TASK-011 PR #2,
-  TASK-012 PR #3, TASK-013 PR #4, TASK-014 PR #5, TASK-015 PR #6, TASK-016 PR #7 all
-  merged). NOT RELEASE READY; mutation gate passes, only the honest context-band gate fails (by
+- `release/agentrouter-v0.5-rc1` — integration branch @ `45e1d9e` (TASK-011 PR #2,
+  TASK-012 PR #3, TASK-013 PR #4, TASK-014 PR #5, TASK-015 PR #6, TASK-016 PR #7,
+  state reconcile PR #8 all merged). NOT RELEASE READY; mutation gate passes, only the honest context-band gate fails (by
   design, and no longer blocks ordinary CI — see CI status below).
 - `task/TASK-011-context-band-data`, `task/TASK-012-annotation-operations`,
   `task/TASK-013-catalog-provenance`, `task/TASK-014-ci-release-semantics`,
@@ -101,17 +101,26 @@ hardening above.
 
 ## In progress / next
 
-- **TASK-016: verified execution-host states + provider diagnostics** — report
-  installed / configured / authenticated / authorized / degraded instead of the
-  current available / unavailable / unknown, and give a first-run user one
-  actionable path to a working route. Offline and credential-free (detection only,
-  never a live auth call).
+**EPIC TASK-018 — production reliability and compatibility lab**, split into three
+sequential, independently reviewable branches. Only one is ever open at a time.
+
+- **TASK-018A: API contract + SDK compatibility** — *open*. A committed, byte-stable
+  OpenAPI contract, a semantic compatibility gate that fails CI on a breaking change
+  and cannot be silently regenerated, typed errors that never leak a traceback, and
+  SDK parity proven by exercising every claimed operation against the real app.
+- **TASK-018B: reliability and load lab** — repo-native deterministic load,
+  concurrency, soak and failure-injection harness with CI correctness gates,
+  race/state checks and baselines.
+- **TASK-018C: operations and observability** — unified `agentrouter doctor`, a safe
+  diagnostic bundle, observability correctness, metrics, tested runbooks and release
+  evidence.
+
+Then TASK-019 (data durability/lifecycle), TASK-020 (cross-platform installability
+and onboarding), TASK-021 (offline release qualification lab).
+
 - **TASK-012 human round** — two real annotators + adjudicator still needed
   (external/owner step per `TASK_012_OWNER_ACTIONS.md`); this is the only path to
-  closing the honest release-gate.
-- Remaining locally-actionable engineering: benchmark routing infra without paid
-  inference, customer docs/examples, observability/runbooks, API/SDK compatibility
-  + load testing.
+  closing the honest release-gate. No AI may act as an annotator or adjudicator.
 
 ## Git guardrail (repaired 2026-08-08, owner-authorized)
 
