@@ -18,6 +18,7 @@ import yaml
 
 from . import (
     __version__,
+    bundle,
     catalog_ops,
     contract,
     diagnostics,
@@ -240,6 +241,16 @@ def _reason_for(rec: dict, cls, shifts: list[str]) -> str:
 @app.command()
 def doctor(
     as_json: bool = typer.Option(False, "--json", help="Machine-readable report on stdout."),
+    bundle_to: Path | None = typer.Option(
+        None,
+        "--bundle",
+        help="Also write a shareable diagnostic bundle to this new directory.",
+    ),
+    include_database: bool = typer.Option(
+        False,
+        "--include-database",
+        help="Include the decision log in the bundle. It contains the task text you routed.",
+    ),
 ):
     """Check the whole local installation and say exactly what to fix.
 
@@ -288,6 +299,20 @@ def doctor(
             typer.echo(f"Everything works. {len(warnings)} {noun} above worth knowing about.")
         else:
             typer.echo('All clear. Next: agentrouter route "your task here"')
+
+    if bundle_to is not None:
+        try:
+            written = bundle.create(home, bundle_to, include_database=include_database)
+        except bundle.BundleError as e:
+            typer.echo(f"Could not write the bundle: {e}", err=True)
+            raise typer.Exit(EXIT_USAGE) from e
+        if not as_json:
+            typer.echo(f"\nBundle written to {written.directory}")
+            typer.echo(f"  {', '.join(sorted(written.files))}")
+            typer.echo(
+                "  No .env, credential file or key value is included. Read README.txt "
+                "before sharing."
+            )
 
     if overall == diagnostics.FAIL:
         raise typer.Exit(EXIT_RUNTIME)
