@@ -63,22 +63,40 @@ class HostStatusResponse(BaseModel):
     remedy: str | None = None
 
 
+# Request-size bounds (TASK-018B).
+#
+# These fields are echoed back in the response AND persisted verbatim, so an
+# unbounded one is a disk-fill primitive: a measured 2 MB task produced a 4 MB
+# response and a 4 MB database row, from a single caller, with no upper limit.
+# The API is local and open by default, so nothing else stops that.
+#
+# The bounds are deliberately generous — 100k characters is roughly 25k tokens of
+# task description, far past any real use — because the goal is to remove the
+# unbounded case, not to second-guess what someone might legitimately send.
+MAX_TASK_CHARS = 100_000
+MAX_NOTE_CHARS = 10_000
+MAX_TOOLS = 100
+MAX_TOOL_NAME_CHARS = 200
+MAX_DECISION_ID_CHARS = 200
+MAX_PREFER_CHARS = 200
+
+
 class ClassifyRequest(BaseModel):
-    task: str = Field(min_length=1)
+    task: str = Field(min_length=1, max_length=MAX_TASK_CHARS)
     context_tokens: int | None = Field(default=None, gt=0)
     risk: Level | None = None
-    tools: list[str] | None = None
+    tools: list[str] | None = Field(default=None, max_length=MAX_TOOLS)
 
 
 class RouteRequest(ClassifyRequest):
-    prefer: str | None = None
+    prefer: str | None = Field(default=None, max_length=MAX_PREFER_CHARS)
     no_log: bool = False
 
 
 class FeedbackRequest(BaseModel):
-    decision_id: str = Field(min_length=1)
+    decision_id: str = Field(min_length=1, max_length=MAX_DECISION_ID_CHARS)
     rating: int = Field(ge=1, le=5)
-    note: str | None = None
+    note: str | None = Field(default=None, max_length=MAX_NOTE_CHARS)
 
 
 class FeedbackResponse(BaseModel):
@@ -87,7 +105,7 @@ class FeedbackResponse(BaseModel):
 
 
 class DryRunRequest(BaseModel):
-    decision_id: str = Field(min_length=1)
+    decision_id: str = Field(min_length=1, max_length=MAX_DECISION_ID_CHARS)
 
 
 # --- response envelopes for the engine/classifier-owned payloads --------------

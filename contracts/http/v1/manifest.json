@@ -1,12 +1,68 @@
 {
+  "accepted_breaking_changes": [
+    {
+      "changes": [
+        {
+          "detail": "maxLength: None -> 100000",
+          "kind": "constraint_tightened",
+          "location": "/v1/classify.post.request.task",
+          "severity": "breaking"
+        },
+        {
+          "detail": "maxItems: None -> 100",
+          "kind": "constraint_tightened",
+          "location": "/v1/classify.post.request.tools",
+          "severity": "breaking"
+        },
+        {
+          "detail": "maxLength: None -> 200",
+          "kind": "constraint_tightened",
+          "location": "/v1/execute/dry-run.post.request.decision_id",
+          "severity": "breaking"
+        },
+        {
+          "detail": "maxLength: None -> 200",
+          "kind": "constraint_tightened",
+          "location": "/v1/feedback.post.request.decision_id",
+          "severity": "breaking"
+        },
+        {
+          "detail": "maxLength: None -> 10000",
+          "kind": "constraint_tightened",
+          "location": "/v1/feedback.post.request.note",
+          "severity": "breaking"
+        },
+        {
+          "detail": "maxLength: None -> 200",
+          "kind": "constraint_tightened",
+          "location": "/v1/route.post.request.prefer",
+          "severity": "breaking"
+        },
+        {
+          "detail": "maxLength: None -> 100000",
+          "kind": "constraint_tightened",
+          "location": "/v1/route.post.request.task",
+          "severity": "breaking"
+        },
+        {
+          "detail": "maxItems: None -> 100",
+          "kind": "constraint_tightened",
+          "location": "/v1/route.post.request.tools",
+          "severity": "breaking"
+        }
+      ],
+      "product_version": "0.4.0",
+      "reason": "TASK-018B: request fields were unbounded and are both echoed and persisted, so a single caller could grow the local database without limit (measured: 2MB task -> 4MB response + 4MB row). Bounds are deliberately generous (100k chars ~= 25k tokens) so no realistic caller is affected; oversized input now returns a typed 422 instead of being stored."
+    }
+  ],
   "api_title": "AgentRouter OS — Local API",
   "api_version": "1",
   "contract_version": "v1",
-  "generated_at": "2026-08-19T07:51:28.839046+00:00",
+  "generated_at": "2026-08-19T16:36:44.490848+00:00",
   "generation_command": "agentrouter contract export",
   "generation_tool": "fastapi 0.141.1",
   "openapi_version": "3.1.0",
   "operation_count": 9,
   "product_version": "0.4.0",
-  "source_commit": "4409810aff23b4ef1865bdc4f933a49d5e46bbe8"
+  "source_commit": "fffb716be24a2aa2eed420ffd7e67c8d482c3f85"
 }
