@@ -140,6 +140,15 @@ def create_app() -> FastAPI:
         cache_key = "|".join(
             [identity, idem, request.url.path, hashlib.sha256(body_in).hexdigest()]
         )
+        # Single-flight: hold the per-key lock across the check AND the work.
+        # Checking then storing was atomic at each end but not in between, so
+        # concurrent retries of the SAME key all missed, all ran, and all
+        # persisted — 12 replays produced 6 decisions. Different keys are
+        # unaffected and still run concurrently.
+        async with idempotency.flight(cache_key):
+            return await _idempotent(request, call_next, cache_key)
+
+    async def _idempotent(request: Request, call_next, cache_key: str):
         cached = idempotency.get(cache_key)
         if cached is not None:
             replay = Response(
@@ -167,6 +176,7 @@ def create_app() -> FastAPI:
             media_type=response.media_type,
         )
         buffered.headers["Idempotency-Replay"] = "false"
+        idempotency.release_flight(cache_key)
         return buffered
 
     @app.middleware("http")

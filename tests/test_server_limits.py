@@ -220,3 +220,82 @@ def test_request_id_present_on_429(client, monkeypatch):
     r = client.get("/v1/models")
     assert r.status_code == 429
     assert r.headers.get("X-Request-ID")
+
+
+# --- single-flight locking (TASK-018B) ----------------------------------------
+#
+# `get` and `put` were each atomic but the window between them was not, so
+# concurrent retries of one idempotency key all missed the cache and all ran the
+# work — 12 replays produced 6 decisions. These pin the lock's exact semantics,
+# because "returns a lock" is not the property that matters: returning the SAME
+# lock for the same key is.
+
+
+def test_flight_returns_the_same_lock_for_the_same_key():
+    """A fresh lock per call would serialise nothing at all."""
+    cache = limits_mod.IdempotencyCache()
+    first = cache.flight("key-a")
+    second = cache.flight("key-a")
+    assert first is second
+
+
+def test_flight_returns_different_locks_for_different_keys():
+    """Otherwise one slow key would block every other caller."""
+    cache = limits_mod.IdempotencyCache()
+    assert cache.flight("key-a") is not cache.flight("key-b")
+
+
+def test_release_flight_drops_an_idle_lock():
+    """The map must not grow without bound across many distinct keys."""
+    cache = limits_mod.IdempotencyCache()
+    cache.flight("done")
+    assert "done" in cache._flights
+    cache.release_flight("done")
+    assert "done" not in cache._flights
+
+
+def test_release_flight_keeps_a_held_lock():
+    """Dropping a held lock would let a waiter create a second one and proceed
+    concurrently — reintroducing exactly the bug this fixes."""
+    import asyncio
+
+    cache = limits_mod.IdempotencyCache()
+
+    async def hold_and_release():
+        lock = cache.flight("busy")
+        async with lock:
+            cache.release_flight("busy")
+            assert "busy" in cache._flights, "a held flight lock was dropped"
+        # once released it can be reclaimed
+        cache.release_flight("busy")
+        assert "busy" not in cache._flights
+
+    asyncio.run(hold_and_release())
+
+
+def test_release_flight_on_an_unknown_key_is_a_no_op():
+    cache = limits_mod.IdempotencyCache()
+    cache.release_flight("never-seen")  # must not raise
+    assert cache._flights == {}
+
+
+def test_flight_locks_actually_serialise_the_same_key():
+    """The behavioural property, not just the bookkeeping."""
+    import asyncio
+
+    cache = limits_mod.IdempotencyCache()
+    order: list[str] = []
+
+    async def worker(name: str):
+        async with cache.flight("shared"):
+            order.append(f"enter-{name}")
+            await asyncio.sleep(0.01)
+            order.append(f"exit-{name}")
+
+    async def run():
+        await asyncio.gather(worker("a"), worker("b"))
+
+    asyncio.run(run())
+    # No interleaving: each enter is immediately followed by its own exit.
+    assert order[0].startswith("enter-") and order[1] == order[0].replace("enter", "exit")
+    assert order[2].startswith("enter-") and order[3] == order[2].replace("enter", "exit")

@@ -26,6 +26,7 @@
             ]
           },
           "task": {
+            "maxLength": 100000,
             "minLength": 1,
             "title": "Task",
             "type": "string"
@@ -36,6 +37,7 @@
                 "items": {
                   "type": "string"
                 },
+                "maxItems": 100,
                 "type": "array"
               },
               {
@@ -143,6 +145,7 @@
       "DryRunRequest": {
         "properties": {
           "decision_id": {
+            "maxLength": 200,
             "minLength": 1,
             "title": "Decision Id",
             "type": "string"
@@ -215,6 +218,7 @@
       "FeedbackRequest": {
         "properties": {
           "decision_id": {
+            "maxLength": 200,
             "minLength": 1,
             "title": "Decision Id",
             "type": "string"
@@ -222,10 +226,11 @@
           "note": {
             "anyOf": [
               {
-                "type": "null"
+                "maxLength": 10000,
+                "type": "string"
               },
               {
-                "type": "string"
+                "type": "null"
               }
             ],
             "title": "Note"
@@ -390,10 +395,11 @@
           "prefer": {
             "anyOf": [
               {
-                "type": "null"
+                "maxLength": 200,
+                "type": "string"
               },
               {
-                "type": "string"
+                "type": "null"
               }
             ],
             "title": "Prefer"
@@ -409,6 +415,7 @@
             ]
           },
           "task": {
+            "maxLength": 100000,
             "minLength": 1,
             "title": "Task",
             "type": "string"
@@ -419,6 +426,7 @@
                 "items": {
                   "type": "string"
                 },
+                "maxItems": 100,
                 "type": "array"
               },
               {

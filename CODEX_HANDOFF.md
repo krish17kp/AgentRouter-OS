@@ -1,5 +1,10 @@
 # Codex Handoff - AgentRouter OS
 
+> **Relationship to `AGENT_HANDOFF.md`:** `AGENT_HANDOFF.md` is the canonical live
+> checkpoint and is authoritative for branch, commit, PR and next-action state.
+> This file is the Codex-oriented narrative and may lag. Where the two disagree,
+> `AGENT_HANDOFF.md` wins. Do not maintain a third handoff.
+
 Last updated: 2026-08-08 (iter 26 — TASK-016 MERGED to RC; mutation gate repaired)
 
 ## Current state (iter 26)

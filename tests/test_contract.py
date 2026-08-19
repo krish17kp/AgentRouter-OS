@@ -822,12 +822,16 @@ def test_removing_authentication_entirely_is_reported_distinctly(doc):
 
 def test_nullability_direction_is_classified_per_side(doc):
     """A request accepting null is permissive; a response returning it is not."""
-    strict = _mutate(
-        doc,
-        lambda d: d["components"]["schemas"]["FeedbackRequest"]["properties"].__setitem__(
-            "note", {"type": "string", "title": "Note"}
-        ),
-    )
+
+    # Change ONLY nullability: keep every sibling keyword (the field carries a
+    # maxLength) so the report isolates the one variable under test.
+    def drop_null(d):
+        prop = d["components"]["schemas"]["FeedbackRequest"]["properties"]["note"]
+        payload = next(b for b in prop["anyOf"] if b.get("type") != "null")
+        prop.pop("anyOf")
+        prop.update(payload)
+
+    strict = _mutate(doc, drop_null)
     # request gains null -> additive
     report = contract.diff_contracts(strict, doc)
     assert report.compatible and "became_nullable" in _kinds(report)
