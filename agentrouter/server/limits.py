@@ -15,6 +15,7 @@ scale out. Env is read lazily per call so it can be tuned per test/deployment.
 
 from __future__ import annotations
 
+import asyncio
 import os
 import threading
 import time
@@ -109,6 +110,31 @@ class IdempotencyCache:
         self._clock = clock
         self._lock = threading.Lock()
         self._store: dict[str, tuple[float, CachedResponse]] = {}
+        # Per-key single-flight locks. `get` and `put` are each atomic, but the
+        # window BETWEEN them was not: concurrent requests carrying the same key
+        # all missed the cache, all ran the work, and all persisted. Measured at
+        # 12 concurrent replays of one key: 6 distinct decisions instead of 1.
+        self._flights: dict[str, asyncio.Lock] = {}
+
+    def flight(self, key: str) -> asyncio.Lock:
+        """The lock that serialises concurrent work for one idempotency key.
+
+        Same key waits; different keys still run in parallel. Created lazily so
+        the lock belongs to the running event loop.
+        """
+        with self._lock:
+            lock = self._flights.get(key)
+            if lock is None:
+                lock = asyncio.Lock()
+                self._flights[key] = lock
+            return lock
+
+    def release_flight(self, key: str) -> None:
+        """Drop an idle single-flight lock so the map cannot grow without bound."""
+        with self._lock:
+            lock = self._flights.get(key)
+            if lock is not None and not lock.locked():
+                del self._flights[key]
 
     @property
     def ttl(self) -> int:

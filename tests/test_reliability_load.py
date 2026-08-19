@@ -234,3 +234,118 @@ def test_snapshot_is_consistent_while_writes_are_in_flight(home, tmp_path):
     finally:
         copied.close()
     assert 0 <= count <= len(written) + 1
+
+
+# --- idempotency and rate limiting under contention ---------------------------
+
+
+def _authed_home(tmp_path, monkeypatch, key="s3cret"):
+    monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENTROUTER_API_KEY", key)
+    assert runner.invoke(cli_app, ["init"]).exit_code == 0
+    return tmp_path
+
+
+def test_a_replayed_idempotency_key_creates_exactly_one_decision(tmp_path, monkeypatch):
+    """The point of the header: a client retry must not mint a second decision."""
+    home = _authed_home(tmp_path, monkeypatch)
+    headers = {"X-API-Key": "s3cret", "Idempotency-Key": "retry-me"}
+    import threading
+
+    from agentrouter.reliability import serve_app
+
+    results = []
+    lock = threading.Lock()
+
+    with serve_app(home) as app:
+        import httpx
+
+        def fire():
+            with httpx.Client(timeout=30) as c:
+                r = c.post(f"{app.url}/v1/route", json={"task": "same task"}, headers=headers)
+            with lock:
+                results.append((r.status_code, r.json().get("decision_id")))
+
+        threads = [threading.Thread(target=fire) for _ in range(12)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+    assert all(status == 200 for status, _ in results), results
+    ids = {decision_id for _, decision_id in results}
+    assert len(ids) == 1, f"a replayed key produced {len(ids)} distinct decisions: {ids}"
+
+    assert _persisted(home) == 1, "the replay persisted more than one decision"
+
+
+def test_the_same_key_with_a_different_body_does_not_replay(tmp_path, monkeypatch):
+    """Otherwise a reused key would hand back a response for a different task."""
+    _authed_home(tmp_path, monkeypatch)
+    from fastapi.testclient import TestClient
+
+    from agentrouter.server.app import create_app
+
+    headers = {"X-API-Key": "s3cret", "Idempotency-Key": "shared"}
+    with TestClient(create_app()) as c:
+        first = c.post("/v1/route", json={"task": "task one"}, headers=headers).json()
+        second = c.post("/v1/route", json={"task": "task two"}, headers=headers).json()
+    assert first["decision_id"] != second["decision_id"]
+    assert second["task"] == "task two", "a different payload replayed the first response"
+
+
+def test_idempotency_does_not_cross_users(tmp_path, monkeypatch):
+    """Two callers using the same key must not read each other's response."""
+    _authed_home(tmp_path, monkeypatch)
+    from fastapi.testclient import TestClient
+
+    from agentrouter.server.app import create_app
+
+    with TestClient(create_app()) as c:
+        mine = c.post(
+            "/v1/route",
+            json={"task": "confidential task"},
+            headers={"X-API-Key": "s3cret", "Idempotency-Key": "collide"},
+        )
+        assert mine.status_code == 200
+        # A caller with the wrong key must be rejected, never served the cache.
+        theirs = c.post(
+            "/v1/route",
+            json={"task": "confidential task"},
+            headers={"X-API-Key": "wrong", "Idempotency-Key": "collide"},
+        )
+    assert theirs.status_code == 401
+    assert "confidential task" not in theirs.text
+
+
+def test_rate_limiting_sheds_load_without_dropping_the_envelope(tmp_path, monkeypatch):
+    """429 is a correct answer under burst; a traceback or a 500 is not."""
+    monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
+    monkeypatch.delenv("AGENTROUTER_API_KEY", raising=False)
+    monkeypatch.setenv("AGENTROUTER_RATE_LIMIT", "10")
+    monkeypatch.setenv("AGENTROUTER_RATE_WINDOW", "60")
+    assert runner.invoke(cli_app, ["init"]).exit_code == 0
+
+    with serve_app(tmp_path) as app:
+        outcome = run_load(app.url, LoadSpec(total=60, workers=12))
+
+    assert outcome.server_errors == 0, outcome.as_dict()
+    assert outcome.statuses.get(429, 0) > 0, "the limit never engaged"
+    assert outcome.ok + outcome.statuses.get(429, 0) == 60, outcome.as_dict()
+    # every accepted request still persisted exactly once
+    assert _persisted(tmp_path) == outcome.ok
+
+
+def test_probes_are_never_rate_limited(tmp_path, monkeypatch):
+    """A liveness probe that gets 429'd takes a healthy service out of rotation."""
+    monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
+    monkeypatch.delenv("AGENTROUTER_API_KEY", raising=False)
+    monkeypatch.setenv("AGENTROUTER_RATE_LIMIT", "5")
+    assert runner.invoke(cli_app, ["init"]).exit_code == 0
+
+    with serve_app(tmp_path) as app:
+        outcome = run_load(
+            app.url, LoadSpec(total=60, workers=12, request=lambda i: ("GET", "/health", None))
+        )
+    assert outcome.ok == 60, outcome.as_dict()
+    assert outcome.statuses.get(429, 0) == 0
