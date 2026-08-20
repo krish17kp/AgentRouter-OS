@@ -14,14 +14,14 @@ authoritative for Claude sessions; where the two disagree, this file wins.
 
 | Field | Value |
 |---|---|
-| Last updated | 2026-08-20 |
+| Last updated | 2026-08-20 (TASK-019 in progress) |
 | Repository | `/media/krish/New Volume/Krish/04 - Dev Projects/Agentrouteros` |
 | Filesystem | NTFS/fuseblk, verified **rw** this session |
-| Active branch | `task/TASK-018-state-reconcile` (state docs only) |
-| RC | **`d81ad94`**, post-merge CI **green** (CI, Security, Critical Mutation Testing) |
+| Active branch | `task/TASK-019-plugin-installer-hardening` |
+| RC | **`7068887`**, CI + Security green (mutation gate green at `d81ad94`, docs-only since) |
 | `main` | `602321a`, untouched |
-| Open PR | none at time of writing. PRs #9, #10, #11 **merged**; their branches deleted |
-| Milestone | **EPIC TASK-018 COMPLETE** — all three parts merged |
+| Open PR | none yet for TASK-019. PRs #9–#12 merged; branches deleted |
+| Milestone | EPIC TASK-018 complete. **TASK-019 in progress** — commit `6a5055c` (local only) |
 | Next milestone | **TASK-019** — plugin installer hardening (selected by gap analysis, below) |
 
 ## Release truth
@@ -88,40 +88,55 @@ Refresh with `graphify update .` (AST only, no LLM, no API key).
 | mutation gate | PASS — 0.986 overall, safety 0.9879, engine 0.9815, 0 unreviewed survivors |
 | contract check | unchanged; 8 owner-accepted |
 
-## Next action — TASK-019
+## TASK-019 progress — a correction worth recording
 
-```bash
-cd "/media/krish/New Volume/Krish/04 - Dev Projects/Agentrouteros"
-findmnt -T "$PWD" -o OPTIONS          # confirm rw first
-source "$HOME/.venvs/agentrouter/bin/activate"
-export PATH="$HOME/.local/bin:$PATH"
-git checkout release/agentrouter-v0.5-rc1 && git pull --ff-only
-git checkout -b task/TASK-019-plugin-installer-hardening
-```
+The backlog framed `plugins.py` as claiming safety properties that had "never
+been adversarially tested". **Half of that was wrong.** The module is genuinely
+well built: I attacked every claim it makes — symlinked destination, symlinked
+parent, dangling link, hardlinked destination, path traversal, uninstall after a
+user edit, uninstall of an unmanaged file, uninstall with the ownership record
+deleted, populated directory during cleanup, colliding backup, concurrent
+installs, concurrent install+uninstall, and both package-upgrade paths — and
+**every one held**.
 
-**Plugin installer hardening.** Chosen by graph-driven gap analysis of the final
-RC, not by picking a convenient cleanup. Three signals agree:
+What was true is that none of it was *proven*. The defences worked, but nothing
+in CI would have noticed a refactor removing one. Landed in `6a5055c`:
 
-1. **Size + coverage** — `agentrouter/plugins.py` is **818 statements at 67.7%**,
-   by a wide margin the largest under-tested module (next is
-   `evaluation/cli.py` at 129 statements).
-2. **Centrality** — four plugin symbols sit in the graph's top 14 hubs:
-   `install()` 47 edges, `get_plugin()` 40, `uninstall()` 40, `_dest()` 34.
-3. **Blast radius** — it is the only module that writes into directories
-   **outside the project** (user agent-config directories) and then removes
-   files from them. Its docstring claims it "refuses links/reparse points and
-   ambiguous hard links" and "never recursively removes directories" — exactly
-   the class of claim 018A/B/C repeatedly found true in intent and incomplete in
-   practice, and it has never been adversarially tested.
+- `tests/test_plugins_adversarial.py` — 20 tests, each naming the damage it
+  prevents. Verified to have teeth: neutering `_is_link_or_reparse` fails three,
+  one by showing content written outside the plugin root.
+- `tests/test_plugins_faults.py` — 12 fault-injection tests covering the error
+  branches that make up most of the uncovered code.
+- `tests/test_plugins_platform.py` — the honest boundary (see below).
 
-Approach, as in 018: **reproduce before fixing.** Attack symlink and hardlink
-targets, ownership forgery, partial/interrupted installs, concurrent
-install+uninstall, a destination that becomes read-only mid-write, path
-traversal in a plugin name, and uninstall on a path the user edited. Raise
-coverage by killing real defects, never by writing tests that assert current
-behaviour.
+**One real defect, found and fixed.** Every failure in the module raises a typed
+`PluginError` with a remedy — except a write failure, which escaped as a bare
+`OSError`. Reproduced through the CLI: a full disk gave **exit 1, empty output
+and a raw traceback**. `_temp_file` now converts it, with a CLI-level regression
+test.
 
-Full rationale is in `loop/BACKLOG.yaml` under `TASK-019`.
+**Coverage: 67.7% → 69.4%.** Deliberately not chased further yet — ~70 of the
+818 statements are the Windows `ctypes`/`CreateFileW` branch of
+`_remove_directory_by_handle`, unreachable on Linux, so the Linux ceiling is
+about **91.4%**. `test_plugins_platform.py` states plainly that the POSIX suite
+says nothing about the Windows reparse-point path, and skip-marks the
+Windows-only assertions so they only pass where a Windows runner runs them.
+
+## Remaining for TASK-019
+
+1. Strengthen `plugin doctor` — diagnose installed / unmanaged / owned /
+   modified / legacy / interrupted / recoverable / corrupt-ownership / missing
+   destination / host-root-unavailable, with safe remedies, and surface it in
+   unified `agentrouter doctor` without duplicating plugin logic.
+2. Close more of the portable error branches (target the 91.4% ceiling
+   honestly, not the 80% gate by accident).
+3. Consider adding plugin destructive paths to the mutation-tested set.
+4. Adversarial security review of the complete diff; refresh Graphify and
+   re-run impact analysis on changed plugin symbols.
+5. Docs: USER_GUIDE / SECURITY / KNOWN_LIMITATIONS / CHANGELOG / runbooks —
+   documenting exactly what is guaranteed and what stays platform-dependent.
+6. Draft PR to the RC, repair CI, merge, delete branch, refresh graph, reconcile
+   state, then the next graph-driven gap analysis.
 
 ## Open findings
 
