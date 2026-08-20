@@ -569,3 +569,78 @@ def test_a_rename_failure_is_reported_with_the_directory_it_could_not_remove(tmp
     assert message.startswith("could not remove empty managed directory")
     assert str(directory) in message
     assert directory.exists(), "the directory was lost when removal failed"
+
+
+def test_a_crash_during_removal_restores_the_directory(tmp_path, monkeypatch):
+    """The recovery-inside-recovery path: staging succeeded, the directory is
+    gone from its original name, and then the removal itself fails.
+
+    If that path is broken the user is left with their directory renamed to a
+    hidden `.name.agentrouter-remove-<hex>` and no indication where it went. It
+    is reached here by failing the removal after a successful stage.
+    """
+    directory = tmp_path / "owned"
+    directory.mkdir()
+    identity = plugins._identity_json(directory.lstat())
+
+    def fail_removal(staged, ident):
+        raise OSError(5, "Input/output error")
+
+    monkeypatch.setattr(plugins, "_remove_directory_by_handle", fail_removal)
+
+    with pytest.raises(plugins.PluginError) as exc:
+        plugins._remove_owned_empty_directory(tmp_path, directory, identity)
+
+    assert directory.exists(), "the directory was left staged under a hidden name"
+    assert directory.is_dir()
+    assert plugins._identity_json(directory.lstat()) == identity, (
+        "a different directory object was put back"
+    )
+    staged_leftovers = list(tmp_path.glob(".owned.agentrouter-remove-*"))
+    assert staged_leftovers == [], f"staging debris left behind: {staged_leftovers}"
+    assert "could not remove empty managed directory" in str(exc.value)
+
+
+def test_recovery_does_not_clobber_a_directory_that_reappeared(tmp_path, monkeypatch):
+    """If something recreates the directory while we are mid-removal, recovery
+    must NOT rename the staged copy back over it.
+
+    The staged copy is the old, empty directory; whatever is at the original
+    path now is newer and belongs to someone else. Restoring over it would
+    destroy content that arrived during the operation — the same class of
+    mistake as restoring a backup over newer user data.
+    """
+    directory = tmp_path / "owned"
+    directory.mkdir()
+    identity = plugins._identity_json(directory.lstat())
+
+    # Prepared in advance so it is a genuinely different directory object.
+    replacement_source = tmp_path / "replacement"
+    replacement_source.mkdir()
+    new_identity = plugins._identity_json(replacement_source.lstat())
+
+    def fail_and_recreate(staged, ident):
+        # A racing process puts a DIFFERENT directory back at the original path.
+        # It is left empty on purpose: POSIX `rename` refuses to replace a
+        # non-empty directory, so a non-empty one would make the OS enforce the
+        # invariant for us and prove nothing about our own check.
+        os.rename(replacement_source, directory)
+        raise OSError(5, "Input/output error")
+
+    monkeypatch.setattr(plugins, "_remove_directory_by_handle", fail_and_recreate)
+
+    with pytest.raises(plugins.PluginError) as caught:
+        plugins._remove_owned_empty_directory(tmp_path, directory, identity)
+
+    # The reported failure must be the removal that actually failed. If recovery
+    # tries to restore anyway, `_restore_staged_directory` refuses -- correctly --
+    # but its PluginError escapes and replaces the real diagnosis with
+    # "directory changed concurrently", sending the operator after the wrong
+    # problem entirely.
+    assert str(caught.value).startswith("could not remove empty managed directory")
+
+    assert directory.exists()
+    assert plugins._identity_json(directory.lstat()) == new_identity, (
+        "recovery replaced the directory that arrived during the operation with "
+        "the stale staged copy"
+    )
