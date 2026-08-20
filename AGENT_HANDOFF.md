@@ -20,8 +20,8 @@ authoritative for Claude sessions; where the two disagree, this file wins.
 | Active branch | `task/TASK-019-plugin-installer-hardening` |
 | RC | **`7068887`**, CI + Security green (mutation gate green at `d81ad94`, docs-only since) |
 | `main` | `602321a`, untouched |
-| Open PR | none yet for TASK-019. PRs #9–#12 merged; branches deleted |
-| Milestone | EPIC TASK-018 complete. **TASK-019 in progress** — commit `6a5055c` (local only) |
+| Open PR | **#13 (draft)** → RC. PRs #9–#12 merged; branches deleted |
+| Milestone | EPIC TASK-018 complete. **TASK-019 in progress** — head `fdc0cad` |
 | Next milestone | **TASK-019** — plugin installer hardening (selected by gap analysis, below) |
 
 ## Release truth
@@ -122,21 +122,53 @@ about **91.4%**. `test_plugins_platform.py` states plainly that the POSIX suite
 says nothing about the Windows reparse-point path, and skip-marks the
 Windows-only assertions so they only pass where a Windows runner runs them.
 
+## TASK-019: mutation gate on the destructive decisions
+
+The four functions that decide whether a path is safe to write through, and
+whether something is ours to delete, are now mutation-tested:
+`_safe_relative`, `_is_link_or_reparse`, `_entry_matches`,
+`_remove_owned_empty_directory`. Deliberately those four and not the whole
+module — mutating all 818 statements roughly quadruples the campaign, and a gate
+that overruns CI's timeout gets disabled rather than obeyed.
+
+Wiring took three attempts and **the gate caught every mistake** rather than
+scoring it as a pass:
+
+1. `only_mutate` in `pyproject.toml` did not list `plugins.py` → no mutants
+   generated, patterns matched nothing;
+2. `pytest_add_cli_args_test_selection` did not list the plugin suites → all 209
+   mutants recorded `no_tests`, and `selected_results_complete` failed instead
+   of treating unrun mutants as killed;
+3. with tests wired in, **73 genuinely survived** and `safety_policy_execution`
+   fell to 0.914.
+
+`tests/test_plugins_decisions.py` (58 tests) kills them with exact-value
+assertions. The sharpest ones: right-digest/wrong-inode must be **false** (content
+equality never proves ownership), and a directory containing only a **dotfile**
+is not empty (`iterdir` includes them; a check that did not would delete a
+directory holding someone's `.config`).
+
+Also fixed from the security review of this diff: an unknown plugin name was
+echoed **unbounded and unsanitised** (5044-char error, raw CRLF). Same class as
+the API's `decision_id`, so the sanitiser moved to `observability.safe_echo` and
+both call sites use it rather than two copies that could drift.
+
+**Verification of the kill is still pending** — the confirming mutation run was
+in flight at checkpoint time. If survivors remain, write more tests; do not lower
+the threshold or allowlist a live mutant.
+
 ## Remaining for TASK-019
 
-1. Strengthen `plugin doctor` — diagnose installed / unmanaged / owned /
-   modified / legacy / interrupted / recoverable / corrupt-ownership / missing
-   destination / host-root-unavailable, with safe remedies, and surface it in
-   unified `agentrouter doctor` without duplicating plugin logic.
-2. Close more of the portable error branches (target the 91.4% ceiling
-   honestly, not the 80% gate by accident).
-3. Consider adding plugin destructive paths to the mutation-tested set.
-4. Adversarial security review of the complete diff; refresh Graphify and
-   re-run impact analysis on changed plugin symbols.
-5. Docs: USER_GUIDE / SECURITY / KNOWN_LIMITATIONS / CHANGELOG / runbooks —
-   documenting exactly what is guaranteed and what stays platform-dependent.
-6. Draft PR to the RC, repair CI, merge, delete branch, refresh graph, reconcile
-   state, then the next graph-driven gap analysis.
+1. Confirm the mutation gate passes with the new decision tests.
+2. Push, get PR #13 green, mark ready, merge, delete branch.
+3. Refresh Graphify from the new RC and re-run impact analysis on the changed
+   plugin symbols.
+4. Reconcile durable state, then the next graph-driven gap analysis.
+
+Note for CI budget: the campaign is now ~4184 mutants (was 1068) because
+`only_mutate` generates for the whole file even though the runner selects four
+functions. Locally ~15 minutes; watch that `critical-modules` stays inside its
+45-minute timeout on CI.
 
 ## Open findings
 
