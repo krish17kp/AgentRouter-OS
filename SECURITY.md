@@ -53,7 +53,11 @@ that attacks it rather than by a claim in a docstring.
 - displacing a file with `--force` always writes a backup first, and a colliding
   backup aborts the install rather than overwriting it;
 - concurrent installs, and concurrent install/uninstall, serialise; they do not
-  corrupt state or leave a partially written file.
+  corrupt state or leave a partially written file;
+- a plugin name echoed back in an error is bounded to 64 characters and stripped
+  of every character Python treats as a line boundary, plus the control, bidi and
+  zero-width ranges — so a hostile name cannot forge a line that looks like
+  AgentRouter spoke it, in a terminal or in captured output.
 
 **Not guaranteed — platform-dependent.** `_remove_directory_by_handle` has two
 different implementations. The POSIX one uses `O_NOFOLLOW`/`dir_fd` with identity
@@ -68,7 +72,16 @@ remedy — including a full disk, which previously escaped as a raw `OSError` an
 gave the user a traceback with no message. `agentrouter plugin doctor` reports
 the state of each destination and the exact safe fix; it never suggests deleting
 an arbitrary directory, and never prints file contents, because its output is
-meant to be pasteable into a support request.
+meant to be pasteable into a support request. It is read-only: running it leaves
+the filesystem byte-for-byte unchanged, verified on both a clean and an installed
+home directory.
+
+`plugin list` and `plugin doctor` also survive the states they exist to report.
+Both previously died with a raw traceback when a destination path contained a
+symlink — the refusal that protects the write path escaped into the display
+path — so the two commands a user reaches for when their plugin directory has
+been tampered with were the two that failed. They now report `blocked` and print
+the offending path with its remedy.
 
 ## Reporting a vulnerability
 

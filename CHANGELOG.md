@@ -93,6 +93,20 @@ All notable changes to AgentRouter OS. Format loosely follows
   gates pass; a valid lower result is reported instead of preserving the previous in-sample claim.
 
 ### Security
+- **An unknown plugin name was echoed back unbounded and unsanitised.** `get_plugin`
+  interpolated the caller's string straight into its error, so a 5 KB argument
+  produced a 5 KB message and embedded CR/LF forged extra lines in anything
+  capturing CLI output — the same class of problem already fixed for the API's
+  `decision_id`. Rather than keep two copies that could drift, the sanitiser now
+  lives in `observability.safe_echo` (bounded to 64 characters, control/bidi
+  ranges stripped) and both the installer and the HTTP surface call it.
+- **That first sanitiser was itself incomplete.** Reviewing the fix found U+2028
+  and U+2029 still passed through: neither is a control character, but
+  `str.splitlines()` treats both as line boundaries, so a name containing one
+  still forged a line — `agentrouter\u2028ERROR: your key is compromised` renders
+  as two lines, the second looking like the program spoke. Both are now stripped,
+  and the test derives the full boundary set from Python rather than trusting a
+  hand-written range list, so the hole cannot quietly reopen.
 - **A malformed registry no longer returns its own contents to the caller.** The
   `RegistryError` handler echoed `str(exc)`, which interpolates the registry path *and
   the offending YAML source line* — and a registry is malformed at exactly the moment
@@ -132,6 +146,22 @@ All notable changes to AgentRouter OS. Format loosely follows
   closing a timing side-channel on `AGENTROUTER_API_KEY`.
 
 ### Fixed
+- **`plugin list` and `plugin doctor` crashed on the state they exist to
+  explain.** Both call `plugins.status()` to print a headline, and `status()`
+  used `_safe_dest`, which correctly refuses a destination whose path contains a
+  symlink or reparse point — but the refusal escaped, so both commands died with
+  a raw traceback exactly when a user's plugin directory had been tampered with.
+  `doctor --json` diagnosed the same state correctly throughout, which is what
+  showed this was a display bug and not a missing diagnosis. `status()` now
+  reports `blocked` (the word `diagnose` already uses) and never raises; the
+  finding printed underneath names the path and the fix.
+- **`USER_GUIDE.md` documented plugin commands that did not exist** — a `plugin
+  status` subcommand, and `--apply` on both `install` and `uninstall` (install
+  applies by default and takes `--dry-run`; uninstall takes no flags). Prose is
+  never executed, so nothing failed until a reader typed it. The guide is
+  corrected, and `tests/test_documented_commands.py` now parses the invocations
+  out of the user-facing docs and checks each subcommand and flag against the
+  real command tree, so a rename breaks the build instead of the reader.
 - **A full disk during `plugin install` no longer produces a bare traceback.**
   Every other failure in the plugin installer raises a typed error with a
   remedy; a write failure escaped as a raw `OSError`, so the user got exit 1,

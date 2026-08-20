@@ -1110,3 +1110,65 @@ score and release-branch GitHub checks are also pending. Current state lives in
   write_generated_registry + deprecation reconciliation on refresh (report-only).
 - **Next:** TASK-013 follow-up (provenance block + deprecation), then Phase 3
   priority #3 (verified execution-host states).
+
+## 2026-08-20 — iter24: TASK-019 plugin installer hardening
+
+**Gap in this log, stated rather than papered over.** Entries stop at iter23
+(2026-07-31, TASK-013) and resume here, but TASK-014 through EPIC TASK-018 were
+built and merged in between. That history was recorded in `AGENT_HANDOFF.md`,
+the `loop/tasks/` directories and the git history of
+`release/agentrouter-v0.5-rc1` (PRs #5–#12), and it is not reconstructed here —
+inventing iteration entries after the fact would make this file look more
+authoritative than it is. Read the RC's git log for that stretch.
+
+- **TASK-019 — plugin installer hardening.** `agentrouter/plugins.py` is the only
+  module that writes into directories outside the project (`~/.claude`,
+  `~/.codex`) and then deletes from them, and was the largest under-tested module
+  in the RC.
+- **The backlog's premise was half wrong, and that is the main finding.** It said
+  the module's safety claims had never been adversarially tested. They had never
+  been tested — but they were all *true*. Symlinked destination, symlinked
+  parent, dangling link, hardlinked destination, path traversal in a plugin name,
+  uninstall after a user edit, uninstall of an unmanaged file, uninstall with the
+  ownership record deleted, a directory populated during cleanup, a colliding
+  backup, concurrent install/uninstall, both upgrade paths: every defence held.
+  What was missing was proof, not protection.
+- **Four real defects, each reproduced before it was fixed:**
+  1. a full disk during `plugin install` gave exit 1, empty output and a raw
+     traceback (`_temp_file` let a bare `OSError` escape);
+  2. an unknown plugin name was echoed back unbounded and unsanitised — 5 KB in,
+     5 KB out, CR/LF intact;
+  3. that sanitiser was itself incomplete: U+2028/U+2029 are not control
+     characters but *are* line boundaries to `str.splitlines()`, so the
+     forged-line attack still worked. Found by attacking my own fix;
+  4. `plugin list` and `plugin doctor` crashed with a raw traceback on a
+     symlinked destination — the exact state they exist to explain. `--json` was
+     correct throughout, which is what identified it as a display bug.
+- **A fifth defect, mine, and the one worth remembering.** A test written for
+  defect 4 omitted the `root` fixture, so `dest_root()` fell back to
+  `Path.home()` and it wrote a symlink into the developer's real
+  `~/.claude/skills/`. It passed in isolation; it broke a test in a different
+  file and aborted the mutation run's baseline. The plugin suite is the one part
+  of this repo whose tests can damage the machine they run on, and a missing
+  fixture argument is silent. `tests/conftest.py` now checks the outcome after
+  every test: the real plugin destinations must be exactly as they were, and a
+  leak is cleaned up and reported by name rather than left to cascade.
+- **Mutation gate extended** to the four functions that decide whether a path is
+  safe to write through and whether something is ours to delete. Wiring took
+  three attempts and the gate caught every mistake rather than scoring it a pass
+  (no mutants generated → all `no_tests` → 73 genuine survivors). Survivors were
+  driven 73 → 0 by real tests; the 26 that remain are individually proven
+  equivalent, each with a written reason naming the clause that makes it
+  unobservable. No threshold lowered, nothing blanket-allowlisted.
+- **Honest boundary kept:** the Windows `ctypes`/`CreateFileW` reparse-point
+  branch is unreachable on Linux, so the module's Linux coverage ceiling is about
+  91.4% and `tests/test_plugins_platform.py` states plainly that the POSIX suite
+  proves nothing about it.
+- **Graph limitation recorded:** `graphify affected safe_echo` omits the three
+  call sites in `server/app.py`, which reach it via the module-level alias
+  `_echo = observability.safe_echo`. AST-only extraction cannot follow a
+  rebinding, so that blast-radius query silently excludes the HTTP API surface.
+  Verified against source; the source wins.
+- **Release truth unchanged:** still NOT RELEASE READY —
+  `context_band_accuracy = 0.6667` against the unchanged 0.90 frozen-holdout
+  gate, closable only by the two-real-human annotation round.
