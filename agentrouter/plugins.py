@@ -1303,8 +1303,27 @@ def worst_status(findings: list[dict]) -> str:
 
 
 def status(p: Plugin) -> str:
+    """Summarise install state for display. Never raises.
+
+    `_safe_dest` refuses a destination whose path contains a link or reparse
+    point, which is correct -- but this function is called from `plugin list`
+    and `plugin doctor` purely to print a headline, and letting that refusal
+    escape meant the two commands a user runs to UNDERSTAND a hostile plugin
+    directory were the two that died on it with a raw traceback. `doctor --json`
+    diagnosed the same state correctly the whole time, which is what made the
+    crash a display bug rather than a missing diagnosis.
+
+    A path that cannot be safely inspected has no honest install state, so it
+    reports "blocked" -- the same word `diagnose` uses -- and the findings
+    printed underneath say what is wrong and how to fix it.
+    """
     root = dest_root(p)
-    present = [_path_exists(_safe_dest(root, f.dest)) for f in p.files]
+    present = []
+    for f in p.files:
+        try:
+            present.append(_path_exists(_safe_dest(root, f.dest)))
+        except PluginError:
+            return DIAG_BLOCKED
     if all(present):
         return "installed"
     if any(present):

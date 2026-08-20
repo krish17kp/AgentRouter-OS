@@ -165,3 +165,34 @@ def test_the_unified_doctor_reports_plugin_state_without_duplicating_logic(root,
 
     ids = {c.id for c in diagnostics.run_all(root / "home")}
     assert "plugins.state" in ids
+
+
+def test_plugin_list_does_not_crash_on_a_destination_it_refuses_to_inspect(root, plugin):
+    """The commands that explain a hostile directory must survive it.
+
+    `status()` used `_safe_dest`, which correctly refuses a path containing a
+    link -- but the refusal escaped into `plugin list` and `plugin doctor`, so
+    both printed a raw traceback in exactly the situation they exist to explain.
+    `doctor --json` was fine throughout, which is what identified this as a
+    display bug rather than a missing diagnosis.
+    """
+    dest = plugins.dest_root(plugin) / plugin.files[0].dest
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    sensitive = root / "SENSITIVE.txt"
+    sensitive.write_text("private\n", encoding="utf-8")
+    dest.symlink_to(sensitive)
+
+    assert plugins.status(plugin) == plugins.DIAG_BLOCKED
+
+    result = runner.invoke(app, ["plugin", "list"])
+    assert result.exit_code == 0, result.output
+    assert "Traceback" not in result.output
+    assert plugins.DIAG_BLOCKED in result.output
+
+    result = runner.invoke(app, ["plugin", "doctor"])
+    assert "Traceback" not in result.output
+    assert result.exit_code == 1  # blocked
+    # The headline must be followed by something actionable, not just a word.
+    assert "link or reparse point" in result.output
+
+    assert sensitive.read_text(encoding="utf-8") == "private\n"

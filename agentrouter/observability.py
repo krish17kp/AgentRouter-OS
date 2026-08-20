@@ -43,8 +43,14 @@ _request_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 # spelling them literally puts real bidi controls into this source file, which is
 # the Trojan Source problem in miniature (bandit B613).
 ECHO_LIMIT = 64
+# U+2028/U+2029 are in this set for a specific reason: they are not control
+# characters and an earlier version of this pattern did not strip them, but
+# `str.splitlines()` treats both as line boundaries. A name containing one still
+# forged a line in anything that processed the output line-wise -- the exact
+# attack the rest of the pattern exists to stop. `test_observability.py` derives
+# the full set from Python itself rather than trusting this list.
 _UNSAFE_ECHO = re.compile(
-    "[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]"
+    "[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069\ufeff]"
 )
 
 
