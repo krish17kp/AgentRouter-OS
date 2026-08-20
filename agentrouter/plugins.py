@@ -357,8 +357,21 @@ def _serialized_state(state: dict) -> bytes:
 
 
 def _temp_file(parent: Path, data: bytes, *, mode: int = 0o600) -> Path:
-    parent.mkdir(parents=True, exist_ok=True)
-    fd, raw_path = tempfile.mkstemp(prefix=".agentrouter-tmp-", dir=parent)
+    """Stage bytes next to their destination, or fail with an actionable error.
+
+    Every other failure in this module raises `PluginError` with a remedy. A
+    write failure here used to escape as a bare `OSError`, so a full disk gave
+    the user exit 1, no output and a traceback — the one situation where a plain
+    sentence ("no space left; free some and retry") is worth most.
+    """
+    try:
+        parent.mkdir(parents=True, exist_ok=True)
+        fd, raw_path = tempfile.mkstemp(prefix=".agentrouter-tmp-", dir=parent)
+    except OSError as exc:
+        raise PluginError(
+            f"could not prepare a staging file in {parent}: {exc}. "
+            "Check free space and that the directory is writable."
+        ) from exc
     path = Path(raw_path)
     try:
         # POSIX-only: restrict the temp file to owner before writing. Windows lacks
@@ -370,7 +383,16 @@ def _temp_file(parent: Path, data: bytes, *, mode: int = 0o600) -> Path:
             stream.write(data)
             stream.flush()
             os.fsync(fd)
+    except OSError as exc:
+        os.close(fd)
+        path.unlink(missing_ok=True)
+        raise PluginError(
+            f"could not write the staging file {path}: {exc}. "
+            "Check free space and that the directory is writable."
+        ) from exc
     except BaseException:
+        # Anything else (KeyboardInterrupt, SystemExit) still propagates, but the
+        # partially written staging file is never left behind.
         os.close(fd)
         path.unlink(missing_ok=True)
         raise
