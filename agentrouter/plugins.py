@@ -1133,6 +1133,169 @@ def plan(p: Plugin, *, adopt_identical: bool = False) -> list[dict]:
     return out
 
 
+# Diagnostic severities, worst first (TASK-019).
+DIAG_OK = "ok"
+DIAG_ATTENTION = "attention"
+DIAG_BLOCKED = "blocked"
+_DIAG_ORDER = (DIAG_BLOCKED, DIAG_ATTENTION, DIAG_OK)
+
+# `plan()` already classifies every destination; diagnose maps those actions to a
+# severity and a remedy rather than recomputing the classification, so the two
+# can never disagree about what state a file is in.
+_ACTION_DIAGNOSIS: dict[str, tuple[str, str, str | None]] = {
+    "create": (
+        DIAG_ATTENTION,
+        "not installed",
+        "run: agentrouter plugin install {name}",
+    ),
+    "skip (identical, managed)": (DIAG_OK, "installed and unmodified", None),
+    "adopt identical legacy installation (managed)": (
+        DIAG_ATTENTION,
+        "an identical copy is already here but is not recorded as ours",
+        "it is byte-for-byte the shipped file, so adopting it changes nothing on "
+        "disk: agentrouter plugin install {name} --adopt-identical",
+    ),
+    "record pre-existing (preserved on uninstall)": (
+        DIAG_ATTENTION,
+        "a file is already there and is not ours",
+        "it will be preserved. To install over it: "
+        "agentrouter plugin install {name} --force  (the original is backed up)",
+    ),
+    # This single action covers two situations `plan()` cannot tell apart: a file
+    # AgentRouter installed and the user then edited, and a file that was never
+    # ours. The wording has to be true of both, because guessing wrong here would
+    # tell someone their own file is our modified copy.
+    "overwrite (backup first)": (
+        DIAG_ATTENTION,
+        "a different file is at this path — either your edit of ours, or your own",
+        "it is left alone. To install the shipped version over it: "
+        "agentrouter plugin install {name} --force  (the existing file is backed up)",
+    ),
+    "blocked (not a safe regular file)": (
+        DIAG_BLOCKED,
+        "the destination is not a plain file (link, reparse point, or extra hard link)",
+        "inspect it yourself and move it aside; AgentRouter will not write through it",
+    ),
+}
+
+
+def diagnose(p: Plugin) -> list[dict]:
+    """Structured health of one plugin: what state each file is in, and the fix.
+
+    Built on `plan()` so the diagnosis and the install preview can never
+    disagree. Reports paths and states only — never file contents, since this
+    output is meant to be pasteable into a support request.
+    """
+    root = dest_root(p)
+    findings: list[dict] = []
+
+    if not _path_exists(root.parent) and not _path_exists(root):
+        findings.append(
+            {
+                "plugin": p.name,
+                "check": "host-root",
+                "status": DIAG_ATTENTION,
+                "summary": f"the host directory {root} does not exist yet",
+                "remedy": f"it is created on install: agentrouter plugin install {p.name}",
+            }
+        )
+
+    # A journal left behind means a previous run died part way through.
+    transaction = _transaction_path(root, p)
+    if _path_exists(transaction):
+        findings.append(
+            {
+                "plugin": p.name,
+                "check": "transaction",
+                "status": DIAG_ATTENTION,
+                "summary": "a previous install or uninstall did not finish",
+                "remedy": f"re-run it to recover: agentrouter plugin install {p.name}",
+            }
+        )
+
+    state_path = _state_path(root, p)
+    if _path_exists(state_path):
+        try:
+            _load_state(root, p)
+        except PluginError as exc:
+            findings.append(
+                {
+                    "plugin": p.name,
+                    "check": "ownership",
+                    "status": DIAG_BLOCKED,
+                    "summary": f"the ownership record is unusable ({type(exc).__name__})",
+                    "remedy": (
+                        "AgentRouter will not delete files it cannot prove it owns. "
+                        f"Remove {state_path} only if you are content to manage these "
+                        "files by hand afterwards."
+                    ),
+                }
+            )
+            return findings
+
+    try:
+        # Diagnose against the adoption-aware plan. It distinguishes an
+        # IDENTICAL pre-existing copy (safe to adopt, byte-for-byte ours) from a
+        # DIFFERENT file at the same path (never safe to assume). The default
+        # plan collapses both into "record pre-existing", which would offer the
+        # same remedy for a file we could adopt and a file that is not ours.
+        # Diagnosis does not mutate anything, so reading the richer plan is free.
+        items = plan(p, adopt_identical=True)
+    except PluginError as exc:
+        findings.append(
+            {
+                "plugin": p.name,
+                "check": "destination",
+                "status": DIAG_BLOCKED,
+                "summary": f"cannot inspect the destination: {exc}",
+                "remedy": "resolve the path above, then re-run this check",
+            }
+        )
+        return findings
+
+    for item in items:
+        status_, summary, remedy = _ACTION_DIAGNOSIS.get(
+            item["action"], (DIAG_ATTENTION, item["action"], None)
+        )
+        findings.append(
+            {
+                "plugin": p.name,
+                "check": "file",
+                "status": status_,
+                "dest": item["dest"],
+                "summary": summary,
+                "remedy": remedy.format(name=p.name) if remedy else None,
+            }
+        )
+    return findings
+
+
+def diagnose_all() -> list[dict]:
+    """Every plugin, worst-first-sortable. Never raises."""
+    out: list[dict] = []
+    for plugin in PLUGINS.values():
+        try:
+            out.extend(diagnose(plugin))
+        except Exception as exc:  # noqa: BLE001 - a doctor must not crash
+            out.append(
+                {
+                    "plugin": plugin.name,
+                    "check": "diagnose",
+                    "status": DIAG_BLOCKED,
+                    "summary": f"the check itself failed ({type(exc).__name__})",
+                    "remedy": "this is a bug in the diagnostic; report it",
+                }
+            )
+    return out
+
+
+def worst_status(findings: list[dict]) -> str:
+    for severity in _DIAG_ORDER:
+        if any(f["status"] == severity for f in findings):
+            return severity
+    return DIAG_OK
+
+
 def status(p: Plugin) -> str:
     root = dest_root(p)
     present = [_path_exists(_safe_dest(root, f.dest)) for f in p.files]
