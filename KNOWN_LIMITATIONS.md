@@ -64,6 +64,27 @@
 - Production code must continue to avoid 3.11-only syntax until the owner explicitly changes the
   supported floor.
 
+## Windows reparse-point handling in the plugin installer is unverified (TASK-019)
+
+`agentrouter/plugins.py` removes a verified directory through two different code
+paths: `O_NOFOLLOW`/`dir_fd` with `(st_dev, st_ino)` verification on POSIX, and
+`CreateFileW` with `FILE_FLAG_OPEN_REPARSE_POINT` on Windows.
+
+The adversarial suite proves the POSIX path. It proves **nothing** about the
+Windows one — they are different code, and a Linux symlink test is not evidence
+about an NTFS junction. `tests/test_plugins_platform.py` skip-marks the
+Windows-only assertions so they can only pass where a Windows runner executes
+them; the CI matrix does include `test-windows`, but the link-specific attacks
+cannot be expressed portably and are not attempted there.
+
+Concretely: on Windows, treat "refuses reparse points" as designed-for and
+partly exercised, not as proven. Closing this properly needs junction and
+symlink attack tests written against Windows semantics.
+
+Branch coverage of `plugins.py` is also capped on Linux for the same reason:
+roughly 70 of its 818 statements are the Windows `ctypes` branch, so a Linux run
+cannot exceed about 91.4%.
+
 ## Local environment note
 
 - The developer's `~/.agentrouter/registry/models.yaml` may predate the current catalog. Run

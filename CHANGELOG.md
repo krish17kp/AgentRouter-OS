@@ -6,6 +6,14 @@ All notable changes to AgentRouter OS. Format loosely follows
 ## [Unreleased]
 
 ### Added
+- **`agentrouter plugin doctor` now diagnoses instead of describing.** For every
+  plugin destination it reports the state and the exact safe fix, with exit `0`
+  installed and unmodified, `1` blocked, `2` needs attention, plus `--json`. It
+  distinguishes an identical pre-existing copy (safe to adopt) from a different
+  file at the same path, never suggests deleting an arbitrary directory, and
+  never prints file contents. Plugin state also appears in unified
+  `agentrouter doctor` as `plugins.state`, delegating to the plugin module rather
+  than re-deriving its ownership rules.
 - **Local REST API** (`agentrouter server`, `[server]` extra): classify/route/
   explain plus a dry-run-only execute preview. No remote execution.
 - **MCP server** (`agentrouter mcp`, `[mcp]` extra): read-only route/classify/
@@ -124,6 +132,12 @@ All notable changes to AgentRouter OS. Format loosely follows
   closing a timing side-channel on `AGENTROUTER_API_KEY`.
 
 ### Fixed
+- **A full disk during `plugin install` no longer produces a bare traceback.**
+  Every other failure in the plugin installer raises a typed error with a
+  remedy; a write failure escaped as a raw `OSError`, so the user got exit 1,
+  empty output and a traceback in exactly the situation where one plain sentence
+  helps most. It now reports the path and "check free space and that the
+  directory is writable", while still cleaning up the partial staging file.
 - **A blank API key no longer reports a host as available.** Host detection tested the env var
   for truthiness, so `OPENAI_API_KEY="   "` (set but empty/whitespace) counted as available and
   `execute` would target a host that cannot possibly authenticate. Such a value now reports
