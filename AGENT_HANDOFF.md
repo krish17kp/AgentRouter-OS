@@ -14,15 +14,15 @@ authoritative for Claude sessions; where the two disagree, this file wins.
 
 | Field | Value |
 |---|---|
-| Last updated | 2026-08-20 (TASK-019 in progress) |
+| Last updated | 2026-08-20 (TASK-019 verified green locally, awaiting PR #13 CI) |
 | Repository | `/media/krish/New Volume/Krish/04 - Dev Projects/Agentrouteros` |
 | Filesystem | NTFS/fuseblk, verified **rw** this session |
 | Active branch | `task/TASK-019-plugin-installer-hardening` |
 | RC | **`7068887`**, CI + Security green (mutation gate green at `d81ad94`, docs-only since) |
 | `main` | `602321a`, untouched |
 | Open PR | **#13 (draft)** → RC. PRs #9–#12 merged; branches deleted |
-| Milestone | EPIC TASK-018 complete. **TASK-019 in progress** — head `fdc0cad` |
-| Next milestone | **TASK-019** — plugin installer hardening (selected by gap analysis, below) |
+| Milestone | EPIC TASK-018 complete. **TASK-019 code+docs complete** — head `7a68369`, pushed |
+| Next milestone | chosen by the next gap analysis, **after** PR #13 merges. Not Rust — still deferred |
 
 ## Release truth
 
@@ -172,6 +172,21 @@ it through the module-level alias `_echo = observability.safe_echo`. AST-only
 extraction cannot follow a rebinding, so a blast-radius query on that symbol
 silently omits the entire HTTP API surface. Verified against the source, which
 wins. Treat `affected` output as a lead, never as a complete caller list.
+
+## Remaining for TASK-019 — exact next actions
+
+1. **`gh pr checks 13`** first. The previous run failed `critical-modules` on the
+   pre-kill commit; `7a68369` is pushed and should now pass.
+2. `gh pr ready 13` — the REST `-f draft=false` does NOT flip draft, `gh pr ready`
+   (GraphQL) does. Then merge into the RC and delete the branch.
+3. **Not yet done:** wheel/sdist build, clean-wheel install into a fresh venv
+   outside the repo, and an installed-artifact `plugin install/doctor/uninstall`
+   smoke test.
+4. After merge: `graphify update .`, then reconcile `LOOP_STATE.json` (add
+   `completed_iter29`, update `current_phase` / `next_action`). `LOOP_LOG.md` and
+   `loop/tasks/TASK-019-plugin-installer-hardening/task.yaml` are already written.
+5. Then the next graph-driven gap analysis and milestone. **Not Rust** — deferred
+   until the current product is topped off.
 
 ## Open findings
 
