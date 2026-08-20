@@ -319,3 +319,25 @@ def test_the_ownership_record_never_contains_file_contents(root, plugin):
     distinctive = [line for line in payload.splitlines() if len(line) > 30][:3]
     for line in distinctive:
         assert line not in blob, "the ownership record embedded file content"
+
+
+def test_an_unknown_plugin_name_is_bounded_and_sanitised_before_echo():
+    """The name comes from the caller and is echoed straight back.
+
+    Unbounded, a 5 KB argument produced a 5 KB error message; with CR/LF intact
+    it could forge extra lines in anything capturing CLI output. Same class of
+    problem as the API's `decision_id`, so it uses the same shared helper rather
+    than a second implementation that could drift.
+    """
+    with pytest.raises(plugins.PluginError) as huge:
+        plugins.get_plugin("A" * 5000)
+    assert len(str(huge.value)) < 200, "an oversized name produced an oversized error"
+
+    with pytest.raises(plugins.PluginError) as hostile:
+        plugins.get_plugin("x\r\nInjected-Line: yes‮")
+    message = str(hostile.value)
+    assert "\r" not in message and "\n" not in message
+    assert "‮" not in message
+
+    # a legitimate name is untouched
+    assert plugins.get_plugin("claude-code").name == "claude-code"

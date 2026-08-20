@@ -32,6 +32,15 @@ def _complete_records(mutants: Path, *, survivor: str | None = None) -> None:
             "agentrouter.cli.x__execute__mutmut_1": 1,
             "agentrouter.cli.x__execute_via_host__mutmut_1": 1,
         },
+        # TASK-019: the plugin safety decisions are selected patterns too, so a
+        # "complete" campaign must include them — leaving them out is exactly
+        # what `selected_results_complete` is meant to catch.
+        "agentrouter/plugins.py": {
+            "agentrouter.plugins.x__safe_relative__mutmut_1": 1,
+            "agentrouter.plugins.x__is_link_or_reparse__mutmut_1": 1,
+            "agentrouter.plugins.x__entry_matches__mutmut_1": 1,
+            "agentrouter.plugins.x__remove_owned_empty_directory__mutmut_1": 1,
+        },
     }
     if survivor:
         for result in records.values():

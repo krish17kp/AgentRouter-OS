@@ -105,6 +105,11 @@ only_mutate = [
     "agentrouter/hosts.py",
     "agentrouter/server/limits.py",
     "agentrouter/cli.py",
+    # TASK-019: only the safety DECISIONS in this module are selected in
+    # scripts/run_mutation_ci.py — mutating all 818 statements would roughly
+    # double the campaign and push CI past its timeout, which gets a gate
+    # disabled rather than obeyed.
+    "agentrouter/plugins.py",
 ]
 pytest_add_cli_args = ["--disable-warnings"]
 pytest_add_cli_args_test_selection = [
@@ -120,6 +125,15 @@ pytest_add_cli_args_test_selection = [
     "tests/test_taxonomy.py",
     "tests/test_setup.py",
     "tests/test_mutation_kills.py",
+    # TASK-019: the suites that exercise the plugin safety decisions selected in
+    # scripts/run_mutation_ci.py. Without these listed, mutmut runs no tests
+    # against those mutants and records every one as `no_tests` — which the
+    # completeness gate correctly fails rather than scoring as a pass.
+    "tests/test_plugins.py",
+    "tests/test_plugins_adversarial.py",
+    "tests/test_plugins_faults.py",
+    "tests/test_plugins_doctor.py",
+    "tests/test_plugins_decisions.py",
 ]
 timeout_multiplier = 8.0
 timeout_constant = 2.0

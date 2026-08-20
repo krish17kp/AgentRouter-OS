@@ -36,6 +36,24 @@ _request_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 )
 
 
+# Caller-supplied text that gets echoed back in an error message. Unbounded, a
+# 5 KB identifier produces a 5 KB error; unsanitised, CR/LF forges extra lines in
+# anything that captures the output and a bidi override (U+202E) reverses the
+# display of everything after it. Ranges are written as escapes on purpose:
+# spelling them literally puts real bidi controls into this source file, which is
+# the Trojan Source problem in miniature (bandit B613).
+ECHO_LIMIT = 64
+_UNSAFE_ECHO = re.compile(
+    "[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]"
+)
+
+
+def safe_echo(value: object, limit: int = ECHO_LIMIT) -> str:
+    """Make caller-supplied text safe to place in a message shown to a human."""
+    cleaned = _UNSAFE_ECHO.sub("", str(value))
+    return cleaned if len(cleaned) <= limit else cleaned[:limit] + "\u2026"
+
+
 def _truthy(value: str | None) -> bool:
     return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
 

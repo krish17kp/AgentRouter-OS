@@ -20,6 +20,8 @@ from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path, PurePosixPath
 
+from . import observability
+
 _BAK_SUFFIX = ".agentrouter-bak"
 _STATE_DIR = ".agentrouter-state"
 _STATE_SCHEMA = 2
@@ -79,7 +81,11 @@ def get_plugin(name: str) -> Plugin:
     try:
         return PLUGINS[name]
     except KeyError:
-        raise PluginError(f"unknown plugin '{name}'. Known: {', '.join(sorted(PLUGINS))}") from None
+        # The name came from the caller, so it is bounded and stripped before it
+        # is echoed. Unbounded, a 5 KB argument produced a 5 KB error; with CR/LF
+        # intact it could forge extra lines in anything capturing CLI output.
+        safe = observability.safe_echo(name)
+        raise PluginError(f"unknown plugin '{safe}'. Known: {', '.join(sorted(PLUGINS))}") from None
 
 
 def _safe_relative(value: str, label: str) -> Path:
