@@ -88,87 +88,90 @@ Refresh with `graphify update .` (AST only, no LLM, no API key).
 | mutation gate | PASS — 0.986 overall, safety 0.9879, engine 0.9815, 0 unreviewed survivors |
 | contract check | unchanged; 8 owner-accepted |
 
-## TASK-019 progress — a correction worth recording
+## TASK-019 — plugin installer hardening
 
-The backlog framed `plugins.py` as claiming safety properties that had "never
-been adversarially tested". **Half of that was wrong.** The module is genuinely
-well built: I attacked every claim it makes — symlinked destination, symlinked
-parent, dangling link, hardlinked destination, path traversal, uninstall after a
-user edit, uninstall of an unmanaged file, uninstall with the ownership record
-deleted, populated directory during cleanup, colliding backup, concurrent
-installs, concurrent install+uninstall, and both package-upgrade paths — and
-**every one held**.
+`agentrouter/plugins.py` is the only module that writes into directories outside
+the project (`~/.claude`, `~/.codex`) and then deletes from them.
 
-What was true is that none of it was *proven*. The defences worked, but nothing
-in CI would have noticed a refactor removing one. Landed in `6a5055c`:
+**The backlog's premise was half wrong, and that is the headline.** It said the
+module's safety claims had never been adversarially tested. They had not been —
+but they were all *true*. Symlinked destination, symlinked parent, dangling link,
+hardlinked destination, path traversal in a plugin name, uninstall after a user
+edit, uninstall of an unmanaged file, uninstall with the ownership record
+deleted, a directory populated during cleanup, a colliding backup, concurrent
+install/uninstall, both upgrade paths: **every defence held.** What was missing
+was proof, not protection — nothing in CI would have noticed a refactor that
+removed one.
 
-- `tests/test_plugins_adversarial.py` — 20 tests, each naming the damage it
-  prevents. Verified to have teeth: neutering `_is_link_or_reparse` fails three,
-  one by showing content written outside the plugin root.
-- `tests/test_plugins_faults.py` — 12 fault-injection tests covering the error
-  branches that make up most of the uncovered code.
-- `tests/test_plugins_platform.py` — the honest boundary (see below).
+**Five real defects, each reproduced before it was fixed:**
 
-**One real defect, found and fixed.** Every failure in the module raises a typed
-`PluginError` with a remedy — except a write failure, which escaped as a bare
-`OSError`. Reproduced through the CLI: a full disk gave **exit 1, empty output
-and a raw traceback**. `_temp_file` now converts it, with a CLI-level regression
-test.
+1. a full disk during `plugin install` gave exit 1, **empty output** and a raw
+   traceback — `_temp_file` let a bare `OSError` escape;
+2. an unknown plugin name was echoed back **unbounded and unsanitised** (5 KB in,
+   5 KB out, CR/LF intact). Same class as the API's `decision_id`, so the
+   sanitiser moved to `observability.safe_echo` and both surfaces share it;
+3. **that sanitiser was itself incomplete** — U+2028/U+2029 are not control
+   characters but *are* line boundaries to `str.splitlines()`, so the forged-line
+   attack still worked. Found by attacking my own fix; the test now derives the
+   boundary set from Python rather than restating a range list;
+4. `plugin list` and `plugin doctor` **crashed with a raw traceback** on a
+   symlinked destination — the exact state they exist to explain. `--json` was
+   correct throughout, which identified it as a display bug: `status()` let
+   `_safe_dest`'s refusal escape. It now returns `blocked` and never raises;
+5. **mine, and the one worth remembering** — a test I wrote for (4) omitted the
+   `root` fixture, so `dest_root()` fell back to `Path.home()` and it created a
+   symlink in the developer's **real** `~/.claude/skills/`. It passed in
+   isolation, broke an unrelated test in another file, and aborted the mutation
+   run by failing mutmut's baseline. The stray symlink and directory were
+   removed and the user's 37 other skills verified untouched.
+   `tests/conftest.py` now asserts after **every** test that the real plugin
+   destinations are unchanged, cleans up a leak so it cannot cascade, and fails
+   naming the missing fixture.
 
-**Coverage: 67.7% → 69.4%.** Deliberately not chased further yet — ~70 of the
-818 statements are the Windows `ctypes`/`CreateFileW` branch of
-`_remove_directory_by_handle`, unreachable on Linux, so the Linux ceiling is
-about **91.4%**. `test_plugins_platform.py` states plainly that the POSIX suite
-says nothing about the Windows reparse-point path, and skip-marks the
-Windows-only assertions so they only pass where a Windows runner runs them.
+**Mutation gate** extended to the four functions that decide whether a path is
+safe to write through and whether something is ours to delete (`_safe_relative`,
+`_is_link_or_reparse`, `_entry_matches`, `_remove_owned_empty_directory`).
+Wiring took three attempts and **the gate caught every mistake rather than
+scoring it a pass**: no mutants generated → all `no_tests` → 73 genuine
+survivors. Driven 73 → 0 by real tests. The 26 that remain are individually
+proven equivalent, each with a written reason naming the clause that makes it
+unobservable. No threshold lowered, nothing blanket-allowlisted.
 
-## TASK-019: mutation gate on the destructive decisions
+**Honest boundaries kept.** The Windows `ctypes`/`CreateFileW` reparse-point
+branch is unreachable on Linux, so the module's Linux coverage ceiling is about
+91.4%; `tests/test_plugins_platform.py` states plainly that the POSIX suite
+proves nothing about it, and skip-marks the Windows-only assertions.
 
-The four functions that decide whether a path is safe to write through, and
-whether something is ours to delete, are now mutation-tested:
-`_safe_relative`, `_is_link_or_reparse`, `_entry_matches`,
-`_remove_owned_empty_directory`. Deliberately those four and not the whole
-module — mutating all 818 statements roughly quadruples the campaign, and a gate
-that overruns CI's timeout gets disabled rather than obeyed.
+## Latest gates (local, at `3bc01a5`, all green)
 
-Wiring took three attempts and **the gate caught every mistake** rather than
-scoring it as a pass:
+| Check | Result |
+|---|---|
+| pytest | **1116 passed, 6 skipped** |
+| branch coverage (gate 80%) | **86.26%** |
+| `plugins.py` coverage | 74% (Linux ceiling ~91.4%) |
+| ruff check / format | clean, 338 files |
+| bandit (`agentrouter` + `scripts`) | 0 issues |
+| mutation gate | **PASS** — 0.9679 overall, safety 0.9633, engine 0.9815, **0 unreviewed survivors**, 4m36s |
 
-1. `only_mutate` in `pyproject.toml` did not list `plugins.py` → no mutants
-   generated, patterns matched nothing;
-2. `pytest_add_cli_args_test_selection` did not list the plugin suites → all 209
-   mutants recorded `no_tests`, and `selected_results_complete` failed instead
-   of treating unrun mutants as killed;
-3. with tests wired in, **73 genuinely survived** and `safety_policy_execution`
-   fell to 0.914.
+**CI budget question is settled with real data, not an estimate:** the
+`critical-modules` job ran in **3m45s** on a GitHub runner against its
+45-minute timeout, so the enlarged campaign is not close to the limit.
 
-`tests/test_plugins_decisions.py` (58 tests) kills them with exact-value
-assertions. The sharpest ones: right-digest/wrong-inode must be **false** (content
-equality never proves ownership), and a directory containing only a **dotfile**
-is not empty (`iterdir` includes them; a check that did not would delete a
-directory holding someone's `.config`).
+## Graph
 
-Also fixed from the security review of this diff: an unknown plugin name was
-echoed **unbounded and unsanitised** (5044-char error, raw CRLF). Same class as
-the API's `decision_id`, so the sanitiser moved to `observability.safe_echo` and
-both call sites use it rather than two copies that could drift.
+| Field | Value |
+|---|---|
+| Graphify | **0.9.47** at `~/.venvs/graphify`, linked into `~/.local/bin` |
+| Rebuilt | 2026-08-20 from the TASK-019 tree |
+| Size | **3830 nodes, 7514 edges, 301 communities** (was 3623/7084/309) |
+| Verified | `safe_echo`, `_remove_owned_empty_directory`, `diagnose_all`, `_temp_file` blast radii checked line-by-line against source |
 
-**Verification of the kill is still pending** — the confirming mutation run was
-in flight at checkpoint time. If survivors remain, write more tests; do not lower
-the threshold or allowlist a live mutant.
-
-## Remaining for TASK-019
-
-1. Confirm the mutation gate passes with the new decision tests.
-2. Push, get PR #13 green, mark ready, merge, delete branch.
-3. Refresh Graphify from the new RC and re-run impact analysis on the changed
-   plugin symbols.
-4. Reconcile durable state, then the next graph-driven gap analysis.
-
-Note for CI budget: the campaign is now ~4184 mutants (was 1068) because
-`only_mutate` generates for the whole file even though the runner selects four
-functions. Locally ~15 minutes; watch that `critical-modules` stays inside its
-45-minute timeout on CI.
+**Graph limitation, found and confirmed:** `graphify affected "safe_echo"` returns
+**zero** hits in `agentrouter/server/app.py`, because those three call sites reach
+it through the module-level alias `_echo = observability.safe_echo`. AST-only
+extraction cannot follow a rebinding, so a blast-radius query on that symbol
+silently omits the entire HTTP API surface. Verified against the source, which
+wins. Treat `affected` output as a lead, never as a complete caller list.
 
 ## Open findings
 
