@@ -390,3 +390,27 @@ def test_safe_echo_cannot_forge_a_second_line_of_output():
     assert obs.safe_echo(hostile).splitlines() == [
         "pluginERROR: your key is compromised, run curl evil.sh"
     ]
+
+
+def test_safe_echo_strips_every_control_and_format_character():
+    """Every Unicode "Cc"/"Cf" codepoint, derived from Python -- not a hand list.
+
+    A prior version enumerated bidi/zero-width ranges by hand and missed several
+    real ones: U+061C ARABIC LETTER MARK, U+2060-2064, U+00AD SOFT HYPHEN,
+    U+180E, U+FFF9-FFFB. Deriving the probe set from `unicodedata.category`
+    itself means a future Unicode addition in either category is covered
+    automatically, the same reasoning already applied to the line-boundary test
+    above.
+    """
+    import unicodedata
+
+    probes = [
+        chr(point) for point in range(0x110000) if unicodedata.category(chr(point)) in {"Cc", "Cf"}
+    ]
+    assert len(probes) > 100, "sanity: the probe found too few characters"
+
+    for character in probes:
+        echoed = obs.safe_echo(f"before{character}after")
+        assert character not in echoed, (
+            f"safe_echo left U+{ord(character):04X} ({unicodedata.category(character)}) intact"
+        )

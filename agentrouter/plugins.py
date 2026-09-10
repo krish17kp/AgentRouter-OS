@@ -124,8 +124,14 @@ def dest_root(p: Plugin) -> Path:
 
 
 def _is_link_or_reparse(path: Path) -> bool:
-    if path.is_symlink():
-        return True
+    try:
+        if path.is_symlink():
+            return True
+    except OSError as exc:
+        # A permission-denied parent (or any other os-level failure) means
+        # whether this is a link cannot be determined -- fail closed with an
+        # honest reason instead of a raw traceback standing in for a diagnosis.
+        raise PluginError(f"could not inspect {path}: {exc}") from None
     is_junction = getattr(os.path, "isjunction", None)
     if is_junction is not None and is_junction(path):
         return True
@@ -133,6 +139,8 @@ def _is_link_or_reparse(path: Path) -> bool:
         attrs = getattr(path.lstat(), "st_file_attributes", 0)
     except FileNotFoundError:
         return False
+    except OSError as exc:
+        raise PluginError(f"could not inspect {path}: {exc}") from None
     return bool(attrs & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))
 
 
@@ -164,6 +172,12 @@ def _path_exists(path: Path) -> bool:
         path.lstat()
     except FileNotFoundError:
         return False
+    except OSError as exc:
+        # A parent directory with no read/execute permission (or any other
+        # os-level failure) means existence genuinely cannot be determined --
+        # that is not the same as "does not exist", and treating it as such
+        # would let install/uninstall logic proceed as if nothing were there.
+        raise PluginError(f"could not check whether {path} exists: {exc}") from None
     return True
 
 
@@ -241,7 +255,13 @@ def _src_bytes(rel: str) -> bytes:
     source = base.joinpath(*safe.parts)
     if not source.is_file():
         raise PluginError(f"packaged plugin source is missing: {rel}")
-    return source.read_bytes()
+    try:
+        return source.read_bytes()
+    except OSError as exc:
+        # The write-failure sibling of this problem was already fixed in
+        # _temp_file; a read failure (a bad sector, a corrupt install medium)
+        # deserves the same typed error rather than a bare traceback.
+        raise PluginError(f"could not read the packaged plugin source {rel}: {exc}") from exc
 
 
 def _backup_path(root: Path, dest: Path) -> Path:
@@ -1339,10 +1359,13 @@ def install(p: Plugin, force: bool = False, adopt_identical: bool = False) -> li
         state, _ = _load_state(root, p)
         _recover_transaction(root, p, state)
         # Validate all registry paths and packaged resources before any mutation.
-        for f in p.files:
-            _safe_dest(root, f.dest)
-            _backup_path(root, _safe_dest(root, f.dest))
-            _src_bytes(f.src)
+        try:
+            for f in p.files:
+                _safe_dest(root, f.dest)
+                _backup_path(root, _safe_dest(root, f.dest))
+                _src_bytes(f.src)
+        except (PluginError, OSError) as exc:
+            raise PluginError(str(exc), results=results) from exc
         historical = sorted(set(state["files"]) - {f.dest for f in p.files})
         if historical:
             raise PluginError(

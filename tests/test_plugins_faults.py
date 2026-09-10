@@ -111,7 +111,10 @@ def test_a_disk_full_failure_reaches_the_cli_as_a_message_not_a_traceback(
 
 def test_an_unreadable_source_payload_is_a_typed_error(root, plugin, monkeypatch):
     monkeypatch.setattr(plugins, "_src_bytes", fail_with(OSError(errno.EIO, "I/O error")))
-    with pytest.raises((plugins.PluginError, OSError)):
+    # Exactly PluginError, not (PluginError, OSError) -- the module's own
+    # docstring contract is "never a bare OSError reaching the CLI"; a tuple
+    # that also accepts OSError would pass whether or not that held.
+    with pytest.raises(plugins.PluginError):
         plugins.install(plugin)
     assert not dest_of(root, plugin).exists()
 

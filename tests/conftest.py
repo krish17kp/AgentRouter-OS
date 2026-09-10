@@ -49,25 +49,24 @@ def _real_destinations() -> list[Path]:
 
 @pytest.fixture(autouse=True)
 def _never_touch_the_real_home():
+    """Fail loudly on a leak into the real home -- never delete anything here.
+
+    An earlier version removed the leaked path so one bad test could not
+    cascade into every later one. That is itself a data-loss primitive: this
+    check cannot tell a leaked test artifact from a real `plugin install` a
+    developer ran concurrently in another terminal while the suite was
+    running, and deleting the wrong one destroys real user data. Failing
+    loudly and leaving the path alone is the only choice that is always safe.
+    """
     before = {path: path.exists() or path.is_symlink() for path in _real_destinations()}
     yield
     for path, existed in before.items():
         now = path.exists() or path.is_symlink()
         if now and not existed:
-            # Remove it so one leaky test does not cascade into every later one,
-            # then fail loudly naming the fixture that was missing.
-            try:
-                if path.is_dir() and not path.is_symlink():
-                    for child in sorted(path.iterdir(), reverse=True):
-                        child.unlink()
-                    path.rmdir()
-                else:
-                    path.unlink()
-            except OSError:  # pragma: no cover - cleanup is best-effort
-                pass
             pytest.fail(
                 f"this test wrote into the real home at {path}. Plugin tests must "
                 "take the `root` fixture (it sets AGENTROUTER_PLUGIN_ROOT); without "
-                "it, dest_root() falls back to Path.home()."
+                "it, dest_root() falls back to Path.home(). Left in place -- inspect "
+                "and remove it by hand if it is test leakage, not a real install."
             )
         assert now == existed, f"a test changed the real home at {path}"
