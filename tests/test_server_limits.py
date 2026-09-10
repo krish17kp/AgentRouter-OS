@@ -34,11 +34,8 @@ class FakeClock:
 
 
 @pytest.fixture()
-def client(tmp_path, monkeypatch):
-    monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
-    monkeypatch.delenv("AGENTROUTER_API_KEY", raising=False)
+def client(home, monkeypatch):
     monkeypatch.delenv("AGENTROUTER_RATE_LIMIT", raising=False)
-    assert runner.invoke(cli_app, ["init"]).exit_code == 0
     return TestClient(create_app())
 
 

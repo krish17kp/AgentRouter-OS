@@ -24,14 +24,6 @@ runner = CliRunner()
 SECRET = "sk-livekey0123456789abcdefghij"
 
 
-@pytest.fixture()
-def home(tmp_path, monkeypatch):
-    monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
-    monkeypatch.delenv("AGENTROUTER_API_KEY", raising=False)
-    assert runner.invoke(app, ["init"]).exit_code == 0
-    return tmp_path
-
-
 def test_a_healthy_install_reports_no_failures_and_exits_zero(home):
     """Open local mode with no API key is the DOCUMENTED default, so a fresh
     healthy install must not exit non-zero — that would cry wolf on the happy

@@ -18,21 +18,15 @@ import pytest
 pytest.importorskip("fastapi")
 
 from fastapi.testclient import TestClient  # noqa: E402
-from typer.testing import CliRunner  # noqa: E402
 
 from agentrouter import observability as obs  # noqa: E402
-from agentrouter.cli import app as cli_app  # noqa: E402
 from agentrouter.server.app import create_app  # noqa: E402
 
-runner = CliRunner()
 TRACE = "trace-me-0001"
 
 
 @pytest.fixture()
-def client(tmp_path, monkeypatch):
-    monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
-    monkeypatch.delenv("AGENTROUTER_API_KEY", raising=False)
-    assert runner.invoke(cli_app, ["init"]).exit_code == 0
+def client(home):
     return TestClient(create_app(), raise_server_exceptions=False)
 
 
