@@ -1,5 +1,78 @@
 # LOOP_LOG
 
+## Iteration 30 — 2026-09-10 — Branch consolidation + RC→main promotion attempt
+
+**Goal:** stop accumulating stacked feature branches; merge PR #14 (repo
+cleanup + architecture) and PR #15 (dynamic-skill-discovery + TASK-020) into
+the RC in dependency order, validate the integrated RC, and attempt the real
+RC→main promotion — letting the real `enforce-release-gate` decide, not
+assuming it would fail.
+
+**What happened.** Inventoried actual GitHub state first rather than trusting
+the prior handoff (it matched exactly: PR #14 → RC, PR #15 → cleanup branch,
+PR #13/TASK-019 → RC draft, both #14/#15 CLEAN/MERGEABLE, CI green). Merged
+PR #14 into RC (`1ae3155`); confirmed via `git diff --quiet` that the merge
+commit's tree is byte-identical to the cleanup branch tip (no surprise
+changes landed alongside it). Retargeted PR #15 from the cleanup branch to RC
+via `gh api` (`gh pr edit`/`gh pr merge` both hit an unrelated `gh` CLI
+GraphQL bug on this repo — `Projects (classic)` deprecation on the
+`projectCards` field — routed around by calling the REST API directly);
+recalculated diff verified unchanged (same file list, no duplicated cleanup
+content, no TASK-019 files). Merged PR #15 into RC (`62d5289`).
+
+**Full RC validation on `62d5289`.** pytest 973 passed/3 skipped; ruff
+check+format clean; bandit 0 issues; pip-audit (`requirements.txt`) clean;
+wheel+sdist build; clean-venv install outside the repo with CLI smoke
+(`init`/`doctor`/`--help`) — harness correctly self-identified as
+`claude-code`; `sdk/typescript` typecheck + 14/18 tests (4 skipped, all
+pre-existing live-suite skips) pass; CI on the merged head (full Python
+matrix, Windows, api-compatibility, build-smoke, critical-modules mutation
+gate, security scan) all green. Two independent read-only reviews of the
+combined `7068887..62d5289` diff (product-architect, security-reviewer-arros)
+found 0 regressions and 0 CRITICAL/HIGH; the one actionable finding (a stale
+"gitignored" claim about removed AutoSkills symlinks in
+`.claude/SKILL_POLICY.md`) was fixed; the rest were LOW-severity and
+pre-existing/out of scope (an unsanitized provider-id echo in
+`usage.py:96`, a `shutdown(wait=False)` interpreter-exit nuance, and a
+`pip-audit` discrepancy traced to dev-venv extras/contamination, not the
+diff).
+
+**RC→main, honestly.** Opened PR #16 specifically to exercise the real
+`enforce-release-gate` (it only runs for a PR based on `main`, a release tag,
+or explicit dispatch — confirmed by reading `.github/workflows/ci.yml`'s
+`if:` condition before relying on it). It ran — not skipped — and failed on
+exactly one of seven gates: `context_band_accuracy` measured `0.6667` (n=45
+held-out) against the required `>=0.90`; every other gate
+(`task_type_macro_f1`, `high_risk_recall`, `approval_accuracy`,
+`tool_needs_f1`, `high_risk_gated`, `synthetic_routing_top1`) passed. This
+matches every prior session's honest finding exactly — no regression, no
+drift. **PR #16 was left open, not merged**, per the standing policy: this
+gate needs the real two-human annotation round in
+`TASK_012_OWNER_ACTIONS.md`, and no AI may act as annotator, adjudicator, or
+tune the frozen holdout.
+
+**Branch cleanup.** Both merged branches' commits proven fully reachable from
+RC via `git merge-base --is-ancestor`; deleted locally. Remote deletion was
+attempted and refused by the repo's own `pre_tool_guard` hook (categorical
+block on `git push --delete` against any remote branch) — that refusal was
+respected, not routed around; the two stale remote branches are left for the
+owner to delete directly on GitHub.
+
+**TASK-019, left alone but checked.** Confirmed read-only (via
+`git merge-tree --write-tree`, which writes only a tree object, never
+touches a branch ref or working tree) that TASK-019's branch — now 11
+commits behind the new RC — has **real** future conflicts, not just GitHub's
+shallow "mergeable" signal: `agentrouter/diagnostics.py` (both TASK-018C's
+doctor pattern and TASK-019's own plugin-doctor check touch it) and
+`tests/conftest.py` (add/add — both branches independently consolidated the
+same fixtures). Recorded for whoever resumes TASK-019 next; the branch,
+PR #13, and its commits were not touched.
+
+**Verification:** all of the above reproduced with actual command output,
+not inferred from prior CI runs; the `enforce-release-gate` conclusion is
+from the real artifact JSON downloaded off the PR #16 run, not the
+non-enforcing `release-readiness-report`.
+
 ## Iteration 29 — 2026-09-10 — Production Milestone 1 (TASK-020): harness identity + usage/quota intelligence
 
 **Goal:** reconcile the two branches stacked above the RC since Iteration 28
