@@ -22,14 +22,19 @@ from .schema import Candidate, ItemLabels
 
 
 def build_pack(candidates: list[Candidate], *, seed: int) -> list[Candidate]:
-    """Return the candidates in a deterministic, per-seed randomised order.
+    """Return the candidates in a deterministic, per-seed randomised order, blinded.
 
     Different annotators pass different seeds, so their orderings are independent.
-    Candidate content is unchanged (still unlabelled); only order differs.
+    Each candidate is rebuilt with only id/prompt/category/source — `template`
+    (a generation-template id that literally encodes the intended band, e.g.
+    "review/small") and `notes` are dropped, matching the same blinding
+    `adjudication_candidates` already applies to the adjudicator's pack.
     """
     order = list(candidates)
     random.Random(seed).shuffle(order)  # nosec B311 - ordering only, not security
-    return order
+    return [
+        Candidate(id=c.id, prompt=c.prompt, category=c.category, source=c.source) for c in order
+    ]
 
 
 def labelled_ids(labels: list[ItemLabels]) -> set[str]:

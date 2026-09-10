@@ -53,6 +53,26 @@ def test_pack_contains_no_labels_or_predictions():
     assert all(c.source in ("generated_candidate", "curated", "real_prompt") for c in a)
 
 
+def test_pack_strips_template_and_notes(tmp_path):
+    # `template` literally encodes the intended band for a generated candidate
+    # (e.g. "review/small"), and `notes` is free text — neither may reach a
+    # pack file an annotator can open.
+    pool = candidates.generate()
+    assert any(c.template is not None for c in pool)  # the pool actually has some to strip
+
+    a = packs.build_pack(pool, seed=7)
+    assert all(c.template is None for c in a)
+    assert all(c.notes is None for c in a)
+
+    out = tmp_path / "pack.yaml"
+    store.save_candidates(out, a)
+    text = out.read_text(encoding="utf-8")
+    # Check the YAML *keys*, not a bare substring — a prompt's own text can
+    # legitimately contain the word "notes" (e.g. "release notes").
+    assert "template:" not in text
+    assert "notes:" not in text
+
+
 # --- resume / progress ------------------------------------------------------
 
 
