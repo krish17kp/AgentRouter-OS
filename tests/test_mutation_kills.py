@@ -1555,3 +1555,32 @@ def test_execute_via_host_refusal_without_a_remedy_uses_the_generic_next_line(mo
         "Next: install/authenticate the host, or run the generated prompt yourself."
         in err.splitlines()
     )
+
+
+# --- api_hosts() / provider_for_api_host() (TASK-020) -------------------------
+#
+# Added here, not just tests/test_diagnostics.py: the mutation CI's
+# `pytest_add_cli_args_test_selection` (pyproject.toml [tool.mutmut]) runs a
+# fixed, hand-curated list of test files against `only_mutate` modules
+# (including hosts.py) — it does NOT discover coverage automatically. A test
+# for new hosts.py code that lives only outside that list is invisible to the
+# mutation campaign, which reports "no tests" (not a survivor, but an
+# incomplete result that still fails the completeness gate) rather than
+# actually attempting to kill the mutant.
+
+
+def test_api_hosts_is_exactly_the_four_api_backed_hosts():
+    result = hosts_mod.api_hosts()
+    assert set(result) == {"anthropic-api", "openai-api", "gemini-api", "openrouter"}
+    assert len(result) == 4  # kills a mutant that drops or duplicates an entry
+
+
+def test_provider_for_api_host_maps_every_known_host_correctly():
+    assert hosts_mod.provider_for_api_host("anthropic-api") == "anthropic"
+    assert hosts_mod.provider_for_api_host("openai-api") == "openai"
+    assert hosts_mod.provider_for_api_host("gemini-api") == "google"
+    assert hosts_mod.provider_for_api_host("openrouter") == "openrouter"
+
+
+def test_provider_for_api_host_unknown_host_is_none_not_a_fabricated_guess():
+    assert hosts_mod.provider_for_api_host("not-a-real-host") is None
