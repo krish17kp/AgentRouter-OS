@@ -1,5 +1,40 @@
 # Repair loop
 
+## 0. CI-only findings (not caught by local runs before the first push)
+
+**0a. Harness test asserted the wrong thing for the ambient environment.**
+`tests/test_harness.py::test_detect_harness_defaults_to_the_real_process_environment`
+asserted `detect_harness()` (no args, real `os.environ`) equals `claude-code`
+— true only in the implementer's interactive session (`CLAUDECODE` set),
+false in GitHub Actions CI (`GITHUB_ACTIONS=true` is the honest, correctly
+detected answer). `detect_harness()` itself was correct in both places; the
+test's expectation was environment-dependent. Fixed by controlling
+`os.environ` via `monkeypatch.setenv` instead of trusting the ambient
+environment. Caught by: every CI job (3.10-3.13, Windows) failing identically
+on this one assertion; local runs never disagreed because they always ran
+inside the same Claude Code session.
+
+**0b. Mutation gate `no_tests` on the two new hosts.py functions.**
+PR #15's `critical-modules` job failed `selected_results_complete` — group
+and overall *scores* were identical to the historical passing baseline
+(0.986/0.9879/0.9815, 0 unreviewed survivors), which initially looked like
+flakiness, but reproduced identically across two independent CI runs.
+Downloaded the run's `critical-mutation-report` artifact and grepped
+`mutmut.log` directly: the two `no_tests` (🫥) mutants were exactly
+`agentrouter.hosts.x_api_hosts__mutmut_1` and
+`agentrouter.hosts.x_provider_for_api_host__mutmut_1` — deterministic, not
+random. Root cause: `pyproject.toml`'s `[tool.mutmut]
+pytest_add_cli_args_test_selection` is a fixed, hand-curated list of test
+files run against `hosts.py` mutants — not coverage-based auto-discovery.
+The only test for these two new functions lived in `tests/test_diagnostics.py`,
+which isn't in that list, so mutmut never attempted a single test against
+their mutants. Fixed by adding direct tests to `tests/test_mutation_kills.py`
+(which is in the curated list, and is this project's existing convention for
+closing exactly this class of gap). Verified locally before re-pushing:
+`mutmut run` scoped to just these two functions showed both 🎉 (killed), was
+both 🫥 (no_tests).
+
+
 ## 1. Duplicated `excluded` entries (product-architect, correctness)
 **Reproduce**: constructed a route with one model whose context window always
 fails eligibility; after a live-EXHAUSTED re-rank, that model's exclusion
