@@ -1,5 +1,65 @@
 # LOOP_LOG
 
+## Iteration 29 — 2026-09-10 — Production Milestone 1 (TASK-020): harness identity + usage/quota intelligence
+
+**Goal:** reconcile the two branches stacked above the RC since Iteration 28
+(repo-cleanup/architecture, dynamic-skill-discovery), publish the four
+canonical architecture diagrams properly, and implement the first production
+architecture milestone — pre-flight, environment/harness discovery, and
+model/usage intelligence.
+
+**What discovery found first.** A `repo-explorer` pass before writing any code
+established that most of "Milestone 1" already existed: `engine.py`'s
+complexity-weighted scoring + explanation trail, `hosts.py`/TASK-016's
+verified execution-host states, `refresh.py`'s dynamic catalog discovery, and
+`diagnostics.py`/TASK-018C's `doctor` Check pattern. Building any of those
+again would have duplicated real, tested abstractions. Only two real gaps
+existed: introspective harness detection (what tool is running *this*
+process, not what AgentRouter can dispatch to) and a usage/quota state model
+distinct from host readiness.
+
+**What shipped.** `agentrouter/harness.py` (evidence-only: Claude Code via a
+verified `CLAUDECODE` env var present in this very session, CI via
+`CI`/`GITHUB_ACTIONS`, GENERIC/UNKNOWN otherwise — Codex/Cursor/Antigravity
+have zero runtime footprint in this repo per `integrations/README.md`, so
+none was fabricated). `agentrouter/usage.py` (UNKNOWN/UNSUPPORTED/AVAILABLE/
+EXHAUSTED/ERROR; honestly UNSUPPORTED for every real provider today since no
+live-credentialed adapter is registered — `loop/BACKLOG.yaml` P2 already
+tracks that as owner-credential-gated, not a code gap). Both wired opt-in
+only: `doctor --verify-live`, `route --verify-live`; zero behavior change
+without the flag. Also: the four architecture PNGs renamed to descriptive
+filenames and given a `docs/architecture/README.md` landing page.
+
+**What three independent read-only reviews found.** 0 CRITICAL/HIGH. 3 MEDIUM
+from security-reviewer-arros: `check_usage`'s `timeout` parameter was accepted
+but never enforced (fixed with `ThreadPoolExecutor` + `wait()` — deliberately
+not `future.result(timeout=...)`, because `concurrent.futures.TimeoutError`
+became an alias of the builtin `TimeoutError` on Python ≥3.11, which would
+have misreported an adapter's own raised `TimeoutError` as our wall-clock
+timeout, caught by this fix's own first test run on this machine's Python
+3.12); an adapter-supplied `detail` string reached stdout/JSON/the SQLite
+decision log unsanitized (fixed, mirroring `hosts._sanitize`); `doctor`
+looked up a live-check registry by API host id while `route` looked up by
+`ModelEntry.provider` id — two different namespaces for what a user would
+assume is the same provider (fixed via a new `hosts.provider_for_api_host()`
+mapping). 1 correctness bug from product-architect: a quota-triggered re-rank
+duplicated every eligibility-exclusion entry (fixed — the recomputed retry's
+exclusions are a pure-function duplicate of the original's, so only the new
+quota-specific entry needed adding). 2 LOW/judgment-call items accepted as-is
+with recorded rationale (see `loop/tasks/TASK-020-preflight-model-intelligence/repairs.md`).
+
+**Verification.** Full regression after repairs: 970 passed, 3 skipped
+(baseline 936/3 — +34 new tests, 0 regressions). ruff/bandit/pip-audit clean.
+Real-environment smoke against a fresh `agentrouter init` home: `doctor`
+1.13s, `doctor --verify-live` 0.98s, both truthful and secret-free; an
+independent reviewer confirmed via `strace` that `doctor --verify-live` makes
+zero `connect()` calls when nothing is registered.
+
+**State at handoff.** `task/dynamic-skill-discovery` has this session's
+commits but has not yet been pushed/PR'd (see AGENT_HANDOFF.md). Neither it
+nor `task/repo-cleanup-architecture-ponytail` has a PR. PR #13 (TASK-019) is
+untouched, still DRAFT, still the next milestone.
+
 ## Iteration 28 — 2026-08-20 — EPIC TASK-018 complete; graph-first loop established
 
 **Goal:** finish the production reliability and operational resilience milestone —
