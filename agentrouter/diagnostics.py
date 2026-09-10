@@ -313,6 +313,37 @@ def check_observability() -> Check:
     )
 
 
+def check_plugins() -> Check:
+    """Plugin health, delegated to `plugins.diagnose_all`.
+
+    Deliberately calls the plugin module's own diagnosis rather than repeating
+    its ownership and link rules here — two implementations of "is this file
+    ours?" would eventually disagree, and the wrong one would be the one that
+    deletes something.
+    """
+    from . import plugins
+
+    findings = plugins.diagnose_all()
+    blocked = [f for f in findings if f["status"] == plugins.DIAG_BLOCKED]
+    attention = [f for f in findings if f["status"] == plugins.DIAG_ATTENTION]
+
+    if blocked:
+        return Check(
+            "plugins.state",
+            FAIL,
+            f"{len(blocked)} plugin destination(s) AgentRouter will not touch",
+            blocked[0]["remedy"] or "run: agentrouter plugin doctor",
+        )
+    if attention:
+        return Check(
+            "plugins.state",
+            WARN,
+            f"{len(attention)} plugin file(s) need attention",
+            attention[0]["remedy"] or "run: agentrouter plugin doctor",
+        )
+    return Check("plugins.state", OK, f"{len(findings)} plugin file(s) installed and unmodified")
+
+
 def run_all(home: Path) -> list[Check]:
     """Every check, in a stable order. Never raises."""
     return [
@@ -324,6 +355,7 @@ def run_all(home: Path) -> list[Check]:
         _safe("catalogs.generated", lambda: check_catalogs(home)),
         _safe("hosts.ready", check_hosts),
         _safe("environment.harness", check_harness),
+        _safe("plugins.state", check_plugins),
         _safe("server.extra", check_server_extra),
         _safe("server.auth", check_api_key_configured),
         _safe("contract.version", check_contract),

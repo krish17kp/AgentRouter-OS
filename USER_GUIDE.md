@@ -296,6 +296,49 @@ $ cp -r integrations/claude-code/agentrouter ~/.claude/skills/agentrouter   # Cl
 
 See [integrations/README.md](integrations/README.md) for per-host install.
 
+### The managed installer (`plugin`)
+
+The `cp -r` above works, but nothing then knows which files AgentRouter put
+there, so there is no safe way to remove them again. `plugin install` does the
+same job with an ownership record:
+
+```console
+$ agentrouter plugin list                          # what can be installed, where,
+                                                   #   and its state: installed,
+                                                   #   partial, not-installed, or
+                                                   #   blocked (a path it will not
+                                                   #   inspect -- see doctor)
+$ agentrouter plugin install claude-code --dry-run # the exact files, changes nothing
+$ agentrouter plugin install claude-code           # do it
+$ agentrouter plugin doctor                        # per-destination state + the safe fix
+$ agentrouter plugin doctor --json                 # same, for a script
+$ agentrouter plugin uninstall claude-code
+```
+
+`plugin doctor` exits 0 only when every plugin is installed and unmodified; 2
+when something needs attention (including the ordinary "not installed yet"), and
+1 when something is blocked — a destination it refuses to write through, or an
+ownership record it cannot use. Script it on the exit code, not the text.
+
+`install` is idempotent: running it twice is a no-op, not a second copy. It stops
+rather than overwrite a file that differs from what it would write — pass
+`--force` to back that file up and replace it, and `uninstall` puts the backup
+back.
+
+Because this writes into your agent's configuration directory — outside the
+project — it is deliberately conservative. It records the identity (device and
+inode) of every file it creates, and on uninstall it removes **only** files that
+still match what it installed. If you edited a file yourself, it is left in
+place and reported, never deleted. It refuses to write through a symlink, never
+recursively deletes a directory tree, and treats a directory that has gained any
+other content — a dotfile counts — as yours to keep.
+
+Two honest limits. A digest match alone is not treated as proof of ownership, so
+a file AgentRouter did not create is reported rather than adopted unless you ask
+for it. And the Windows reparse-point branch of the deletion path is implemented
+but has **not** been verified on a Windows runner; see
+[KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md).
+
 ---
 
 ## JSON output contract
