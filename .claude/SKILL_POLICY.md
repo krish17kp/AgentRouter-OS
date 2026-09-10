@@ -59,9 +59,12 @@ its own authority is.
 
 AutoSkills is just one source that can populate the installed-skill set —
 not a special subsystem. Project-local AutoSkills artifacts (`.agents/`, npm
-package/lock files, `.claude/skills/*` symlinks) were removed and gitignored
-in `e678860` because they were untracked and referenced by nothing in the
-repo; that gitignore entry is intentional, not a bug. Before re-running
+package/lock files, `.claude/skills/*` symlinks) were removed in `e678860`
+because they were untracked and referenced by nothing in the repo. Only
+`.agents/`, `package.json`, `package-lock.json`, and `skills-lock.json` are
+gitignored (intentional, not a bug) — a resurrected `.claude/skills/*`
+symlink is not covered by a gitignore pattern and would show as untracked in
+`git status` instead. Before re-running
 AutoSkills, check whether the currently installed global marketplaces
 already cover the need — re-running it only to duplicate coverage already
 available globally re-creates the artifact problem `e678860` fixed. If a

@@ -17,12 +17,12 @@ authoritative for Claude sessions; where the two disagree, this file wins.
 | Last updated | 2026-09-10 |
 | Repository | `/mnt/NewVolume/Krish/04 - Dev Projects/Agentrouteros` |
 | Filesystem | NTFS/fuseblk, verified **rw** this session |
-| Active branch | `task/dynamic-skill-discovery`, stacked: RC `7068887` → `task/repo-cleanup-architecture-ponytail` `e678860` → `task/dynamic-skill-discovery` `fe4d13e` (both pushed, no PR yet) → this session's TASK-020 work |
-| RC | **`7068887`** (merge of PR #12, TASK-018-state-reconcile). Pre-existing 018-era gates (`936 passed`, mutation PASS) are from `d81ad94`; this session's full pytest/ruff/bandit/pip-audit run (below) is against the current branch tip, not a fresh mutation run |
-| `main` | `602321a`, untouched |
-| Open PR | **#13** (`task/TASK-019-plugin-installer-hardening`, DRAFT, out of scope this session — do not touch). No PR yet for `task/repo-cleanup-architecture-ponytail` or `task/dynamic-skill-discovery`; both need one |
-| Milestone | **Production Milestone 1 (TASK-020) COMPLETE** — pre-flight harness identity + usage/quota intelligence, see below |
-| Next milestone | **TASK-019** — plugin installer hardening (PR #13 already drafted; independently selected, unchanged priority) |
+| Active branch | `release/agentrouter-v0.5-rc1` (checked out locally at RC tip) |
+| RC | **`62d5289`** (merge of PR #15, dynamic-skill-discovery + TASK-020, into PR #14's cleanup, both merged into RC this session). `task/repo-cleanup-architecture-ponytail` and `task/dynamic-skill-discovery` are fully merged, deleted locally, and safe to delete on the remote (blocked from doing so here by the repo's own `pre_tool_guard` hook, which categorically refuses remote-branch deletion) |
+| `main` | `602321a`, untouched — RC is 66 commits ahead, PR **#16** open (`release/agentrouter-v0.5-rc1` → `main`) |
+| Open PRs | **#16** (RC → `main`, promotion PR, open — see Release truth below) · **#13** (`task/TASK-019-plugin-installer-hardening`, DRAFT, out of scope, do not touch — now 11 commits behind RC; real future conflicts confirmed via `git merge-tree` in `AGENT_HANDOFF.md`, `agentrouter/diagnostics.py`, `tests/conftest.py` (add/add)) |
+| Milestone | **Branch consolidation + RC→main promotion attempt COMPLETE this session** — PR #14 and #15 merged into RC, full RC validation green, PR #16 opened and its `enforce-release-gate` genuinely run (not skipped); blocked only by the known human-annotation gate, see below |
+| Next milestone | **TASK-019** — plugin installer hardening (PR #13, DRAFT, in progress; resume from its own state, do not restart) |
 
 ## Release truth
 
@@ -62,6 +62,58 @@ procedure / Hypothetical, with a test keeping the citations honest.
 The missing **TASK-018A security re-review** was executed and closed —
 `loop/tasks/TASK-018B-reliability-load-lab/security-review-018a.md`, no new
 critical or high findings.
+
+## Branch consolidation + RC→main promotion attempt (this session)
+
+PR #14 (repo cleanup + architecture) merged into RC as `1ae3155`; PR #15
+(dynamic skill discovery + TASK-020) retargeted from the now-merged cleanup
+branch straight to RC and merged as `62d5289` — recalculated diff verified
+identical to the pre-retarget diff (tree of `1ae3155` is byte-identical to
+`e678860`, so no code moved under the retarget). Full RC validation on
+`62d5289`: pytest 973 passed/3 skipped, ruff+format clean, bandit 0, pip-audit
+(against `requirements.txt`) clean, wheel/sdist build + clean-venv install/CLI
+smoke pass (harness correctly detects `claude-code` outside the repo), SDK
+typecheck+tests pass (14/18, 4 skipped), and CI (full matrix + api-compatibility
++ build-smoke + critical-modules + security scan) green on the merged head.
+Two independent read-only reviews of the combined `7068887..62d5289` diff
+(product-architect, security-reviewer-arros) found 0 regressions and 0
+CRITICAL/HIGH; architecture review's one actionable finding (a stale
+"gitignored" claim in `.claude/SKILL_POLICY.md`) is fixed; the rest are
+pre-existing/out-of-scope LOW items, not attributable to this integration.
+
+PR **#16** (`release/agentrouter-v0.5-rc1` → `main`) opened to exercise the
+real `enforce-release-gate` (it only runs for a PR whose base is `main`, a
+release tag, or explicit dispatch — never skipped here). It ran and **failed
+on exactly one of seven gates**: `context_band_accuracy>=0.90` — measured
+`0.6667` (n=45 held-out cases), unchanged from every prior session. All six
+other gates pass (`task_type_macro_f1`, `high_risk_recall`,
+`approval_accuracy`, `tool_needs_f1`, `high_risk_gated`,
+`synthetic_routing_top1`). This is the known, legitimate, non-bypassable
+human-annotation gate — not a software defect. **PR #16 is intentionally
+left open, not merged.** Closing it requires the real two-annotator round in
+`TASK_012_OWNER_ACTIONS.md`; no AI may act as annotator or adjudicator, the
+frozen holdout must not be tuned against, and the threshold must not be
+lowered.
+
+Both merged task branches (`task/repo-cleanup-architecture-ponytail`,
+`task/dynamic-skill-discovery`) are fully reachable from RC
+(`git merge-base --is-ancestor` verified) and were deleted locally. The
+remote copies were **not** deleted — the repo's `pre_tool_guard` hook
+categorically refuses `git push --delete` on any remote branch, and that
+refusal was respected rather than routed around; the owner can delete
+`origin/task/repo-cleanup-architecture-ponytail` and
+`origin/task/dynamic-skill-discovery` directly on GitHub.
+
+TASK-019 (PR #13, still DRAFT, untouched) is now 11 commits behind RC. A
+read-only `git merge-tree` dry run (no branch or working-tree state changed)
+confirms **real future conflicts**, not just GitHub's shallow "mergeable"
+signal: `AGENT_HANDOFF.md` (trivial, doc churn), `agentrouter/diagnostics.py`
+(real — TASK-018C's doctor pattern and TASK-019's own "plugin doctor" check
+both touch it), and `tests/conftest.py` (add/add — both branches
+independently consolidated the same fixtures). Whoever resumes TASK-019
+should rebase onto current RC early, expect a real (not mechanical) merge in
+`diagnostics.py`, and re-run mutation coverage on that file after resolving
+it.
 
 ## Production Milestone 1 (TASK-020) — what shipped
 
@@ -124,24 +176,21 @@ Refresh with `graphify update .` (AST only, no LLM, no API key).
 | ruff check / format | this session | clean, 348 files |
 | bandit (`agentrouter`) | this session | 0 issues |
 | pip-audit | this session | no known vulnerabilities |
+| pytest | this session, merged RC `62d5289` | **973 passed, 3 skipped** |
+| ruff check / format | this session, RC `62d5289` | clean |
+| bandit (`agentrouter`) | this session, RC `62d5289` | 0 issues |
+| pip-audit (`requirements.txt`) | this session, RC `62d5289` | no known vulnerabilities |
+| build + clean-venv install/CLI smoke | this session, RC `62d5289` | pass |
+| sdk/typescript typecheck + test | this session, RC `62d5289` | pass (14 pass, 4 skipped) |
+| CI (full matrix, api-compat, build-smoke, critical-modules, security) | this session, RC `62d5289` | all green |
+| `enforce-release-gate` (real, PR #16 base=`main`) | this session | **FAIL** — only `context_band_accuracy` (0.6667 < 0.90); other 6 gates pass |
 
-Coverage/mutation were **not** re-run this session (TASK-020's diff is small
-and covered by targeted + full pytest; a fresh mutation run belongs to
-whichever task next touches a mutation-gated module).
+Critical-module mutation gate was confirmed via CI's `Critical Mutation
+Testing` workflow (pass) on RC `62d5289`, not re-run locally this session.
 
 ## Next action
 
-First, close out this session's two un-PR'd branches and TASK-020's commits:
-
-```bash
-cd "/mnt/NewVolume/Krish/04 - Dev Projects/Agentrouteros"
-findmnt -T "$PWD" -o OPTIONS          # confirm rw first
-gh pr create --base release/agentrouter-v0.5-rc1 --head task/repo-cleanup-architecture-ponytail --draft
-gh pr create --base task/repo-cleanup-architecture-ponytail --head task/dynamic-skill-discovery --draft
-gh pr checks <the resulting PR numbers>   # inspect CI on both before marking ready
-```
-
-Then resume **TASK-019** — it is **already in progress**, not a fresh start:
+Resume **TASK-019** — it is **already in progress**, not a fresh start:
 PR **#13** (`task/TASK-019-plugin-installer-hardening`) is DRAFT with several
 commits already landed (symlink/hardlink attacks, a raw-`OSError` fix, a
 directory-removal recovery path with mutation-kill tests). Read
@@ -183,10 +232,15 @@ Full rationale is in `loop/BACKLOG.yaml` under `TASK-019`.
 
 ## Open findings
 
-None outstanding. All three findings tracked through this milestone are closed:
-the WAL sidecar hazard (fixed via `store.snapshot`), the missing 018A security
-re-review (executed, no new critical/high), and the redaction path over-match
-(fixed without weakening detection).
+None blocking. All three EPIC-018 findings are closed: the WAL sidecar hazard
+(fixed via `store.snapshot`), the missing 018A security re-review (executed,
+no new critical/high), and the redaction path over-match (fixed without
+weakening detection). This session's consolidation reviews surfaced only LOW
+severity, pre-existing/out-of-scope items (see the consolidation section
+above) — none rise to a fix-now bar under this repo's "don't reopen a
+finished milestone for stylistic reasons" policy. The one real open item is
+the TASK-019/RC conflict risk in `agentrouter/diagnostics.py` and
+`tests/conftest.py`, noted above for whoever resumes TASK-019.
 
 ## Prohibited
 
