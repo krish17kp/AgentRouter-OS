@@ -14,15 +14,15 @@ authoritative for Claude sessions; where the two disagree, this file wins.
 
 | Field | Value |
 |---|---|
-| Last updated | 2026-08-20 (TASK-019 verified green locally, awaiting PR #13 CI) |
-| Repository | `/media/krish/New Volume/Krish/04 - Dev Projects/Agentrouteros` |
+| Last updated | 2026-09-10 |
+| Repository | `/mnt/NewVolume/Krish/04 - Dev Projects/Agentrouteros` |
 | Filesystem | NTFS/fuseblk, verified **rw** this session |
-| Active branch | `task/TASK-019-plugin-installer-hardening` |
-| RC | **`7068887`**, CI + Security green (mutation gate green at `d81ad94`, docs-only since) |
-| `main` | `602321a`, untouched |
-| Open PR | **#13 (draft)** → RC. PRs #9–#12 merged; branches deleted |
-| Milestone | EPIC TASK-018 complete. **TASK-019 code+docs complete** — head `7a68369`, pushed |
-| Next milestone | chosen by the next gap analysis, **after** PR #13 merges. Not Rust — still deferred |
+| Active branch | `release/agentrouter-v0.5-rc1` (checked out locally at RC tip) |
+| RC | **`62d5289`** (merge of PR #15, dynamic-skill-discovery + TASK-020, into PR #14's cleanup, both merged into RC this session). `task/repo-cleanup-architecture-ponytail` and `task/dynamic-skill-discovery` are fully merged, deleted locally, and safe to delete on the remote (blocked from doing so here by the repo's own `pre_tool_guard` hook, which categorically refuses remote-branch deletion) |
+| `main` | `602321a`, untouched — RC is 66 commits ahead, PR **#16** open (`release/agentrouter-v0.5-rc1` → `main`) |
+| Open PRs | **#16** (RC → `main`, promotion PR, open — see Release truth below) · **#13** (`task/TASK-019-plugin-installer-hardening`, DRAFT, out of scope, do not touch — now 11 commits behind RC; real future conflicts confirmed via `git merge-tree` in `AGENT_HANDOFF.md`, `agentrouter/diagnostics.py`, `tests/conftest.py` (add/add)) |
+| Milestone | **Branch consolidation + RC→main promotion attempt COMPLETE this session** — PR #14 and #15 merged into RC, full RC validation green, PR #16 opened and its `enforce-release-gate` genuinely run (not skipped); blocked only by the known human-annotation gate, see below |
+| Next milestone | **TASK-019** — plugin installer hardening (PR #13, DRAFT, in progress; resume from its own state, do not restart) |
 
 ## Release truth
 
@@ -63,6 +63,93 @@ The missing **TASK-018A security re-review** was executed and closed —
 `loop/tasks/TASK-018B-reliability-load-lab/security-review-018a.md`, no new
 critical or high findings.
 
+## Branch consolidation + RC→main promotion attempt (this session)
+
+PR #14 (repo cleanup + architecture) merged into RC as `1ae3155`; PR #15
+(dynamic skill discovery + TASK-020) retargeted from the now-merged cleanup
+branch straight to RC and merged as `62d5289` — recalculated diff verified
+identical to the pre-retarget diff (tree of `1ae3155` is byte-identical to
+`e678860`, so no code moved under the retarget). Full RC validation on
+`62d5289`: pytest 973 passed/3 skipped, ruff+format clean, bandit 0, pip-audit
+(against `requirements.txt`) clean, wheel/sdist build + clean-venv install/CLI
+smoke pass (harness correctly detects `claude-code` outside the repo), SDK
+typecheck+tests pass (14/18, 4 skipped), and CI (full matrix + api-compatibility
++ build-smoke + critical-modules + security scan) green on the merged head.
+Two independent read-only reviews of the combined `7068887..62d5289` diff
+(product-architect, security-reviewer-arros) found 0 regressions and 0
+CRITICAL/HIGH; architecture review's one actionable finding (a stale
+"gitignored" claim in `.claude/SKILL_POLICY.md`) is fixed; the rest are
+pre-existing/out-of-scope LOW items, not attributable to this integration.
+
+PR **#16** (`release/agentrouter-v0.5-rc1` → `main`) opened to exercise the
+real `enforce-release-gate` (it only runs for a PR whose base is `main`, a
+release tag, or explicit dispatch — never skipped here). It ran and **failed
+on exactly one of seven gates**: `context_band_accuracy>=0.90` — measured
+`0.6667` (n=45 held-out cases), unchanged from every prior session. All six
+other gates pass (`task_type_macro_f1`, `high_risk_recall`,
+`approval_accuracy`, `tool_needs_f1`, `high_risk_gated`,
+`synthetic_routing_top1`). This is the known, legitimate, non-bypassable
+human-annotation gate — not a software defect. **PR #16 is intentionally
+left open, not merged.** Closing it requires the real two-annotator round in
+`TASK_012_OWNER_ACTIONS.md`; no AI may act as annotator or adjudicator, the
+frozen holdout must not be tuned against, and the threshold must not be
+lowered.
+
+Both merged task branches (`task/repo-cleanup-architecture-ponytail`,
+`task/dynamic-skill-discovery`) are fully reachable from RC
+(`git merge-base --is-ancestor` verified) and were deleted locally. The
+remote copies were **not** deleted — the repo's `pre_tool_guard` hook
+categorically refuses `git push --delete` on any remote branch, and that
+refusal was respected rather than routed around; the owner can delete
+`origin/task/repo-cleanup-architecture-ponytail` and
+`origin/task/dynamic-skill-discovery` directly on GitHub.
+
+TASK-019 (PR #13, still DRAFT, untouched) is now 11 commits behind RC. A
+read-only `git merge-tree` dry run (no branch or working-tree state changed)
+confirms **real future conflicts**, not just GitHub's shallow "mergeable"
+signal: `AGENT_HANDOFF.md` (trivial, doc churn), `agentrouter/diagnostics.py`
+(real — TASK-018C's doctor pattern and TASK-019's own "plugin doctor" check
+both touch it), and `tests/conftest.py` (add/add — both branches
+independently consolidated the same fixtures). Whoever resumes TASK-019
+should rebase onto current RC early, expect a real (not mechanical) merge in
+`diagnostics.py`, and re-run mutation coverage on that file after resolving
+it.
+
+## Production Milestone 1 (TASK-020) — what shipped
+
+**Architecture publication**: the four canonical diagrams (already finalized
+in `2de5cae` on `task/repo-cleanup-architecture-ponytail`, still `img1-4.png`
+with no landing page) renamed to descriptive filenames
+(`01-orchestration-routing-dispatch.png` … `04-workspace-layer-maintainer-interfaces.png`)
+and given a `docs/architecture/README.md` landing page; root `README.md`'s
+Architecture section now links there instead of embedding all four images
+inline.
+
+**Harness identity + usage/quota intelligence** (`loop/tasks/TASK-020-preflight-model-intelligence/`):
+a discovery pass first established that most of "Milestone 1" already existed
+— `engine.py` (complexity-weighted scoring + explanation trail),
+`hosts.py`/TASK-016 (verified execution-host states), `refresh.py` (dynamic
+catalog discovery), `diagnostics.py`/TASK-018C (the `doctor` Check pattern) —
+so only two real gaps were built: `agentrouter/harness.py` (introspective,
+evidence-only harness detection: Claude Code via a verified `CLAUDECODE` env
+var, CI via `CI`/`GITHUB_ACTIONS`, GENERIC/UNKNOWN otherwise — no other tool
+is guessed) and `agentrouter/usage.py` (a usage/quota state model —
+UNKNOWN/UNSUPPORTED/AVAILABLE/EXHAUSTED/ERROR — honestly UNSUPPORTED for
+every real provider today, since no live-credentialed adapter is registered;
+`loop/BACKLOG.yaml` P2 already tracks that as owner-credential-gated). Wired
+opt-in only: `doctor --verify-live` and `route --verify-live`; zero behavior
+change without the flag.
+
+Three independent read-only reviews (verification-engineer,
+security-reviewer-arros, product-architect) found 0 CRITICAL/HIGH, 3 MEDIUM
+security findings (unenforced timeout; unsanitized adapter-supplied text;
+inconsistent provider-id namespace between `doctor` and `route`'s usage
+lookups), 2 LOW, and 1 correctness bug (duplicated exclusion entries on a
+quota-triggered re-rank) — all reproduced and fixed; see
+`loop/tasks/TASK-020-preflight-model-intelligence/repairs.md`. Full
+regression after repairs: **970 passed, 3 skipped** (baseline 936/3, so +34
+new tests, 0 regressions); ruff/bandit/pip-audit clean.
+
 ## Graph
 
 | Field | Value |
@@ -77,123 +164,83 @@ critical or high findings.
 
 Refresh with `graphify update .` (AST only, no LLM, no API key).
 
-## Latest gates (at `d81ad94`)
+## Latest gates
 
-| Check | Result |
-|---|---|
-| pytest | **936 passed, 3 skipped** |
-| branch coverage (gate 80%) | **85.42%** |
-| ruff check / format | clean, 331 files |
-| bandit (`agentrouter` + `scripts`) | 0 issues |
-| mutation gate | PASS — 0.986 overall, safety 0.9879, engine 0.9815, 0 unreviewed survivors |
-| contract check | unchanged; 8 owner-accepted |
+| Check | At | Result |
+|---|---|---|
+| pytest | `d81ad94` (018-era) | 936 passed, 3 skipped |
+| branch coverage (gate 80%) | `d81ad94` | 85.42% |
+| mutation gate | `d81ad94` | PASS — 0.986 overall, safety 0.9879, engine 0.9815 |
+| contract check | `d81ad94` | unchanged; 8 owner-accepted |
+| pytest | this session, `task/dynamic-skill-discovery` + TASK-020 | **970 passed, 3 skipped** |
+| ruff check / format | this session | clean, 348 files |
+| bandit (`agentrouter`) | this session | 0 issues |
+| pip-audit | this session | no known vulnerabilities |
+| pytest | this session, merged RC `62d5289` | **973 passed, 3 skipped** |
+| ruff check / format | this session, RC `62d5289` | clean |
+| bandit (`agentrouter`) | this session, RC `62d5289` | 0 issues |
+| pip-audit (`requirements.txt`) | this session, RC `62d5289` | no known vulnerabilities |
+| build + clean-venv install/CLI smoke | this session, RC `62d5289` | pass |
+| sdk/typescript typecheck + test | this session, RC `62d5289` | pass (14 pass, 4 skipped) |
+| CI (full matrix, api-compat, build-smoke, critical-modules, security) | this session, RC `62d5289` | all green |
+| `enforce-release-gate` (real, PR #16 base=`main`) | this session | **FAIL** — only `context_band_accuracy` (0.6667 < 0.90); other 6 gates pass |
 
-## TASK-019 — plugin installer hardening
+Critical-module mutation gate was confirmed via CI's `Critical Mutation
+Testing` workflow (pass) on RC `62d5289`, not re-run locally this session.
 
-`agentrouter/plugins.py` is the only module that writes into directories outside
-the project (`~/.claude`, `~/.codex`) and then deletes from them.
+## Next action
 
-**The backlog's premise was half wrong, and that is the headline.** It said the
-module's safety claims had never been adversarially tested. They had not been —
-but they were all *true*. Symlinked destination, symlinked parent, dangling link,
-hardlinked destination, path traversal in a plugin name, uninstall after a user
-edit, uninstall of an unmanaged file, uninstall with the ownership record
-deleted, a directory populated during cleanup, a colliding backup, concurrent
-install/uninstall, both upgrade paths: **every defence held.** What was missing
-was proof, not protection — nothing in CI would have noticed a refactor that
-removed one.
+Resume **TASK-019** — it is **already in progress**, not a fresh start:
+PR **#13** (`task/TASK-019-plugin-installer-hardening`) is DRAFT with several
+commits already landed (symlink/hardlink attacks, a raw-`OSError` fix, a
+directory-removal recovery path with mutation-kill tests). Read
+`loop/tasks/TASK-019-plugin-installer-hardening/` (if present) and PR #13's
+current CI state before doing anything — do **not** `git checkout -b` a new
+branch over it.
 
-**Five real defects, each reproduced before it was fixed:**
+```bash
+source "$HOME/.venvs/agentrouter/bin/activate"
+export PATH="$HOME/.local/bin:$PATH"
+git checkout task/TASK-019-plugin-installer-hardening && git pull --ff-only
+gh pr view 13
+```
 
-1. a full disk during `plugin install` gave exit 1, **empty output** and a raw
-   traceback — `_temp_file` let a bare `OSError` escape;
-2. an unknown plugin name was echoed back **unbounded and unsanitised** (5 KB in,
-   5 KB out, CR/LF intact). Same class as the API's `decision_id`, so the
-   sanitiser moved to `observability.safe_echo` and both surfaces share it;
-3. **that sanitiser was itself incomplete** — U+2028/U+2029 are not control
-   characters but *are* line boundaries to `str.splitlines()`, so the forged-line
-   attack still worked. Found by attacking my own fix; the test now derives the
-   boundary set from Python rather than restating a range list;
-4. `plugin list` and `plugin doctor` **crashed with a raw traceback** on a
-   symlinked destination — the exact state they exist to explain. `--json` was
-   correct throughout, which identified it as a display bug: `status()` let
-   `_safe_dest`'s refusal escape. It now returns `blocked` and never raises;
-5. **mine, and the one worth remembering** — a test I wrote for (4) omitted the
-   `root` fixture, so `dest_root()` fell back to `Path.home()` and it created a
-   symlink in the developer's **real** `~/.claude/skills/`. It passed in
-   isolation, broke an unrelated test in another file, and aborted the mutation
-   run by failing mutmut's baseline. The stray symlink and directory were
-   removed and the user's 37 other skills verified untouched.
-   `tests/conftest.py` now asserts after **every** test that the real plugin
-   destinations are unchanged, cleans up a leak so it cannot cascade, and fails
-   naming the missing fixture.
+**Plugin installer hardening — original rationale**, still valid. Chosen by
+graph-driven gap analysis of the final RC, not by picking a convenient
+cleanup. Three signals agreed:
 
-**Mutation gate** extended to the four functions that decide whether a path is
-safe to write through and whether something is ours to delete (`_safe_relative`,
-`_is_link_or_reparse`, `_entry_matches`, `_remove_owned_empty_directory`).
-Wiring took three attempts and **the gate caught every mistake rather than
-scoring it a pass**: no mutants generated → all `no_tests` → 73 genuine
-survivors. Driven 73 → 0 by real tests. The 26 that remain are individually
-proven equivalent, each with a written reason naming the clause that makes it
-unobservable. No threshold lowered, nothing blanket-allowlisted.
+1. **Size + coverage** — `agentrouter/plugins.py` is **818 statements at 67.7%**,
+   by a wide margin the largest under-tested module (next is
+   `evaluation/cli.py` at 129 statements).
+2. **Centrality** — four plugin symbols sit in the graph's top 14 hubs:
+   `install()` 47 edges, `get_plugin()` 40, `uninstall()` 40, `_dest()` 34.
+3. **Blast radius** — it is the only module that writes into directories
+   **outside the project** (user agent-config directories) and then removes
+   files from them. Its docstring claims it "refuses links/reparse points and
+   ambiguous hard links" and "never recursively removes directories" — exactly
+   the class of claim 018A/B/C repeatedly found true in intent and incomplete in
+   practice, and it has never been adversarially tested.
 
-**Honest boundaries kept.** The Windows `ctypes`/`CreateFileW` reparse-point
-branch is unreachable on Linux, so the module's Linux coverage ceiling is about
-91.4%; `tests/test_plugins_platform.py` states plainly that the POSIX suite
-proves nothing about it, and skip-marks the Windows-only assertions.
+Approach, as in 018: **reproduce before fixing.** Attack symlink and hardlink
+targets, ownership forgery, partial/interrupted installs, concurrent
+install+uninstall, a destination that becomes read-only mid-write, path
+traversal in a plugin name, and uninstall on a path the user edited. Raise
+coverage by killing real defects, never by writing tests that assert current
+behaviour.
 
-## Latest gates (local, at `3bc01a5`, all green)
-
-| Check | Result |
-|---|---|
-| pytest | **1116 passed, 6 skipped** |
-| branch coverage (gate 80%) | **86.26%** |
-| `plugins.py` coverage | 74% (Linux ceiling ~91.4%) |
-| ruff check / format | clean, 338 files |
-| bandit (`agentrouter` + `scripts`) | 0 issues |
-| mutation gate | **PASS** — 0.9679 overall, safety 0.9633, engine 0.9815, **0 unreviewed survivors**, 4m36s |
-
-**CI budget question is settled with real data, not an estimate:** the
-`critical-modules` job ran in **3m45s** on a GitHub runner against its
-45-minute timeout, so the enlarged campaign is not close to the limit.
-
-## Graph
-
-| Field | Value |
-|---|---|
-| Graphify | **0.9.47** at `~/.venvs/graphify`, linked into `~/.local/bin` |
-| Rebuilt | 2026-08-20 from the TASK-019 tree |
-| Size | **3830 nodes, 7514 edges, 301 communities** (was 3623/7084/309) |
-| Verified | `safe_echo`, `_remove_owned_empty_directory`, `diagnose_all`, `_temp_file` blast radii checked line-by-line against source |
-
-**Graph limitation, found and confirmed:** `graphify affected "safe_echo"` returns
-**zero** hits in `agentrouter/server/app.py`, because those three call sites reach
-it through the module-level alias `_echo = observability.safe_echo`. AST-only
-extraction cannot follow a rebinding, so a blast-radius query on that symbol
-silently omits the entire HTTP API surface. Verified against the source, which
-wins. Treat `affected` output as a lead, never as a complete caller list.
-
-## Remaining for TASK-019 — exact next actions
-
-1. **`gh pr checks 13`** first. The previous run failed `critical-modules` on the
-   pre-kill commit; `7a68369` is pushed and should now pass.
-2. `gh pr ready 13` — the REST `-f draft=false` does NOT flip draft, `gh pr ready`
-   (GraphQL) does. Then merge into the RC and delete the branch.
-3. **Not yet done:** wheel/sdist build, clean-wheel install into a fresh venv
-   outside the repo, and an installed-artifact `plugin install/doctor/uninstall`
-   smoke test.
-4. After merge: `graphify update .`, then reconcile `LOOP_STATE.json` (add
-   `completed_iter29`, update `current_phase` / `next_action`). `LOOP_LOG.md` and
-   `loop/tasks/TASK-019-plugin-installer-hardening/task.yaml` are already written.
-5. Then the next graph-driven gap analysis and milestone. **Not Rust** — deferred
-   until the current product is topped off.
+Full rationale is in `loop/BACKLOG.yaml` under `TASK-019`.
 
 ## Open findings
 
-None outstanding. All three findings tracked through this milestone are closed:
-the WAL sidecar hazard (fixed via `store.snapshot`), the missing 018A security
-re-review (executed, no new critical/high), and the redaction path over-match
-(fixed without weakening detection).
+None blocking. All three EPIC-018 findings are closed: the WAL sidecar hazard
+(fixed via `store.snapshot`), the missing 018A security re-review (executed,
+no new critical/high), and the redaction path over-match (fixed without
+weakening detection). This session's consolidation reviews surfaced only LOW
+severity, pre-existing/out-of-scope items (see the consolidation section
+above) — none rise to a fix-now bar under this repo's "don't reopen a
+finished milestone for stylistic reasons" policy. The one real open item is
+the TASK-019/RC conflict risk in `agentrouter/diagnostics.py` and
+`tests/conftest.py`, noted above for whoever resumes TASK-019.
 
 ## Prohibited
 

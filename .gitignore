@@ -63,3 +63,9 @@ graphify-out/
 graph.html
 raw/
 .mutmut-cache
+
+# Autoskill marketplace tooling (agent-config, not part of the product)
+/.agents/
+/package.json
+/package-lock.json
+/skills-lock.json

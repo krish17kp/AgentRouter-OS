@@ -52,7 +52,7 @@ def _validate_provider(provider: str) -> None:
 
 def _sanitize(value: str) -> str:
     """Strip control/escape characters before echoing untrusted file content to a terminal."""
-    return "".join(c if c.isprintable() else "?" for c in value)
+    return "".join(c if c.isprintable() else "?" for c in value)[:120]
 
 
 def _provider_of(path: Path) -> str:

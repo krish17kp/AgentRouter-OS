@@ -15,10 +15,7 @@ runner = CliRunner()
 
 
 @pytest.fixture()
-def client(tmp_path, monkeypatch):
-    monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
-    monkeypatch.delenv("AGENTROUTER_API_KEY", raising=False)
-    assert runner.invoke(cli_app, ["init"]).exit_code == 0
+def client(home):
     return TestClient(create_app())
 
 

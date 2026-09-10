@@ -22,22 +22,10 @@ import pytest
 pytest.importorskip("fastapi")
 
 from fastapi.testclient import TestClient  # noqa: E402
-from typer.testing import CliRunner  # noqa: E402
 
-from agentrouter.cli import app as cli_app  # noqa: E402
 from agentrouter.server.app import create_app  # noqa: E402
 
-runner = CliRunner()
-
 CREDENTIAL = "sk-livekey0123456789abcdefghij"
-
-
-@pytest.fixture()
-def home(tmp_path, monkeypatch):
-    monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
-    monkeypatch.delenv("AGENTROUTER_API_KEY", raising=False)
-    assert runner.invoke(cli_app, ["init"]).exit_code == 0
-    return tmp_path
 
 
 @pytest.fixture()

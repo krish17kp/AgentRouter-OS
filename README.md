@@ -453,6 +453,12 @@ No test needs internet or an API key — provider-refresh tests mock the HTTP la
 
 ---
 
+## Architecture
+
+The target architecture — orchestration and dispatch, the three specialist agents, and the protected control plane vs. workspace permission split — is documented with four diagrams in **[docs/architecture](docs/architecture/README.md)**. These are the target design; see [Milestones](#milestones) below for what is actually implemented today.
+
+---
+
 ## Milestones
 
 | # | Milestone | Status |
@@ -479,6 +485,7 @@ See [ROADMAP.md](ROADMAP.md) and [MILESTONES.md](MILESTONES.md) for the full bre
 | [CLI_SPEC.md](CLI_SPEC.md) | Full command specification and flags |
 | [ROUTING_RULES.md](ROUTING_RULES.md) | Scoring, classification, risk, fallback logic |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Components, request lifecycle, data flow |
+| [docs/architecture](docs/architecture/README.md) | Target architecture diagrams (orchestration, agents, control plane) |
 | [MODEL_REGISTRY_SCHEMA.md](MODEL_REGISTRY_SCHEMA.md) | Model entry schema (source of truth) |
 | [PROVIDER_ADAPTER_SPEC.md](PROVIDER_ADAPTER_SPEC.md) | Provider adapter contract |
 | [TESTING.md](TESTING.md) | Test layout, coverage, post-build verification |
