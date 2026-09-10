@@ -10,19 +10,28 @@ OpenAPI: /openapi.json   Docs: /docs
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import os
+import re
 import uuid
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, Response, Security
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.security import APIKeyHeader
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from agentrouter import observability
 from agentrouter.registry import RegistryError
 
-from . import service
+from . import limits, service
 from .schemas import (
     ClassifyRequest,
+    ClassifyResponse,
+    DecisionResponse,
     DryRunRequest,
+    DryRunResponse,
     ErrorResponse,
     FeedbackRequest,
     FeedbackResponse,
@@ -30,6 +39,7 @@ from .schemas import (
     HostStatusResponse,
     ModelSummary,
     RouteRequest,
+    RouteResponse,
 )
 
 API_KEY_ENV = "AGENTROUTER_API_KEY"
@@ -40,10 +50,43 @@ def _error(status: int, code: str, message: str) -> JSONResponse:
     return JSONResponse(status_code=status, content={"error": {"code": code, "message": message}})
 
 
-def require_api_key(x_api_key: str | None = Header(default=None)) -> None:
+# Identifiers we echo back are caller-supplied, so they are bounded and stripped
+# before they reach a message. Unbounded, a 5 KB id produced a 5 KB error body;
+# unsanitised, CR/LF forged extra lines in anything that logs the message, and a
+# bidi override (U+202E) reversed the display of everything after it. Real ids
+# look like `d_00001`, so this never truncates a legitimate one.
+_ECHO_LIMIT = 64
+# The ranges are written as escapes on purpose: spelling them literally puts real
+# bidi overrides into this source file, which is the Trojan Source problem in
+# miniature (bandit B613 flags exactly that). C0/C1 controls, zero-width and
+# directional marks, embeddings/overrides, isolates, and the BOM.
+_UNSAFE_ECHO = re.compile(
+    "[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]"
+)
+
+
+def _echo(value: str) -> str:
+    """Make a caller-supplied identifier safe to place in an error message."""
+    cleaned = _UNSAFE_ECHO.sub("", str(value))
+    return cleaned if len(cleaned) <= _ECHO_LIMIT else cleaned[:_ECHO_LIMIT] + "…"
+
+
+def _api_key_ok(provided: str | None, expected: str | None) -> bool:
+    """Constant-time key check. Open (True) when no key is configured."""
+    if not expected:
+        return True
+    return provided is not None and hmac.compare_digest(provided, expected)
+
+
+# Declared as a security scheme (not a bare Header) so the exported OpenAPI
+# records authentication explicitly — otherwise adding or removing auth on an
+# endpoint is invisible to the compatibility checker.
+api_key_scheme = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+def require_api_key(x_api_key: str | None = Security(api_key_scheme)) -> None:
     """Local-mode auth: open unless AGENTROUTER_API_KEY is set, then key must match."""
-    expected = os.environ.get(API_KEY_ENV)
-    if expected and x_api_key != expected:
+    if not _api_key_ok(x_api_key, os.environ.get(API_KEY_ENV)):
         raise HTTPException(status_code=401, detail="invalid or missing API key")
 
 
@@ -56,15 +99,115 @@ def create_app() -> FastAPI:
         responses={"4XX": {"model": ErrorResponse}, "5XX": {"model": ErrorResponse}},
     )
 
+    # Per-app in-memory stores (fresh per create_app() -> test isolation).
+    rate_limiter = limits.RateLimiter()
+    idempotency = limits.IdempotencyCache()
+
+    # Middleware added LAST wraps OUTERMOST. limits_middleware is added first (inner)
+    # and request_id_middleware last (outer) so X-Request-ID is set even on limits'
+    # short-circuit responses (429 / idempotent replay).
+    @app.middleware("http")
+    async def limits_middleware(request: Request, call_next):
+        # Mirror the route-level auth decision here so the cache/rate-key can never
+        # outrun require_api_key: an unauthenticated request must not read or write
+        # the idempotency cache, and must not get a trusted rate-limit bucket.
+        expected = os.environ.get(API_KEY_ENV)
+        provided = request.headers.get("X-API-Key")
+        authed = _api_key_ok(provided, expected)
+
+        # 1. Rate limit (opt-in; probes exempt). Only trust the API key as the bucket
+        #    key when it actually validated — otherwise bucket by host so a rotated
+        #    header can't mint unlimited buckets.
+        if request.url.path not in limits.RATE_EXEMPT_PATHS:
+            trusted_key = provided if (expected and authed) else None
+            key = limits.client_key(trusted_key, request.client.host if request.client else None)
+            allowed, retry_after = rate_limiter.check(key)
+            if not allowed:
+                resp = _error(429, "rate_limited", "too many requests; slow down")
+                resp.headers["Retry-After"] = str(retry_after)
+                return resp
+
+        # 2. Idempotency — only for authenticated POSTs that opt in via header.
+        idem = request.headers.get("Idempotency-Key")
+        if request.method != "POST" or not idem or not authed:
+            return await call_next(request)
+
+        # Key namespaced by identity + path + body hash so a reused key with a
+        # different payload (or a different caller) can never replay a stale/foreign
+        # response.
+        body_in = await request.body()
+        identity = provided if expected else "local"
+        cache_key = "|".join(
+            [identity, idem, request.url.path, hashlib.sha256(body_in).hexdigest()]
+        )
+        # Single-flight: hold the per-key lock across the check AND the work.
+        # Checking then storing was atomic at each end but not in between, so
+        # concurrent retries of the SAME key all missed, all ran, and all
+        # persisted — 12 replays produced 6 decisions. Different keys are
+        # unaffected and still run concurrently.
+        async with idempotency.flight(cache_key):
+            return await _idempotent(request, call_next, cache_key)
+
+    async def _idempotent(request: Request, call_next, cache_key: str):
+        cached = idempotency.get(cache_key)
+        if cached is not None:
+            replay = Response(
+                content=cached.body, status_code=cached.status, media_type=cached.media_type
+            )
+            replay.headers["Idempotency-Replay"] = "true"
+            return replay
+
+        response = await call_next(request)
+        body = b"".join([chunk async for chunk in response.body_iterator])
+        # Only cache successful responses so a transient 4xx/5xx isn't pinned for the TTL.
+        if 200 <= response.status_code < 300:
+            # BaseHTTPMiddleware's response.media_type is always None; the real
+            # content-type lives in the headers, so capture it there for the replay.
+            idempotency.put(
+                cache_key,
+                limits.CachedResponse(
+                    response.status_code, body, response.headers.get("content-type")
+                ),
+            )
+        buffered = Response(
+            content=body,
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            media_type=response.media_type,
+        )
+        buffered.headers["Idempotency-Replay"] = "false"
+        idempotency.release_flight(cache_key)
+        return buffered
+
     @app.middleware("http")
     async def request_id_middleware(request: Request, call_next):
         rid = request.headers.get(REQUEST_ID_HEADER) or str(uuid.uuid4())
-        response = await call_next(request)
+        observability.set_request_id(rid)
+        try:
+            response = await call_next(request)
+        except Exception as exc:
+            # Starlette registers Exception handlers on its OUTERMOST middleware,
+            # above this one — so a failure handled there would answer without an
+            # X-Request-ID and the client could not correlate it. Convert here,
+            # where the id is still in scope. The exception text is never returned
+            # (it can carry paths or user data); it is logged at ERROR *with* the
+            # traceback, because catching here also stops the ASGI server from
+            # logging it — without this the fault would be silent server-side.
+            observability.log_api_error("api.unhandled_error", exc)
+            response = _error(500, "internal_error", "internal server error")
+        finally:
+            observability.set_request_id(None)  # avoid a stale id bleeding across contexts
         response.headers[REQUEST_ID_HEADER] = rid
         return response
 
-    @app.exception_handler(HTTPException)
-    async def http_exc_handler(_request: Request, exc: HTTPException):
+    # Registered on Starlette's base class so unmatched-route 404s (raised as the
+    # base HTTPException, not FastAPI's subclass) also get the error envelope.
+    @app.exception_handler(StarletteHTTPException)
+    async def http_exc_handler(_request: Request, exc: StarletteHTTPException):
+        # 503 maps to a generic `unavailable` only as a defensive default; nothing
+        # currently raises HTTPException(503) — the registry case has its own
+        # `registry_unavailable` handler — so this code is not documented as one a
+        # client should expect to see.
         code = {401: "unauthorized", 404: "not_found", 503: "unavailable"}.get(
             exc.status_code, "error"
         )
@@ -77,6 +220,35 @@ def create_app() -> FastAPI:
         message = f"{loc}: {first.get('msg')}" if loc else str(first.get("msg"))
         return _error(422, "validation_error", message)
 
+    @app.exception_handler(RegistryError)
+    async def registry_exc_handler(_request: Request, exc: RegistryError):
+        """A bad registry is the user's data, not a server bug — but its text is unsafe.
+
+        Registry errors interpolate the file path and the underlying YAML/pydantic
+        error, which quotes the offending source line. A registry only fails this
+        way when it is malformed, which is exactly when someone has pasted a
+        credential into it — so echoing the message would return that secret to
+        the caller.
+
+        The text is kept out of the LOG for the same reason. `/ready` is
+        unauthenticated and rate-limit exempt, and an ERROR record reaches
+        stderr even with no handler installed, so logging the message would let
+        any caller write that registry content into the operator's log on every
+        request — roughly 8 KB a time, credentials included. `agentrouter
+        doctor` reads the file directly and is the right place for the detail.
+        """
+        observability.log_api_error(
+            "api.registry_error",
+            exc,
+            detail=False,
+            remedy="run 'agentrouter doctor' on the host to see the offending registry file",
+        )
+        return _error(
+            503,
+            "registry_unavailable",
+            "registry unavailable or invalid; run 'agentrouter doctor' locally for details",
+        )
+
     protected = [Depends(require_api_key)]
 
     @app.get("/health", response_model=HealthResponse, tags=["meta"])
@@ -85,10 +257,9 @@ def create_app() -> FastAPI:
 
     @app.get("/ready", response_model=HealthResponse, tags=["meta"])
     def ready() -> dict:
-        try:
-            service.load_registry()
-        except RegistryError as e:
-            raise HTTPException(status_code=503, detail=f"registry not ready: {e}") from e
+        # Let the RegistryError handler answer, so readiness and the /v1 routes
+        # report the same code for the same condition (and leak the same nothing).
+        service.load_registry()
         return {"status": "ready"}
 
     @app.get("/v1/models", response_model=list[ModelSummary], dependencies=protected, tags=["v1"])
@@ -101,7 +272,7 @@ def create_app() -> FastAPI:
     def hosts_() -> list[dict]:
         return service.list_hosts()
 
-    @app.post("/v1/classify", dependencies=protected, tags=["v1"])
+    @app.post("/v1/classify", response_model=ClassifyResponse, dependencies=protected, tags=["v1"])
     def classify_(body: ClassifyRequest) -> dict:
         return service.classify_task(
             body.task,
@@ -110,7 +281,7 @@ def create_app() -> FastAPI:
             tools=body.tools,
         )
 
-    @app.post("/v1/route", dependencies=protected, tags=["v1"])
+    @app.post("/v1/route", response_model=RouteResponse, dependencies=protected, tags=["v1"])
     def route_(body: RouteRequest) -> dict:
         return service.route_task(
             body.task,
@@ -121,25 +292,32 @@ def create_app() -> FastAPI:
             no_log=body.no_log,
         )
 
-    @app.get("/v1/decisions/{decision_id}", dependencies=protected, tags=["v1"])
+    @app.get(
+        "/v1/decisions/{decision_id}",
+        response_model=DecisionResponse,
+        dependencies=protected,
+        tags=["v1"],
+    )
     def decision_(decision_id: str) -> dict:
         payload = service.get_decision(decision_id)
         if payload is None:
-            raise HTTPException(status_code=404, detail=f"no decision '{decision_id}'")
+            raise HTTPException(status_code=404, detail=f"no decision '{_echo(decision_id)}'")
         return payload
 
     @app.post("/v1/feedback", response_model=FeedbackResponse, dependencies=protected, tags=["v1"])
     def feedback_(body: FeedbackRequest) -> dict:
         recorded = service.save_feedback(body.decision_id, body.rating, body.note)
         if not recorded:
-            raise HTTPException(status_code=404, detail=f"no decision '{body.decision_id}'")
+            raise HTTPException(status_code=404, detail=f"no decision '{_echo(body.decision_id)}'")
         return {"decision_id": body.decision_id, "recorded": True}
 
-    @app.post("/v1/execute/dry-run", dependencies=protected, tags=["v1"])
+    @app.post(
+        "/v1/execute/dry-run", response_model=DryRunResponse, dependencies=protected, tags=["v1"]
+    )
     def dry_run_(body: DryRunRequest) -> dict:
         plan = service.execute_dry_run(body.decision_id)
         if plan is None:
-            raise HTTPException(status_code=404, detail=f"no decision '{body.decision_id}'")
+            raise HTTPException(status_code=404, detail=f"no decision '{_echo(body.decision_id)}'")
         return plan
 
     return app

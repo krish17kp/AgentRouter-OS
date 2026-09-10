@@ -1,6 +1,7 @@
 """Capstone M2 — providers refresh (OpenRouter) with mocked HTTP. No network, no keys."""
 
 import copy
+import os
 
 import pytest
 import yaml
@@ -154,6 +155,69 @@ def test_manual_wins_on_collision(home, mock_http):
     assert any("shadowed" in w for w in warnings)
 
 
+def test_write_generated_registry_includes_provenance(home, mock_http):
+    entries, _ = fetch_openrouter_models(None, limit=25)
+    reg_dir = home / "registry"
+    path = write_generated_registry(
+        reg_dir, "openrouter", entries, cli_args={"limit": 25, "match": None}
+    )
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    prov = data["provenance"]
+    assert prov["provider"] == "openrouter"
+    assert prov["source_url"] == refresh.OPENROUTER_MODELS_URL
+    assert prov["count"] == len(entries)
+    assert prov["cli_args"] == {"limit": 25, "match": None}
+    assert prov["tool_version"]
+    assert prov["fetched_at"]  # ISO-8601 UTC timestamp, non-empty
+
+
+def test_write_generated_registry_provenance_ignored_by_loader(home, mock_http):
+    """Extra top-level `provenance` key must not break the registry loader."""
+    entries, _ = fetch_openrouter_models(None, limit=25)
+    reg_dir = home / "registry"
+    write_generated_registry(reg_dir, "openrouter", entries)
+    providers = load_providers(reg_dir / "providers.yaml")
+    merged, _ = load_all_models(reg_dir, providers)
+    assert any(m.source == "refresh" for m in merged)
+
+
+def test_write_generated_registry_is_atomic_on_failure(home, mock_http, monkeypatch):
+    """A failure during the atomic replace must never corrupt the previous file."""
+    entries, _ = fetch_openrouter_models(None, limit=25)
+    reg_dir = home / "registry"
+    path = write_generated_registry(reg_dir, "openrouter", entries)
+    original = path.read_text(encoding="utf-8")
+
+    def boom(_src, _dst):
+        raise OSError("simulated crash during atomic replace")
+
+    monkeypatch.setattr(refresh.os, "replace", boom)
+    with pytest.raises(OSError, match="simulated crash"):
+        write_generated_registry(reg_dir, "openrouter", entries[:1])
+
+    # the final file is untouched — still the original, complete content
+    assert path.read_text(encoding="utf-8") == original
+    # no leftover temp file (hidden, unpredictable name — glob for the *.tmp suffix)
+    assert not list(reg_dir.glob("*.tmp"))
+
+
+def test_write_generated_registry_temp_file_is_not_predictable(home, mock_http):
+    """The temp filename must not be guessable/pre-plantable (no fixed name + PID)."""
+    entries, _ = fetch_openrouter_models(None, limit=25)
+    reg_dir = home / "registry"
+    predictable = reg_dir / f"models.openrouter.generated.yaml.tmp{os.getpid()}"
+    write_generated_registry(reg_dir, "openrouter", entries)
+    assert not predictable.exists()
+
+
+def test_previous_model_ids_reads_existing_generated_file(home, mock_http):
+    entries, _ = fetch_openrouter_models(None, limit=25)
+    reg_dir = home / "registry"
+    assert refresh.previous_model_ids(reg_dir, "openrouter") == set()
+    write_generated_registry(reg_dir, "openrouter", entries)
+    assert refresh.previous_model_ids(reg_dir, "openrouter") == {e.model_id for e in entries}
+
+
 def test_refresh_is_idempotent(home, mock_http):
     from agentrouter.cli import app
 
@@ -185,6 +249,32 @@ def test_cli_refresh_writes_and_routing_still_works(home, mock_http):
 
     route = runner.invoke(app, ["route", "write a haiku about routers"])
     assert route.exit_code == 0, route.output
+
+
+def test_cli_refresh_reports_deprecation_candidates(home, mock_http, monkeypatch):
+    from agentrouter.cli import app
+
+    r1 = runner.invoke(app, ["providers", "refresh", "openrouter"])
+    assert r1.exit_code == 0, r1.output
+    assert "candidate deprecation" not in r1.output  # nothing to compare against yet
+
+    shrunk = copy.deepcopy(SAMPLE_RESPONSE)
+    shrunk["data"] = [shrunk["data"][0]]  # only vendor/frontier-x remains live
+
+    def fake_shrunk(url, api_key):
+        return copy.deepcopy(shrunk)
+
+    monkeypatch.setattr(refresh, "_http_get_json", fake_shrunk)
+    r2 = runner.invoke(app, ["providers", "refresh", "openrouter"])
+    assert r2.exit_code == 0, r2.output
+    assert "candidate deprecation" in r2.output
+    assert "vendor/cheap-y" in r2.output and "vendor/mid-z" in r2.output
+    assert "nothing is deleted" in r2.output
+
+    # report-only: the new fetch still overwrites the generated file (no auto-keep)
+    gen = home / "registry" / "models.openrouter.generated.yaml"
+    data = yaml.safe_load(gen.read_text(encoding="utf-8"))
+    assert [m["model_id"] for m in data["models"]] == ["vendor/frontier-x"]
 
 
 def test_cli_refresh_dry_run_writes_nothing(home, mock_http):

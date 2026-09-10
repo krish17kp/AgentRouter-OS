@@ -1,0 +1,17 @@
+{
+  "agentrouter.hosts.x_resolve_execution_route__mutmut_6": "Equivalent: zip(strict=None) vs strict=True. statuses is built one-per-target from the same execution_targets list, so lengths are always equal and strict has no observable effect.",
+  "agentrouter.hosts.x_resolve_execution_route__mutmut_9": "Equivalent: zip(strict removed) vs strict=True. statuses length always equals execution_targets length, so strict never triggers; behaviour identical.",
+  "agentrouter.hosts.x_resolve_execution_route__mutmut_10": "Equivalent: zip(strict=False) vs strict=True. statuses is derived per-target from execution_targets so the two iterables are always equal length; no behavioural difference.",
+  "agentrouter.hosts.x_execution_route_block__mutmut_32": "Equivalent: mutates the dead 'unknown' fallback in `status.availability if status else 'unknown'`. The early guard requires execution_targets, so resolve_execution_route always returns a non-None status here; the else branch is unreachable.",
+  "agentrouter.hosts.x_execution_route_block__mutmut_33": "Equivalent: uppercases the dead 'unknown' fallback string. status is always non-None once the execution_targets guard passes, so this else branch never executes.",
+  "agentrouter.hosts.x_execution_route_block__mutmut_36": "Equivalent: mutates the dead 'no execution target' fallback in `status.reason if status else ...`. status is guaranteed non-None after the execution_targets guard; the else branch is unreachable.",
+  "agentrouter.hosts.x_execution_route_block__mutmut_37": "Equivalent: uppercases the dead 'no execution target' fallback string. Unreachable because status is always non-None when the model has execution targets.",
+  "agentrouter.cli.x__execute_via_host__mutmut_25": "Equivalent: `tgt is None and status is None` vs `or`. The call site fixes include_unavailable=True, so resolve_execution_route returns tgt and status that are both None (no targets) or both non-None; the two operators are indistinguishable.",
+  "agentrouter.engine.x__use_case_adjust__mutmut_4": "Equivalent: `adj += _IDEAL_BOOST` vs `adj = _IDEAL_BOOST`. adj is initialised to 0.0 and the ideal branch runs before the avoid branch, so `+=` from 0.0 equals plain assignment; the resulting value is identical on every path.",
+  "agentrouter.engine.x_score_models__mutmut_64": "Equivalent: round(cost, 2) vs round(cost, 3). _COST_FIT values are all at most one decimal place, so rounding to 2 vs 3 places yields the identical float.",
+  "agentrouter.engine.x_score_models__mutmut_71": "Equivalent: round(lat, 2) vs round(lat, 3). _LAT_FIT values have at most one decimal place, so the extra precision changes nothing.",
+  "agentrouter.engine.x_score_models__mutmut_78": "Equivalent: round(ctx, 2) vs round(ctx, 3). _context_fit only ever returns 0.6, 0.7 or 1.0, so rounding to 2 vs 3 places is identical.",
+  "agentrouter.engine.x_score_models__mutmut_85": "Equivalent: round(adj, 2) vs round(adj, 3). _use_case_adjust only produces values with at most two decimals (0.0, +/-0.05, +/-0.10, -0.05), so the third place is always zero.",
+  "agentrouter.engine.x_score_models__mutmut_92": "Equivalent: round(dep, 2) vs round(dep, 3). dep is exactly 0.0 or 0.2, so rounding to 2 vs 3 places gives the identical value.",
+  "agentrouter.cli.x__execute__mutmut_94": "Equivalent: passes er=None instead of er to _execute_via_host, whose body never reads the er parameter (it re-resolves the route from the model). The argument value is therefore unobservable."
+}

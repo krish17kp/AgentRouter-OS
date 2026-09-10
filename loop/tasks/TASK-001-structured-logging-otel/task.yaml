@@ -1,0 +1,25 @@
+id: TASK-001
+title: Structured logging + OpenTelemetry (opt-in) for server/engine/cli
+source: loop/BACKLOG.yaml#L1
+priority: 8
+status: done
+risk: low
+customer_impact: operators can trace routing decisions; improves trust/ops readiness
+affected_surfaces: [server, engine, cli]
+dependencies: []
+acceptance_criteria:
+  - structured (JSON) log records for each route decision with request-id
+  - OpenTelemetry spans are opt-in and no-op when the dep/env is absent
+  - no secrets or prompt contents logged by default
+  - existing 371 tests stay green; new focused tests for the logging layer
+verification_commands:
+  - python -m pytest -q
+  - ruff check agentrouter && ruff format --check agentrouter
+  - bandit -c pyproject.toml -r agentrouter
+required_reviewers: [verification-engineer, security-reviewer-arros, product-architect]
+repair_iteration: 0
+external_blockers: []
+owner_blockers: []
+created_at: "2026-07-18"
+updated_at: "2026-07-18"
+result: "PASS — 380 tests, audits clean, released to loop (not product release)"

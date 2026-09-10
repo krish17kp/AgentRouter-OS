@@ -12,9 +12,7 @@ small/medium/large bands and exist only to guarantee spectrum coverage.
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from ..base import Availability, DatasetAdapter, DatasetMetadata
+from ..base import Availability, DatasetAdapter, DatasetMetadata, fixture_path
 from ..schema import (
     AnnotationMethod,
     EvaluationCase,
@@ -23,9 +21,7 @@ from ..schema import (
     ReviewStatus,
 )
 
-_FIXTURE = (
-    Path(__file__).resolve().parents[3] / "evaluation" / "fixtures" / "longbench_v2_sample.jsonl"
-)
+_FIXTURE = fixture_path("longbench_v2_sample.jsonl")
 
 # (label, low_inclusive, high_exclusive) token buckets spanning the spectrum.
 CONTEXT_BUCKETS: list[tuple[str, int, int]] = [

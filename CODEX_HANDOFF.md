@@ -1,0 +1,191 @@
+# Codex Handoff - AgentRouter OS
+
+> **Relationship to `AGENT_HANDOFF.md`:** `AGENT_HANDOFF.md` is the canonical live
+> checkpoint and is authoritative for branch, commit, PR and next-action state.
+> This file is the Codex-oriented narrative and may lag. Where the two disagree,
+> `AGENT_HANDOFF.md` wins. Do not maintain a third handoff.
+
+Last updated: 2026-08-08 (iter 26 — TASK-016 MERGED to RC; mutation gate repaired)
+
+## Current state (iter 26)
+
+- **Branch topology (authoritative):**
+  - `main` — stable, untouched (still `602321a`). Never merge into it without explicit owner approval.
+  - `release/agentrouter-v0.5-rc1` — integration branch @ `5847c22`. **NOT RELEASE READY**
+    (context_band held-out 0.6667 < 0.90, unchanged). Mutation gate **PASSES**. CI is **green** on
+    ordinary pushes/PRs (see below).
+  - `task/TASK-011-context-band-data`, `task/TASK-012-annotation-operations`,
+    `task/TASK-013-catalog-provenance`, `task/TASK-014-ci-release-semantics`,
+    `task/TASK-015-trusted-catalogs` — **all MERGED to RC (PR #2/#3/#4/#5/#6) and DELETED**
+    local + remote; all commits preserved via merge commits.
+  - `mutation-kill-safety` — **DELETED** (local + remote); PR #1 closed as fully superseded by
+    `tests/test_mutation_kills.py`.
+- **TASK-011 on the RC:** `agentrouter/annotation/` program — schema, deterministic unlabelled
+  candidate generation (63 prompts, all ten categories, zero frozen-holdout leaks), dedup/near-dup
+  + cross-set leakage, two-annotator adjudication, leakage-safe train/dev/holdout splits, versioned
+  manifests, rules/learned/hybrid comparison, optional Graphify impact (text-only fallback), and the
+  `agentrouter dataset ...` CLI. Docs in `docs/CONTEXT_BAND_ANNOTATION.md`.
+- **TASK-012 on the RC:** blinded per-annotator packs, resumable annotate flow, disagreements-only
+  adjudication pack, JSONL+CSV export. The real two-annotator + adjudicator round is still external
+  (`TASK_012_OWNER_ACTIONS.md`) — the only path to closing the honest release-gate.
+- **TASK-013 on the RC:** `agentrouter/catalog_ops.py` (freshness/staleness vs
+  `registry.STALE_AFTER_DAYS`, safe rollback with `.bak` backup) + `providers status` /
+  `providers rollback` CLI.
+- **TASK-015 on the RC:** trusted catalogs — generated catalogs carry a `provenance` block
+  (source_url, fetched_at UTC, count, tool_version, cli_args) the loader ignores; atomic
+  refresh (`tempfile.mkstemp` + `os.replace`); candidate-deprecation reporting on refresh
+  (report-only); non-destructive backup rotation + new `providers restore`; new
+  `providers doctor` that schema-validates every generated catalog and exits 3 only on real
+  corruption. Independent security review: 0 critical / 3 medium / 2 low, all medium+low
+  fixed and regression-tested (symlink-race on temp/backup writes, crash-instead-of-clean-fail
+  on corrupt catalogs, same-second backup-rotation data loss).
+- **TASK-014 on the RC:** split the always-on enforcing `release-gate` into
+  `release-readiness-report` (push/PR/dispatch, non-enforcing, honest YES/NO) and
+  `enforce-release-gate` (RC->main PR / release tag / explicit dispatch only, full enforcement).
+  Ordinary CI is green; promotion stays strictly gated.
+- **Mutation (TASK-010b CLOSED):** mutmut 3.6.0, 923 mutants — overall **0.9837**;
+  `safety_policy_execution` **0.985** (>=0.95); `routing_engine` **0.9815** (>=0.85); no safety/
+  auth/policy/execution-bypass survivor. `cli.execute()` gate logic extracted into undecorated
+  `_execute()` for mutmut reach. Local iteration via Docker container `armut`.
+- **CI on `5847c22`:** test matrix 3.10-3.13, test-windows, build-smoke, Security,
+  `release-readiness-report` and **Critical Mutation Testing** all GREEN;
+  `enforce-release-gate`/`live-smoke` correctly SKIP (not run) on task/RC pushes by design.
+- **Local env blocker resolved (2026-08-08):** full pytest now runs cleanly on this machine (684
+  passed, 3 skipped); 33 hook tests; ruff, bandit and pip-audit clean. No longer CI-only
+  for regression evidence.
+- **GIT GUARDRAIL REPAIRED (2026-08-08, owner-authorized):** `.claude/hooks/pre_tool_guard.py`
+  had blocked `git add`/`commit`/`push` unconditionally, contradicting command.md §14 and the
+  AGENTS.md git policy and making this loop impossible to execute. Now branch-aware:
+  add/commit only on `task/*`; push only from a `task/*` branch for that same branch, never
+  forced, never to a protected branch. **Direct writes to `main` and `release/*` are still
+  refused** — record state and land every change through a task branch + PR, not by committing
+  on the RC. Force push, remote-branch deletion, tags, history rewriting, `reset --hard`,
+  `git clean`, recursive deletes, deployment, publication and secret printing stay blocked.
+- **TASK-016 on the RC:** hosts report installed/configured/authenticated/authorized/degraded
+  with a concrete remedy (offline, credential-free; existence checks only, never a network call
+  or a credential read). `authorized` is never inferred offline — it needs the opt-in live check
+  PHASE C lists separately, which is not implemented. Fixed a real bug: a set-but-blank API key
+  used to report *available*, so `execute` would target a host that cannot authenticate.
+  The critical-module mutation gate failed on the first CI run (safety_policy_execution 0.8895)
+  and was repaired to 0.9877 with real tests — no threshold lowered, no mutant allowlisted.
+- **Next:** remaining local backlog — benchmark routing infrastructure that needs no paid
+  inference, customer docs/examples, observability runbooks, API/SDK compatibility + load
+  testing (loop/BACKLOG.yaml L4/L9). Do NOT reuse/tune the frozen holdout; the 0.90 gate is unchanged; RC stays
+  NOT RELEASE READY; no RC->main without owner approval.
+
+---
+
+## Historical takeover notes (iter 18-19)
+
+## Repository and Git state
+
+- Path: `D:\Krish\Agentrouteros`
+- Remote verified: `origin https://github.com/krish17kp/AgentRouter-OS.git`
+- Initial branch: `main` tracking `origin/main`
+- Initial HEAD: `602321af91ff298c0d5b59d6d36c24f845557fc1`
+- Target authorized branch: `release/agentrouter-v0.5-rc1` (not yet created at this checkpoint)
+- `git diff --check` and `git diff --cached --check`: no integrity errors at takeover.
+
+### Inherited index (must not be discarded)
+
+Nine staged renames move packaged evaluation data into the Python package:
+
+- `benchmarks/{classifier_gold_v1,routing_gold_v1}.yaml` -> `agentrouter/benchmarks/`
+- Seven `evaluation/fixtures/*.jsonl` files -> `agentrouter/evaluation/fixtures/`
+
+### Inherited unstaged tracked work (must not be discarded)
+
+`.github/workflows/release.yml`, `.gitignore`, `CHANGELOG.md`, `KNOWN_LIMITATIONS.md`,
+`LOOP_LOG.md`, `LOOP_STATE.json`, `README.md`, `RELEASE.md`, `TESTING.md`,
+`agentrouter/{__init__,classifier,cli,hosts}.py`, evaluation base and seven adapters,
+`agentrouter/server/{__init__,app,service}.py`, evaluation report artifacts, `examples/README.md`,
+`pyproject.toml`, and three focused tests. Initial unstaged diff: 36 files, 951 insertions and
+1,701 deletions (the deletions are primarily regenerated evaluation output).
+
+### Inherited untracked work (must not be discarded)
+
+`.claude/` control-plane reference files; `PRODUCTION_READINESS.md`, `QUALITY_DASHBOARD.md`,
+`UPGRADING.md`; `agentrouter/{mcp_server,observability}.py` and
+`agentrouter/server/limits.py`; the complete `loop/` control plane and TASK-001..007 evidence;
+`sdk/typescript/`; and tests for context bands, MCP, observability, properties, and server limits.
+`.mutmut-cache` is untracked generated state and must not be committed.
+
+### Ignored/local state (exclude from commits)
+
+`.env` (contents not read or printed), `.venv/`, `.coverage`, `.hypothesis/`, `.pytest_cache/`,
+`.ruff_cache/`, Python caches, `agentrouter_os.egg-info/`, `artifacts/evaluation/current/`, `build/`,
+`dist/`, `data/`, and `sdk/typescript/node_modules/`.
+
+## Reconstructed state
+
+Inherited work implements exact model/host routing, route controls, confidence/abstention, tool
+taxonomy, plugin installers, setup, structured private-by-default logging and optional OTel,
+request IDs, bounded rate limiting/idempotency, local FastAPI/Python SDK, safe MCP read/route tools,
+TypeScript SDK, evaluation framework, packaged eval resources, SBOM/provenance release changes,
+and prior audit repairs. These remain under independent verification.
+
+Locally actionable work remains, despite stale `BLOCKED_EXTERNAL` flags:
+
+1. TASK-008 safe empty plugin-directory cleanup with path/symlink/user-file protections.
+2. TASK-009 genuinely held-out context-band generalization evaluation and leakage detection.
+3. Bounded Linux mutation-testing GitHub Actions workflow and a real CI score.
+4. Fix baseline formatting drift in three `.claude/hooks` files and any later audit/CI findings.
+
+External/owner-controlled items remain live provider credentials/catalogs, paid model benchmarks,
+hosted/team infrastructure, marketplace/PyPI publication, real beta users, production deployment,
+and final irreversible product decisions.
+
+## Independently reproduced takeover baseline
+
+- Python: `427 passed` (one Starlette/httpx deprecation warning), 2026-07-20.
+- Claude hook/control tests: `15 passed`.
+- Ruff lint: clean.
+- Ruff format: **FAIL**, would reformat `.claude/hooks/post_edit_check.py`,
+  `pre_tool_guard.py`, and `test_hooks.py`.
+- Bandit: zero findings; five justified nosec exclusions.
+- pip-audit: no known vulnerabilities in `requirements.txt`.
+- Evaluation: `98.32/100`, 165 cases, all seven current gates pass.
+- TypeScript SDK: `npm ci`, 8/8 tests, typecheck clean.
+- Packaging: wheel and sdist build successfully; setuptools emits future license-metadata warnings.
+- Clean wheel: fresh Python 3.13 venv, installed wheel with `[server,mcp]`, non-repository cwd;
+  import/version, help, init, setup, registry list, hosts list, route, eval list-datasets,
+  `eval run --all`, packaged benchmarks/fixtures/plugins, API import, and MCP import all pass.
+- Clean-wheel temp evidence path:
+  `C:\Users\krish\AppData\Local\Temp\agentrouter-codex-wheel-984c6723ae73494984c5575dd3533ae6`.
+
+## Current next command/task
+
+Iter 19 done (Claude, 2026-07-31 — decision A): built a dev-only LEARNED context-band classifier
+(`agentrouter/context_model.py`, multinomial LR, pure-Python runtime, packaged JSON weights) and
+evaluated rules / learned / hybrid against the frozen holdout ONCE. **Proven ceiling** — none
+reach 0.90: rules 0.6667 (macro-F1 0.6792), learned 0.6889 (macro-F1 0.6613, collapses medium
+recall), hybrid 0.6444. Learned is not significantly better than rules and has a lower macro-F1,
+so shipped **rules-active** (`_USE_LEARNED_BAND=False`); learned kept as a tested, flag-gated
+artifact with rule fallback. Study: `loop/tasks/TASK-009-context-band-holdout/learned-model-study.md`.
+Baseline: 481 collected — **480 passed** / 1 env-skip (otel), ruff/format clean, bandit 0, eval
+**98.23** Release-ready NO (context_band gate). Graphify post-impl 2309 nodes / 4319 edges,
+`context_model.py` leaf, no cycle. Clean-wheel verified (model JSON packaged, loads from fresh
+install). Independent gates: release-auditor FAIL-to-release / correctly HELD (all claims
+reproduced); security-reviewer no CRITICAL/HIGH, one LOW fixed (`load_model()` TypeError catch).
+One plugin backup test is order-flaky on Windows (passes isolated), unrelated to TASK-009.
+
+Iter 18/18b (2026-07-20): TASK-008 re-audited PASS (no repair); TASK-010 locally validated (CI
+score pending push); bandit regression fixed; Graphify activated; autonomy codified.
+
+Remaining is owner/external-blocked:
+- context_band held-out gate (0.6667 < 0.90) — **PROVEN DATASET CEILING** (rules/learned/hybrid all
+  tested). Closing honestly needs a larger human-labeled dev set or real-file context signals, OR an
+  owner decision to adjust/justify the gate. Do NOT tune against the frozen holdout.
+- release/agentrouter-v0.5-rc1 push — GATED: owner authorization required to push an RC while a
+  mandatory gate fails.
+- Phases B-J (live catalogs, paid benchmarks, hosted infra, PyPI/marketplace, beta) — external/owner.
+
+Resume/re-verify with:
+
+```console
+git status --short --branch
+.venv\Scripts\python.exe -m pytest -q
+.venv\Scripts\python.exe -m agentrouter eval run --all
+graphify update .
+```
+

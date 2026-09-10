@@ -232,6 +232,8 @@ def grade_cases(cases: list[dict], classify_fn=classify) -> dict:
         "approval": metrics["approval"],
         "release_thresholds": thresholds,
         "release_ready": all(thresholds.values()),
+        "readiness_scope": "legacy_gold_set_only",
+        "canonical_release_ready": None,
         "failures": [c for c in per_case if not c["ok"]],
         "cases": per_case,
     }

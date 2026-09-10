@@ -5,6 +5,7 @@ import json
 from typer.testing import CliRunner
 
 from agentrouter.cli import app
+from agentrouter.evaluation import cli as evaluation_cli
 
 runner = CliRunner()
 
@@ -32,6 +33,65 @@ def test_run_fast_json(tmp_path):
     report = json.loads(r.output[r.output.index("{") :])
     assert report["n_cases"] >= 150
     assert "release_gates" in report
+
+
+def test_run_all_exercises_frozen_holdout_and_reports_gate_consistently():
+    result = runner.invoke(
+        app,
+        [
+            "eval",
+            "run",
+            "--all",
+            "--json",
+            "--no-artifacts",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    report = json.loads(result.output[result.output.index("{") :])
+    generalization = report["context_band_generalization"]
+    assert generalization["current_holdout"]["n"] == 45
+    accuracy = generalization["current_holdout"]["accuracy"]
+    assert report["release_gates"]["context_band_accuracy>=0.90"] is (accuracy >= 0.90)
+    assert report["release_ready"] is all(report["release_gates"].values())
+
+
+def test_require_release_ready_returns_nonzero_for_failed_result(monkeypatch):
+    failed = {
+        "grade_over_100": 99.0,
+        "grade_of_measured": 99.0,
+        "release_ready": False,
+        "n_cases": 1,
+        "datasets": {},
+        "release_gates": {"context_band_accuracy>=0.90": False},
+        "classification": {},
+    }
+    monkeypatch.setattr(evaluation_cli.runner, "run", lambda **_kwargs: failed)
+
+    result = runner.invoke(
+        app,
+        [
+            "eval",
+            "run",
+            "--all",
+            "--json",
+            "--no-artifacts",
+            "--require-release-ready",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert json.loads(result.output)["release_ready"] is False
+
+
+def test_require_release_ready_requires_complete_measurement():
+    result = runner.invoke(
+        app,
+        ["eval", "run", "--json", "--no-artifacts", "--require-release-ready"],
+    )
+
+    assert result.exit_code == 2
+    assert "requires --all" in result.output
 
 
 def test_run_writes_artifacts(tmp_path):

@@ -39,6 +39,11 @@ $ agentrouter route "write a shell script" --prohibit-tool shell   # exclude she
 $ agentrouter route "build a scraper" --stable-only --max-price 5   # stable channel, price cap
 ```
 
+> Note: `--max-price` filters on real per-token prices, which the seeded catalog
+> does not carry yet, so `--max-price` on seeds currently excludes every model
+> ("no eligible model"). It takes effect once a priced catalog is loaded (see
+> `KNOWN_LIMITATIONS.md`).
+
 ## 6. Ambiguous tasks (confidence & abstention)
 
 ```console

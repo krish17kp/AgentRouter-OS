@@ -1,0 +1,21 @@
+id: TASK-010
+title: Bounded Linux mutation testing in GitHub Actions
+status: in_progress
+owner: codex
+started: 2026-07-20
+scope:
+  - .github/workflows/mutation.yml
+  - scripts/run_mutation_ci.py
+  - mutation-survivor-allowlist.json
+  - pyproject.toml
+  - tests/test_mutation_ci.py
+acceptance:
+  - mutmut dependency is exactly pinned
+  - Linux command and job have explicit timeouts
+  - selected critical modules are bounded
+  - tool failures and incomplete results cannot pass as a score
+  - overall score is at least 0.85
+  - safety-policy-execution score is at least 0.95
+  - every survivor is listed and reviewed as non-bypass or killed with a regression test
+  - report, survivor list, tool status, and raw log are uploaded
+  - a real GitHub-hosted Linux run completes

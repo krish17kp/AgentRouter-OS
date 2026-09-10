@@ -1,0 +1,112 @@
+# AgentRouter OS production backlog.
+# Merges command.md section 9 with actual repo evidence (LOOP_STATE.json @ iter 8).
+# priority = customer_value * trust * platform_leverage * adoption / risk (relative rank)
+# status: done | local_open | blocked_external | blocked_user
+version: 1
+
+# ---- Already delivered (local slices, see LOOP_STATE.json.completed) ----
+done:
+  - {id: P3,  title: route-control filters + preference weights + confidence/abstention}
+  - {id: P4,  title: tool taxonomy (versioned labels, equivalence, alias eligibility)}
+  - {id: P6,  title: 100-point evaluator suite + eval run --all}
+  - {id: P7,  title: local FastAPI /v1 server (no remote exec) + Python httpx SDK}
+  - {id: P8a, title: plugin installer (list/install/uninstall/doctor, reversible)}
+  - {id: P9,  title: non-interactive idempotent setup wizard}
+  - {id: P10a,title: URL-scheme hardening + bandit/pip-audit/secret-scan CI}
+  - {id: P12, title: examples/README + README quickstart (verified commands)}
+  - {id: TASK-011, title: "context-band data + annotation program (PR #2, merge commit 35e616e)"}
+  - {id: TASK-012, title: "human annotation operations tooling (PR #3, merge commit 0ddf401); human labeling round itself remains external"}
+  - {id: TASK-010b, title: "critical-module mutation hardening (0.9837 overall; safety 0.985; engine 0.9815)"}
+  - {id: TASK-013, title: "catalog freshness status + rollback (PR #4, merge commit c8fe429); provenance block + deprecation reconciliation deferred to TASK-015"}
+  - {id: TASK-014, title: "CI release-gate report/enforce split (PR #5, merge commit b62ffd7)"}
+  - {id: TASK-001, title: structured logging + OpenTelemetry (was L1)}
+  - {id: TASK-002, title: rate limiting + idempotency keys (was L6)}
+  - {id: TASK-003, title: property-based + mutation testing stack (was L5)}
+  - {id: TASK-005, title: MCP server exposing safe read/route/explain tools (was L2)}
+  - {id: TASK-006, title: TypeScript SDK, contract-parity with Python SDK (was L3)}
+  - {id: TASK-007, title: SBOM + release provenance upgrade (was L7)}
+  - {id: TASK-016, title: "verified execution-host states + provider diagnostics (PR #7, merge commit 5847c22)"}
+  - {id: TASK-015, title: "trusted catalogs — provenance, atomic refresh, deprecation reporting, rollback/restore, providers doctor (PR #6, merge commit 8661629)"}
+
+# ---- Unblocked local work (candidates for this loop) ----
+local_open:
+  - id: L4
+    title: Classifier context-band tuning + safety-gate hardening to 0.90
+    priority: 5
+    surfaces: [classifier, taxonomy]
+    risk: medium
+    note: >
+      SUPERSEDED as a rules/tuning task — TASK-009 proved a hand-rules ceiling
+      (rules 0.6667 / learned 0.6889 / hybrid 0.6444, none reach 0.90, learned not
+      significantly better). The only honest path to 0.90 is TASK-011/012's
+      human-labelled dataset + new private holdout; the external two-annotator
+      round is the live blocker (TASK_012_OWNER_ACTIONS.md).
+  - id: TASK-018A
+    title: Versioned HTTP API contract, semantic compatibility gate and SDK parity
+    priority: 1
+    surfaces: [server, sdk, ci, docs]
+    risk: medium
+    status: in_progress
+    note: >
+      EPIC TASK-018 part 1 of 3. Implemented and fully verified on
+      task/TASK-018A-api-contract-sdk-compatibility; draft PR to the RC pending.
+      Supersedes the API/SDK-compatibility half of L9.
+  - id: TASK-018B
+    title: Reliability, load, concurrency, soak and failure-injection lab
+    priority: 2
+    surfaces: [server, ci]
+    risk: medium
+    note: >
+      EPIC TASK-018 part 2 of 3. Repo-native and deterministic; CI correctness
+      gates, race/state checks, baselines and reports. Starts only after 018A
+      merges — one implementation branch at a time.
+  - id: TASK-019
+    title: Plugin installer hardening — the largest under-tested security surface
+    priority: 1
+    surfaces: [plugins, cli, security]
+    risk: high
+    note: >
+      SELECTED BY GRAPH-DRIVEN GAP ANALYSIS of the RC at d81ad94 (2026-08-20),
+      not by picking a convenient cleanup. Three independent signals agree:
+
+      (1) SIZE + COVERAGE. agentrouter/plugins.py is 818 statements at 67.7%
+      branch coverage — by a wide margin the largest under-tested module in the
+      project. The next biggest gap is evaluation/cli.py at 129 statements.
+
+      (2) CENTRALITY. Graphify god-nodes on the final RC puts four plugin
+      symbols in the top 14 architectural hubs: install() 47 edges,
+      get_plugin() 40, uninstall() 40, _dest() 34.
+
+      (3) BLAST RADIUS. This is the only module that writes into directories
+      OUTSIDE the project — user agent-config directories — and then removes
+      files from them. Its own docstring claims it "refuses links/reparse points
+      and ambiguous hard links" and "never recursively removes directories".
+      Those are exactly the class of claims TASK-018A/B/C repeatedly found to be
+      true in intent and incomplete in practice, and they have never been
+      adversarially tested.
+
+      Scope: reproduce before fixing, as in 018. Attack symlink and hardlink
+      targets, ownership forgery, partial/interrupted installs, concurrent
+      install+uninstall, a destination that becomes read-only mid-write, path
+      traversal in a plugin name, and uninstall on a path the user edited.
+      Raise coverage by killing real defects, never by writing tests that assert
+      current behaviour.
+
+  - id: L9
+    title: Observability runbooks + API/SDK compatibility and load testing
+    priority: 5
+    surfaces: [server, sdk, docs]
+    risk: low
+    note: >
+      SUPERSEDED by EPIC TASK-018 (018A contract/SDK compatibility, 018B load and
+      reliability, 018C observability and runbooks). Kept for traceability.
+
+# ---- External-blocked (need creds / paid inference / infra / owner) ----
+blocked_external:
+  - {id: P1,  title: dynamic catalog refresh (anthropic/openai/google/openrouter), needs: live authenticated APIs}
+  - {id: P2,  title: live host access verification, needs: opt-in network + credentials}
+  - {id: P5,  title: benchmark-measured model profiles + private holdout, needs: paid inference}
+  - {id: P11, title: hosted infra deploy + marketplace publication, needs: owner infra/creds}
+  - {id: P13, title: public beta feedback workflow + real-user evidence, needs: beta users}
+  - {id: P14, title: production ops runbook / incident response / backup-restore drills, needs: real infra}
+  - {id: P15, title: PostgreSQL team-mode + tenant/RBAC, needs: owner product decision + infra}

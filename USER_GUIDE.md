@@ -75,7 +75,7 @@ $ agentrouter prompt generate --from d_00002 --out prompt.md   # from a logged d
 $ agentrouter prompt generate "write release notes" --tool openai/general-purpose-model
 ```
 
-Paste the generated prompt into the recommended tool — or use `execute` (§8)
+Paste the generated prompt into the recommended tool — or use `execute` (§9)
 if you have opted a provider into execution.
 
 ## 6. `feedback <id>` — record the outcome (feeds learning)
@@ -127,6 +127,34 @@ Fetches OpenRouter's live model catalog and writes it to
 - Entries whose `last_updated` ages past 90 days trigger a load-time warning.
 - Other providers (`claude-code`, `cursor`, …) are not refreshable; the
   command says so and exits with code 2.
+- Every generated file carries a `provenance` block (source URL, UTC fetch
+  time, count, tool version, the CLI args used) — an extra top-level key the
+  registry loader ignores. If a provider already has a generated catalog,
+  refreshing it reports any model ids that were there before but are missing
+  from the new fetch as **candidate deprecations** — reported only, never
+  auto-deleted.
+
+### Trusting and reverting a refreshed catalog
+
+```console
+$ agentrouter providers status                 # freshness + provenance, offline
+$ agentrouter providers doctor                 # validates every generated catalog;
+                                                # exits non-zero only on real corruption
+$ agentrouter providers rollback openrouter    # back up + remove the generated file
+$ agentrouter providers restore openrouter     # undo the most recent rollback
+```
+
+- `status` shows each generated catalog's age, fresh/stale (90-day window), and
+  where it came from (when the provenance block is present).
+- `doctor` re-parses and schema-validates every generated file; a catalog that
+  is merely stale still reports `[OK]` — only a genuinely corrupt or invalid
+  file fails it (exit code 3) and suggests `rollback`.
+- `rollback` reverts to the manual registry by removing the generated file,
+  after backing it up (`.bak`); rolling back twice in a row rotates the older
+  backup aside instead of overwriting it, so backup history isn't lost.
+- `restore` reverses the most recent `rollback`. It refuses to overwrite a
+  generated file that was re-refreshed since the rollback — remove or roll
+  that one back first.
 
 ### Live smoke test (needs internet; pytest never does)
 
@@ -140,12 +168,60 @@ $ agentrouter route "Summarize a 300k-token repository"           # long-ctx imp
 On network failure the command exits 1, explains itself, and guarantees the
 registry was not modified — routing keeps working from the manual registry.
 
-## 8. `execute <id>` — optionally run the recommendation (M6, opt-in)
+## 8. `hosts` — what can actually run a model?
+
+Routing always works offline. *Executing* needs an **execution host**: a local CLI
+(Claude Code, Codex) or an API key. `hosts doctor` is the one command to run when
+something will not execute.
+
+```console
+$ agentrouter hosts doctor      # every host: readiness state + exact next step
+$ agentrouter hosts list        # one line per host
+$ agentrouter hosts show openai-api
+```
+
+```console
+$ agentrouter hosts doctor
+[OK  ] claude-code      authenticated  'claude' on PATH; credentials found in ~/.claude
+[--  ] codex-cli        missing        'codex' not found on PATH
+                       -> install the Codex CLI, then authenticate it
+[--  ] openai-api       missing        OPENAI_API_KEY is not set
+                       -> export OPENAI_API_KEY=<your key>
+[OK  ] manual           configured     manual execution is always available
+
+Ready to execute: claude-code.
+Next: agentrouter route "your task here"
+```
+
+Each host reports one **state**:
+
+| State | Meaning |
+|---|---|
+| `missing` | prerequisite absent — no binary on PATH, or no key set |
+| `installed` | CLI found, but nothing configured yet |
+| `configured` | host config directory exists, no credentials found |
+| `authenticated` | a credential is present (**not** proof that it works) |
+| `authorized` | a live check confirmed access — **never** inferred offline |
+| `degraded` | present but unusable, e.g. a key set to an empty value |
+
+Detection is **offline and read-only**. It checks whether a binary is on PATH and
+whether a config/credential file or env var *exists* — it never opens a credential
+file, never prints a key, and never makes a network call. Because of that,
+`authenticated` means "you have a credential", not "the provider accepted it";
+proving `authorized` needs an opt-in live check, which is not implemented.
+
+`hosts doctor` exits non-zero only when no real host is ready (`manual` alone does
+not count) and then prints the closest concrete fix.
+
+## 9. `execute <id>` — optionally run the recommendation (M6, opt-in)
 
 ```console
 $ agentrouter execute d_00002          # shows what would run, asks for --yes
 $ agentrouter execute d_00002 --yes    # actually runs it
 ```
+
+`execute` refuses any host that is not `available`, naming the state and the fix —
+for example a key that is set but empty reports `degraded`, never `available`.
 
 Disabled everywhere by default. To opt a provider in, edit
 `~/.agentrouter/registry/providers.yaml`:
@@ -163,7 +239,7 @@ shell. Hard gate (NFR-8): decisions with `risk=high` or any non-auto approval
 level are **always blocked** — the command tells you to run the prompt
 yourself. The subprocess exit code is propagated.
 
-## 9. `stats` — local telemetry
+## 10. `stats` — local telemetry
 
 ```console
 $ agentrouter stats            # decisions, risk/tier/user distributions, feedback
@@ -175,7 +251,7 @@ Every decision records who made it: the `AGENTROUTER_USER` env var if set
 breakdown and `explain --json` includes the `user`. Databases created before
 v0.4.0 migrate automatically (old rows show as `unknown`).
 
-## 10. `dashboard` — read-only web view
+## 11. `dashboard` — read-only web view
 
 ```console
 $ agentrouter dashboard              # http://127.0.0.1:8321/
@@ -186,7 +262,7 @@ Serves decision history, risk/tier distributions, and feedback acceptance from
 the local SQLite db. Stdlib HTTP, GET-only — there is no write path from the
 dashboard into routing.
 
-## 11. Team mode (shared home) + policy
+## 12. Team mode (shared home) + policy
 
 Point everyone's `AGENTROUTER_HOME` at one shared directory to share the
 registry, config, and policy. In the shared `config.yaml`:
@@ -205,7 +281,7 @@ not multi-tenant hosting (see TODO.md). Have each teammate set
 $ export AGENTROUTER_USER=alice     # or setx on Windows
 ```
 
-## 12. Using AgentRouter inside Claude Code / Codex / Antigravity / any agent
+## 13. Using AgentRouter inside Claude Code / Codex / Antigravity / any agent
 
 The `integrations/` directory ships a skill that lets agent CLIs and IDEs call
 AgentRouter themselves: the host agent decomposes a task into subtasks, routes

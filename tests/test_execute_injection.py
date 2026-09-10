@@ -100,6 +100,7 @@ def test_execute_never_uses_shell():
 
     from agentrouter import cli
 
-    src = inspect.getsource(cli.execute)
+    # execute() delegates to the undecorated _execute() helper (mutation-testable).
+    src = inspect.getsource(cli._execute) + inspect.getsource(cli._execute_via_host)
     assert "subprocess.run(argv)" in src
     assert "shell=True" not in src

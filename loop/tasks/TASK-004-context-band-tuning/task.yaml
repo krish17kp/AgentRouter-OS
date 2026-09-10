@@ -1,0 +1,24 @@
+id: TASK-004
+title: Classifier context-band tuning toward the open eval gate (backlog L4)
+source: loop/BACKLOG.yaml#L4
+priority: 5
+status: done
+risk: medium
+customer_impact: more accurate context-band inference -> better model/context-window routing
+affected_surfaces: [classifier]
+dependencies: []
+acceptance_criteria:
+  - context_band_accuracy >= 0.90 on the gold set via principled (non-overfitting) signals
+  - no regression on other eval gates (task_type/risk/approval/tool/high_risk_gated/routing)
+  - full test suite stays green
+  - every new signal is a general semantic category, not a fixture-specific keyword
+verification_commands:
+  - python -m agentrouter eval run --all
+  - python -m pytest -q
+  - ruff check agentrouter
+required_reviewers: [verification-engineer, product-architect]
+repair_iteration: 0
+created_at: "2026-07-18"
+updated_at: "2026-07-18"
+
+result: "PASS — context_band 0.824->0.945; ALL 7 eval gates PASS (last open gate closed); principled (architect-verified); 418 tests"
