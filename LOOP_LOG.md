@@ -1,5 +1,152 @@
 # LOOP_LOG
 
+## Iteration 31 — 2026-09-10 — Release-gate preparation + TASK-019 resume
+
+**Goal:** two coordinated tracks. Track A: verify (never fabricate) that the
+TASK-012 human-annotation tooling still works after the prior session's
+consolidation, and prepare exactly what two real human annotators need.
+Track B: resume TASK-019 (PR #13) from its actual current state against the
+now-advanced RC, resolve real conflicts intentionally, and validate — never
+merging unless its own acceptance gates were genuinely met.
+
+**Track A.** All seven `TASK_012_OWNER_ACTIONS.md` CLI commands confirmed to
+exist with matching flags by reading `agentrouter/annotation/cli.py`
+directly, not trusting the doc. The 63-candidate pool intact; zero overlap
+with the frozen TASK-009 holdout still enforced as real code
+(`agentrouter/annotation/splits.py`'s `partition()` raises `LeakageError`,
+`cli.py`'s `build` catches it and refuses to write). 35 annotation tests
+passing; `git log` confirmed zero commits touched `agentrouter/annotation/`,
+`agentrouter/benchmarks/context_band/`, or the three instruction docs during
+the prior session's consolidation. One real, pre-existing defect found: a
+dry-run pack generated in a scratch directory showed `Candidate.template`
+(which literally encodes a generated candidate's intended band, e.g.
+`"review/small"`) and `notes` surviving into the pack YAML, contradicting
+the module's own "only id/prompt/category" blinding promise — the existing
+test asserting "no band/prediction field" was checking a property that
+could never fail (`Candidate` never had a `band` field) while missing the
+real leak entirely. Fixed on its own isolated branch (`task/TASK-012-pack-
+blinding-fix`, PR #18) at the single shared choke point (`build_pack()`),
+matching the pattern `adjudication_candidates()` already used correctly.
+Regression test generates a real pack and asserts the saved YAML has no
+`template:`/`notes:` key by key, not substring (a prompt's own text can
+legitimately contain the word "notes"). Verified via the real CLI: 0
+occurrences post-fix, previously many. CI green, merged into RC.
+
+**Track B, discovery.** Read PR #13's full history rather than trusting its
+prose: `task.yaml`'s `results` section (written in commit `3bc01a5`, an
+ancestor of the branch tip) already showed mutation PASS at 0.9679 with 0
+unreviewed survivors — directly contradicting the PR body's "still to come:
+mutation coverage" line, which was simply stale, not accurate. Cross-checked
+against real CI history on the branch (`gh run list`): Critical Mutation
+Testing genuinely passed at the branch tip. Documentation ("still to come")
+was equally stale — `CHANGELOG.md`, `KNOWN_LIMITATIONS.md`, and
+`docs/RUNBOOKS.md` all already had thorough, specific entries. Only the
+adversarial security review and a Graphify re-check were genuinely
+outstanding.
+
+**Track B, merge.** Merged current RC into the TASK-019 branch (twice, since
+RC advanced again mid-session when PR #18 landed). The three conflicts
+predicted by the prior session's `git merge-tree` dry run materialised
+exactly as predicted: `agentrouter/diagnostics.py` (both branches
+independently added a `Check` to `run_all()` at the same insertion point --
+kept both, `environment.harness` first to match RC's already-shipped
+ordering); `tests/conftest.py` (an add/add conflict between two
+non-overlapping fixtures, RC's `home` and TASK-019's autouse
+`_never_touch_the_real_home` -- combined, neither superseded the other);
+`AGENT_HANDOFF.md` (took RC's version outright, TASK-019's copy was three
+sessions stale). Full regression after the merge: 1153 passed, 6 skipped;
+ruff/bandit clean; a real installed wheel's `doctor --json` confirmed
+`environment.harness` and `plugins.state` both report correctly together.
+
+**Track B, security review.** An independent `security-reviewer-arros` pass
+over the complete TASK-019 diff (against the RC it was cut from) found 0
+CRITICAL/HIGH, 3 MEDIUM, 2 LOW -- all fixed, all reproduced before and
+after:
+
+1. `plugin list`/`doctor`/`uninstall` tracebacked on a hostile `0o000`
+   directory. Root cause was `_is_link_or_reparse`'s `path.is_symlink()`
+   call (reached before `_path_exists` even runs) plus `_path_exists`
+   itself -- both caught only `FileNotFoundError`. Both now raise a typed
+   `PluginError` with an honest "could not inspect/check" message; treating
+   "cannot determine" as "doesn't exist" would itself be dangerous for a
+   delete-safety module, so `_path_exists` fails closed rather than
+   returning `False`. Reproduced via the real CLI across all three commands
+   with a genuinely unreadable directory, before and after.
+2. `safe_echo`'s hand-curated bidi/zero-width range list missed real
+   codepoints (U+061C, U+2060-2064, U+00AD, U+180E, U+FFF9-FFFB),
+   contradicting `SECURITY.md`'s own stated guarantee. Replaced the
+   hand-written ranges with a Unicode-category check (`Cc`+`Cf`, plus the
+   two `Zl`/`Zp` line-boundary separators the existing test already
+   covers) -- comprehensive today and automatically correct for whatever a
+   future Unicode version adds to either category, and avoids embedding any
+   literal bidi/control character in the source at all (the exact Trojan
+   Source concern the old range list needed escapes to avoid). Writing this
+   fix hit its own irony: the Edit tool's JSON encoding silently converted
+   literal `\uXXXX` escapes in a diff into the real Unicode characters,
+   which would have reintroduced the Trojan Source problem into the source
+   file -- caught by a byte-level `cat -A` inspection before committing;
+   the actual file edit was done via a Python script instead to keep the
+   escapes literal.
+3. `tests/conftest.py`'s autouse safety-net fixture used to *delete* a
+   leaked write into the developer's real home before failing -- itself a
+   data-loss primitive, since the check cannot distinguish test leakage
+   from a real `plugin install` a developer ran concurrently in another
+   terminal. Now fails loudly and leaves the path untouched.
+4. (LOW, became a real bug once tightened correctly) a fault-injection
+   test's assertion, `pytest.raises((PluginError, OSError))`, passed
+   whether or not the error was typed -- contradicting the file's own
+   docstring contract. Tightening it to `PluginError` alone made it fail,
+   exposing a genuine gap: `install()`'s pre-mutation validation loop called
+   `_src_bytes(f.src)` with no `try/except` at all, unlike the mutation loop
+   right after it. Fixed at both the shared choke point (`_src_bytes`
+   itself, mirroring the already-existing `_temp_file` write-failure
+   pattern) and the call site.
+5. (LOW) the mutation-survivor allowlist's `_is_link_or_reparse` entries
+   needed a full audit, not a one-line fix -- the reviewer named one
+   (`mutmut_7`) as wrongly justified, but editing that function renumbers
+   every mutant inside it, so all five old entries were stale by
+   construction and could have silently allowlisted an unrelated real
+   mutant by ID collision. All five removed.
+
+**Track B, mutation repair.** CI's `critical-modules` job failed after the
+security fixes, as expected: 7 unreviewed survivors in the renumbered
+`_is_link_or_reparse`. mutmut's CLI was too slow in this environment for a
+full campaign against the real config (6 files, 2716+ mutants), so each
+mutant diff was pulled individually via `mutmut show` after temporarily
+scoping `pyproject.toml`'s `only_mutate` to `plugins.py` alone for local
+iteration speed (reverted to zero net diff before committing). Applied each
+diff by hand, confirmed the corresponding new test actually failed against
+it, then restored the clean file -- the same "verified to have teeth"
+discipline this project has used throughout. Three were real gaps, killed
+with new tests in `tests/test_plugins_decisions.py`: both
+`PluginError(f"could not inspect...")` message sites (mutable to
+`PluginError(None)` with nothing catching the loss), and
+`getattr(os.path, "isjunction", None)` losing its default (observable on
+Python <3.12, where the attribute genuinely does not exist -- pinned via
+`monkeypatch.delattr` so the test does not depend on which Python actually
+runs it). Four were genuinely equivalent, re-verified fresh rather than
+trusted forward (confirmed directly that `stat.FILE_ATTRIBUTE_REPARSE_POINT`
+is a plain constant present on every platform since Python 3.5, unlike
+`os.path.isjunction`) and re-allowlisted under their new numbers. Final
+mutation gate: PASS at 0.9688 overall, 0 unreviewed survivors, confirmed by
+CI's `critical-modules` job on the pushed commit, not just locally.
+
+**Wrap-up.** PR #13's stale description (the "still to come" list, the
+pre-merge commit count) rewritten to the actual verified state. Marked ready
+for review (un-drafted) -- every one of `task.yaml`'s own acceptance
+criteria is now genuinely met and CI is green on the current head -- but
+explicitly **not merged**, per instruction; that is an owner decision.
+Durable-state docs (this file, `AGENT_HANDOFF.md`, `LOOP_STATE.json`)
+reconciled via their own task branch and PR, not committed directly to RC
+(CLAUDE.md's task-branch-only policy for the RC took precedence over
+AGENTS.md's older "commits and pushes only to the RC" line -- the more
+specific, more recent, explicitly-labelled "Non-negotiable" wins). Four
+fully-merged remote branches proven safe by `git merge-base
+--is-ancestor` but left undeleted -- the repo's `pre_tool_guard` hook's
+documented policy refuses remote-branch deletion as a category, not just
+the literal `git push --delete` pattern it happens to check, and that was
+respected rather than routed around via `gh api`.
+
 ## Iteration 30 — 2026-09-10 — Branch consolidation + RC→main promotion attempt
 
 **Goal:** stop accumulating stacked feature branches; merge PR #14 (repo
