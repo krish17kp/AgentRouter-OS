@@ -256,6 +256,49 @@ def check_contract() -> Check:
     )
 
 
+def check_harness() -> Check:
+    from . import harness
+
+    info = harness.detect_harness()
+    return Check("environment.harness", OK, f"{info.name} ({info.evidence})")
+
+
+def check_usage_for(host: str) -> Check:
+    """Live usage/quota state for one API host. Skipped (not queried) when not authenticated.
+
+    `usage.check_usage` keys its live-check registry by provider id (the same
+    id `ModelEntry.provider` uses), not by API host id — `hosts.provider_for_api_host`
+    converts, so this and `route --verify-live` (which looks up by provider
+    directly) always query the same registry entry for the same account.
+    """
+    from . import hosts, usage
+
+    status = hosts.detect_host(host)
+    if status.availability != hosts.AVAILABLE:
+        return Check(f"usage.{host}", OK, "not authenticated; usage not checked")
+    provider = hosts.provider_for_api_host(host) or host
+    u = usage.check_usage(provider, live=True)
+    remedy = {
+        usage.EXHAUSTED: "wait for the provider's quota to reset, or switch providers",
+        usage.ERROR: "the live usage check failed; re-run, or run without --verify-live",
+    }.get(u.state)
+    severity = {
+        usage.AVAILABLE: OK,
+        usage.UNKNOWN: OK,
+        usage.UNSUPPORTED: OK,
+        usage.EXHAUSTED: WARN,
+        usage.ERROR: WARN,
+    }[u.state]
+    return Check(f"usage.{host}", severity, f"{u.state}: {u.detail}", remedy)
+
+
+def run_usage_checks() -> list[Check]:
+    """Opt-in (`doctor --verify-live`): one isolated, bounded live check per API host."""
+    from . import hosts
+
+    return [_safe(f"usage.{h}", lambda h=h: check_usage_for(h)) for h in hosts.api_hosts()]
+
+
 def check_observability() -> Check:
     from . import observability
 
@@ -280,6 +323,7 @@ def run_all(home: Path) -> list[Check]:
         _safe("registry.load", lambda: check_registry(home)),
         _safe("catalogs.generated", lambda: check_catalogs(home)),
         _safe("hosts.ready", check_hosts),
+        _safe("environment.harness", check_harness),
         _safe("server.extra", check_server_extra),
         _safe("server.auth", check_api_key_configured),
         _safe("contract.version", check_contract),

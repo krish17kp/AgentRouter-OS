@@ -305,6 +305,29 @@ def known_hosts() -> list[str]:
     return [*_CLI_HOSTS, *_API_HOSTS, "manual"]
 
 
+def api_hosts() -> list[str]:
+    """Host ids backed by an API key rather than a local CLI (usage-checkable)."""
+    return list(_API_HOSTS)
+
+
+# API host id -> the provider id ModelEntry.provider / usage.check_usage use
+# (registry/seeds/providers.yaml is the source of truth for provider ids).
+# A live usage-check adapter is registered by provider id, not host id, so
+# every caller must convert through this map rather than picking either
+# namespace ad hoc — see TASK-020 security review, MEDIUM-3.
+_API_HOST_PROVIDER = {
+    "anthropic-api": "anthropic",
+    "openai-api": "openai",
+    "gemini-api": "google",
+    "openrouter": "openrouter",
+}
+
+
+def provider_for_api_host(host: str) -> str | None:
+    """The provider id a usage/quota check should use for this API host, if known."""
+    return _API_HOST_PROVIDER.get(host)
+
+
 def execution_route_block(row: dict | None, models_by_key: dict[str, ModelEntry]) -> dict | None:
     """Stage-2 route block: resolve HOW to run the selected model (program Phase 5/6).
 

@@ -139,6 +139,97 @@ def test_check_ids_are_stable_identifiers(home):
     } <= ids
 
 
+def test_harness_check_is_always_present_and_never_a_secret_leak(home, monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", SECRET)
+    result = runner.invoke(app, ["doctor"])
+    assert "environment.harness" in result.output
+    assert SECRET not in result.output
+
+
+def test_verify_live_reports_unsupported_for_every_real_provider(home, monkeypatch):
+    """No adapter is registered in production, so every authenticated provider
+    honestly reports 'unsupported' — never a guessed quota number."""
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-not-a-real-key")
+    result = runner.invoke(app, ["doctor", "--verify-live"])
+    assert result.exit_code == 0, result.output
+    assert "usage.openai-api" in result.output
+    assert "unsupported" in result.output
+
+
+def test_verify_live_is_opt_in_and_absent_by_default(home, monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-not-a-real-key")
+    result = runner.invoke(app, ["doctor"])
+    assert "usage.openai-api" not in result.output
+
+
+def test_verify_live_skips_unauthenticated_hosts_without_checking(home, monkeypatch):
+    for env in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY", "OPENROUTER_API_KEY"):
+        monkeypatch.delenv(env, raising=False)
+    result = runner.invoke(app, ["doctor", "--verify-live", "--json"])
+    payload = json.loads(result.output)
+    usage_checks = [c for c in payload["checks"] if c["id"].startswith("usage.")]
+    assert usage_checks
+    assert all(c["summary"] == "not authenticated; usage not checked" for c in usage_checks)
+
+
+def test_verify_live_and_route_verify_live_query_the_same_provider_key(home, monkeypatch):
+    """Regression: doctor's usage checks used to look up by API host id
+    ('openai-api') while route's looked up by provider id ('openai') — a
+    registered adapter would only ever fire on one of the two paths."""
+    from agentrouter import hosts, usage
+
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-not-a-real-key")
+    seen = []
+
+    def fake(t):
+        seen.append(True)
+        return usage.UsageStatus("openai", usage.AVAILABLE, "ok")
+
+    usage.register_live_check("openai", fake)
+    try:
+        result = runner.invoke(app, ["doctor", "--verify-live", "--json"])
+        payload = json.loads(result.output)
+        check = next(c for c in payload["checks"] if c["id"] == "usage.openai-api")
+        assert check["summary"] == "available: ok"
+        assert seen == [True]
+        assert hosts.provider_for_api_host("openai-api") == "openai"
+    finally:
+        usage.unregister_live_check("openai")
+
+
+def test_exhausted_usage_check_is_a_warning_with_a_remedy(home, monkeypatch):
+    from agentrouter import diagnostics
+
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-not-a-real-key")
+    monkeypatch.setattr(
+        diagnostics,
+        "check_usage_for",
+        lambda host: diagnostics.Check(
+            f"usage.{host}", diagnostics.WARN, "exhausted: none left", "wait or switch providers"
+        ),
+    )
+    result = runner.invoke(app, ["doctor", "--verify-live"])
+    assert result.exit_code == 0, result.output  # WARN never fails doctor
+    assert "exhausted" in result.output
+    assert "wait or switch providers" in result.output
+
+
+def test_verify_live_isolates_one_broken_provider_check(home, monkeypatch):
+    """A provider check that raises must not crash doctor or hide the others."""
+    from agentrouter import diagnostics
+
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-not-a-real-key")
+
+    def boom(host):
+        raise RuntimeError("simulated provider check crash")
+
+    monkeypatch.setattr(diagnostics, "check_usage_for", boom)
+    result = runner.invoke(app, ["doctor", "--verify-live"])
+    assert result.exit_code in (0, 1), result.output
+    assert "Traceback" not in result.output
+    assert "usage.openai-api" in result.output
+
+
 def test_an_unwritable_home_is_reported_with_the_mount_hint(home):
     """This project has actually had its NTFS volume remount read-only."""
     mode = home.stat().st_mode
