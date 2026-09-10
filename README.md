@@ -453,6 +453,28 @@ No test needs internet or an API key — provider-refresh tests mock the HTTP la
 
 ---
 
+## Architecture
+
+These four diagrams are the target architecture, in order:
+
+**Orchestration & specialist agents:**
+
+![Part 2A — Orchestration, Routing, and Dispatch](docs/architecture/img1.png)
+*Part 2A — capability-gap detection feeds an execution orchestrator, a model/agent/workflow router stack, and a supervisor agent, which conditionally dispatches to the Research, Coding, and Testing agents.*
+
+![Part 2B — Specialist Agents](docs/architecture/img2.png)
+*Part 2B — internal workflow of each specialist agent: Research (source gathering, synthesis, citation verification), Coding (implementation planning, patch/edit, sandboxed testing), and Testing (test selection, execution, coverage/quality gates).*
+
+**Protected control plane & workspace:**
+
+![Part 1 of 2 — Protected Control Plane](docs/architecture/img3.png)
+*Protected control plane — normal task agents get read-only access; only the core maintainer can write, and only in maintenance mode.*
+
+![Part 2 of 2 — Workspace Layer + Maintainer Interfaces](docs/architecture/img4.png)
+*Workspace layer — normal agents get read+write on project-scoped work; maintainer-only interfaces govern changes to the protected core itself.*
+
+---
+
 ## Milestones
 
 | # | Milestone | Status |
