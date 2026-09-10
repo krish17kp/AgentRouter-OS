@@ -55,7 +55,15 @@ def test_unrelated_editor_variable_is_never_used_alone():
     assert info.name not in (harness.CLAUDE_CODE, harness.CI_GITHUB_ACTIONS, harness.CI_GENERIC)
 
 
-def test_detect_harness_defaults_to_the_real_process_environment():
-    """No env arg reads os.environ — this process runs under Claude Code, so it must be detected."""
+def test_detect_harness_defaults_to_the_real_process_environment(monkeypatch):
+    """No env arg reads the real os.environ, not just the explicit-dict path.
+
+    Asserting a *specific* harness from the ambient, unmocked environment
+    would be environment-dependent (true in an interactive Claude Code
+    session, false in CI where GITHUB_ACTIONS=true is the honest answer) —
+    so this controls os.environ via monkeypatch instead of trusting whatever
+    happens to be ambient wherever the suite runs.
+    """
+    monkeypatch.setenv("CLAUDECODE", "1")
     info = harness.detect_harness()
     assert info.name == harness.CLAUDE_CODE
