@@ -39,14 +39,6 @@ CONCURRENT_TOTAL = 200
 CONCURRENT_WORKERS = 32
 
 
-@pytest.fixture()
-def home(tmp_path, monkeypatch) -> Path:
-    monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
-    monkeypatch.delenv("AGENTROUTER_API_KEY", raising=False)
-    assert runner.invoke(cli_app, ["init"]).exit_code == 0
-    return tmp_path
-
-
 def _persisted(home: Path) -> int:
     conn = store.connect(home)
     try:
