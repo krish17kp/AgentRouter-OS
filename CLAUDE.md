@@ -53,3 +53,8 @@ Always verify a graph claim against real source before acting on it. If the grap
 and the source disagree, **the source wins** and graph staleness is itself a
 finding. Refresh the graph after any architecture-changing commit and after every
 merge into the RC.
+
+## Skills
+
+Choosing which installed Claude Code skill to load for a task, and how a
+loaded skill's instructions rank against project rules: `.claude/SKILL_POLICY.md`.

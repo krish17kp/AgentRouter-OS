@@ -1,12 +1,14 @@
 {
   "loop_version": 2,
-  "last_updated": "2026-08-20",
-  "current_phase": "EPIC TASK-018 COMPLETE. RC @ d81ad94 with 018A (PR #9), 018B (PR #10) and 018C (PR #11) all merged and post-merge CI green across CI, Security and Critical Mutation Testing. Next milestone TASK-019 (plugin installer hardening), selected by graph-driven gap analysis of the final RC.",
-  "current_objective": "TASK-019: harden agentrouter/plugins.py — 818 statements at 67.7% branch coverage, the largest under-tested module by a wide margin; four of the graph's top-14 architectural hubs (install 47 edges, get_plugin 40, uninstall 40, _dest 34); and the ONLY module that writes into directories outside the project and then removes files from them. Its docstring claims it refuses links/reparse points and ambiguous hard links and never recursively removes directories - exactly the class of claim 018A/B/C repeatedly found true in intent and incomplete in practice, never adversarially tested. Reproduce before fixing; raise coverage by killing real defects, not by asserting current behaviour.",
+  "last_updated": "2026-09-10",
+  "current_phase": "Production Milestone 1 (TASK-020) COMPLETE on task/dynamic-skill-discovery, stacked above task/repo-cleanup-architecture-ponytail above RC 7068887 (PR #12 merged). Neither of the two stacked branches has a PR yet. PR #13 (TASK-019 plugin installer hardening) is DRAFT with substantial prior progress and remains the next milestone, unstarted-fresh — resume it, do not restart it.",
+  "current_objective": "Next: open PRs for task/repo-cleanup-architecture-ponytail and task/dynamic-skill-discovery (base RC / base each other, stacked), inspect CI, then resume TASK-019 from PR #13's actual current state (see loop/tasks/TASK-019-plugin-installer-hardening/ if present, and gh pr view 13) rather than re-deriving the plugin-hardening plan from scratch.",
   "status": "IN_PROGRESS",
   "branch_topology": {
     "main": "stable, untouched (602321a) — never merge without owner approval",
-    "release/agentrouter-v0.5-rc1": "integration branch @ d81ad94; TASK-011..018C merged (PR #2-#11); NOT RELEASE READY (context_band 0.6667 < 0.90, unchanged); mutation gate PASSES (0.986 overall, safety_policy_execution 0.9879); post-merge CI green",
+    "release/agentrouter-v0.5-rc1": "RC @ 7068887 (PR #12 merged, TASK-018-state-reconcile); NOT RELEASE READY (context_band 0.6667 < 0.90, unchanged)",
+    "task/repo-cleanup-architecture-ponytail": "pushed @ e678860 (full-repo Ponytail audit + architecture visuals finalized); no PR yet",
+    "task/dynamic-skill-discovery": "pushed @ fe4d13e (dynamic skill discovery policy) + this session's TASK-020 commits (architecture publication polish, harness/usage intelligence); no PR yet",
     "task/TASK-011-context-band-data": "MERGED to RC (PR #2) and DELETED local+remote; all commits preserved",
     "task/TASK-012-annotation-operations": "MERGED to RC (PR #3, merge commit 0ddf401) and DELETED local+remote",
     "task/TASK-013-catalog-provenance": "MERGED to RC (PR #4, merge commit c8fe429) and DELETED local+remote; provenance block + deprecation reconciliation deferred to TASK-015",

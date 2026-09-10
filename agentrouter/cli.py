@@ -27,6 +27,7 @@ from . import (
     plugins,
     store,
     taxonomy,
+    usage,
 )
 from .classifier import classify
 from .controls import PREFERENCE_WEIGHTS, RouteControls, apply_controls
@@ -226,7 +227,9 @@ def _reason_for(rec: dict, cls, shifts: list[str]) -> str:
     if cls.tool_needs:
         parts.append(f"supports required tools: {', '.join(cls.tool_needs)}")
     for s in shifts:
-        if "high" in s:
+        if "quota exhausted" in s:
+            parts.append("previous top pick skipped: quota exhausted (live-verified)")
+        elif "high" in s:
             parts.append("capability weighted up (high complexity/risk)")
         elif "low" in s:
             parts.append("cost weighted up (simple task)")
@@ -251,6 +254,13 @@ def doctor(
         "--include-database",
         help="Include the decision log in the bundle. It contains the task text you routed.",
     ),
+    verify_live: bool = typer.Option(
+        False,
+        "--verify-live",
+        help="Also attempt a live usage/quota check per authenticated provider (opt-in, "
+        "network, bounded timeout). No adapter is registered yet, so every real provider "
+        "reports 'unsupported' today — this proves the mechanism, not live quota data.",
+    ),
 ):
     """Check the whole local installation and say exactly what to fix.
 
@@ -268,6 +278,8 @@ def doctor(
     """
     home = _home()
     checks = diagnostics.run_all(home)
+    if verify_live:
+        checks = checks + diagnostics.run_usage_checks()
     overall = diagnostics.worst(checks)
 
     if as_json:
@@ -459,6 +471,13 @@ def route(
     ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
     no_log: bool = typer.Option(False, "--no-log", help="Do not persist the decision."),
+    verify_live: bool = typer.Option(
+        False,
+        "--verify-live",
+        help="If the top pick's provider is live-verified out of quota, re-rank without it "
+        "(opt-in, network, bounded timeout). No adapter is registered yet, so this is a "
+        "no-op for every real provider today; see `doctor --verify-live`.",
+    ),
 ):
     """Classify a task and recommend the best model/tool + fallback."""
     prefer = _resolve_preference(prefer_quality, prefer_balanced, prefer_cheap, prefer_fast)
@@ -512,6 +531,9 @@ def route(
     result["excluded"] = control_drops + result["excluded"]
     if learn_note:
         result["weight_shifts"].append(learn_note)
+    models_by_key = {m.key: m for m in models}
+    if verify_live:
+        result = usage.apply_live_verification(result, models, models_by_key, cls, weights, prefer)
     gates = gates_for(cls)
 
     rec = result["recommendation"]
@@ -519,7 +541,6 @@ def route(
     prompt = generate_prompt(task, target, cls, gates["checklist"])
     reason = _reason_for(rec, cls, result["weight_shifts"]) if rec else None
 
-    models_by_key = {m.key: m for m in models}
     exec_route = hosts.execution_route_block(rec, models_by_key) if rec else None
     fb_route = (
         hosts.execution_route_block(result["fallback"], models_by_key)

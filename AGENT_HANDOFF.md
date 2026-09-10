@@ -14,15 +14,15 @@ authoritative for Claude sessions; where the two disagree, this file wins.
 
 | Field | Value |
 |---|---|
-| Last updated | 2026-08-20 |
-| Repository | `/media/krish/New Volume/Krish/04 - Dev Projects/Agentrouteros` |
+| Last updated | 2026-09-10 |
+| Repository | `/mnt/NewVolume/Krish/04 - Dev Projects/Agentrouteros` |
 | Filesystem | NTFS/fuseblk, verified **rw** this session |
-| Active branch | `task/TASK-018-state-reconcile` (state docs only) |
-| RC | **`d81ad94`**, post-merge CI **green** (CI, Security, Critical Mutation Testing) |
+| Active branch | `task/dynamic-skill-discovery`, stacked: RC `7068887` → `task/repo-cleanup-architecture-ponytail` `e678860` → `task/dynamic-skill-discovery` `fe4d13e` (both pushed, no PR yet) → this session's TASK-020 work |
+| RC | **`7068887`** (merge of PR #12, TASK-018-state-reconcile). Pre-existing 018-era gates (`936 passed`, mutation PASS) are from `d81ad94`; this session's full pytest/ruff/bandit/pip-audit run (below) is against the current branch tip, not a fresh mutation run |
 | `main` | `602321a`, untouched |
-| Open PR | none at time of writing. PRs #9, #10, #11 **merged**; their branches deleted |
-| Milestone | **EPIC TASK-018 COMPLETE** — all three parts merged |
-| Next milestone | **TASK-019** — plugin installer hardening (selected by gap analysis, below) |
+| Open PR | **#13** (`task/TASK-019-plugin-installer-hardening`, DRAFT, out of scope this session — do not touch). No PR yet for `task/repo-cleanup-architecture-ponytail` or `task/dynamic-skill-discovery`; both need one |
+| Milestone | **Production Milestone 1 (TASK-020) COMPLETE** — pre-flight harness identity + usage/quota intelligence, see below |
+| Next milestone | **TASK-019** — plugin installer hardening (PR #13 already drafted; independently selected, unchanged priority) |
 
 ## Release truth
 
@@ -63,6 +63,41 @@ The missing **TASK-018A security re-review** was executed and closed —
 `loop/tasks/TASK-018B-reliability-load-lab/security-review-018a.md`, no new
 critical or high findings.
 
+## Production Milestone 1 (TASK-020) — what shipped
+
+**Architecture publication**: the four canonical diagrams (already finalized
+in `2de5cae` on `task/repo-cleanup-architecture-ponytail`, still `img1-4.png`
+with no landing page) renamed to descriptive filenames
+(`01-orchestration-routing-dispatch.png` … `04-workspace-layer-maintainer-interfaces.png`)
+and given a `docs/architecture/README.md` landing page; root `README.md`'s
+Architecture section now links there instead of embedding all four images
+inline.
+
+**Harness identity + usage/quota intelligence** (`loop/tasks/TASK-020-preflight-model-intelligence/`):
+a discovery pass first established that most of "Milestone 1" already existed
+— `engine.py` (complexity-weighted scoring + explanation trail),
+`hosts.py`/TASK-016 (verified execution-host states), `refresh.py` (dynamic
+catalog discovery), `diagnostics.py`/TASK-018C (the `doctor` Check pattern) —
+so only two real gaps were built: `agentrouter/harness.py` (introspective,
+evidence-only harness detection: Claude Code via a verified `CLAUDECODE` env
+var, CI via `CI`/`GITHUB_ACTIONS`, GENERIC/UNKNOWN otherwise — no other tool
+is guessed) and `agentrouter/usage.py` (a usage/quota state model —
+UNKNOWN/UNSUPPORTED/AVAILABLE/EXHAUSTED/ERROR — honestly UNSUPPORTED for
+every real provider today, since no live-credentialed adapter is registered;
+`loop/BACKLOG.yaml` P2 already tracks that as owner-credential-gated). Wired
+opt-in only: `doctor --verify-live` and `route --verify-live`; zero behavior
+change without the flag.
+
+Three independent read-only reviews (verification-engineer,
+security-reviewer-arros, product-architect) found 0 CRITICAL/HIGH, 3 MEDIUM
+security findings (unenforced timeout; unsanitized adapter-supplied text;
+inconsistent provider-id namespace between `doctor` and `route`'s usage
+lookups), 2 LOW, and 1 correctness bug (duplicated exclusion entries on a
+quota-triggered re-rank) — all reproduced and fixed; see
+`loop/tasks/TASK-020-preflight-model-intelligence/repairs.md`. Full
+regression after repairs: **970 passed, 3 skipped** (baseline 936/3, so +34
+new tests, 0 regressions); ruff/bandit/pip-audit clean.
+
 ## Graph
 
 | Field | Value |
@@ -77,30 +112,53 @@ critical or high findings.
 
 Refresh with `graphify update .` (AST only, no LLM, no API key).
 
-## Latest gates (at `d81ad94`)
+## Latest gates
 
-| Check | Result |
-|---|---|
-| pytest | **936 passed, 3 skipped** |
-| branch coverage (gate 80%) | **85.42%** |
-| ruff check / format | clean, 331 files |
-| bandit (`agentrouter` + `scripts`) | 0 issues |
-| mutation gate | PASS — 0.986 overall, safety 0.9879, engine 0.9815, 0 unreviewed survivors |
-| contract check | unchanged; 8 owner-accepted |
+| Check | At | Result |
+|---|---|---|
+| pytest | `d81ad94` (018-era) | 936 passed, 3 skipped |
+| branch coverage (gate 80%) | `d81ad94` | 85.42% |
+| mutation gate | `d81ad94` | PASS — 0.986 overall, safety 0.9879, engine 0.9815 |
+| contract check | `d81ad94` | unchanged; 8 owner-accepted |
+| pytest | this session, `task/dynamic-skill-discovery` + TASK-020 | **970 passed, 3 skipped** |
+| ruff check / format | this session | clean, 348 files |
+| bandit (`agentrouter`) | this session | 0 issues |
+| pip-audit | this session | no known vulnerabilities |
 
-## Next action — TASK-019
+Coverage/mutation were **not** re-run this session (TASK-020's diff is small
+and covered by targeted + full pytest; a fresh mutation run belongs to
+whichever task next touches a mutation-gated module).
+
+## Next action
+
+First, close out this session's two un-PR'd branches and TASK-020's commits:
 
 ```bash
-cd "/media/krish/New Volume/Krish/04 - Dev Projects/Agentrouteros"
+cd "/mnt/NewVolume/Krish/04 - Dev Projects/Agentrouteros"
 findmnt -T "$PWD" -o OPTIONS          # confirm rw first
-source "$HOME/.venvs/agentrouter/bin/activate"
-export PATH="$HOME/.local/bin:$PATH"
-git checkout release/agentrouter-v0.5-rc1 && git pull --ff-only
-git checkout -b task/TASK-019-plugin-installer-hardening
+gh pr create --base release/agentrouter-v0.5-rc1 --head task/repo-cleanup-architecture-ponytail --draft
+gh pr create --base task/repo-cleanup-architecture-ponytail --head task/dynamic-skill-discovery --draft
+gh pr checks <the resulting PR numbers>   # inspect CI on both before marking ready
 ```
 
-**Plugin installer hardening.** Chosen by graph-driven gap analysis of the final
-RC, not by picking a convenient cleanup. Three signals agree:
+Then resume **TASK-019** — it is **already in progress**, not a fresh start:
+PR **#13** (`task/TASK-019-plugin-installer-hardening`) is DRAFT with several
+commits already landed (symlink/hardlink attacks, a raw-`OSError` fix, a
+directory-removal recovery path with mutation-kill tests). Read
+`loop/tasks/TASK-019-plugin-installer-hardening/` (if present) and PR #13's
+current CI state before doing anything — do **not** `git checkout -b` a new
+branch over it.
+
+```bash
+source "$HOME/.venvs/agentrouter/bin/activate"
+export PATH="$HOME/.local/bin:$PATH"
+git checkout task/TASK-019-plugin-installer-hardening && git pull --ff-only
+gh pr view 13
+```
+
+**Plugin installer hardening — original rationale**, still valid. Chosen by
+graph-driven gap analysis of the final RC, not by picking a convenient
+cleanup. Three signals agreed:
 
 1. **Size + coverage** — `agentrouter/plugins.py` is **818 statements at 67.7%**,
    by a wide margin the largest under-tested module (next is
