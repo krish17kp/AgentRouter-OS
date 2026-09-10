@@ -162,6 +162,46 @@ def test_a_reparse_point_attribute_is_a_link(tmp_path, monkeypatch):
     assert plugins._is_link_or_reparse(plain) is True
 
 
+def test_a_permission_error_checking_a_symlink_is_a_typed_error(tmp_path, monkeypatch):
+    """The first lstat (inside `Path.is_symlink()`) can fail on an unreadable
+    parent directory. That must not surface as a raw OSError, and the message
+    must actually name the path -- not be silently dropped."""
+    target = tmp_path / "blocked"
+
+    def raise_permission_error(self):
+        raise PermissionError("denied")
+
+    monkeypatch.setattr(Path, "is_symlink", raise_permission_error)
+    with pytest.raises(plugins.PluginError, match="could not inspect"):
+        plugins._is_link_or_reparse(target)
+
+
+def test_a_permission_error_reading_reparse_attributes_is_a_typed_error(tmp_path, monkeypatch):
+    """The second lstat (reading `st_file_attributes`) is a separate call from
+    the one inside `is_symlink()` and can fail independently -- same contract:
+    a typed, named error, never a bare OSError."""
+    target = tmp_path / "blocked"
+    monkeypatch.setattr(Path, "is_symlink", lambda self: False)
+
+    def raise_permission_error(self):
+        raise PermissionError("denied")
+
+    monkeypatch.setattr(Path, "lstat", raise_permission_error)
+    with pytest.raises(plugins.PluginError, match="could not inspect"):
+        plugins._is_link_or_reparse(target)
+
+
+def test_missing_isjunction_falls_back_gracefully(tmp_path, monkeypatch):
+    """`os.path.isjunction` is Python-3.12+ only, so `getattr(..., None)` needs
+    its default: on an older interpreter the attribute genuinely does not
+    exist. Deleting it here pins that regardless of which Python actually runs
+    this test."""
+    plain = tmp_path / "plain.txt"
+    plain.write_text("x", encoding="utf-8")
+    monkeypatch.delattr(os.path, "isjunction", raising=False)
+    assert plugins._is_link_or_reparse(plain) is False
+
+
 # --- _entry_matches: is this file still the one we installed? -----------------
 
 
