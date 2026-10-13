@@ -107,3 +107,29 @@ stands on its own without that crutch: these values are replayed, not produced, 
 here is a promise about data we did not write and cannot migrate. The rule admits no
 exceptions, because the first pass left `prompt` as `str | None` and a decision persisted
 when `prompt` was a dict returned 500.
+
+## AD-7 — Approved Rust-native target, phased behind the existing contracts
+The owner has approved a Rust-native implementation as the long-term target, reviewed
+externally against the foundation-document inventory (`AGENTROUTER_FOUNDATION_REVIEW.md`).
+The **current Python implementation remains the shipping system and the sole release-gate
+authority** until the migration completes; this decision changes the target, not today's
+behavior, test requirements, or release gates.
+
+The migration is phased module-by-module (order, acceptance tests, and rollback criteria
+in [RUST_MIGRATION_PLAN.md](RUST_MIGRATION_PLAN.md)), because the alternative — a single
+rewrite-and-cutover — would make every one of this document's prior decisions (the
+committed contract artifact in AD-5, the request/response `required` asymmetry in AD-6,
+the price-cap honesty in AD-3) re-provable only in aggregate, with no way to isolate which
+ported component caused a regression. Each existing compatibility mechanism —
+`contracts/http/v1/` + the `api-compatibility` CI job, `CLI_SPEC.md`'s documented-command
+tests, the registry YAML schema, the SQLite decision-log format, the seven evaluation
+gates — is reused as the acceptance bar for its Rust replacement rather than redesigned,
+so a ported module either reproduces the existing committed contract or it is not done.
+
+Consequences: no Python module is deleted until the full migration is complete and has run
+a full release cycle in production (see Rollback in the migration plan); no release,
+coverage, or mutation threshold is lowered to accommodate different Rust tooling
+(`cargo-mutants`/`cargo-audit` replace `mutmut`/`bandit` only once independently
+re-validated at the same thresholds); and the frozen-holdout annotation policy (no AI
+annotates or adjudicates) carries over unchanged, since it is a human-process requirement,
+not an implementation detail.

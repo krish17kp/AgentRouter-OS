@@ -14,15 +14,26 @@ authoritative for Claude sessions; where the two disagree, this file wins.
 
 | Field | Value |
 |---|---|
-| Last updated | 2026-09-10 |
-| Repository | `/mnt/NewVolume/Krish/04 - Dev Projects/Agentrouteros` |
-| Filesystem | NTFS/fuseblk, verified **rw** this session |
-| Active branch | `release/agentrouter-v0.5-rc1` (checked out locally at RC tip) |
-| RC | **`64ae5f8`** (merge of PR #18, TASK-012 pack-blinding fix, on top of PR #17's docs, on top of PR #14+#15). Four task branches are fully merged and safe to delete on the remote (blocked from doing so here by the repo's own `pre_tool_guard` hook, whose documented policy refuses remote-branch deletion as a category, not just the specific `git push --delete` pattern it checks — not routed around via `gh api` either): `task/repo-cleanup-architecture-ponytail`, `task/dynamic-skill-discovery`, `task/consolidation-handoff-docs`, `task/TASK-012-pack-blinding-fix` |
-| `main` | `602321a`, untouched — RC is 70 commits ahead, PR **#16** open (`release/agentrouter-v0.5-rc1` → `main`) |
-| Open PRs | **#16** (RC → `main`, promotion PR, open — see Release truth below) · **#13** (`task/TASK-019-plugin-installer-hardening`, **NOW READY FOR REVIEW** — merged forward onto current RC, independent security review closed, mutation gate PASS 0.9688/0 unreviewed survivors, full CI green; still not merged, per instruction) |
-| Milestone | **Release-gate preparation (Track A) + TASK-019 resume (Track B) COMPLETE this session** — see below |
-| Next milestone | Merge PR #13 (owner decision, out of this session's authorization) once reviewed; then whatever gap analysis selects next. The two-annotator round (`TASK_012_OWNER_ACTIONS.md`) is the only path to closing PR #16 |
+| Last updated | 2026-10-13 |
+| Repository | `/run/media/krish/New Volume/Krish/04 - Dev Projects/Agentrouteros` (path confirmed this session; prior path strings below are historical and may not match the current mount) |
+| Filesystem | NTFS/fuseblk, verified **rw** this session (`findmnt` + write test) |
+| Active branch | `task/rust-migration-foundation`, branched from RC tip `f52191f` |
+| RC | **`f52191f`** (merge of PR #19, handoff-docs reconciliation). Open task branches ahead of this point, per `gh pr list` this session: #22 (mcp dep pin), #21 (hook interpreter fix), #20 (eval CLI coverage), #16 (RC→`main` promotion, still blocked — see Release truth), #13 (TASK-019, still unmerged per instruction). `task/fix-registry-staleness-test-fragility` (`d3217e8`, not yet a PR as of this session) decouples 9 test files from registry real-time staleness. The four branches this file previously listed as "safe to delete, blocked by `pre_tool_guard`" were not re-verified this session — treat that claim as historical, not current, until re-checked. |
+| `main` | not re-verified this session; historical value below (`602321a`) may be stale |
+| Open PRs | **#16** (RC → `main`, still blocked only on `context_band_accuracy`, see Release truth) · **#13** (TASK-019, historical state below not re-verified this session) · **#20, #21, #22** (opened since this file's last update, not yet reviewed by this session) |
+| Milestone | **Rust-migration foundation documentation (this session)** — ADR recorded (AD-7), `RUST_MIGRATION_PLAN.md` added, architecture/roadmap/milestones/testing/release docs annotated to distinguish the shipping Python implementation from the approved Rust target. No Rust code written, no Python code touched, no release gate changed. |
+| Next milestone | Open a PR for this session's doc changes; owner review. Everything below this point in the file is **historical** (prior sessions' own "what shipped" records) and is preserved, not re-verified, except where a line explicitly says otherwise. |
+
+### Graphify — corrected stale claim
+
+The "Graph" section further below (last updated 2026-08-20) claims Graphify
+`0.9.47` is installed at `~/.venvs/graphify`. **This was independently checked
+and found false** during this session's foundation review
+(`AGENTROUTER_FOUNDATION_REVIEW.md` §1): `~/.local/bin` and `~/.venvs` have no
+`graphify` on this machine. This is an environment gap, not a code defect, and
+is unresolved — flagged for the owner. Do not assume Graphify is available
+until this is re-verified; the historical node/edge counts further below
+describe a graph built 2026-08-20 and may not reflect the current tree.
 
 ## Release truth
 

@@ -1,5 +1,13 @@
 # Testing AgentRouter OS
 
+> **Implementation status:** this strategy and its thresholds (80% branch
+> coverage gate, 95%/85% mutation gates) apply to the **Python implementation**
+> and are the release-gate authority today. They carry over unchanged as the
+> acceptance bar for the approved Rust-native port — see
+> [RUST_MIGRATION_PLAN.md](RUST_MIGRATION_PLAN.md) — which must identify and
+> validate its own equivalent tooling (e.g. `cargo-mutants`, `cargo-audit`)
+> rather than assume these numbers transfer mechanically.
+
 ## Run everything
 
 ```console
