@@ -45,25 +45,54 @@ Ready. Try: agentrouter route "your task here"
 
 ---
 
-## 2. `providers refresh` — *Capstone demo*
+## 2. `providers refresh` / `status` / `rollback` / `restore` / `doctor` — *Capstone demo*
 
-Call each provider adapter's `refresh_models` and rewrite the model registry.
+`providers refresh` calls one live adapter (`openrouter`, `openai`) and writes its
+catalog to `models.<provider>.generated.yaml`, next to the hand-edited
+`models.yaml`. The manual registry always wins on key collision, so a refresh can
+never shadow a hand-edited model. Every generated file carries a `provenance`
+block (source URL, fetch time UTC, count, tool version, CLI args) that the
+registry loader ignores; `status`/`doctor` read it back.
 
 ```
-agentrouter providers refresh [--provider <id>] [--dry-run]
+agentrouter providers refresh <provider> [--limit N] [--match SUBSTRING] [--dry-run]
+agentrouter providers status
+agentrouter providers rollback <provider>
+agentrouter providers restore <provider>
+agentrouter providers doctor
 ```
-- `--provider <id>` — refresh only one provider.
-- `--dry-run` — show diffs, write nothing.
+- `<provider>` — `openrouter` (public catalog) or `openai` (needs `OPENAI_API_KEY`).
+- `--limit N` — cap how many models are imported (default 25).
+- `--match SUBSTRING` — only import model ids containing this substring.
+- `--dry-run` — print what would be imported; write nothing. If the provider
+  already has a generated catalog, candidate deprecations (ids that were in the
+  previous fetch but are missing from this one) are reported either way — never
+  auto-deleted, the user decides.
+- `status` — per-provider freshness (age vs. a 90-day staleness window) and, when
+  present, the provenance source/fetch time; offline, reads only local files.
+- `rollback <provider>` — back up (rotating any earlier `.bak`) then remove the
+  generated file, reverting to the manual registry.
+- `restore <provider>` — reverse the most recent `rollback`; refuses to clobber a
+  generated file that was re-refreshed since.
+- `doctor` — parse and schema-validate every generated catalog; exits non-zero
+  only on real corruption (not merely staleness), with per-provider `[OK]`/`[FAIL]`
+  lines.
 
 ```console
-$ agentrouter providers refresh
-claude-code : 4 models (0 new, 1 updated)
-openai      : 9 models (2 new, 0 deprecated)
-openrouter  : 143 models (12 new, 3 retired)
-cursor      : 3 models (config-only)
-cli-agent   : 1 model (from config)
-manual      : 1 model (static)
-Registry updated. 156 active models.
+$ agentrouter providers refresh openrouter --limit 5
+auth: no OPENROUTER_API_KEY set - using the public catalog endpoint
+Fetched 5 models from openrouter:
+  openrouter/vendor/frontier-x                        ctx    200000  frontier
+  ...
+Wrote registry/models.openrouter.generated.yaml
+Manual models.yaml is untouched and wins on collision. Delete the .generated.yaml file to revert.
+Next: agentrouter registry list
+
+$ agentrouter providers status
+openrouter      5 models  newest 2026-08-08 (0d)  fresh  source=https://openrouter.ai/api/v1/models
+
+$ agentrouter providers doctor
+[OK   ] openrouter      5 models  newest 2026-08-08 (0d)  fresh  source=https://openrouter.ai/api/v1/models
 ```
 
 ---
@@ -237,5 +266,5 @@ agentrouter plugin doctor
 | `explain` | MVP (basic), Capstone (rich table) |
 | `registry list` | MVP |
 | `prompt generate` | MVP |
-| `providers refresh` | Capstone demo |
+| `providers refresh/status/rollback/restore/doctor` | Capstone demo |
 | `feedback` | Advanced |

@@ -46,8 +46,25 @@ Non-2xx responses use a structured envelope:
 { "error": { "code": "not_found", "message": "no decision 'd_99999'" } }
 ```
 
-Codes: `unauthorized` (401), `not_found` (404), `validation_error` (422),
-`unavailable` (503), `error` (other).
+| Code | Status | Meaning |
+|------|--------|---------|
+| `unauthorized` | 401 | Missing or wrong `X-API-Key` while `AGENTROUTER_API_KEY` is set |
+| `not_found` | 404 | No such decision, or no such route |
+| `validation_error` | 422 | The request body failed validation; `message` names the field |
+| `rate_limited` | 429 | Opt-in rate limit exceeded; retry after `Retry-After` seconds |
+| `registry_unavailable` | 503 | The local registry is missing or malformed — run `agentrouter doctor` |
+| `internal_error` | 500 | An unexpected server-side fault |
+| `error` | other | Any other HTTP error |
+
+`message` is safe to display but is **not** a stable API: match on `code`.
+
+Two codes deliberately say less than the server knows. `registry_unavailable`
+and `internal_error` both carry a fixed message, because the underlying text
+quotes registry file paths and the offending source line — and a registry is
+only malformed at exactly the moment someone has pasted a credential into it.
+The detail is written to the server log at `ERROR` with the request id, so run
+`agentrouter doctor` locally, or correlate the `X-Request-ID` with the log.
+**No traceback is ever returned to a client.**
 
 ## Endpoints
 
@@ -155,11 +172,117 @@ with AgentRouterClient("http://127.0.0.1:8000", api_key="your-secret") as client
 
 Non-2xx responses raise `AgentRouterError` (with `.status_code` and `.code`).
 
+## Compatibility promise
+
+`GET /openapi.json` describes whatever the running process happens to serve. The
+**contract** is the committed artifact at `contracts/http/v1/openapi.json`, with
+its provenance in `contracts/http/v1/manifest.json`. It is regenerated from the
+real app, canonicalised (recursively sorted, environment-dependent fields
+dropped) so it is byte-stable, and carries no timestamp or commit — those live in
+the manifest, so an unchanged API produces an unchanged file.
+
+```bash
+agentrouter contract check          # live app vs the committed contract
+agentrouter contract check --json   # machine-readable report
+agentrouter contract export         # regenerate after an intentional change
+```
+
+`contract check` exit codes: `0` compatible (or every break owner-accepted),
+`1` breaking change, `3` missing or
+untrustworthy baseline, `4` this install has no HTTP API to describe (the
+`[server]` extra is absent). A missing baseline is a failure, never a pass, and
+`4` is deliberately not `1` so CI cannot mistake "the extra was not installed"
+for "the API broke". CI runs it on every push and the enforced release gate
+depends on it.
+
+Changes are classified into three bands:
+
+| Band | Examples | Effect |
+|------|----------|--------|
+| **breaking** | endpoint/method/media-type/parameter removed; a **response** field removed or made optional; a **request** field made required, or its enum/`const` introduced or narrowed, constraint or `format` tightened, body made required, `additionalProperties` closed; a type change; a request stops accepting `null`; a response starts returning `null`; authentication removed or a scheme redefined (including oauth2 `flows`); `servers` relocated | Fails CI |
+| **accepted** | a breaking change the owner reviewed and recorded via `--accept-breaking --reason`, matched on the checker's own (kind, location) | Reported prominently, does not fail |
+| **risky** | a **request** enum expanded or unconstrained; a **response** enum expanded or removed; type erased to untyped; `default`/`format` changed on a response; `operationId` renamed; an operation deprecated; a status wildcard refined into explicit codes; description changes; `info.version` changed | Reported, does not fail |
+| **additive** | new endpoint; a new **response** field (even a required one — a stronger promise, not a client break); a new optional request field; a newly documented response status; a request constraint relaxed; a **response** enum narrowed; an additional accepted auth scheme | Reported, does not fail |
+
+Direction matters throughout, because the same edit means opposite things on the
+two sides of a call. `required` on a request is an obligation on the caller; on a
+response it is a guarantee from the server. A narrowed enum rejects callers on a
+request but merely promises less on a response. `allOf` is a conjunction, so more
+branches is *narrower*, while `anyOf`/`oneOf` gain permissiveness with more.
+
+`required` is read per direction, because it means opposite things: on a request
+it is an obligation on the caller, on a response it is a guarantee from the
+server. Treating a new required response field as breaking would fail CI on the
+most common additive change there is, and teach maintainers to reach for
+`--accept-breaking` — which is how a gate stops meaning anything.
+
+A deliberate breaking change is not silently absorbed: `contract export` refuses
+to overwrite the baseline while a breaking change is present, and recording one
+requires `--accept-breaking --reason "<owner-reviewed justification>"`. That
+appends to `accepted_breaking_changes` in the manifest, which a later routine
+export will not erase and which can only record a break the checker itself
+detected. `contract check` then reads that record: a break matching a recorded
+(kind, location) is reported as **accepted** rather than failing, so the decision
+can actually ship. Any *other* break in the same change still fails — an
+acceptance excuses exactly what it names, and nothing else.
+
+CI also checks the live app against the contract on the **base branch**, not just
+the copy in the branch under review. Without that, the branch grades its own
+homework: deleting or corrupting `contracts/http/v1/openapi.json` would make any
+breaking change look green.
+
+### What `contracts/http/v1/` means
+
+`v1` is the version of **this contract artifact**, not a second HTTP API. There is
+one running app and one exported document, which describes every path it serves —
+including the unversioned `/health` and `/ready` probes. Creating
+`contracts/http/v2/` would not route a `/v2` API into existence; it would only
+produce a second file describing the same app.
+
+So when a genuinely incompatible API arrives, the versioning happens in the
+**URL space** (`/v2/...` paths added alongside `/v1/...`, both described by the
+one contract, with `endpoint_removed` protecting the old paths until they are
+deliberately retired) — not by adding a directory here.
+
+### SDK parity
+
+`contracts/sdk/capabilities.json` is the versioned record of which operations
+each SDK supports. Every operation listed is *exercised* against the real app, so
+an entry cannot claim coverage the SDK does not have — Python drives an
+in-process uvicorn server, TypeScript drives the same app started by
+`scripts/serve_for_parity.py` (Node cannot host an ASGI app in-process, so it is
+the real app over loopback rather than literally in-process). CI sets
+`AGENTROUTER_REQUIRE_LIVE=1` so a skipped live suite fails instead of passing.
+
+### What the checker still cannot see
+
+Stated plainly, because a compatibility gate that is trusted beyond its reach is
+worse than one whose limits are known:
+
+- **Semantics.** Anything not expressible in OpenAPI — a field whose *meaning*
+  changes, an id format, ordering guarantees, pagination behaviour, rate-limit
+  thresholds. `/v1/decisions/{id}` replays an opaque engine payload, so the
+  contract describes its top-level keys and nothing deeper.
+- **Structures it does not model:** response `headers`, path-item-level
+  `parameters`, `webhooks`/`callbacks`, `discriminator`, and
+  `readOnly`/`writeOnly`.
+- **Multi-branch unions** are compared branch-by-branch when both sides have the
+  same combinator and the same number of alternatives. When the arity or the
+  combinator differs, the *shape* change is reported (`union_widened` /
+  `union_narrowed`, direction-aware — `allOf` is a conjunction, so more branches
+  is narrower) but the branches are not matched up individually. The common
+  `T | None` shape is fully unwrapped and compared.
+- **`not`**, parameter `style`/`explode`/`deprecated`, and the *scope* granularity
+  of a security requirement are not compared at all.
+- **Behaviour under load or failure** — that is TASK-018B, not this gate.
+
 ## Limitations
 
-- **Rate limiting** is documented as a requirement but not enforced in-process;
-  put the app behind a reverse proxy if you need it. The API is intended for
-  localhost use.
+- **Rate limiting** is enforced in-process but opt-in and single-process: set
+  `AGENTROUTER_RATE_LIMIT` (requests per `AGENTROUTER_RATE_WINDOW`, default 60s)
+  to enable it. The counters live in one process's memory, so behind multiple
+  workers each gets its own budget — put the app behind a reverse proxy if you
+  need a shared limit. The API is intended for localhost use.
 - **Feedback** is stored in the existing SQLite `feedback` table via a direct
   insert (no new storage layer added); it is validated against an existing
   decision first.

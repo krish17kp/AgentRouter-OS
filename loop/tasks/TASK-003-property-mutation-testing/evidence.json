@@ -1,0 +1,36 @@
+{
+  "criteria": [
+    {
+      "id": "AC1",
+      "text": "Hypothesis property tests for core invariants",
+      "status": "PASS",
+      "evidence": "tests/test_property.py 6 passed; verification: 8/8 hand-mutations caught after repair"
+    },
+    {
+      "id": "AC2",
+      "text": "property tests skip cleanly w/o hypothesis",
+      "status": "PASS",
+      "evidence": "importorskip verified in fresh venv -> SKIP"
+    },
+    {
+      "id": "AC3",
+      "text": "mutmut configured + real mutation score",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence": "mutmut 2.x/3.x + mutatest all incompatible with Windows+py3.13; documented; Linux-CI/WSL follow-up; coverage works (limits.py 95.16%)"
+    },
+    {
+      "id": "AC4",
+      "text": "full suite green",
+      "status": "PASS",
+      "evidence": "405 passed"
+    }
+  ],
+  "commands": [
+    "pytest tests/test_property.py -q => 6 passed",
+    "pytest -m property -q => 6 passed, 399 deselected",
+    "pytest --cov=agentrouter.server.limits => 95.16%",
+    "pytest -q => 405 passed",
+    "ruff check + format --check => clean"
+  ],
+  "env_block": "mutation score: BLOCKED_ENVIRONMENT (Windows+py3.13); not fabricated"
+}

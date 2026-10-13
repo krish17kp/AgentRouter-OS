@@ -1,0 +1,73 @@
+# Codex capability inventory for the 2026-07-20 takeover.
+# No secret values are recorded. Decisions follow least privilege and task relevance.
+version: 2
+captured: 2026-07-20
+runtime: Codex
+
+tools:
+  - {name: shell_command, decision: use, reason: "local inspection, tests, build, git, and gh"}
+  - {name: apply_patch, decision: use, reason: "auditable repository file edits"}
+  - {name: web, decision: use_conditionally, reason: "official mutmut/GitHub documentation only"}
+  - {name: collaboration, decision: use, reason: "user required independent parallel reviewers"}
+  - {name: update_plan, decision: use, reason: "long takeover progress tracking"}
+  - {name: view_image, decision: do_not_use, reason: "no image input"}
+  - {name: image_generation, decision: do_not_use, reason: "no bitmap deliverable"}
+  - {name: mcp_resources, decision: do_not_use, reason: "no repository context exposed as MCP resources"}
+  - {name: goals, decision: do_not_use, reason: "user requested execution, not a product goal object"}
+
+skills:
+  - {name: imagegen, decision: do_not_use, reason: "no raster asset"}
+  - {name: openai-docs, decision: do_not_use, reason: "no OpenAI product/API question"}
+  - {name: plugin-creator, decision: do_not_use, reason: "no Codex plugin bundle requested"}
+  - {name: skill-creator, decision: do_not_use, reason: "no new Codex skill requested"}
+  - {name: skill-installer, decision: do_not_use, reason: "no skill installation requested"}
+  - {name: browser:control-in-app-browser, decision: do_not_use, reason: "CLI/API tests are local and non-browser"}
+  - {name: canva:canva-branded-presentation, decision: do_not_use, reason: "no Canva deck"}
+  - {name: canva:canva-resize-for-all-social-media, decision: do_not_use, reason: "no social design"}
+  - {name: canva:canva-translate-design, decision: do_not_use, reason: "no Canva localization"}
+  - {name: documents:documents, decision: do_not_use, reason: "no DOCX artifact"}
+  - {name: drawio-skill, decision: do_not_use, reason: "no requested architecture diagram deliverable"}
+  - {name: figma:figma-code-connect, decision: do_not_use, reason: "no Figma mapping"}
+  - {name: figma:figma-create-new-file, decision: do_not_use, reason: "no Figma file"}
+  - {name: figma:figma-design-to-code, decision: do_not_use, reason: "no Figma design"}
+  - {name: figma:figma-generate-design, decision: do_not_use, reason: "no Figma write"}
+  - {name: figma:figma-generate-diagram, decision: do_not_use, reason: "no Figma diagram"}
+  - {name: figma:figma-generate-library, decision: do_not_use, reason: "no design system"}
+  - {name: figma:figma-implement-motion, decision: do_not_use, reason: "no motion design"}
+  - {name: figma:figma-swiftui, decision: do_not_use, reason: "not an Apple UI project"}
+  - {name: figma:figma-use, decision: do_not_use, reason: "no Figma context"}
+  - {name: figma:figma-use-figjam, decision: do_not_use, reason: "no FigJam context"}
+  - {name: figma:figma-use-motion, decision: do_not_use, reason: "no Figma motion"}
+  - {name: figma:figma-use-slides, decision: do_not_use, reason: "no Figma Slides"}
+  - {name: find-skills, decision: do_not_use, reason: "the task needs repository work, not skill discovery"}
+  - {name: github:github, decision: use, reason: "inspect pushed branch and GitHub checks"}
+  - {name: github:gh-address-comments, decision: use_conditionally, reason: "only if a PR review exists"}
+  - {name: github:gh-fix-ci, decision: use_conditionally, reason: "after push, if Actions checks fail"}
+  - {name: github:yeet, decision: do_not_use, reason: "workflow would open a draft PR not requested by owner"}
+  - {name: google-calendar:google-calendar, decision: do_not_use, reason: "no scheduling task"}
+  - {name: google-calendar:google-calendar-daily-brief, decision: do_not_use, reason: "no calendar brief"}
+  - {name: google-calendar:google-calendar-free-up-time, decision: do_not_use, reason: "no calendar optimization"}
+  - {name: google-calendar:google-calendar-group-scheduler, decision: do_not_use, reason: "no meeting scheduling"}
+  - {name: google-calendar:google-calendar-meeting-prep, decision: do_not_use, reason: "no meeting prep"}
+  - {name: improve, decision: do_not_use, reason: "strictly read-only; takeover explicitly requires implementation"}
+  - {name: presentations:Presentations, decision: do_not_use, reason: "no PPTX deliverable"}
+  - {name: spreadsheets:Spreadsheets, decision: do_not_use, reason: "no spreadsheet deliverable"}
+  - {name: supabase, decision: do_not_use, reason: "repository does not use Supabase"}
+  - {name: supabase-postgres-best-practices, decision: do_not_use, reason: "no Postgres schema/query work"}
+  - {name: use-railway, decision: do_not_use, reason: "deployment is owner-controlled and prohibited"}
+
+recommended_uninstalled_plugins:
+  - {name: Atlassian Rovo, decision: do_not_install, reason: "no Atlassian task"}
+  - {name: Box, decision: do_not_install, reason: "no Box content"}
+  - {name: Gmail, decision: do_not_install, reason: "no email task"}
+  - {name: Google Drive, decision: do_not_install, reason: "no Drive content"}
+  - {name: Notion, decision: do_not_install, reason: "no Notion content"}
+  - {name: Outlook Calendar, decision: do_not_install, reason: "no scheduling task"}
+  - {name: Outlook Email, decision: do_not_install, reason: "no email task"}
+  - {name: SharePoint, decision: do_not_install, reason: "no SharePoint content"}
+  - {name: Slack, decision: do_not_install, reason: "no messaging task"}
+  - {name: Teams, decision: do_not_install, reason: "no Teams task"}
+
+legacy_claude_assets:
+  decision: preserve_but_do_not_treat_as_codex_enforcement
+  note: ".claude agents/skills/hooks remain project history; critical rules were copied into AGENTS.md, tests, scripts, and CI."

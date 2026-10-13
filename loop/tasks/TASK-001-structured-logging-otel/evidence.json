@@ -1,0 +1,36 @@
+{
+  "criteria": [
+    {
+      "id": "AC1",
+      "text": "structured JSON log per route decision with request-id",
+      "status": "PASS",
+      "evidence": "tests/test_observability.py::test_log_route_decision_emits_json, ::test_server_route_logs_with_request_id"
+    },
+    {
+      "id": "AC2",
+      "text": "OTel spans opt-in, no-op when dep/env absent",
+      "status": "PASS",
+      "evidence": "::test_route_span_noop_when_disabled, ::test_route_span_noop_when_otel_missing"
+    },
+    {
+      "id": "AC3",
+      "text": "no secrets/raw task/prompt logged by default",
+      "status": "PASS",
+      "evidence": "::test_record_never_contains_raw_task_or_prompt; server test asserts task text absent from caplog"
+    },
+    {
+      "id": "AC4",
+      "text": "existing tests green + new focused tests",
+      "status": "PASS",
+      "evidence": "pytest -q => 380 passed (was 371); +9 new"
+    }
+  ],
+  "commands": [
+    "python -m pytest tests/test_observability.py -q => 9 passed",
+    "python -m pytest -q => 380 passed",
+    "ruff check agentrouter tests/test_observability.py => All checks passed",
+    "ruff format --check => clean (after format)",
+    "bandit -c pyproject.toml -r agentrouter => 0 issues"
+  ],
+  "independent_audit": "verification-engineer + security-reviewer-arros dispatched (read-only)"
+}

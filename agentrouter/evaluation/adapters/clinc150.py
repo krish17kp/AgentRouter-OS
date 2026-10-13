@@ -10,9 +10,7 @@ reported so we never imply every intent has one obvious label.
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from ..base import Availability, DatasetAdapter, DatasetMetadata
+from ..base import Availability, DatasetAdapter, DatasetMetadata, fixture_path
 from ..schema import (
     AnnotationMethod,
     EvaluationCase,
@@ -21,7 +19,7 @@ from ..schema import (
     ReviewStatus,
 )
 
-_FIXTURE = Path(__file__).resolve().parents[3] / "evaluation" / "fixtures" / "clinc150_sample.jsonl"
+_FIXTURE = fixture_path("clinc150_sample.jsonl")
 
 # Conservative curated intent-substring -> acceptable task families. Anything
 # not matched defaults to [general] and is tagged needs-review.

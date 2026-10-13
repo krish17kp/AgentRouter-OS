@@ -6,19 +6,11 @@ leakage reports. Honest labelling: distinguishes model_assisted from human.
 
 from __future__ import annotations
 
-import hashlib
 import platform
 import sys
 from collections import Counter
-from pathlib import Path
 
 from .schema import AnnotationMethod, EvaluationCase
-
-
-def file_checksum(path: Path) -> str | None:
-    if not path.exists():
-        return None
-    return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
 
 
 def environment_snapshot(git_sha: str | None = None) -> dict:

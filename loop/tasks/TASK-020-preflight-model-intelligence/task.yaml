@@ -1,0 +1,33 @@
+id: TASK-020
+title: "Production Milestone 1 — harness identity + usage/quota intelligence"
+source: "user request (Production Milestone 1: pre-flight + environment/harness discovery + model/usage intelligence)"
+priority: 1
+status: done
+risk: low
+customer_impact: >
+  agentrouter doctor gains an always-on harness-identity check and an opt-in
+  --verify-live provider usage/quota check; agentrouter route gains an opt-in
+  --verify-live flag that re-ranks away a live-verified-exhausted top pick
+  instead of silently recommending it. No behavior change for existing
+  default (non-flag) usage.
+affected_surfaces: [cli, diagnostics, hosts, engine-adjacent, docs]
+dependencies: [TASK-016-verified-host-states, TASK-018C-operations-observability]
+acceptance_criteria:
+  - "harness.detect_harness() reports claude-code only on verified CLAUDECODE evidence; CI only on documented CI env vars; generic/unknown otherwise — never a guessed identity"
+  - "usage.check_usage() defaults (live=False) to UNKNOWN; with no registered live adapter, live=True reports UNSUPPORTED for every real provider — never fabricates a number"
+  - "doctor always runs check_harness(); doctor --verify-live additionally runs a usage check per authenticated API host, isolated so one provider's failure/timeout cannot fail the others or crash doctor"
+  - "route --verify-live re-ranks away a live-EXHAUSTED top pick and records why in excluded + weight_shifts + a new usage_check field; UNKNOWN/UNSUPPORTED never excludes a model"
+  - "no secret value is ever printed by any new check or field"
+  - "existing doctor/route/hosts/diagnostics test suites stay green with zero default-behavior change (no flag => no network call, no new required field)"
+verification_commands:
+  - "pytest -q"
+  - "pytest tests/test_harness.py tests/test_usage.py tests/test_diagnostics.py tests/test_host_states.py -q"
+  - "ruff check . && ruff format --check ."
+  - "bandit -c pyproject.toml -r agentrouter"
+required_reviewers: [verification-engineer, security-reviewer-arros, product-architect]
+repair_iteration: 0
+external_blockers:
+  - "live provider quota adapters (real credentialed usage endpoints) are P2 in loop/BACKLOG.yaml — blocked on owner-provided credentials + opt-in network; this task builds the pluggable UNSUPPORTED-by-default mechanism only, proven end-to-end with a test-only fake adapter"
+owner_blockers: []
+created_at: "2026-09-10"
+updated_at: "2026-09-10"

@@ -6,8 +6,11 @@ and attaches an environment + dataset-quality snapshot for reproducibility.
 
 from __future__ import annotations
 
+import hashlib
 import subprocess
+from pathlib import Path
 
+from .. import classifier
 from .grading import grade
 from .provenance import dataset_quality, environment_snapshot
 from .registry import get_adapter, profile_datasets
@@ -21,6 +24,28 @@ def _git_sha() -> str | None:
         )
         return out.stdout.strip() or None if out.returncode == 0 else None
     except Exception:  # noqa: BLE001 - git is optional at runtime
+        return None
+
+
+def _git_dirty() -> bool | None:
+    try:
+        out = subprocess.run(  # nosec B603 B607 - fixed argv, read-only provenance
+            ["git", "status", "--porcelain", "--untracked-files=normal"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        return bool(out.stdout) if out.returncode == 0 else None
+    except Exception:  # noqa: BLE001 - git is optional at runtime
+        return None
+
+
+def _code_sha256(path: str | None) -> str | None:
+    if not path:
+        return None
+    try:
+        return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    except OSError:
         return None
 
 
@@ -90,8 +115,24 @@ def run(
     else:
         cases, per_dataset = _collect(names, limit, seed, source)
 
-    result = grade(cases, measure_all=measure_all)
-    result["environment"] = environment_snapshot(_git_sha())
+    context_generalization = None
+    if measure_all:
+        from .context_bands import evaluate_generalization
+
+        context_generalization = evaluate_generalization()
+    result = grade(
+        cases,
+        measure_all=measure_all,
+        context_band_generalization=context_generalization,
+    )
+    environment = environment_snapshot(_git_sha())
+    environment.update(
+        {
+            "git_dirty": _git_dirty(),
+            "classifier_sha256": _code_sha256(classifier.__file__),
+        }
+    )
+    result["environment"] = environment
     result["datasets"] = per_dataset
     result["profile"] = profile
     result["dataset_quality"] = dataset_quality(cases)

@@ -11,7 +11,7 @@ from pathlib import Path
 
 import yaml
 
-from ..base import AdapterError, Availability, DatasetAdapter, DatasetMetadata
+from ..base import AdapterError, Availability, DatasetAdapter, DatasetMetadata, gold_path
 from ..schema import (
     AnnotationMethod,
     EvaluationCase,
@@ -20,8 +20,7 @@ from ..schema import (
     ReviewStatus,
 )
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[3]
-_GOLD = _PROJECT_ROOT / "benchmarks" / "classifier_gold_v1.yaml"
+_GOLD = gold_path("classifier_gold_v1.yaml")
 
 _RISK_TO_APPROVAL = {
     "low": "auto",

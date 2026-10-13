@@ -1,0 +1,31 @@
+schema_version: 1
+dataset: agentrouter-context-band
+split: development
+frozen: false
+annotation: model_assisted_pending_human_review
+cases:
+  - {id: dev-s-01, prompt: "Return the larger of two integers.", context_band: small, category: coding}
+  - {id: dev-s-02, prompt: "Outline an API for a disposable demo service.", context_band: small, category: analysis}
+  - {id: dev-s-03, prompt: "Explain the purpose of an ETL job.", context_band: small, category: data-pipeline}
+  - {id: dev-s-04, prompt: "Condense this sentence to five words.", context_band: small, category: summarization}
+  - {id: dev-s-05, prompt: "Draft a heading for developer documentation.", context_band: small, category: documentation}
+  - {id: dev-s-06, prompt: "Take a look.", context_band: small, category: ambiguous}
+  - {id: dev-s-07, prompt: "What makes code review useful?", context_band: small, category: review}
+  - {id: dev-s-08, prompt: "Describe a safe refactoring workflow.", context_band: small, category: refactor}
+  - {id: dev-m-01, prompt: "Examine the login sequence already used by the application.", context_band: medium, category: audit}
+  - {id: dev-m-02, prompt: "Rework the billing subsystem without changing its public behavior.", context_band: medium, category: refactor}
+  - {id: dev-m-03, prompt: "Trace the intermittent failures across the worker tests.", context_band: medium, category: review}
+  - {id: dev-m-04, prompt: "Turn the existing operator handbook into a quick-reference sheet.", context_band: medium, category: summarization}
+  - {id: dev-m-05, prompt: "Document the current request lifecycle from entry point to storage.", context_band: medium, category: documentation}
+  - {id: dev-m-06, prompt: "Find the cause of skewed aggregates in the nightly data flow.", context_band: medium, category: data-pipeline}
+  - {id: dev-m-07, prompt: "Assess maintainability across the parser implementation and its tests.", context_band: medium, category: analysis}
+  - {id: dev-m-08, prompt: "Add cancellation handling to the command runner already in use.", context_band: medium, category: coding}
+  - {id: dev-l-01, prompt: "Summarize a 96k-token compliance archive.", context_band: large, category: summarization}
+  - {id: dev-l-02, prompt: "Audit 120000 tokens of access-control traces.", context_band: large, category: audit}
+  - {id: dev-l-03, prompt: "Refactor a monorepo snapshot containing 750 source files.", context_band: large, category: refactor}
+  - {id: dev-l-04, prompt: "Review a 500-page acquisition dossier and list inconsistencies.", context_band: large, category: review}
+  - {id: dev-l-05, prompt: "Produce documentation from an 80k-token protocol specification.", context_band: large, category: documentation}
+  - {id: dev-l-06, prompt: "Analyze a year of raw event partitions totaling 140000 tokens.", context_band: large, category: data-pipeline}
+  - {id: dev-l-07, prompt: "Implement changes spanning a 110k-token generated client library.", context_band: large, category: coding}
+  - {id: dev-l-08, prompt: "Do this across the entire corpus of 600 files.", context_band: large, category: ambiguous}
+

@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import uuid
 from datetime import timezone
 from importlib import resources
 from pathlib import Path
@@ -15,7 +16,19 @@ from pathlib import Path
 import typer
 import yaml
 
-from . import hosts, plugins, store
+from . import (
+    __version__,
+    bundle,
+    catalog_ops,
+    contract,
+    diagnostics,
+    hosts,
+    observability,
+    plugins,
+    store,
+    taxonomy,
+    usage,
+)
 from .classifier import classify
 from .controls import PREFERENCE_WEIGHTS, RouteControls, apply_controls
 from .engine import BASE_WEIGHTS
@@ -27,9 +40,10 @@ from .refresh import (
     GENERATED_SUFFIX,
     SUPPORTED_PROVIDERS,
     RefreshError,
+    previous_model_ids,
     write_generated_registry,
 )
-from .registry import RegistryError, load_all_models, load_providers
+from .registry import RegistryError, load_all_models, load_models, load_providers
 from .safety import gates_for
 from .schema import Classification, Level, PricingTier
 
@@ -64,18 +78,30 @@ prompt_app = typer.Typer(help="Prompt generation.")
 hosts_app = typer.Typer(help="Execution host discovery.")
 models_app = typer.Typer(help="Model catalog inspection.")
 plugin_app = typer.Typer(help="Install AgentRouter host integrations (skill/plugin).")
+# Maintainer tooling: it operates on repository artifacts (contracts/), not on a
+# user's installation, so it is hidden from the top-level help rather than
+# advertised to someone who pip-installed the wheel.
+contract_app = typer.Typer(
+    help="Versioned HTTP API contract (export / compatibility check). Maintainer tooling."
+)
 app.add_typer(registry_app, name="registry")
 app.add_typer(providers_app, name="providers")
 app.add_typer(prompt_app, name="prompt")
 app.add_typer(hosts_app, name="hosts")
 app.add_typer(models_app, name="models")
 app.add_typer(plugin_app, name="plugin")
+app.add_typer(contract_app, name="contract", hidden=True)
 
 # Multi-dataset evaluation framework (evaluation/ package). The legacy
 # single-shot `evaluate` command below is kept for backward compatibility.
 from .evaluation.cli import eval_app  # noqa: E402
 
 app.add_typer(eval_app, name="eval")
+
+# Context-band data collection + annotation program (TASK-011).
+from .annotation.cli import dataset_app  # noqa: E402
+
+app.add_typer(dataset_app, name="dataset")
 
 EXIT_RUNTIME, EXIT_USAGE, EXIT_REGISTRY, EXIT_NO_MODEL = 1, 2, 3, 4
 
@@ -201,7 +227,9 @@ def _reason_for(rec: dict, cls, shifts: list[str]) -> str:
     if cls.tool_needs:
         parts.append(f"supports required tools: {', '.join(cls.tool_needs)}")
     for s in shifts:
-        if "high" in s:
+        if "quota exhausted" in s:
+            parts.append("previous top pick skipped: quota exhausted (live-verified)")
+        elif "high" in s:
             parts.append("capability weighted up (high complexity/risk)")
         elif "low" in s:
             parts.append("cost weighted up (simple task)")
@@ -210,40 +238,96 @@ def _reason_for(rec: dict, cls, shifts: list[str]) -> str:
     return "; ".join(parts)
 
 
-def _execution_route(row: dict | None, models_by_key: dict) -> dict | None:
-    """Stage-2: resolve HOW to run the selected model (program Phase 5/6).
-
-    Returns a JSON-serializable execution-route block, or None if the model has
-    no execution targets (e.g. a refreshed catalog entry without host wiring).
-    """
-    if row is None:
-        return None
-    model = models_by_key.get(row["model"])
-    if model is None or not model.execution_targets:
-        return None
-    resolved = hosts.resolve_execution_route(model, include_unavailable=True)
-    tgt, status = resolved.target, resolved.status
-    return {
-        "vendor": model.vendor,
-        "model_id": model.model_id,
-        "display_name": model.name,
-        "release_channel": model.release_channel.value,
-        "host": tgt.host if tgt else None,
-        "host_model_id": tgt.host_model_id if tgt else None,
-        "execution_mode": tgt.execution_mode.value if tgt else None,
-        "availability": status.availability if status else "unknown",
-        "availability_reason": status.reason if status else "no execution target",
-        "command_preview": hosts.command_preview(tgt) if tgt else None,
-        "required_env": tgt.required_env if tgt else [],
-        "context_window": model.context_window,
-        "max_output_tokens": model.max_output_tokens,
-        "all_hosts": [
-            {"host": s.host, "availability": s.availability} for s in resolved.all_statuses
-        ],
-    }
-
-
 # --- init --------------------------------------------------------------------
+
+
+@app.command()
+def doctor(
+    as_json: bool = typer.Option(False, "--json", help="Machine-readable report on stdout."),
+    bundle_to: Path | None = typer.Option(
+        None,
+        "--bundle",
+        help="Also write a shareable diagnostic bundle to this new directory.",
+    ),
+    include_database: bool = typer.Option(
+        False,
+        "--include-database",
+        help="Include the decision log in the bundle. It contains the task text you routed.",
+    ),
+    verify_live: bool = typer.Option(
+        False,
+        "--verify-live",
+        help="Also attempt a live usage/quota check per authenticated provider (opt-in, "
+        "network, bounded timeout). No adapter is registered yet, so every real provider "
+        "reports 'unsupported' today — this proves the mechanism, not live quota data.",
+    ),
+):
+    """Check the whole local installation and say exactly what to fix.
+
+    Aggregates the checks that `providers doctor`, `hosts doctor` and
+    `plugin doctor` each cover, plus the runtime, data directory, database,
+    contract and observability state — one command, one answer.
+
+    Exit code: 0 when the installation works, 1 when something is broken.
+
+    Warnings deliberately do NOT fail. Open local mode with no API key is the
+    documented default, so exiting non-zero on a fresh healthy install would
+    make this command useless in a script — it would cry wolf on the happy path.
+    A warning is something worth knowing; a failure is something that stops the
+    tool working.
+    """
+    home = _home()
+    checks = diagnostics.run_all(home)
+    if verify_live:
+        checks = checks + diagnostics.run_usage_checks()
+    overall = diagnostics.worst(checks)
+
+    if as_json:
+        typer.echo(
+            json.dumps(
+                {
+                    "status": overall,
+                    "home": str(home),
+                    "checks": [c.as_dict() for c in checks],
+                },
+                indent=2,
+            )
+        )
+    else:
+        marks = {diagnostics.OK: "OK  ", diagnostics.WARN: "WARN", diagnostics.FAIL: "FAIL"}
+        for check in checks:
+            typer.echo(f"[{marks[check.status]}] {check.id:<22} {check.summary}")
+            if check.remedy:
+                typer.echo(f"{'':9}-> {check.remedy}")
+
+        failures = [c for c in checks if c.status == diagnostics.FAIL]
+        warnings = [c for c in checks if c.status == diagnostics.WARN]
+        typer.echo("")
+        if failures:
+            noun = "problem" if len(failures) == 1 else "problems"
+            typer.echo(f"{len(failures)} {noun} to fix. Start with: {failures[0].remedy}")
+        elif warnings:
+            noun = "note" if len(warnings) == 1 else "notes"
+            typer.echo(f"Everything works. {len(warnings)} {noun} above worth knowing about.")
+        else:
+            typer.echo('All clear. Next: agentrouter route "your task here"')
+
+    if bundle_to is not None:
+        try:
+            written = bundle.create(home, bundle_to, include_database=include_database)
+        except bundle.BundleError as e:
+            typer.echo(f"Could not write the bundle: {e}", err=True)
+            raise typer.Exit(EXIT_USAGE) from e
+        if not as_json:
+            typer.echo(f"\nBundle written to {written.directory}")
+            typer.echo(f"  {', '.join(sorted(written.files))}")
+            typer.echo(
+                "  No .env, credential file or key value is included. Read README.txt "
+                "before sharing."
+            )
+
+    if overall == diagnostics.FAIL:
+        raise typer.Exit(EXIT_RUNTIME)
 
 
 @app.command()
@@ -262,6 +346,10 @@ def init(force: bool = typer.Option(False, "--force", help="Overwrite existing f
         if dest.exists() and not force:
             typer.echo(f"exists, skipped: {dest} (use --force to overwrite)")
             continue
+        if dest.exists():  # force: back up a possibly hand-edited catalog first
+            backup = dest.with_suffix(dest.suffix + ".bak")
+            shutil.copyfile(dest, backup)
+            typer.echo(f"Backed up {dest} -> {backup}")
         with resources.as_file(seeds / name) as src:
             shutil.copyfile(src, dest)
         typer.echo(f"Created {dest}")
@@ -288,7 +376,7 @@ def setup(
 ):
     """Guided onboarding: init home, discover hosts, set a preference, run a sample route.
 
-    Non-interactive and idempotent — safe to re-run and to run in CI.
+    Non-interactive and idempotent - safe to re-run and to run in CI.
     """
     if preference not in PREFERENCE_WEIGHTS:
         typer.echo(
@@ -303,14 +391,17 @@ def setup(
     init(force=False)
 
     typer.echo("\n2. Execution hosts (credentials detected by presence only; values never read)")
-    available = 0
+    real_available = 0
     for host in hosts.known_hosts():
         st = hosts.detect_host(host)
         mark = "OK " if st.availability == hosts.AVAILABLE else "-- "
-        typer.echo(f"   [{mark}] {host:<16} {st.availability:<12} {st.reason}")
-        available += st.availability == hosts.AVAILABLE
-    if not available:
-        typer.echo("   Note: no host available yet — install Claude Code/Codex or set an API key.")
+        typer.echo(f"   [{mark}] {host:<16} {st.state:<14} {st.reason}")
+        # 'manual' is always AVAILABLE, so count only real hosts or the warning never fires
+        if host != "manual" and st.availability == hosts.AVAILABLE:
+            real_available += 1
+    if not real_available:
+        typer.echo("   Note: no host available yet - install Claude Code/Codex or set an API key.")
+        typer.echo("   Run 'agentrouter hosts doctor' for the exact next step per host.")
 
     typer.echo(f"\n3. Preference: {preference}")
     _write_preference(preference)
@@ -380,6 +471,13 @@ def route(
     ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
     no_log: bool = typer.Option(False, "--no-log", help="Do not persist the decision."),
+    verify_live: bool = typer.Option(
+        False,
+        "--verify-live",
+        help="If the top pick's provider is live-verified out of quota, re-rank without it "
+        "(opt-in, network, bounded timeout). No adapter is registered yet, so this is a "
+        "no-op for every real provider today; see `doctor --verify-live`.",
+    ),
 ):
     """Classify a task and recommend the best model/tool + fallback."""
     prefer = _resolve_preference(prefer_quality, prefer_balanced, prefer_cheap, prefer_fast)
@@ -389,6 +487,17 @@ def route(
     if available_only and include_unavailable:
         typer.echo("Use only one of --available-only / --include-unavailable.", err=True)
         raise typer.Exit(EXIT_USAGE)
+    if prohibit_tool:  # reject typos instead of silently dropping nothing
+        import difflib
+
+        known = sorted(taxonomy.TOOLS)
+        for t in prohibit_tool:
+            if not taxonomy.is_known(t):
+                near = difflib.get_close_matches(t, known, n=1)
+                hint = f" (did you mean {near[0]!r}?)" if near else ""
+                msg = f"Unknown --prohibit-tool {t!r}{hint}. Known: {', '.join(known)}"
+                typer.echo(msg, err=True)
+                raise typer.Exit(EXIT_USAGE)
     ctrl = RouteControls(
         vendor=tuple(vendor or ()),
         exclude_vendor=tuple(exclude_vendor or ()),
@@ -414,10 +523,17 @@ def route(
         uncertainty_threshold=uncertainty_threshold,
     )
     weights, learn_note = _adapted_weights(cfg)
-    result = engine_route(models, cls, weights, prefer=prefer)
+    observability.configure_logging()
+    request_id = uuid.uuid4().hex
+    observability.set_request_id(request_id)
+    with observability.route_span("route", task_type=cls.task_type.value, risk=cls.risk.value):
+        result = engine_route(models, cls, weights, prefer=prefer)
     result["excluded"] = control_drops + result["excluded"]
     if learn_note:
         result["weight_shifts"].append(learn_note)
+    models_by_key = {m.key: m for m in models}
+    if verify_live:
+        result = usage.apply_live_verification(result, models, models_by_key, cls, weights, prefer)
     gates = gates_for(cls)
 
     rec = result["recommendation"]
@@ -425,9 +541,12 @@ def route(
     prompt = generate_prompt(task, target, cls, gates["checklist"])
     reason = _reason_for(rec, cls, result["weight_shifts"]) if rec else None
 
-    models_by_key = {m.key: m for m in models}
-    exec_route = _execution_route(rec, models_by_key) if rec else None
-    fb_route = _execution_route(result["fallback"], models_by_key) if result["fallback"] else None
+    exec_route = hosts.execution_route_block(rec, models_by_key) if rec else None
+    fb_route = (
+        hosts.execution_route_block(result["fallback"], models_by_key)
+        if result["fallback"]
+        else None
+    )
 
     payload = {
         "classification": cls.model_dump(mode="json"),
@@ -443,6 +562,10 @@ def route(
         conn = store.connect(_home())
         decision_id = store.save_decision(conn, task, payload)
         conn.close()
+
+    observability.log_route_decision(
+        task=task, payload=payload, decision_id=decision_id, request_id=request_id
+    )
 
     if json_out:
         typer.echo(json.dumps({"decision_id": decision_id, "task": task, **payload}, indent=2))
@@ -492,7 +615,7 @@ def _print_route(task, cls, result, gates, reason, decision_id, exec_route=None,
             if cls.alternative_task_type
             else ""
         )
-        why = f" — {cls.ambiguity_reason}" if cls.ambiguity_reason else ""
+        why = f" - {cls.ambiguity_reason}" if cls.ambiguity_reason else ""
         typer.echo(f"\nLow confidence{why}{alt}.")
         typer.echo("  Consider clarifying the task; the recommendation below is a best guess.")
 
@@ -737,16 +860,131 @@ def providers_refresh(
     typer.echo(f"Fetched {len(entries)} models from {provider}:")
     for e in entries:
         typer.echo(f"  {e.key:<52} ctx {e.context_window:>9}  {e.pricing_tier.value}")
+
+    deprecated = sorted(previous_model_ids(reg_dir, provider) - {e.model_id for e in entries})
+    if deprecated:
+        typer.echo(
+            f"\n{len(deprecated)} candidate deprecation(s) — in the previous generated "
+            "catalog but not in this fetch (reported only; nothing is deleted):"
+        )
+        for model_id in deprecated:
+            typer.echo(f"  {model_id}")
+
     if dry_run:
         typer.echo("\nDry run - nothing written.")
         return
-    path = write_generated_registry(reg_dir, provider, entries)
+    path = write_generated_registry(
+        reg_dir, provider, entries, cli_args={"limit": limit, "match": match}
+    )
     typer.echo(f"\nWrote {path}")
     typer.echo(
         "Manual models.yaml is untouched and wins on collision. "
         f"Delete the {GENERATED_SUFFIX} file to revert."
     )
     typer.echo("Next: agentrouter registry list")
+
+
+@providers_app.command("status")
+def providers_status():
+    """Show freshness of each refreshed catalog (offline; reads generated files)."""
+    reg_dir = _home() / "registry"
+    if not reg_dir.is_dir():
+        typer.echo(f"Registry directory not found: {reg_dir}", err=True)
+        typer.echo("Next: run agentrouter init first.", err=True)
+        raise typer.Exit(EXIT_REGISTRY)
+    try:
+        statuses = catalog_ops.list_generated(reg_dir)
+    except catalog_ops.CatalogError as e:
+        typer.echo(f"Cannot read catalog status: {e}", err=True)
+        typer.echo("Next: agentrouter providers doctor  (isolates which catalog is bad)", err=True)
+        raise typer.Exit(EXIT_REGISTRY) from e
+    if not statuses:
+        typer.echo("No refreshed catalogs. Manual models.yaml is authoritative.")
+        typer.echo("Next: agentrouter providers refresh openrouter")
+        return
+    for st in statuses:
+        typer.echo(st.summary)
+    if any(st.stale for st in statuses):
+        typer.echo("\nSome catalogs are stale; re-run 'agentrouter providers refresh <provider>'.")
+
+
+@providers_app.command("rollback")
+def providers_rollback(
+    provider: str = typer.Argument(..., help="Provider whose refreshed catalog to revert."),
+):
+    """Revert a provider's refreshed catalog (back up + remove the generated file)."""
+    reg_dir = _home() / "registry"
+    try:
+        backup = catalog_ops.rollback(reg_dir, provider)
+    except ValueError as e:
+        typer.echo(f"Cannot roll back: {e}", err=True)
+        raise typer.Exit(EXIT_USAGE) from e
+    if backup is None:
+        missing = reg_dir / f"models.{provider}.generated.yaml"
+        typer.echo(f"No generated catalog for '{provider}' to roll back.", err=True)
+        typer.echo(f"Why: {missing} does not exist.", err=True)
+        raise typer.Exit(EXIT_USAGE)
+    typer.echo(f"Rolled back '{provider}'; backed up to {backup.name}.")
+    typer.echo("Manual models.yaml is now authoritative. Re-refresh to restore, or")
+    typer.echo(f"Next: agentrouter providers restore {provider}")
+
+
+@providers_app.command("restore")
+def providers_restore(
+    provider: str = typer.Argument(..., help="Provider whose last rollback to reverse."),
+):
+    """Reverse the most recent rollback (moves the .bak generated file back)."""
+    reg_dir = _home() / "registry"
+    try:
+        restored = catalog_ops.restore(reg_dir, provider)
+    except (FileExistsError, ValueError) as e:
+        typer.echo(f"Cannot restore '{provider}': {e}", err=True)
+        raise typer.Exit(EXIT_USAGE) from e
+    if restored is None:
+        typer.echo(f"No rollback backup for '{provider}' to restore.", err=True)
+        typer.echo(
+            f"Why: {reg_dir / f'models.{provider}.generated.yaml.bak'} does not exist.", err=True
+        )
+        raise typer.Exit(EXIT_USAGE)
+    typer.echo(f"Restored {restored}.")
+    typer.echo("Next: agentrouter providers status")
+
+
+@providers_app.command("doctor")
+def providers_doctor():
+    """Validate every refreshed catalog; exit non-zero if one is corrupt or invalid."""
+    reg_dir = _home() / "registry"
+    if not reg_dir.is_dir():
+        typer.echo(f"Registry directory not found: {reg_dir}", err=True)
+        typer.echo("Next: run agentrouter init first.", err=True)
+        raise typer.Exit(EXIT_REGISTRY)
+    gen_paths = sorted(reg_dir.glob(catalog_ops.GENERATED_GLOB))
+    if not gen_paths:
+        typer.echo("No refreshed catalogs to check. Manual models.yaml is authoritative.")
+        return
+    try:
+        providers = load_providers(reg_dir / "providers.yaml")
+    except RegistryError as e:
+        typer.echo(f"Cannot validate: {e}", err=True)
+        raise typer.Exit(EXIT_REGISTRY) from e
+
+    broken = 0
+    for path in gen_paths:
+        provider = path.name[len("models.") : -len(".generated.yaml")]
+        try:
+            st = catalog_ops.read_status(path)
+            load_models(path, providers)
+        except (RegistryError, catalog_ops.CatalogError, yaml.YAMLError, OSError) as e:
+            typer.echo(f"[FAIL ] {provider:<12} {e}")
+            broken += 1
+            continue
+        mark = "STALE" if st.stale else "OK   "
+        typer.echo(f"[{mark}] {st.summary}")
+
+    if broken:
+        typer.echo(f"\n{broken} generated catalog(s) are corrupt or invalid.")
+        typer.echo("Next: agentrouter providers rollback <provider>, then re-refresh.")
+        raise typer.Exit(EXIT_REGISTRY)
 
 
 # --- prompt generate ---------------------------------------------------------------
@@ -843,9 +1081,12 @@ def _execute_via_host(rec: dict, er: dict, prompt: str, *, yes: bool, dry_run: b
         raise typer.Exit(0)
     # never execute when availability is not confirmed (program Phase 7)
     if status.availability != hosts.AVAILABLE:
-        typer.echo(f"Not enabled: host '{tgt.host}' is {status.availability}.", err=True)
+        typer.echo(f"Not enabled: host '{tgt.host}' is {status.state} ({status.reason}).", err=True)
         typer.echo(
-            "Next: install/authenticate the host, or run the generated prompt yourself.", err=True
+            f"Next: {status.remedy}"
+            if status.remedy
+            else "Next: install/authenticate the host, or run the generated prompt yourself.",
+            err=True,
         )
         raise typer.Exit(EXIT_USAGE)
     if not yes:
@@ -882,30 +1123,48 @@ def hosts_list():
         if host not in seen:
             seen[host] = hosts.detect_host(host)
     for host, st in seen.items():
-        typer.echo(f"{host:<16} {st.availability:<12} {st.reason}")
+        typer.echo(f"{host:<16} {st.state:<14} {st.reason}")
 
 
 @hosts_app.command("doctor")
 def hosts_doctor():
-    """Diagnose host availability; exit non-zero if no host is available."""
-    any_available = False
+    """Diagnose every execution host; exit non-zero if none is available."""
+    ready: list[str] = []
+    fixable: list[tuple[str, hosts.HostStatus]] = []
     for host in hosts.known_hosts():
         st = hosts.detect_host(host)
-        mark = "OK " if st.availability == hosts.AVAILABLE else "-- "
-        typer.echo(f"[{mark}] {host:<16} {st.availability:<12} {st.reason}")
-        any_available = any_available or st.availability == hosts.AVAILABLE
-    if not any_available:
-        typer.echo(
-            "\nNo execution host is available. Install Claude Code or Codex, or set an API key."
-        )
-        raise typer.Exit(EXIT_RUNTIME)
+        mark = "OK  " if st.availability == hosts.AVAILABLE else "--  "
+        typer.echo(f"[{mark}] {host:<16} {st.state:<14} {st.reason}")
+        if st.remedy:
+            typer.echo(f"{'':22} -> {st.remedy}")
+        # 'manual' is always available, so it must not mask a real host being ready
+        if st.availability == hosts.AVAILABLE and host != "manual":
+            ready.append(host)
+        elif st.remedy:
+            fixable.append((host, st))
+
+    if ready:
+        typer.echo(f"\nReady to execute: {', '.join(ready)}.")
+        typer.echo('Next: agentrouter route "your task here"')
+        return
+
+    typer.echo("\nNo execution host is ready — routing still works, execution does not.")
+    if fixable:
+        # cheapest real fix first (correct a blank key < export one < install a tool),
+        # not simply whichever host happens to be listed first
+        host, st = min(fixable, key=lambda pair: hosts.fix_cost(pair[1]))
+        typer.echo(f"Easiest fix ({host}): {st.remedy}")
+    typer.echo("Then re-check with: agentrouter hosts doctor")
+    raise typer.Exit(EXIT_RUNTIME)
 
 
 @hosts_app.command("show")
 def hosts_show(host: str = typer.Argument(..., help="Host id, e.g. claude-code.")):
-    """Show a single host's availability and which models target it."""
+    """Show a single host's readiness and which models target it."""
     st = hosts.detect_host(host)
-    typer.echo(f"{host}: {st.availability} ({st.reason})")
+    typer.echo(f"{host}: {st.state} ({st.availability}) - {st.reason}")
+    if st.remedy:
+        typer.echo(f"Next: {st.remedy}")
     _, models = _load_registries()
     targeting = [m.key for m in models for t in m.execution_targets if t.host == host]
     typer.echo(f"Models using this host: {', '.join(targeting) or 'none'}")
@@ -973,8 +1232,15 @@ def execute(
     """Run the recommended tool for a logged decision (opt-in; high risk never executes).
 
     Requires the recommendation's provider to have supports_execution: true and an
-    exec_command in providers.yaml — both ship disabled by default.
+    exec_command in providers.yaml - both ship disabled by default.
     """
+    # Delegate to an undecorated helper so the safety-critical execution logic is
+    # reachable by mutation testing (mutmut does not instrument @app.command funcs).
+    _execute(decision_id, yes=yes, dry_run=dry_run)
+
+
+def _execute(decision_id: str, *, yes: bool, dry_run: bool):
+    """Execution gate + dispatch for a logged decision (see ``execute``)."""
     conn = store.connect(_home())
     payload = store.load_decision(conn, decision_id)
     recent = store.recent_ids(conn)
@@ -1100,7 +1366,7 @@ def server(
     """Run the local REST API (Phase P7). Remote model execution stays disabled.
 
     Set AGENTROUTER_API_KEY to require an X-API-Key header. Docs at /docs.
-    Install extras first: pip install "agentrouter-os[server]".
+    Install extras first: pip install "agentrouter-os\\[server]".
     """
     try:
         import uvicorn
@@ -1110,8 +1376,24 @@ def server(
         typer.echo(f"Server extras not installed: {e}", err=True)
         typer.echo('Next: pip install "agentrouter-os[server]"', err=True)
         raise typer.Exit(EXIT_RUNTIME) from e
-    typer.echo(f"AgentRouter API on http://{host}:{port}  (docs: /docs)  — Ctrl+C to stop")
+    typer.echo(f"AgentRouter API on http://{host}:{port}  (docs: /docs)  - Ctrl+C to stop")
     uvicorn.run(api_app, host=host, port=port)
+
+
+@app.command()
+def mcp():
+    """Run the MCP server over stdio: safe read/route/explain tools, no execution.
+
+    Install extras first: pip install "agentrouter-os\\[mcp]".
+    """
+    from .mcp_server import build_server
+
+    try:
+        server = build_server()
+    except RuntimeError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(EXIT_RUNTIME) from e
+    server.run()
 
 
 @app.command()
@@ -1130,9 +1412,10 @@ def dashboard(port: int = typer.Option(8321, "--port", min=0, max=65535)):
 
 # --- evaluate (graded classifier benchmark) ------------------------------------------
 
-_PROJECT_ROOT = Path(__file__).parent.parent
-_DEFAULT_GOLD = _PROJECT_ROOT / "benchmarks" / "classifier_gold_v1.yaml"
-_DEFAULT_ARTIFACTS = _PROJECT_ROOT / "artifacts"
+_DEFAULT_GOLD = Path(
+    str(resources.files("agentrouter").joinpath("benchmarks", "classifier_gold_v1.yaml"))
+)
+_DEFAULT_ARTIFACTS = Path("artifacts")  # cwd-relative output dir (never under site-packages)
 
 
 @app.command()
@@ -1142,7 +1425,7 @@ def evaluate(
     json_out: bool = typer.Option(False, "--json", help="Print the full report as JSON."),
     no_artifacts: bool = typer.Option(False, "--no-artifacts", help="Do not write files."),
 ):
-    """Grade the classifier against a gold benchmark; write evaluation artifacts."""
+    """Run the legacy gold-set benchmark; use `eval run --all` for release readiness."""
     from . import evaluate as ev
 
     try:
@@ -1162,7 +1445,10 @@ def evaluate(
         return
 
     typer.echo(f"\nCases: {report['n_cases']}   Overall grade: {report['overall_grade']}/100")
-    typer.echo(f"Release-ready: {'YES' if report['release_ready'] else 'NO'}")
+    typer.echo(
+        "Legacy gold-set thresholds: "
+        f"{'PASS' if report['release_ready'] else 'FAIL'} (not canonical release readiness)"
+    )
     typer.echo("\nDimension scores (weight x score):")
     for d, w in report["grade_weights"].items():
         typer.echo(f"  {d:<11} w={w:<2} score={report['dimension_scores'][d]:.3f}")
@@ -1200,17 +1486,22 @@ def _resolve_plugin(name: str) -> plugins.Plugin:
 def plugin_install(
     name: str = typer.Argument(..., help="Plugin name (see `plugin list`)."),
     force: bool = typer.Option(False, "--force", help="Back up and replace differing files."),
+    adopt_identical: bool = typer.Option(
+        False,
+        "--adopt-identical",
+        help="Claim an identical legacy installation so uninstall may remove it.",
+    ),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show the exact files, change nothing."),
 ):
     """Install a host integration (idempotent, reversible)."""
     p = _resolve_plugin(name)
     if dry_run:
         typer.echo(f"Would install '{p.name}':")
-        for item in plugins.plan(p):
+        for item in plugins.plan(p, adopt_identical=adopt_identical):
             typer.echo(f"  {item['action']:<24} {item['dest']}")
         return
     try:
-        for r in plugins.install(p, force=force):
+        for r in plugins.install(p, force=force, adopt_identical=adopt_identical):
             typer.echo(f"  {r['result']:<28} {r['dest']}")
     except plugins.PluginError as e:
         typer.echo(str(e), err=True)
@@ -1224,8 +1515,15 @@ def plugin_uninstall(
 ):
     """Remove a host integration; restores any backed-up user file."""
     p = _resolve_plugin(name)
-    for r in plugins.uninstall(p):
-        typer.echo(f"  {r['result']:<28} {r['dest']}")
+    try:
+        results = plugins.uninstall(p)
+    except plugins.PluginError as e:
+        for result in e.results:
+            typer.echo(f"  {result['result']:<28} {result['dest']}")
+        typer.echo(str(e), err=True)
+        raise typer.Exit(EXIT_RUNTIME) from e
+    for result in results:
+        typer.echo(f"  {result['result']:<28} {result['dest']}")
 
 
 @plugin_app.command("doctor")
@@ -1239,3 +1537,218 @@ def plugin_doctor():
 
 if __name__ == "__main__":
     app()
+
+
+# --- contract (versioned HTTP API contract — TASK-018A) ------------------------------
+
+# The API is a product contract: exported to a byte-stable artifact, and every
+# change classified before it can land. Exit codes are stable for CI:
+#   0 compatible (additive/risky only)
+#   1 breaking change
+#   3 no baseline, or a baseline that cannot be trusted
+#   4 this install has no HTTP API to describe (the [server] extra is missing)
+# 4 is deliberately NOT 1: CI must be able to tell "the API broke" from "the
+# optional extra was not installed", and the second must never read as the first.
+EXIT_CONTRACT_BREAKING = 1
+EXIT_CONTRACT_NO_SERVER = 4
+
+
+def _repo_root() -> Path:
+    """Repository root holding the contract artifacts.
+
+    Walks up from the working directory so the command behaves the same from a
+    subdirectory; falls back to cwd (first export in a fresh tree). Override with
+    AGENTROUTER_CONTRACT_ROOT.
+    """
+    override = os.environ.get("AGENTROUTER_CONTRACT_ROOT")
+    if override:
+        return Path(override)
+    start = Path.cwd().resolve()
+    for candidate in (start, *start.parents):
+        if (candidate / contract.CONTRACT_DIR).is_dir() or (candidate / ".git").exists():
+            return candidate
+    return start
+
+
+@contract_app.command("export")
+def contract_export(
+    accept_breaking: bool = typer.Option(
+        False,
+        "--accept-breaking",
+        help="Deliberately record a breaking change (requires --reason).",
+    ),
+    reason: str | None = typer.Option(
+        None, "--reason", help="Why the breaking change is intended; stored in the manifest."
+    ),
+):
+    """Write the canonical OpenAPI contract + provenance manifest.
+
+    Refuses to overwrite a baseline when doing so would silently record a
+    breaking change: that needs an explicit, reviewed decision.
+    """
+    root = _repo_root()
+    try:
+        current = contract.canonical_openapi()
+    except contract.ContractError as e:
+        typer.echo(f"Contract export failed: {e}", err=True)
+        raise typer.Exit(EXIT_RUNTIME) from e
+
+    try:
+        baseline = contract.load_baseline(root)
+    except contract.BaselineMissing:
+        baseline = None  # genuinely the first export: nothing to protect yet
+    except contract.ContractError as e:
+        # A baseline that exists but cannot be read must NOT be treated as
+        # absent. Doing so turns "corrupt the file" into a way to erase the
+        # breaking-change refusal and have export overwrite it with exit 0.
+        typer.echo(f"Refusing to overwrite an unreadable baseline: {e}", err=True)
+        typer.echo(
+            "Why: it may still describe a contract this change breaks. Restore it "
+            "from git (git checkout -- contracts/) and re-run.",
+            err=True,
+        )
+        raise typer.Exit(EXIT_REGISTRY) from e
+
+    if baseline is not None:
+        report = contract.diff_contracts(baseline, current)
+        if report.breaking and not accept_breaking:
+            typer.echo(
+                f"Refusing to update the baseline: {len(report.breaking)} breaking change(s).",
+                err=True,
+            )
+            for c in report.breaking:
+                typer.echo(f"  [breaking] {c.location}: {c.kind} — {c.detail}", err=True)
+            typer.echo(
+                "Why: overwriting the baseline would erase the incompatibility instead of "
+                "surfacing it to API clients.",
+                err=True,
+            )
+            typer.echo(
+                "Next: revert the incompatible change, or re-run with "
+                '--accept-breaking --reason "<owner-reviewed justification>".',
+                err=True,
+            )
+            raise typer.Exit(EXIT_CONTRACT_BREAKING)
+        if report.breaking and accept_breaking and not reason:
+            typer.echo("--accept-breaking requires --reason.", err=True)
+            raise typer.Exit(EXIT_USAGE)
+
+    # Preserve any prior acceptances BEFORE the manifest is rewritten: the record
+    # is an append-only history, not a slot the next routine export can erase.
+    manifest_path = root / contract.CONTRACT_DIR / contract.MANIFEST_FILE
+    history: list = []
+    if manifest_path.exists():
+        try:
+            history = (
+                json.loads(manifest_path.read_text(encoding="utf-8")).get(
+                    "accepted_breaking_changes"
+                )
+                or []
+            )
+        except (OSError, ValueError):
+            history = []
+
+    try:
+        path, doc = contract.export_contract(root)
+    except contract.ContractError as e:
+        typer.echo(f"Contract export failed: {e}", err=True)
+        raise typer.Exit(EXIT_RUNTIME) from e
+
+    # Only a real, detected incompatibility may be recorded — otherwise the
+    # provenance could assert a breaking change that never happened.
+    breaking_now = (
+        contract.diff_contracts(baseline, current).breaking if baseline is not None else []
+    )
+    if breaking_now and accept_breaking and reason:
+        history.append(
+            {
+                "reason": reason,
+                "product_version": __version__,
+                "changes": [c.as_dict() for c in breaking_now],
+            }
+        )
+        typer.echo(f"Recorded an accepted breaking change: {reason}")
+    if history:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["accepted_breaking_changes"] = history
+        manifest_path.write_text(contract.dumps(manifest), encoding="utf-8")
+
+    ops = sum(
+        1
+        for methods in doc.get("paths", {}).values()
+        for m in methods
+        if m in ("get", "put", "post", "delete", "patch")
+    )
+    typer.echo(f"Wrote {path} ({ops} operations).")
+    typer.echo("Next: commit the contract, then: agentrouter contract check")
+
+
+@contract_app.command("check")
+def contract_check(
+    as_json: bool = typer.Option(False, "--json", help="Machine-readable report on stdout."),
+    out: Path | None = typer.Option(None, "--out", help="Also write the JSON report here."),
+    baseline: Path | None = typer.Option(
+        None,
+        "--baseline",
+        help="Compare against this contract file instead of the committed one. "
+        "CI uses it to check against the PR's base branch, so deleting the "
+        "committed contract cannot turn a breaking change green.",
+    ),
+):
+    """Compare the live API against the committed contract. Never regenerates it."""
+    root = _repo_root()
+    try:
+        report, _current = contract.check(root, baseline_path=baseline)
+    except RecursionError as e:  # pathological $ref nesting in a baseline
+        typer.echo("Contract check failed: baseline is nested too deeply to compare.", err=True)
+        raise typer.Exit(EXIT_REGISTRY) from e
+    except contract.ServerExtraMissing as e:
+        # Not a contract problem: there is no API to describe in this install, so
+        # `contract export` would fail the same way. Say that instead, with an
+        # exit code CI cannot confuse with a real breaking change.
+        if as_json:
+            typer.echo(json.dumps({"ok": False, "error": str(e)}, indent=2))
+        else:
+            typer.echo(f"Contract check failed: {e}", err=True)
+        raise typer.Exit(EXIT_CONTRACT_NO_SERVER) from e
+    except contract.ContractError as e:  # missing or untrustworthy baseline
+        # A missing or unreadable baseline is a hard failure, never a silent pass.
+        if as_json:
+            typer.echo(json.dumps({"ok": False, "error": str(e)}, indent=2))
+        else:
+            typer.echo(f"Contract check failed: {e}", err=True)
+            typer.echo("Next: agentrouter contract export, then commit the contract.", err=True)
+        raise typer.Exit(EXIT_REGISTRY) from e
+
+    payload = report.as_dict()
+    if out is not None:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(contract.dumps(payload), encoding="utf-8")
+
+    if as_json:
+        typer.echo(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        counts = payload["counts"]
+        if not report.changes:
+            typer.echo("Contract unchanged: the live API matches the committed contract.")
+        else:
+            for c in report.breaking + report.accepted + report.risky + report.additive:
+                typer.echo(f"[{c.severity:<9}] {c.location}: {c.kind} — {c.detail}")
+            typer.echo(
+                f"\n{counts['breaking']} breaking, {counts['accepted']} owner-accepted, "
+                f"{counts['risky']} risky, {counts['additive']} additive."
+            )
+            if report.accepted:
+                typer.echo(
+                    "Owner-accepted breaks are recorded in the contract manifest and do "
+                    "not fail this check. They are still breaking changes for clients."
+                )
+        if report.breaking:
+            typer.echo(
+                "\nBreaking changes require an owner-reviewed decision: revert them, or "
+                're-export with --accept-breaking --reason "...".',
+                err=True,
+            )
+
+    if report.breaking:
+        raise typer.Exit(EXIT_CONTRACT_BREAKING)

@@ -1,0 +1,24 @@
+id: TASK-002
+title: In-memory rate limiting + idempotency keys on the local server (backlog L6)
+source: loop/BACKLOG.yaml#L6
+priority: 5
+status: done
+risk: low
+customer_impact: API integrators get predictable 429s and safe retries (no duplicate decisions)
+affected_surfaces: [server]
+dependencies: []
+acceptance_criteria:
+  - rate limiting is opt-in via env (disabled by default); returns 429 + Retry-After when exceeded
+  - Idempotency-Key header replays the prior response for a repeated POST within a TTL
+  - default behavior unchanged (existing 380 tests stay green); no new hard deps
+  - thread-safe in-memory stores; structured error shape reused
+verification_commands:
+  - python -m pytest -q
+  - ruff check agentrouter && ruff format --check agentrouter
+  - bandit -c pyproject.toml -r agentrouter
+required_reviewers: [verification-engineer, security-reviewer-arros]
+repair_iteration: 0
+created_at: "2026-07-18"
+updated_at: "2026-07-18"
+
+result: "PASS — 399 tests; HIGH+3 MEDIUM security findings fixed; audits clean"

@@ -1,0 +1,64 @@
+name: Critical Mutation Testing
+
+on:
+  pull_request:
+    paths:
+      - "agentrouter/safety.py"
+      - "agentrouter/controls.py"
+      - "agentrouter/engine.py"
+      - "agentrouter/hosts.py"
+      - "agentrouter/server/limits.py"
+      - "agentrouter/cli.py"
+      - "tests/**"
+      - "scripts/run_mutation_ci.py"
+      - "mutation-survivor-allowlist.json"
+      - "pyproject.toml"
+      - ".github/workflows/mutation.yml"
+  push:
+    branches: ["release/**"]
+    paths:
+      - "agentrouter/safety.py"
+      - "agentrouter/controls.py"
+      - "agentrouter/engine.py"
+      - "agentrouter/hosts.py"
+      - "agentrouter/server/limits.py"
+      - "agentrouter/cli.py"
+      - "tests/**"
+      - "scripts/run_mutation_ci.py"
+      - "mutation-survivor-allowlist.json"
+      - "pyproject.toml"
+      - ".github/workflows/mutation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  critical-modules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install bounded mutation environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,property,server,mutation]"
+          python -c "import mutmut; from importlib.metadata import version; assert version('mutmut') == '3.6.0'"
+      - name: Run bounded critical-module campaign
+        run: python scripts/run_mutation_ci.py --timeout-seconds 2100 --max-children 4
+      - name: Upload mutation evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: critical-mutation-report
+          path: artifacts/mutation/
+          if-no-files-found: error
+          retention-days: 14

@@ -8,12 +8,16 @@ import threading
 import time
 
 import pytest
-import uvicorn
-from typer.testing import CliRunner
 
-from agentrouter.cli import app as cli_app
-from agentrouter.sdk import AgentRouterClient, AgentRouterError
-from agentrouter.server.app import create_app
+pytest.importorskip("fastapi")  # optional [server] extra
+pytest.importorskip("uvicorn")  # optional [server] extra
+
+import uvicorn  # noqa: E402
+from typer.testing import CliRunner  # noqa: E402
+
+from agentrouter.cli import app as cli_app  # noqa: E402
+from agentrouter.sdk import AgentRouterClient, AgentRouterError  # noqa: E402
+from agentrouter.server.app import create_app  # noqa: E402
 
 runner = CliRunner()
 

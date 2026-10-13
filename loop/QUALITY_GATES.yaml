@@ -1,0 +1,106 @@
+# Machine-readable desired thresholds and current evidence for AgentRouter OS.
+version: 2
+updated: 2026-07-20
+canonical_release_ready: false
+
+testing:
+  mandatory_tests_pass:
+    required: true
+    current: pending_full_rerun
+    last_full_baseline_passed: 427
+  unexplained_failures:
+    required: 0
+    current: 0
+  every_fixed_bug_has_regression:
+    required: true
+    current: true
+
+coverage:
+  line_min: 0.90
+  branch_min: 0.85
+  safety_execution_gateway_branch: 1.00
+  policy_enforcement_branch: 1.00
+  current: pending_final_measurement
+
+mutation:
+  overall_min: 0.85
+  safety_execution_policy_min: 0.95
+  measured: false
+  current: pending_first_linux_ci_run
+  fabricated_score: false
+
+evaluation:
+  grade_over_100:
+    achieved: 98.23
+  task_type_macro_f1:
+    threshold: 0.90
+    pass: true
+  high_risk_recall:
+    threshold: 1.00
+    pass: true
+  approval_accuracy:
+    threshold: 1.00
+    pass: true
+  tool_needs_f1:
+    threshold: 0.90
+    pass: true
+  context_band_accuracy:
+    threshold: 0.90
+    achieved: 0.6667
+    macro_f1: 0.6792
+    confidence_interval_95: [0.5207, 0.7864]
+    dataset: frozen_45_case_holdout
+    checksum: ca07dfa09f08cd877d383067b8e1163c0f196a5a1f0c4e641adefed12b17508f
+    pass: false
+    note: >-
+      Shipped rules-active. TASK-009 decision A proved a dataset ceiling: a dev-only
+      learned model (0.6889) and hybrid (0.6444) also fail 0.90; learned is not
+      significantly better than rules and has lower macro-F1. See
+      loop/tasks/TASK-009-context-band-holdout/learned-model-study.md.
+  high_risk_gated:
+    threshold: 1.00
+    pass: true
+  synthetic_routing_top1:
+    threshold: 0.95
+    pass: true
+
+static_quality:
+  ruff_clean: pending_full_rerun
+  format_clean: pending_full_rerun
+  type_checker_green: pending_full_rerun
+  no_broad_new_ignores: true
+
+security:
+  bandit_clean_or_justified: pending_final_rerun
+  pip_audit_clean_or_mitigated: pending_final_rerun
+  secret_scan_clean: pending_final_rerun
+  plugin_permission_audit_pass: pending_independent_reaudit
+
+packaging:
+  wheel_and_sdist_build: pending_final_rerun
+  wheel_installs_clean_env: pending_final_rerun
+  cli_starts: pending_final_rerun
+  plugins_included: pending_final_rerun
+  install_upgrade_uninstall: pending_final_rerun
+
+platforms:
+  windows_local_green: pending_final_rerun
+  github_linux_green: false
+  github_windows_green: false
+
+open:
+  - id: context_band_generalization
+    blocking: true
+    reason: >-
+      frozen held-out accuracy 0.6667 is below the unchanged 0.90 threshold; decision A
+      proved a dataset ceiling (rules 0.6667 / learned 0.6889 / hybrid 0.6444 all fail)
+  - id: mutation_score
+    blocking: true
+    reason: real mutmut 3.6.0 score awaits the first Linux GitHub Actions run
+  - id: release_branch_ci
+    blocking: true
+    reason: release branch and its GitHub checks do not exist yet
+
+historical_corrections:
+  - claim: context_band_accuracy_0.945_release_ready
+    correction: 0.945 was in-sample gold-set accuracy, not held-out generalization

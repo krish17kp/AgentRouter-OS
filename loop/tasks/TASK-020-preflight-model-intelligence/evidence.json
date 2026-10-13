@@ -1,0 +1,26 @@
+{
+  "criteria": [
+    "harness.detect_harness() evidence-only",
+    "usage.check_usage() honest UNKNOWN/UNSUPPORTED, never fabricates",
+    "doctor always runs check_harness(); --verify-live isolates provider failures",
+    "route --verify-live re-ranks EXHAUSTED and explains why",
+    "no secret value ever printed",
+    "zero default-behavior change"
+  ],
+  "commands": [
+    "pytest -q",
+    "pytest tests/test_harness.py tests/test_usage.py tests/test_diagnostics.py tests/test_host_states.py tests/test_cli_smoke.py -q",
+    "ruff check . && ruff format --check .",
+    "bandit -c pyproject.toml -r agentrouter",
+    "pip-audit -r requirements.txt"
+  ],
+  "results": [
+    "pytest -q: 970 passed, 3 skipped (baseline before this task: 936 passed, 3 skipped)",
+    "targeted suite: 82 passed",
+    "ruff check/format: All checks passed, 348 files already formatted",
+    "bandit: 0 issues (High/Medium/Low all 0)",
+    "pip-audit: no known vulnerabilities",
+    "real-environment smoke: agentrouter init -> doctor (1.13s) -> doctor --verify-live (0.98s) -> route --verify-live, all truthful, no secrets, no network call without the flag (confirmed by an independent reviewer via strace: 0 connect() calls)",
+    "3 independent read-only reviews (verification-engineer, security-reviewer-arros, product-architect): 0 CRITICAL/HIGH; 3 MEDIUM + 2 LOW + 1 correctness bug found and fixed; 2 design judgment calls accepted with recorded rationale — see audit.md/repairs.md"
+  ]
+}

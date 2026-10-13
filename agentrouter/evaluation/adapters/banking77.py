@@ -10,9 +10,7 @@ by virtue of being about money. Mapping is provenance=heuristic, pending review.
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from ..base import Availability, DatasetAdapter, DatasetMetadata
+from ..base import Availability, DatasetAdapter, DatasetMetadata, fixture_path
 from ..schema import (
     AnnotationMethod,
     EvaluationCase,
@@ -21,9 +19,7 @@ from ..schema import (
     ReviewStatus,
 )
 
-_FIXTURE = (
-    Path(__file__).resolve().parents[3] / "evaluation" / "fixtures" / "banking77_sample.jsonl"
-)
+_FIXTURE = fixture_path("banking77_sample.jsonl")
 
 
 class Banking77Adapter(DatasetAdapter):

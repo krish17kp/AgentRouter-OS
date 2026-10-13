@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import contextlib
 import getpass
 import json
 import os
 import sqlite3
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -32,18 +34,95 @@ def current_user() -> str:
     return os.environ.get("AGENTROUTER_USER") or getpass.getuser()
 
 
-def connect(home: Path) -> sqlite3.Connection:
-    home.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(home / "agentrouter.db")
-    conn.executescript(_SCHEMA)
+# How long a writer waits for a competing write before giving up. SQLite's
+# default is 0 — the very first contended write fails immediately — which is why
+# concurrent routing returned HTTP 500 "database is locked" (TASK-018B). Five
+# seconds is far longer than any write here takes and still bounded, so a truly
+# wedged database still fails rather than hanging a request forever.
+_BUSY_TIMEOUT_MS = 15_000
+
+# SQLite permits exactly one writer at a time, so N threads racing for the file
+# lock is the wrong shape: they compete, and whoever loses for longer than
+# busy_timeout gets an error instead of a turn. WAL + busy_timeout alone was
+# enough on a fast machine and NOT enough on slower CI runners, where 200
+# concurrent routes still produced 3 x "database is locked" at p99 9s.
+#
+# Serialising writers inside the process converts "compete and sometimes fail"
+# into "queue and always succeed". It costs nothing in throughput, because
+# SQLite was going to serialise them anyway — it just does the queuing somewhere
+# that can wait politely. busy_timeout still matters for a SECOND process (the
+# CLI writing while the server runs), which this lock cannot coordinate.
+_WRITE_LOCK = threading.Lock()
+
+
+def write_lock() -> threading.Lock:
+    """The process-wide serialiser for SQLite writes. See `_WRITE_LOCK`."""
+    return _WRITE_LOCK
+
+
+def _ensure_schema(conn: sqlite3.Connection) -> None:
+    """Create tables and apply in-place migrations. Runs only when needed.
+
+    This used to run on every ``connect()``, and the server opens a connection
+    per request — so every request paid for a schema script plus a
+    ``PRAGMA table_info``, and two processes could race the ``ALTER TABLE``.
+    """
+    tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    if not {"decisions", "feedback"} <= tables:
+        conn.executescript(_SCHEMA)
     cols = {row[1] for row in conn.execute("PRAGMA table_info(decisions)")}
     if "user" not in cols:  # migrate pre-M7 DBs in place
         conn.execute("ALTER TABLE decisions ADD COLUMN user TEXT")
         conn.commit()
+
+
+def connect(home: Path) -> sqlite3.Connection:
+    home.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(home / "agentrouter.db")
+    # WAL lets readers proceed while a write is in flight, and busy_timeout makes
+    # a contended writer WAIT instead of failing outright. Without both, 200
+    # concurrent routes produced HTTP 500s from sqlite3.OperationalError.
+    # journal_mode is persistent (stored in the file), but setting it per
+    # connection is cheap and keeps a database created by an older version from
+    # silently staying in rollback-journal mode.
+    with contextlib.suppress(sqlite3.DatabaseError):
+        conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute(f"PRAGMA busy_timeout={_BUSY_TIMEOUT_MS}")
+    _ensure_schema(conn)
     return conn
 
 
+def snapshot(home: Path, destination: Path) -> Path:
+    """Write a complete, self-contained copy of the decision log to ``destination``.
+
+    Copying ``agentrouter.db`` with a filesystem copy is WRONG once WAL is enabled
+    (TASK-018B), and silently so: recently committed rows live in the ``-wal``
+    sidecar until a checkpoint, so a naive copy can yield a database with **no
+    tables at all** — verified, not theoretical. Anything that backs up, exports
+    or bundles the database must come through here.
+
+    ``sqlite3``'s online backup API takes a consistent snapshot including whatever
+    is still in the WAL, while other connections keep reading and writing.
+    """
+    source = connect(home)
+    try:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        target = sqlite3.connect(destination)
+        try:
+            source.backup(target)
+        finally:
+            target.close()
+    finally:
+        source.close()
+    return destination
+
+
 def save_decision(conn: sqlite3.Connection, task: str, payload: dict) -> str:
+    with _WRITE_LOCK:
+        return _save_decision_locked(conn, task, payload)
+
+
+def _save_decision_locked(conn: sqlite3.Connection, task: str, payload: dict) -> str:
     cur = conn.execute(
         "INSERT INTO decisions (created_at, task, payload, user) VALUES (?, ?, ?, ?)",
         (datetime.now(timezone.utc).isoformat(), task, json.dumps(payload), current_user()),

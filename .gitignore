@@ -28,6 +28,14 @@ build/
 *.egg-info/
 agentrouter_os.egg-info/
 
+# Node / TypeScript SDK
+node_modules/
+*.tsbuildinfo
+
+# Generated SBOMs (produced at release time / in CI)
+*.cdx.json
+sbom.json
+
 # OS / editor
 .DS_Store
 Thumbs.db
@@ -41,9 +49,23 @@ evaluation/reports/generated/
 artifacts/evaluation/current/
 mlruns/
 .mutmut-cache/
+mutants/
+artifacts/mutation/
 .promptfoo/
 promptfoo-output/
 benchmark-results/
 *.prof
 *.benchmark.json
 .hypothesis/
+
+# Graphify (code-graph tool) generated output + local mutmut cache file
+graphify-out/
+graph.html
+raw/
+.mutmut-cache
+
+# Autoskill marketplace tooling (agent-config, not part of the product)
+/.agents/
+/package.json
+/package-lock.json
+/skills-lock.json

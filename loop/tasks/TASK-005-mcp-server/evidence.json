@@ -1,0 +1,40 @@
+{
+  "criteria": [
+    {
+      "id": "AC1",
+      "text": "read-only route/explain tools",
+      "status": "PASS",
+      "evidence": "TOOLS + registration tests"
+    },
+    {
+      "id": "AC2",
+      "text": "no execution; dry-run only",
+      "status": "PASS",
+      "evidence": "security review: no subprocess reachable"
+    },
+    {
+      "id": "AC3",
+      "text": "mcp optional extra",
+      "status": "PASS",
+      "evidence": "import works without fastapi after repair; regression test"
+    },
+    {
+      "id": "AC4",
+      "text": "reuse service.py",
+      "status": "PASS",
+      "evidence": "one-line delegations"
+    },
+    {
+      "id": "AC5",
+      "text": "tests + suite green",
+      "status": "PASS",
+      "evidence": "426 passed; bandit 0; ruff clean"
+    }
+  ],
+  "commands": [
+    "pytest tests/test_mcp_server.py -q => 8 passed",
+    "pytest -q => 426 passed",
+    "ruff clean",
+    "bandit 0"
+  ]
+}
