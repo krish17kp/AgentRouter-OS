@@ -14,15 +14,16 @@ authoritative for Claude sessions; where the two disagree, this file wins.
 
 | Field | Value |
 |---|---|
-| Last updated | 2026-10-13 |
+| Last updated | 2026-10-13 (Rust R1 session) |
 | Repository | `/run/media/krish/New Volume/Krish/04 - Dev Projects/Agentrouteros` (path confirmed this session; prior path strings below are historical and may not match the current mount) |
 | Filesystem | NTFS/fuseblk, verified **rw** this session (`findmnt` + write test) |
-| Active branch | `task/rust-migration-foundation`, branched from RC tip `5ce3234` |
+| Rust toolchain | **Installed this session** via official `rustup` (owner-authorized) — `rustc`/`cargo` 1.99.0 stable. Was absent at session start. |
+| Active branch | `task/rust-r1-workspace`, branched from `task/rust-migration-foundation` (PR #24, left untouched at `2bcaf5e`) |
 | RC | **`5ce3234`** (merge of PR #23, `task/fix-registry-staleness-test-fragility`, on top of PR #19's handoff-docs reconciliation). Open PRs/branches ahead of this point, per `gh pr list` this session: #22 (mcp dep pin), #21 (hook interpreter fix), #20 (eval CLI coverage), #16 (RC→`main` promotion, still blocked — see Release truth), #13 (TASK-019, still unmerged per instruction). The four branches this file previously listed as "safe to delete, blocked by `pre_tool_guard`" were not re-verified this session — treat that claim as historical, not current, until re-checked. |
 | `main` | not re-verified this session; historical value below (`602321a`) may be stale |
 | Open PRs | **#16** (RC → `main`, still blocked only on `context_band_accuracy`, see Release truth) · **#13** (TASK-019, historical state below not re-verified this session) · **#20, #21, #22** (opened since this file's last update, not yet reviewed by this session) |
-| Milestone | **Rust-migration foundation documentation (this session)** — ADR recorded (AD-7), `RUST_MIGRATION_PLAN.md` added, architecture/roadmap/milestones/testing/release docs annotated to distinguish the shipping Python implementation from the approved Rust target. No Rust code written, no Python code touched, no release gate changed. |
-| Next milestone | Open a PR for this session's doc changes; owner review. Everything below this point in the file is **historical** (prior sessions' own "what shipped" records) and is preserved, not re-verified, except where a line explicitly says otherwise. |
+| Milestone | **Rust milestone R1 shipped (this session)** — real Rust code, not just docs: Cargo workspace + `agentrouter-core` crate (6 enums + `Classification` struct mirroring `agentrouter/schema.py` field-for-field), `print_classification` bin, and a real Python/Rust JSON-compatibility test (`tests/test_rust_compat.py`) that diffs live Pydantic output against live Rust serde output. `cargo build`/`test`/`clippy -D warnings`/`fmt --check` all green; full `pytest -q` 982 passed/1 skipped (baseline 981/1, +1 new test, 0 regressions). No Python code modified, no release gate touched. |
+| Next milestone | R2 (registries + classification port) per `RUST_MIGRATION_PLAN.md`'s milestone table. Add a CI job that builds/tests the Rust workspace (not yet done this session) before starting R2. Everything below this point in the file is **historical** (prior sessions' own "what shipped" records) and is preserved, not re-verified, except where a line explicitly says otherwise. |
 
 ### Graphify — corrected stale claim
 
