@@ -21,6 +21,7 @@ import logging
 import os
 import re
 import traceback
+import unicodedata
 from collections.abc import Iterator
 from typing import Any
 
@@ -34,6 +35,40 @@ _OTEL_ENV = "AGENTROUTER_OTEL"
 _request_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "agentrouter_request_id", default=None
 )
+
+
+# Caller-supplied text that gets echoed back in an error message. Unbounded, a
+# 5 KB identifier produces a 5 KB error; unsanitised, CR/LF forges extra lines in
+# anything that captures the output and a bidi override (U+202E) reverses the
+# display of everything after it.
+ECHO_LIMIT = 64
+# Unicode category, not a hand-curated range list: "Cc" (control) and "Cf"
+# (format) together cover every control, bidi-override, zero-width and
+# interlinear-annotation character Unicode defines -- including ones a
+# hand-written range list missed (U+061C ARABIC LETTER MARK, U+2060-2064,
+# U+00AD SOFT HYPHEN, U+180E, U+FFF9-FFFB), and any added in a future Unicode
+# version. Matching by category also means no literal bidi/control character
+# needs to appear in this source file, avoiding the Trojan Source problem in
+# miniature (bandit B613) that an explicit range list requires escapes for.
+_UNSAFE_ECHO_CATEGORIES = frozenset({"Cc", "Cf"})
+# U+2028/U+2029 are Unicode category "Zl"/"Zp" (line/paragraph separator), not
+# Cc/Cf, so the category check above does not catch them -- but they are not
+# control characters either, and `str.splitlines()` treats both as line
+# boundaries. A name containing one still forges a line in anything that
+# processes the output line-wise, the exact attack this function exists to
+# stop, so they are stripped explicitly. `test_observability.py` derives the
+# full line-boundary set from Python itself rather than trusting this list.
+_UNSAFE_ECHO_EXTRA = "\u2028\u2029"
+
+
+def safe_echo(value: object, limit: int = ECHO_LIMIT) -> str:
+    """Make caller-supplied text safe to place in a message shown to a human."""
+    cleaned = "".join(
+        ch
+        for ch in str(value)
+        if unicodedata.category(ch) not in _UNSAFE_ECHO_CATEGORIES and ch not in _UNSAFE_ECHO_EXTRA
+    )
+    return cleaned if len(cleaned) <= limit else cleaned[:limit] + "\u2026"
 
 
 def _truthy(value: str | None) -> bool:

@@ -13,7 +13,6 @@ from __future__ import annotations
 import hashlib
 import hmac
 import os
-import re
 import uuid
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, Security
@@ -50,25 +49,10 @@ def _error(status: int, code: str, message: str) -> JSONResponse:
     return JSONResponse(status_code=status, content={"error": {"code": code, "message": message}})
 
 
-# Identifiers we echo back are caller-supplied, so they are bounded and stripped
-# before they reach a message. Unbounded, a 5 KB id produced a 5 KB error body;
-# unsanitised, CR/LF forged extra lines in anything that logs the message, and a
-# bidi override (U+202E) reversed the display of everything after it. Real ids
-# look like `d_00001`, so this never truncates a legitimate one.
-_ECHO_LIMIT = 64
-# The ranges are written as escapes on purpose: spelling them literally puts real
-# bidi overrides into this source file, which is the Trojan Source problem in
-# miniature (bandit B613 flags exactly that). C0/C1 controls, zero-width and
-# directional marks, embeddings/overrides, isolates, and the BOM.
-_UNSAFE_ECHO = re.compile(
-    "[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]"
-)
-
-
-def _echo(value: str) -> str:
-    """Make a caller-supplied identifier safe to place in an error message."""
-    cleaned = _UNSAFE_ECHO.sub("", str(value))
-    return cleaned if len(cleaned) <= _ECHO_LIMIT else cleaned[:_ECHO_LIMIT] + "…"
+# Identifiers echoed back to a caller are bounded and stripped by the shared
+# helper in `observability`, so the API and the plugin installer cannot drift
+# apart on what "safe to display" means.
+_echo = observability.safe_echo
 
 
 def _api_key_ok(provided: str | None, expected: str | None) -> bool:

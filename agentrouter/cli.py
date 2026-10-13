@@ -1527,12 +1527,38 @@ def plugin_uninstall(
 
 
 @plugin_app.command("doctor")
-def plugin_doctor():
-    """Report install status and destination paths for every plugin."""
-    for p in plugins.PLUGINS.values():
-        typer.echo(f"{p.name}: {plugins.status(p)}  (root: {plugins.dest_root(p)})")
-        for item in plugins.plan(p):
-            typer.echo(f"  {item['action']:<24} {item['dest']}")
+def plugin_doctor(
+    as_json: bool = typer.Option(False, "--json", help="Machine-readable findings."),
+):
+    """Diagnose every plugin and say exactly how to fix what is wrong.
+
+    Exit code: 0 when everything is installed and unmodified, 1 when something
+    is blocked (a destination AgentRouter refuses to write through, or an
+    unusable ownership record), 2 when something merely needs attention.
+
+    Never prints file contents — this output is meant to be pasteable into a
+    support request.
+    """
+    findings = plugins.diagnose_all()
+    overall = plugins.worst_status(findings)
+
+    if as_json:
+        typer.echo(json.dumps({"status": overall, "findings": findings}, indent=2))
+    else:
+        for p in plugins.PLUGINS.values():
+            typer.echo(f"{p.name}: {plugins.status(p)}  (root: {plugins.dest_root(p)})")
+            for finding in [f for f in findings if f["plugin"] == p.name]:
+                mark = {"ok": "OK  ", "attention": "NOTE", "blocked": "STOP"}[finding["status"]]
+                where = finding.get("dest", finding["check"])
+                typer.echo(f"  [{mark}] {where}")
+                typer.echo(f"         {finding['summary']}")
+                if finding["remedy"]:
+                    typer.echo(f"         -> {finding['remedy']}")
+
+    if overall == plugins.DIAG_BLOCKED:
+        raise typer.Exit(EXIT_RUNTIME)
+    if overall == plugins.DIAG_ATTENTION:
+        raise typer.Exit(EXIT_USAGE)
 
 
 if __name__ == "__main__":

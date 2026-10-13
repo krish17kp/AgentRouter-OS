@@ -20,6 +20,8 @@ from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path, PurePosixPath
 
+from . import observability
+
 _BAK_SUFFIX = ".agentrouter-bak"
 _STATE_DIR = ".agentrouter-state"
 _STATE_SCHEMA = 2
@@ -79,7 +81,11 @@ def get_plugin(name: str) -> Plugin:
     try:
         return PLUGINS[name]
     except KeyError:
-        raise PluginError(f"unknown plugin '{name}'. Known: {', '.join(sorted(PLUGINS))}") from None
+        # The name came from the caller, so it is bounded and stripped before it
+        # is echoed. Unbounded, a 5 KB argument produced a 5 KB error; with CR/LF
+        # intact it could forge extra lines in anything capturing CLI output.
+        safe = observability.safe_echo(name)
+        raise PluginError(f"unknown plugin '{safe}'. Known: {', '.join(sorted(PLUGINS))}") from None
 
 
 def _safe_relative(value: str, label: str) -> Path:
@@ -118,8 +124,14 @@ def dest_root(p: Plugin) -> Path:
 
 
 def _is_link_or_reparse(path: Path) -> bool:
-    if path.is_symlink():
-        return True
+    try:
+        if path.is_symlink():
+            return True
+    except OSError as exc:
+        # A permission-denied parent (or any other os-level failure) means
+        # whether this is a link cannot be determined -- fail closed with an
+        # honest reason instead of a raw traceback standing in for a diagnosis.
+        raise PluginError(f"could not inspect {path}: {exc}") from None
     is_junction = getattr(os.path, "isjunction", None)
     if is_junction is not None and is_junction(path):
         return True
@@ -127,6 +139,8 @@ def _is_link_or_reparse(path: Path) -> bool:
         attrs = getattr(path.lstat(), "st_file_attributes", 0)
     except FileNotFoundError:
         return False
+    except OSError as exc:
+        raise PluginError(f"could not inspect {path}: {exc}") from None
     return bool(attrs & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))
 
 
@@ -158,6 +172,12 @@ def _path_exists(path: Path) -> bool:
         path.lstat()
     except FileNotFoundError:
         return False
+    except OSError as exc:
+        # A parent directory with no read/execute permission (or any other
+        # os-level failure) means existence genuinely cannot be determined --
+        # that is not the same as "does not exist", and treating it as such
+        # would let install/uninstall logic proceed as if nothing were there.
+        raise PluginError(f"could not check whether {path} exists: {exc}") from None
     return True
 
 
@@ -235,7 +255,13 @@ def _src_bytes(rel: str) -> bytes:
     source = base.joinpath(*safe.parts)
     if not source.is_file():
         raise PluginError(f"packaged plugin source is missing: {rel}")
-    return source.read_bytes()
+    try:
+        return source.read_bytes()
+    except OSError as exc:
+        # The write-failure sibling of this problem was already fixed in
+        # _temp_file; a read failure (a bad sector, a corrupt install medium)
+        # deserves the same typed error rather than a bare traceback.
+        raise PluginError(f"could not read the packaged plugin source {rel}: {exc}") from exc
 
 
 def _backup_path(root: Path, dest: Path) -> Path:
@@ -357,8 +383,21 @@ def _serialized_state(state: dict) -> bytes:
 
 
 def _temp_file(parent: Path, data: bytes, *, mode: int = 0o600) -> Path:
-    parent.mkdir(parents=True, exist_ok=True)
-    fd, raw_path = tempfile.mkstemp(prefix=".agentrouter-tmp-", dir=parent)
+    """Stage bytes next to their destination, or fail with an actionable error.
+
+    Every other failure in this module raises `PluginError` with a remedy. A
+    write failure here used to escape as a bare `OSError`, so a full disk gave
+    the user exit 1, no output and a traceback — the one situation where a plain
+    sentence ("no space left; free some and retry") is worth most.
+    """
+    try:
+        parent.mkdir(parents=True, exist_ok=True)
+        fd, raw_path = tempfile.mkstemp(prefix=".agentrouter-tmp-", dir=parent)
+    except OSError as exc:
+        raise PluginError(
+            f"could not prepare a staging file in {parent}: {exc}. "
+            "Check free space and that the directory is writable."
+        ) from exc
     path = Path(raw_path)
     try:
         # POSIX-only: restrict the temp file to owner before writing. Windows lacks
@@ -370,7 +409,16 @@ def _temp_file(parent: Path, data: bytes, *, mode: int = 0o600) -> Path:
             stream.write(data)
             stream.flush()
             os.fsync(fd)
+    except OSError as exc:
+        os.close(fd)
+        path.unlink(missing_ok=True)
+        raise PluginError(
+            f"could not write the staging file {path}: {exc}. "
+            "Check free space and that the directory is writable."
+        ) from exc
     except BaseException:
+        # Anything else (KeyboardInterrupt, SystemExit) still propagates, but the
+        # partially written staging file is never left behind.
         os.close(fd)
         path.unlink(missing_ok=True)
         raise
@@ -1111,9 +1159,191 @@ def plan(p: Plugin, *, adopt_identical: bool = False) -> list[dict]:
     return out
 
 
-def status(p: Plugin) -> str:
+# Diagnostic severities, worst first (TASK-019).
+DIAG_OK = "ok"
+DIAG_ATTENTION = "attention"
+DIAG_BLOCKED = "blocked"
+_DIAG_ORDER = (DIAG_BLOCKED, DIAG_ATTENTION, DIAG_OK)
+
+# `plan()` already classifies every destination; diagnose maps those actions to a
+# severity and a remedy rather than recomputing the classification, so the two
+# can never disagree about what state a file is in.
+_ACTION_DIAGNOSIS: dict[str, tuple[str, str, str | None]] = {
+    "create": (
+        DIAG_ATTENTION,
+        "not installed",
+        "run: agentrouter plugin install {name}",
+    ),
+    "skip (identical, managed)": (DIAG_OK, "installed and unmodified", None),
+    "adopt identical legacy installation (managed)": (
+        DIAG_ATTENTION,
+        "an identical copy is already here but is not recorded as ours",
+        "it is byte-for-byte the shipped file, so adopting it changes nothing on "
+        "disk: agentrouter plugin install {name} --adopt-identical",
+    ),
+    "record pre-existing (preserved on uninstall)": (
+        DIAG_ATTENTION,
+        "a file is already there and is not ours",
+        "it will be preserved. To install over it: "
+        "agentrouter plugin install {name} --force  (the original is backed up)",
+    ),
+    # This single action covers two situations `plan()` cannot tell apart: a file
+    # AgentRouter installed and the user then edited, and a file that was never
+    # ours. The wording has to be true of both, because guessing wrong here would
+    # tell someone their own file is our modified copy.
+    "overwrite (backup first)": (
+        DIAG_ATTENTION,
+        "a different file is at this path — either your edit of ours, or your own",
+        "it is left alone. To install the shipped version over it: "
+        "agentrouter plugin install {name} --force  (the existing file is backed up)",
+    ),
+    "blocked (not a safe regular file)": (
+        DIAG_BLOCKED,
+        "the destination is not a plain file (link, reparse point, or extra hard link)",
+        "inspect it yourself and move it aside; AgentRouter will not write through it",
+    ),
+}
+
+
+def diagnose(p: Plugin) -> list[dict]:
+    """Structured health of one plugin: what state each file is in, and the fix.
+
+    Built on `plan()` so the diagnosis and the install preview can never
+    disagree. Reports paths and states only — never file contents, since this
+    output is meant to be pasteable into a support request.
+    """
     root = dest_root(p)
-    present = [_path_exists(_safe_dest(root, f.dest)) for f in p.files]
+    findings: list[dict] = []
+
+    if not _path_exists(root.parent) and not _path_exists(root):
+        findings.append(
+            {
+                "plugin": p.name,
+                "check": "host-root",
+                "status": DIAG_ATTENTION,
+                "summary": f"the host directory {root} does not exist yet",
+                "remedy": f"it is created on install: agentrouter plugin install {p.name}",
+            }
+        )
+
+    # A journal left behind means a previous run died part way through.
+    transaction = _transaction_path(root, p)
+    if _path_exists(transaction):
+        findings.append(
+            {
+                "plugin": p.name,
+                "check": "transaction",
+                "status": DIAG_ATTENTION,
+                "summary": "a previous install or uninstall did not finish",
+                "remedy": f"re-run it to recover: agentrouter plugin install {p.name}",
+            }
+        )
+
+    state_path = _state_path(root, p)
+    if _path_exists(state_path):
+        try:
+            _load_state(root, p)
+        except PluginError as exc:
+            findings.append(
+                {
+                    "plugin": p.name,
+                    "check": "ownership",
+                    "status": DIAG_BLOCKED,
+                    "summary": f"the ownership record is unusable ({type(exc).__name__})",
+                    "remedy": (
+                        "AgentRouter will not delete files it cannot prove it owns. "
+                        f"Remove {state_path} only if you are content to manage these "
+                        "files by hand afterwards."
+                    ),
+                }
+            )
+            return findings
+
+    try:
+        # Diagnose against the adoption-aware plan. It distinguishes an
+        # IDENTICAL pre-existing copy (safe to adopt, byte-for-byte ours) from a
+        # DIFFERENT file at the same path (never safe to assume). The default
+        # plan collapses both into "record pre-existing", which would offer the
+        # same remedy for a file we could adopt and a file that is not ours.
+        # Diagnosis does not mutate anything, so reading the richer plan is free.
+        items = plan(p, adopt_identical=True)
+    except PluginError as exc:
+        findings.append(
+            {
+                "plugin": p.name,
+                "check": "destination",
+                "status": DIAG_BLOCKED,
+                "summary": f"cannot inspect the destination: {exc}",
+                "remedy": "resolve the path above, then re-run this check",
+            }
+        )
+        return findings
+
+    for item in items:
+        status_, summary, remedy = _ACTION_DIAGNOSIS.get(
+            item["action"], (DIAG_ATTENTION, item["action"], None)
+        )
+        findings.append(
+            {
+                "plugin": p.name,
+                "check": "file",
+                "status": status_,
+                "dest": item["dest"],
+                "summary": summary,
+                "remedy": remedy.format(name=p.name) if remedy else None,
+            }
+        )
+    return findings
+
+
+def diagnose_all() -> list[dict]:
+    """Every plugin, worst-first-sortable. Never raises."""
+    out: list[dict] = []
+    for plugin in PLUGINS.values():
+        try:
+            out.extend(diagnose(plugin))
+        except Exception as exc:  # noqa: BLE001 - a doctor must not crash
+            out.append(
+                {
+                    "plugin": plugin.name,
+                    "check": "diagnose",
+                    "status": DIAG_BLOCKED,
+                    "summary": f"the check itself failed ({type(exc).__name__})",
+                    "remedy": "this is a bug in the diagnostic; report it",
+                }
+            )
+    return out
+
+
+def worst_status(findings: list[dict]) -> str:
+    for severity in _DIAG_ORDER:
+        if any(f["status"] == severity for f in findings):
+            return severity
+    return DIAG_OK
+
+
+def status(p: Plugin) -> str:
+    """Summarise install state for display. Never raises.
+
+    `_safe_dest` refuses a destination whose path contains a link or reparse
+    point, which is correct -- but this function is called from `plugin list`
+    and `plugin doctor` purely to print a headline, and letting that refusal
+    escape meant the two commands a user runs to UNDERSTAND a hostile plugin
+    directory were the two that died on it with a raw traceback. `doctor --json`
+    diagnosed the same state correctly the whole time, which is what made the
+    crash a display bug rather than a missing diagnosis.
+
+    A path that cannot be safely inspected has no honest install state, so it
+    reports "blocked" -- the same word `diagnose` uses -- and the findings
+    printed underneath say what is wrong and how to fix it.
+    """
+    root = dest_root(p)
+    present = []
+    for f in p.files:
+        try:
+            present.append(_path_exists(_safe_dest(root, f.dest)))
+        except PluginError:
+            return DIAG_BLOCKED
     if all(present):
         return "installed"
     if any(present):
@@ -1129,10 +1359,13 @@ def install(p: Plugin, force: bool = False, adopt_identical: bool = False) -> li
         state, _ = _load_state(root, p)
         _recover_transaction(root, p, state)
         # Validate all registry paths and packaged resources before any mutation.
-        for f in p.files:
-            _safe_dest(root, f.dest)
-            _backup_path(root, _safe_dest(root, f.dest))
-            _src_bytes(f.src)
+        try:
+            for f in p.files:
+                _safe_dest(root, f.dest)
+                _backup_path(root, _safe_dest(root, f.dest))
+                _src_bytes(f.src)
+        except (PluginError, OSError) as exc:
+            raise PluginError(str(exc), results=results) from exc
         historical = sorted(set(state["files"]) - {f.dest for f in p.files})
         if historical:
             raise PluginError(
