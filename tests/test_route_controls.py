@@ -5,11 +5,13 @@ integration tests that exercise the wiring in `agentrouter route`.
 """
 
 import json
+from datetime import date
 from pathlib import Path
 
 from typer.testing import CliRunner
 
 import agentrouter
+from agentrouter import registry as registry_module
 from agentrouter.cli import app
 from agentrouter.controls import PREFERENCE_WEIGHTS, RouteControls, apply_controls
 from agentrouter.registry import load_all_models, load_providers
@@ -17,6 +19,18 @@ from agentrouter.registry import load_all_models, load_providers
 runner = CliRunner()
 
 _SEEDS = Path(agentrouter.__file__).parent / "seeds"
+
+# Not testing registry staleness here; freeze the registry's clock to the
+# bundled seed catalog's own curated date so an unrelated, correct staleness
+# warning (stderr) never leaks into CliRunner's merged output and breaks
+# these tests' JSON parsing as real time passes.
+_FROZEN_TODAY = date(2026, 7, 14)
+
+
+class _FrozenDate(date):
+    @classmethod
+    def today(cls):
+        return _FROZEN_TODAY
 
 
 def _seed_models():
@@ -101,6 +115,7 @@ def test_preference_vectors_sum_to_one():
 
 def _route_json(tmp_path, monkeypatch, *args):
     monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
+    monkeypatch.setattr(registry_module, "date", _FrozenDate)
     runner.invoke(app, ["init"])
     r = runner.invoke(app, ["route", *args, "--json", "--no-log"])
     return r

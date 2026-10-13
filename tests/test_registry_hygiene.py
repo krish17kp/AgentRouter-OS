@@ -1,11 +1,13 @@
 """M3 — staleness warnings and curated ability overrides."""
 
+import sys
 from datetime import date, timedelta
 
 import pytest
 import yaml
 from typer.testing import CliRunner
 
+from agentrouter import registry as registry_module
 from agentrouter.refresh import write_generated_registry
 from agentrouter.registry import (
     STALE_AFTER_DAYS,
@@ -17,10 +19,25 @@ from agentrouter.schema import Ability, LatencyTier, ModelEntry, PricingTier
 
 runner = CliRunner()
 
+# The bundled seed registry's curated last_updated dates are a real calendar
+# date (not relative), so this file's own notion of "today" is frozen to match
+# it. Without this, these staleness tests pass or fail depending on how much
+# real wall-clock time has elapsed since the catalog was last curated -- which
+# these tests are not exercising and must not depend on.
+_FROZEN_TODAY = date(2026, 7, 14)
+
+
+class _FrozenDate(date):
+    @classmethod
+    def today(cls):
+        return _FROZEN_TODAY
+
 
 @pytest.fixture()
 def home(tmp_path, monkeypatch):
     monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
+    monkeypatch.setattr(registry_module, "date", _FrozenDate)
+    monkeypatch.setattr(sys.modules[__name__], "date", _FrozenDate)
     from agentrouter.cli import app
 
     result = runner.invoke(app, ["init"])
