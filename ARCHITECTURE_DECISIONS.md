@@ -133,3 +133,19 @@ coverage, or mutation threshold is lowered to accommodate different Rust tooling
 re-validated at the same thresholds); and the frozen-holdout annotation policy (no AI
 annotates or adjudicates) carries over unchanged, since it is a human-process requirement,
 not an implementation detail.
+
+**Revision (2026-10-13):** an independent architectural review found the scope this
+decision originally pointed at — the first cut of `RUST_MIGRATION_PLAN.md` — too shallow
+in three ways, since corrected in that document rather than here (this entry stays a
+pointer, not a restatement). First, `agentrouter/annotation/*` was marked "stays Python
+indefinitely"; the owner has since clarified it is in scope for eventual migration too,
+*without* changing the human-review requirement, the frozen-holdout leakage guardrail, or
+pack-blinding behavior — those are carried over as acceptance criteria, not relaxed.
+Second, the module inventory was built from assumption rather than a recursive read of
+`agentrouter/`; the plan now carries a real subsystem inventory with IMPLEMENTED/PARTIAL/
+INTERFACE ONLY/PLANNED/MISSING/BLOCKED status per area, which surfaced that real
+agent-execution adapters and multi-agent orchestration do not exist in Python today — they
+are net-new design work, not port targets, and are scoped as such (milestones R6/R7).
+Third, the crate-boundary sketch and milestone list were underspecified; both are now
+concrete in the plan. None of this changes what this decision already said: Python remains
+the sole shipping/release-gate authority, no code was deleted, and no threshold moved.
