@@ -8,17 +8,33 @@ child process as inert data — never interpreted by a shell, never re-substitut
 
 import json
 import sys
+from datetime import date
 
 import pytest
 import yaml
 from typer.testing import CliRunner
 
+from agentrouter import registry as registry_module
+
 runner = CliRunner()
+
+# Not testing registry staleness here; freeze the registry's clock to the
+# bundled seed catalog's own curated date so an unrelated, correct staleness
+# warning (stderr) never leaks into CliRunner's merged output and breaks
+# these tests' JSON parsing as real time passes.
+_FROZEN_TODAY = date(2026, 7, 14)
+
+
+class _FrozenDate(date):
+    @classmethod
+    def today(cls):
+        return _FROZEN_TODAY
 
 
 @pytest.fixture()
 def home(tmp_path, monkeypatch):
     monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
+    monkeypatch.setattr(registry_module, "date", _FrozenDate)
     from agentrouter.cli import app
 
     assert runner.invoke(app, ["init"]).exit_code == 0
