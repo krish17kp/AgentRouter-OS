@@ -47,4 +47,4 @@ jobs:
       - name: Assert compatibility against the real Rust binary
         run: |
           cargo build --workspace --locked
-          python -m pytest -q tests/test_rust_compat.py -rs
+          python -m pytest -q tests/test_rust_compat.py tests/test_rust_registry_compat.py -rs

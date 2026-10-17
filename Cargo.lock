@@ -13,6 +13,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "agentrouter-registry"
+version = "0.1.0"
+dependencies = [
+ "agentrouter-core",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "thiserror",
+]
+
+[[package]]
 name = "equivalent"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

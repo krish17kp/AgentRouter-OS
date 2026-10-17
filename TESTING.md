@@ -79,3 +79,21 @@ agentrouter providers refresh openrouter --limit 5 --dry-run
 ```
 
 Needs internet; works without a key (public catalog endpoint).
+
+## Rust migration verification (R1/R2, not the production release gate)
+
+The Rust workspace is being introduced behind the existing Python interfaces.
+`.github/workflows/rust-ci.yml` is **not** a release gate substitute; Python
+and the seven evaluation gates retain release authority until full parity.
+
+```console
+cargo build --workspace --locked
+cargo test --workspace --locked
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+python -m pytest -q tests/test_rust_compat.py tests/test_rust_registry_compat.py
+```
+
+CI runs the Rust workspace on Linux and Windows and Python/Rust compatibility
+on Linux with Cargo explicitly installed, so those tests cannot silently skip.
+R1 CI passed on 2026-10-17; R2 results must be recorded before any promotion.
