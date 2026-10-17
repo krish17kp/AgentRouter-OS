@@ -222,6 +222,10 @@ impl ModelEntry {
         format!("{}/{}", self.provider, self.model_id)
     }
 
+    pub fn vendor_key(&self) -> String {
+        format!("{}/{}", self.vendor(), self.model_id)
+    }
+
     pub fn name(&self) -> &str {
         self.display_name.as_deref().unwrap_or(&self.model_id)
     }

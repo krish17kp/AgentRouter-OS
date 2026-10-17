@@ -7,6 +7,8 @@
 
 use std::collections::HashMap;
 
+pub mod controls;
+
 pub mod taxonomy {
     use std::collections::HashSet;
 

@@ -6,6 +6,8 @@ members = [
     "rust/agentrouter-classifier",
     "rust/agentrouter-policy",
     "rust/agentrouter-routing",
+    "rust/agentrouter-hosts",
+    "rust/agentrouter-usage",
 ]
 
 [workspace.package]
