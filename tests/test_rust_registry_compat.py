@@ -44,7 +44,16 @@ def test_registry_seed_contract_matches_python() -> None:
         "warnings": warnings,
     }
     result = subprocess.run(
-        ["cargo", "run", "--quiet", "--locked", "-p", "agentrouter-registry", "--bin", "print_registry"],
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "-p",
+            "agentrouter-registry",
+            "--bin",
+            "print_registry",
+        ],
         cwd=ROOT,
         text=True,
         capture_output=True,
