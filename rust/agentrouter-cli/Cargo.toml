@@ -1,0 +1,23 @@
+[package]
+name = "agentrouter-cli"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+agentrouter-core = { path = "../agentrouter-core" }
+agentrouter-registry = { path = "../agentrouter-registry" }
+agentrouter-classifier = { path = "../agentrouter-classifier" }
+agentrouter-policy = { path = "../agentrouter-policy" }
+agentrouter-routing = { path = "../agentrouter-routing" }
+agentrouter-hosts = { path = "../agentrouter-hosts" }
+agentrouter-storage = { path = "../agentrouter-storage" }
+rusqlite = { version = "0.32.1", features = ["bundled"] }
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = "1.0.128"
+serde_yaml = "0.9.34"
+
+[[bin]]
+name = "cli_route_cli"
+path = "src/bin/route_cli.rs"

@@ -12,6 +12,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "agentrouter-cli"
+version = "0.1.0"
+dependencies = [
+ "agentrouter-classifier",
+ "agentrouter-core",
+ "agentrouter-hosts",
+ "agentrouter-policy",
+ "agentrouter-registry",
+ "agentrouter-routing",
+ "agentrouter-storage",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+]
+
+[[package]]
 name = "agentrouter-core"
 version = "0.1.0"
 dependencies = [

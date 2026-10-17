@@ -258,21 +258,14 @@ fn use_case_adjust(m: &ModelEntry, task_type: TaskType) -> f64 {
 /// default round-half-away-from-zero — the two only diverge on exact
 /// `.xx5` boundaries, but the engine's scores are built from eighths/tenths
 /// where that can occur.
+/// Mirrors Python's `round(x, ndigits)`: both resolve to a correctly-rounded
+/// decimal conversion of the float's exact binary value with ties-to-even,
+/// which is exactly what Rust's `{:.N}` float formatting does too — scaling
+/// by `10^ndigits` first (the previous approach here) reintroduces binary
+/// float error that can flip a case landing exactly on a `.5` boundary.
 fn round_half_even(x: f64, ndigits: i32) -> f64 {
-    let m = 10f64.powi(ndigits);
-    let scaled = x * m;
-    let floor = scaled.floor();
-    let diff = scaled - floor;
-    let rounded = if (diff - 0.5).abs() < 1e-9 {
-        if (floor as i64) % 2 == 0 {
-            floor
-        } else {
-            floor + 1.0
-        }
-    } else {
-        scaled.round()
-    };
-    rounded / m
+    let ndigits = ndigits.max(0) as usize;
+    format!("{x:.ndigits$}").parse().unwrap()
 }
 
 #[derive(Debug, Clone, Serialize)]
