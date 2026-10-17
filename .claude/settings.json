@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre_tool_guard.py\""
+            "command": "\"$HOME/.venvs/agentrouter/bin/python3\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre_tool_guard.py\""
           }
         ]
       }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/post_edit_check.py\""
+            "command": "\"$HOME/.venvs/agentrouter/bin/python3\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/post_edit_check.py\""
           }
         ]
       }
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop_gate.py\""
+            "command": "\"$HOME/.venvs/agentrouter/bin/python3\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop_gate.py\""
           }
         ]
       }

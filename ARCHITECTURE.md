@@ -8,6 +8,15 @@
 > [MODEL_REGISTRY_SCHEMA.md](MODEL_REGISTRY_SCHEMA.md). Adapter method names come
 > from [PROVIDER_ADAPTER_SPEC.md](PROVIDER_ADAPTER_SPEC.md). CLI command names
 > come from [CLI_SPEC.md](CLI_SPEC.md).
+>
+> **Implementation status:** everything below describes the **working Python
+> implementation in `agentrouter/`**, which is the current shipping system and
+> the sole release-gate authority. A Rust-native implementation of this same
+> architecture is the approved long-term target (see
+> [AD-7](ARCHITECTURE_DECISIONS.md#ad-7--approved-rust-native-target-phased-behind-the-existing-contracts)
+> and [RUST_MIGRATION_PLAN.md](RUST_MIGRATION_PLAN.md)); the layers, contracts,
+> and data formats described here are exactly what the Rust port must
+> reproduce, not a design that changes with the language.
 
 ---
 

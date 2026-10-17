@@ -5,6 +5,12 @@
 > concrete phases. Each phase lists its goal and headline deliverables.
 > Milestone-level tasks, validation, and risks are in
 > [MILESTONES.md](MILESTONES.md) (1:1 with these phases).
+>
+> **Implementation status:** these phases describe the **Python
+> implementation**, the current shipping system. A phased Rust-native port is
+> the approved long-term target and is tracked separately in
+> [RUST_MIGRATION_PLAN.md](RUST_MIGRATION_PLAN.md) — it does not insert new
+> phases here or change these phases' Python deliverables or gates.
 
 ---
 

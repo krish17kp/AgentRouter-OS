@@ -1,0 +1,15 @@
+[package]
+name = "agentrouter-classifier"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+agentrouter-core = { path = "../agentrouter-core" }
+regex = "1.11.0"
+serde_json = "1.0.128"
+
+[[bin]]
+name = "classify_cli"
+path = "src/bin/classify_cli.rs"

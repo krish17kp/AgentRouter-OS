@@ -1,0 +1,18 @@
+[workspace]
+resolver = "2"
+members = [
+    "rust/agentrouter-core",
+    "rust/agentrouter-registry",
+    "rust/agentrouter-classifier",
+    "rust/agentrouter-policy",
+    "rust/agentrouter-routing",
+    "rust/agentrouter-hosts",
+    "rust/agentrouter-usage",
+    "rust/agentrouter-storage",
+    "rust/agentrouter-cli",
+]
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.75"
+license = "MIT"

@@ -69,3 +69,6 @@ raw/
 /package.json
 /package-lock.json
 /skills-lock.json
+
+# Rust workspace build output (RUST_MIGRATION_PLAN.md R1+)
+/target/
