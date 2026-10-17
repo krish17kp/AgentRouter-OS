@@ -50,9 +50,7 @@ def _rust_status(host: str, required_command: str | None, env: dict) -> dict:
     args = [_built_binary_path(), host]
     if required_command is not None:
         args.append(required_command)
-    result = subprocess.run(
-        args, capture_output=True, text=True, timeout=30, check=True, env=env
-    )
+    result = subprocess.run(args, capture_output=True, text=True, timeout=30, check=True, env=env)
     return json.loads(result.stdout.strip())
 
 
@@ -101,9 +99,11 @@ def test_cli_host_missing_binary_matches(monkeypatch, tmp_path):
 def test_cli_host_installed_then_configured_then_authenticated_matches(monkeypatch, tmp_path):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    fake_cli = bin_dir / "fake-claude-cli"
-    fake_cli.write_text("#!/bin/sh\necho ok\n")
-    fake_cli.chmod(fake_cli.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+    cmd_name = "fake-claude-cli.bat" if os.name == "nt" else "fake-claude-cli"
+    fake_cli = bin_dir / cmd_name
+    fake_cli.write_text("@echo ok\n" if os.name == "nt" else "#!/bin/sh\necho ok\n")
+    if os.name != "nt":
+        fake_cli.chmod(fake_cli.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
 
     home = tmp_path / "home"
     home.mkdir()
