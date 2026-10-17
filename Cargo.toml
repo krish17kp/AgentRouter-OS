@@ -1,6 +1,12 @@
 [workspace]
 resolver = "2"
-members = ["rust/agentrouter-core", "rust/agentrouter-registry", "rust/agentrouter-classifier"]
+members = [
+    "rust/agentrouter-core",
+    "rust/agentrouter-registry",
+    "rust/agentrouter-classifier",
+    "rust/agentrouter-policy",
+    "rust/agentrouter-routing",
+]
 
 [workspace.package]
 edition = "2021"

@@ -22,6 +22,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "agentrouter-policy"
+version = "0.1.0"
+
+[[package]]
 name = "agentrouter-registry"
 version = "0.1.0"
 dependencies = [
@@ -31,6 +35,18 @@ dependencies = [
  "serde_yaml",
  "tempfile",
  "thiserror",
+]
+
+[[package]]
+name = "agentrouter-routing"
+version = "0.1.0"
+dependencies = [
+ "agentrouter-core",
+ "agentrouter-policy",
+ "agentrouter-registry",
+ "serde",
+ "serde_json",
+ "serde_yaml",
 ]
 
 [[package]]
