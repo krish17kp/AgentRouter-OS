@@ -25,6 +25,7 @@ htmlcov/
 # Build / packaging
 dist/
 build/
+website/dist/
 *.egg-info/
 agentrouter_os.egg-info/
 
@@ -51,6 +52,7 @@ mlruns/
 .mutmut-cache/
 mutants/
 artifacts/mutation/
+artifacts/browser-qa/
 .promptfoo/
 promptfoo-output/
 benchmark-results/
@@ -69,3 +71,6 @@ raw/
 /package.json
 /package-lock.json
 /skills-lock.json
+
+# Rust workspace build output (RUST_MIGRATION_PLAN.md R1+)
+/target/
