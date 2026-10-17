@@ -83,7 +83,7 @@ Needs internet; works without a key (public catalog endpoint).
 ## Rust migration verification (R1/R2, not the production release gate)
 
 The Rust workspace is being introduced behind the existing Python interfaces.
-`/.github/workflows/rust-ci.yml` is **not** a release gate substitute; Python
+`.github/workflows/rust-ci.yml` is **not** a release gate substitute; Python
 and the seven evaluation gates retain release authority until full parity.
 
 ```console

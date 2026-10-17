@@ -267,9 +267,8 @@ fn validate_date(date: &str) -> bool {
 }
 
 fn validate_model(model: &ModelEntry) -> Result<(), RegistryError> {
-    let invalid = |detail: &str| {
-        RegistryError::Invalid(format!("model '{}': {}", model.key(), detail))
-    };
+    let invalid =
+        |detail: &str| RegistryError::Invalid(format!("model '{}': {}", model.key(), detail));
     if model.context_window == 0 {
         return Err(invalid("context_window must be positive"));
     }
@@ -279,9 +278,13 @@ fn validate_model(model: &ModelEntry) -> Result<(), RegistryError> {
     if model.max_input_tokens == Some(0) {
         return Err(invalid("max_input_tokens must be positive"));
     }
-    if [model.ability.coding, model.ability.reasoning, model.ability.writing]
-        .iter()
-        .any(|v| !(0..=10).contains(v))
+    if [
+        model.ability.coding,
+        model.ability.reasoning,
+        model.ability.writing,
+    ]
+    .iter()
+    .any(|v| !(0..=10).contains(v))
     {
         return Err(invalid("ability scores must be between 0 and 10"));
     }
@@ -303,7 +306,10 @@ fn validate_model(model: &ModelEntry) -> Result<(), RegistryError> {
     for (name, value) in [
         ("last_updated", model.last_updated.as_deref()),
         ("last_verified", model.last_verified.as_deref()),
-        ("pricing_effective_date", model.pricing_effective_date.as_deref()),
+        (
+            "pricing_effective_date",
+            model.pricing_effective_date.as_deref(),
+        ),
     ] {
         if let Some(date) = value {
             if !validate_date(date) {
@@ -338,9 +344,7 @@ pub fn parse_models(
         }
         let key = model.key();
         if !seen.insert(key.clone()) {
-            return Err(RegistryError::Invalid(format!(
-                "duplicate model '{key}'"
-            )));
+            return Err(RegistryError::Invalid(format!("duplicate model '{key}'")));
         }
         // Pydantic's model_validator defaults vendor to provider on load.
         if model.vendor.is_none() {
@@ -415,7 +419,10 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("context_window"));
-        let unknown = sample().replace("    model_id: sample", "    surprise_field: 1\n    model_id: sample");
+        let unknown = sample().replace(
+            "    model_id: sample",
+            "    surprise_field: 1\n    model_id: sample",
+        );
         assert!(parse_models(&unknown, &providers).is_err());
     }
 
@@ -423,7 +430,9 @@ mod tests {
     fn rejects_invalid_provider_duplicate_model_and_bounds() {
         let providers = parse_providers(PROVIDERS).unwrap();
         assert!(parse_models(&sample().replace("openai", "not-installed"), &providers).is_err());
-        assert!(parse_models(&(sample() + &sample().replace("models:\n", "")), &providers).is_err());
+        assert!(
+            parse_models(&(sample() + &sample().replace("models:\n", "")), &providers).is_err()
+        );
         assert!(parse_models(&sample().replace("12345", "0"), &providers).is_err());
         assert!(parse_models(&sample().replace("coding: 8", "coding: 11"), &providers).is_err());
         assert!(parse_models(&sample().replace("low", "not-a-tier"), &providers).is_err());
@@ -432,7 +441,10 @@ mod tests {
     #[test]
     fn warns_but_loads_unresolved_fallback_and_defaults_vendor() {
         let providers = parse_providers(PROVIDERS).unwrap();
-        let yaml = sample().replace("    model_id: sample", "    model_id: sample\n    fallback: [future-model]");
+        let yaml = sample().replace(
+            "    model_id: sample",
+            "    model_id: sample\n    fallback: [future-model]",
+        );
         let (models, warnings) = parse_models(&yaml, &providers).unwrap();
         assert_eq!(models[0].vendor.as_deref(), Some("openai"));
         assert_eq!(models[0].key(), "openai/sample");

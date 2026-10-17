@@ -3,9 +3,8 @@ use agentrouter_registry::{parse_models, parse_providers};
 use serde_json::json;
 
 fn main() {
-    let providers =
-        parse_providers(include_str!("../../../../agentrouter/seeds/providers.yaml"))
-            .expect("seed providers must parse");
+    let providers = parse_providers(include_str!("../../../../agentrouter/seeds/providers.yaml"))
+        .expect("seed providers must parse");
     let (models, warnings) = parse_models(
         include_str!("../../../../agentrouter/seeds/models.yaml"),
         &providers,
