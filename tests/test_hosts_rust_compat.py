@@ -64,6 +64,15 @@ def _python_status(host: str, required_command: str | None) -> dict:
     return asdict(hosts.detect_host(host, required_command))
 
 
+def _set_home(monkeypatch, path) -> None:
+    """Sets both HOME and USERPROFILE so Python's `Path.home()` (which
+    prefers USERPROFILE on Windows) and the Rust port's `home_dir()` (which
+    checks HOME first, falling back to USERPROFILE) agree on every platform.
+    """
+    monkeypatch.setenv("HOME", str(path))
+    monkeypatch.setenv("USERPROFILE", str(path))
+
+
 @pytest.mark.parametrize(
     "host,env_vars",
     [
@@ -79,7 +88,7 @@ def test_detect_host_matches_without_cli_filesystem_state(monkeypatch, host, env
         monkeypatch.delenv(key, raising=False)
     for key, value in env_vars.items():
         monkeypatch.setenv(key, value)
-    monkeypatch.setenv("HOME", str(tmp_path))
+    _set_home(monkeypatch, tmp_path)
 
     python_result = _python_status(host, None)
     rust_result = _rust_status(host, None, dict(os.environ))
@@ -87,7 +96,7 @@ def test_detect_host_matches_without_cli_filesystem_state(monkeypatch, host, env
 
 
 def test_cli_host_missing_binary_matches(monkeypatch, tmp_path):
-    monkeypatch.setenv("HOME", str(tmp_path))
+    _set_home(monkeypatch, tmp_path)
     monkeypatch.setenv("PATH", str(tmp_path))  # empty PATH entry, binary can't be found
     cmd = "definitely-not-a-real-binary-xyz"
 
@@ -107,7 +116,7 @@ def test_cli_host_installed_then_configured_then_authenticated_matches(monkeypat
 
     home = tmp_path / "home"
     home.mkdir()
-    monkeypatch.setenv("HOME", str(home))
+    _set_home(monkeypatch, home)
     monkeypatch.setenv("PATH", str(bin_dir))
     for key in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY"):
         monkeypatch.delenv(key, raising=False)
