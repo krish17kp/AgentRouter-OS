@@ -13,13 +13,18 @@
 - Independent review found a non-finite price-cap bypass (also present in
   Python) and a missing-home fallback to the current directory in Rust host
   detection. Both were repaired with fail-closed checks and regression tests.
-- Local full regression: 1,336 Python tests passed, 3 skipped. Rust 1.75
+- Local full regression: 1,338 Python tests passed, 3 skipped. Rust 1.75
   workspace tests, Clippy with warnings denied, and formatting passed.
   `git diff --check` and Ruff passed. This is a partial R4 probe, not a
   production Rust CLI. Remote checks on recent preceding heads failed
   before job creation with GitHub internal server errors; inspect new CI.
 - Release evaluation remains 6/7, context-band accuracy 0.6667 < 0.90;
   human annotation remains external under `TASK_012_OWNER_ACTIONS.md`.
+- The first CI run on `4157fd2` passed Python, Windows, Rust parity, and
+  Security, but mutation failed with three new `controls.apply_controls`
+  survivors. Reproduced each in a fresh archive and added `0.0`/`0.5`
+  accepted-cap boundary tests plus exact rejection-message assertions; all
+  three targeted mutants are now killed. A new full mutation run is required.
 
 ## Iteration 31 — 2026-09-10 — Release-gate preparation + TASK-019 resume
 

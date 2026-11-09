@@ -21,6 +21,9 @@
 - Route price caps now reject non-finite and negative values. Registry prices
   remain unmeasured for bundled seed models, so a valid cap still excludes
   those models rather than assuming they are under budget.
+- Remote mutation verification on the controls-boundary test repair remains
+  pending after `4157fd2` reported three new survivors. All three are killed
+  in a fresh targeted local mutant run; the full gate has not yet passed.
 
 ## Historical limitations and studies
 

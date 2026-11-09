@@ -1,13 +1,13 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-09",
-  "current_phase": "IN_PROGRESS: PR #25 task/rust-r1-workspace. 3281c41 was fully green; later pull-request workflows failed before any jobs began due to GitHub internal server errors. Rust route persistence, non-forced init, configured routing/controls and host discovery pass local parity and await new CI. Python remains shipping; Rust R4 partial. Context-band gate 0.6667 < 0.90 requires human labels.",
+  "current_phase": "IN_PROGRESS: PR #25 task/rust-r1-workspace. 4157fd2 passed CI, Rust Linux/Windows parity and Security, but mutation found three new Python controls survivors. Targeted boundary tests now kill all three; full remote mutation recheck pending. Python remains shipping; Rust R4 partial. Context-band gate 0.6667 < 0.90 requires human labels.",
   "current_objective": "Inspect and repair PR #25 CI, continue contract-compatible Rust CLI/HTTP/MCP migration and routing evaluation without weakening release gates, then validate production readiness. Preserve inherited untracked website/ and do not fabricate context-band labels.",
   "status": "IN_PROGRESS",
   "branch_topology": {
     "main": "stable, untouched (602321a) -- never merge without owner approval; PR #16 open against it, blocked on context_band_accuracy",
     "release/agentrouter-v0.5-rc1": "Remote RC @ 5ce3234 on 2026-11-09; NOT RELEASE READY (context-band 0.6667 < 0.90). PR #25 is open against it; this task branch has not been merged.",
-    "task/rust-r1-workspace": "PR #25 open against RC; 3281c41 passed GitHub CI, later PR workflows failed before jobs due GitHub internal server errors; Rust R4 partial and OpenAI execution hardening",
+    "task/rust-r1-workspace": "PR #25 open against RC; 4157fd2 passed GitHub CI/Rust/Security but mutation failed with three new controls survivors; targeted tests kill them and await full remote recheck; Rust R4 partial and OpenAI execution hardening",
     "task/repo-cleanup-architecture-ponytail": "MERGED to RC (PR #14, merge commit 1ae3155); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/dynamic-skill-discovery": "MERGED to RC (PR #15, merge commit 62d5289); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/consolidation-handoff-docs": "MERGED to RC (PR #17, merge commit 73a1875); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
@@ -29,7 +29,7 @@
   "repo_sha_at_takeover": "602321af91ff298c0d5b59d6d36c24f845557fc1",
   "canonical_release_ready": false,
   "in_progress": [
-    "2026-11-09: PR #25 branch task/rust-r1-workspace. Prior 3281c41 passed all GitHub checks; later PR workflows failed before job creation due to GitHub internal server errors, so no code verdict. Local Python 1336 passed/3 skipped; Rust 1.75, Clippy, Ruff, Bandit, pip-audit and package build pass; prior mutation (0.9836 overall, 0.9843 safety/policy/execution, 0 unreviewed survivors) remains evidence for preceding code. Rust route persistence, non-forced init, configured routing/controls and host discovery pass local parity and await next CI. Rust R4 partial, R5-R13 pending, context-band 0.6667<0.90.",
+    "2026-11-10: PR #25 branch task/rust-r1-workspace at 4157fd2 before repair push. GitHub CI, Rust Linux/Windows parity, and Security pass; mutation failed on three new controls price-cap survivors. Fresh targeted local mutant run kills all three with boundary/exact-error tests; full remote recheck pending. Local Python 1338 passed/3 skipped, Rust 1.75, Clippy, Ruff, Bandit, pip-audit and package build pass. Rust R4 partial, R5-R13 pending, context-band 0.6667<0.90.",
     "Phase 3 local engineering via the full graph-aware loop. Done+merged: TASK-013 catalog freshness status + rollback (PR #4), TASK-014 CI release-gate report/enforce split (PR #5). Next: TASK-015 trusted catalogs (file-level provenance block, deprecation reconciliation, atomic refresh, rollback hardening, provider doctor/status), then verified execution-host states, provider diagnostics/onboarding, benchmark routing infra, customer docs, observability/runbooks, API/SDK compat+load testing. External: the human annotation round (TASK-012 tooling shipped) needs two real annotators + adjudicator per TASK_012_OWNER_ACTIONS.md.",
     "ENV BLOCKER RESOLVED 2026-08-08: local pytest now runs cleanly on this machine (595 passed, 3 skipped in 18.4s; ruff clean; bandit 0). CI remains an independent cross-platform authority (3.10-3.13 + Windows) but is no longer the only usable regression signal."
   ],

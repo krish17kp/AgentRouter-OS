@@ -17,7 +17,7 @@
 
 ## Verification
 
-- `uv run --no-sync pytest -q`: 1,336 passed, 3 skipped, 1 warning after
+- `uv run --no-sync pytest -q`: 1,338 passed, 3 skipped, 1 warning after
   the independent-review repairs.
 - `cargo +1.75.0 test --workspace --locked`: pass.
 - `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`: pass.
@@ -30,9 +30,12 @@
 - Differential cases cover configured routes, learning switch, controls,
   no-eligible results, malformed config, unknown controls, invalid price caps,
   and home lookup. Focused review-repair tests: 61 passed.
-- Prior pushed commit `3281c41` passed GitHub checks. Later workflow runs
-  on `0ac4335` and `e8bbc58` failed before jobs began due to GitHub internal
-  server errors, so the new head still needs remote verification.
+- Commit `4157fd2` passed GitHub CI, Rust Linux/Windows parity, and Security,
+  but the critical mutation campaign found three unreviewed survivors in the
+  newly added Python price-cap validation. A fresh archived checkout
+  reproduced mutants `agentrouter.controls.x_apply_controls__mutmut_6`, `_7`,
+  and `_9`; boundary and exact-error tests kill all three in a targeted run.
+  Full remote mutation verification on the repair commit is pending.
 
 ## Release status
 

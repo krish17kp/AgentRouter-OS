@@ -98,8 +98,15 @@ def test_max_price_excludes_unknown_price_honestly():
 
 @pytest.mark.parametrize("cap", [math.nan, math.inf, -math.inf, -1.0])
 def test_max_price_rejects_invalid_caps(cap):
-    with pytest.raises(ValueError, match="finite and non-negative"):
+    with pytest.raises(ValueError) as error:
         apply_controls(_seed_models(), RouteControls(max_price=cap))
+    assert str(error.value) == "max_price must be finite and non-negative"
+
+
+@pytest.mark.parametrize("cap", [0.0, 0.5])
+def test_max_price_accepts_finite_non_negative_caps(cap):
+    kept, dropped = apply_controls(_seed_models(), RouteControls(max_price=cap))
+    assert len(kept) + len(dropped) == len(_seed_models())
 
 
 @pytest.mark.parametrize("cap", ["nan", "inf", "-inf", "-1"])

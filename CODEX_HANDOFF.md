@@ -5,7 +5,7 @@
 Branch `task/rust-r1-workspace` has PR #25 open against the RC. The newest
 Rust R4 work adds configured weights, pricing policy, learning switch, and
 hard route controls to the route probe, plus a host credential-path parity
-fix. Local full Python suite: 1,336 passed, 3 skipped; Rust 1.75 workspace
+fix. Local full Python suite: 1,338 passed, 3 skipped; Rust 1.75 workspace
 tests, formatting, Clippy, Ruff,
 Bandit, dependency audit and package build passed. Mutation campaign:
 0.9836 overall, 0.9843 safety/policy/execution, no unreviewed survivor.
@@ -17,6 +17,10 @@ with GitHub internal server errors on affected workflows. They are no code
 verdict; `3281c41` is the latest fully green remote checkpoint. Route
 persistence, non-forced `init`, config/control routing, and host discovery
 pass local Python/Rust differential tests.
+On `4157fd2`, CI, Rust Linux/Windows parity and Security passed, while the
+mutation job failed on three new Python price-cap validation survivors.
+The new boundary and exact-error tests kill those three in a fresh local
+mutant run; full remote mutation recheck is pending.
 Next command: `gh run list --branch task/rust-r1-workspace --limit 12`;
 repair any failure and continue R4 CLI parity. Preserve the inherited
 untracked `website/` directory. No paid API call, merge, tag, or deploy

@@ -13,7 +13,7 @@
   now have Python/Rust differential tests. Host credential discovery matches
   Python when `AGENTROUTER_HOME` is set. The Rust
   public CLI/HTTP/MCP and later R5–R13 milestones remain outstanding.
-- Local verification: 1,336 Python tests passed, 3 skipped; Rust 1.75
+- Local verification: 1,338 Python tests passed, 3 skipped; Rust 1.75
   workspace tests, Clippy and formatting passed; Ruff, Bandit, dependency
   audit, wheel/sdist build passed. Mutmut 3.6.0: overall 0.9836,
   safety/policy/execution 0.9843, 0 unreviewed survivors after specific
@@ -27,6 +27,10 @@
   attempts failed before jobs began with internal server errors; these are
   no code verdict. This checkpoint adds Rust config/control parity and the
   host-path fix after the already pushed non-forced `init` probe at `e8bbc58`.
+- On `4157fd2`, GitHub CI, Rust Linux/Windows parity, and Security passed;
+  mutation found three new `controls.apply_controls` survivors. The new
+  boundary/exact-error tests kill all three in a fresh local mutant run and
+  await a full remote campaign on the repair commit.
 
 ## Historical checkpoint
 

@@ -14,6 +14,9 @@ unchanged 0.90 threshold. Rust still lacks full CLI/HTTP/MCP/execution parity,
 R5–R13 validation, staging and rollback evidence. The human annotation round
 in `TASK_012_OWNER_ACTIONS.md` remains required; AI-generated labels cannot
 close that gate. No paid OpenAI request or production deployment occurred.
+The first `4157fd2` run passed CI, Rust parity and Security but failed
+mutation on three new price-cap validation survivors. Targeted local tests
+kill them; full remote recheck remains pending.
 
 ## Historical v0.5 assessment
 
