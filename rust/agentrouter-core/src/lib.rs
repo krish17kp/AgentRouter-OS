@@ -72,6 +72,22 @@ pub enum PricingTier {
     Frontier,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LatencyTier {
+    Fast,
+    Medium,
+    Slow,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DeprecationStatus {
+    Active,
+    Deprecated,
+    Retired,
+}
+
 /// The result of classifying a task — mirrors `schema.Classification`'s 7
 /// canonical dimensions (ROUTING_RULES.md §1) plus the P3 confidence fields.
 /// Field names match the Python model exactly (`approval_level`, not

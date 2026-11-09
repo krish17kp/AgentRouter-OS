@@ -2,7 +2,7 @@
 
 Research date: 2026-11-09. This is an engineering plan, not a release-readiness claim.
 Python remains the shipping implementation. The Rust workspace has R1 shared types and
-the first R3 weight-policy parity slice; neither is a complete Rust router.
+the first static routing decision parity slice; neither is a complete Rust router.
 
 ## What comparable systems do
 
@@ -25,7 +25,8 @@ accepted as AgentRouter benchmarks.
    validation, classification, policy, scoring, fallback, host resolution, then
    SQLite/CLI/HTTP/MCP. Each slice gets Python/Rust differential fixtures, malformed
    input tests, Windows/Linux CI, and a rollback path. The current slice ports
-   `engine.weights_for` with ordered explanation parity and rejects unknown preferences.
+   `engine.weights_for` and the static eligibility/scoring/fallback pass over a
+  validated registry projection, plus the static safety gate. Unknown preferences are rejected.
 2. **Evidence model.** Define dated observations for provider/deployment health,
    time to first token, throughput, effective price, rate-limit rate, and tool-call
    success. Separate observed values from catalog estimates. Specify expiry,
@@ -47,7 +48,7 @@ accepted as AgentRouter benchmarks.
 ## Current gates and blockers
 
 - `RUST_MIGRATION_PLAN.md` remains the authoritative milestone and Python-retirement
-  contract. A weight-policy crate is partial progress, not completion of R2/R3.
+  contract. Static route parity is partial progress, not completion of R2/R3.
 - The frozen context-band holdout is below its unchanged 0.90 gate according to
   `RELEASE_READINESS.md`. The two-human annotation/adjudication round in
   `TASK_012_OWNER_ACTIONS.md` is required; AI-generated labels cannot close it.
@@ -63,5 +64,8 @@ accepted as AgentRouter benchmarks.
 - `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`,
   and `cargo test --workspace` pass.
 - `tests/test_rust_routing_weights.py` compares nine Python/Rust weight-policy
-  scenarios and rejects an unknown preference.
+  scenarios and rejects an unknown preference. `tests/test_rust_routing_decision.py`
+  compares the full static route on 30 task/constraint combinations from the
+  seed registry, including no-eligible and fallback cases. `tests/test_rust_safety_parity.py`
+  covers all nine risk/approval gate combinations.
 - No Python behavior changes or release threshold changes are made by this slice.

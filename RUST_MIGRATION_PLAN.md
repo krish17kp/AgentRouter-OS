@@ -13,9 +13,11 @@
 ## Current implementation note (2026-11-09)
 
 R1 shared types exist in `rust/agentrouter-core`. The staged
-`rust/agentrouter-routing` crate now ports only `engine.weights_for`, with
-Python/Rust differential tests and Linux/Windows CI in `.github/workflows/ci.yml`.
-This is a partial routing proof, not R2 or R3 completion. The research-backed
+`rust/agentrouter-routing` crate now ports `engine.weights_for`, the static
+eligibility/scoring/fallback decision, and `safety.gates_for` over a validated registry projection,
+with Python/Rust differential tests and Linux/Windows CI in `.github/workflows/ci.yml`.
+The registry, classifier, policy controls, and host layers still need Rust
+ports, so this is not R2 or R3 completion. The research-backed
 next steps and evidence policy are in `docs/ROUTING_EVOLUTION_2026-11.md`.
 The historical inventory below describes the 2026-10-13 baseline.
 

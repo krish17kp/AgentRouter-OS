@@ -5,6 +5,9 @@
 use agentrouter_core::{Classification, ContextBand, Level};
 use serde::{Deserialize, Serialize};
 
+pub mod decision;
+pub mod safety;
+
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Weights {
     pub w_cap: f64,
