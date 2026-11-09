@@ -14,8 +14,12 @@ npm run build
 
 - The playground is a **recorded CLI demonstration**. Its three fixtures were refreshed from
   `agentrouter route ... --json --no-log` on the website branch.
-- Typed `RouteRequest`/`RouteResult` contracts in `src/api.ts` reserve the integration seam for
-  `/v1/route`, but the static site intentionally never sends visitor prompts to a backend.
+- By default the playground is a recorded CLI demonstration and never sends visitor prompts.
+  To opt into a local live route, start AgentRouter's local API and build/run the website with
+  `VITE_AGENTROUTER_API_URL=http://127.0.0.1:8000` plus
+  `AGENTROUTER_CORS_ORIGINS=http://localhost:5173` on the API process. Live browser requests
+  always include `no_log: true`, never carry an API key, and the UI labels the source as
+  **local API**. A public static build should leave `VITE_AGENTROUTER_API_URL` unset.
 - No model execution, credential, local database, private host state, or unrestricted API is
   exposed. The current shipping router remains local-first.
 - Rust migration content is limited to verified R1 workspace/core-type completion; later
