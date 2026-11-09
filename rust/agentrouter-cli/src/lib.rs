@@ -13,6 +13,7 @@
 //! `providers *` are not ported in this slice.
 
 use std::collections::HashMap;
+use std::io::Write;
 use std::path::Path;
 
 use agentrouter_core::{ApprovalLevel, Classification, Level};
@@ -354,6 +355,57 @@ pub fn home_dir() -> std::path::PathBuf {
     std::env::var("AGENTROUTER_HOME")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|_| dirs_home().join(".agentrouter"))
+}
+
+/// Seed a new local home without replacing existing files. `create_new`
+/// avoids following a symlink or clobbering a file created between the
+/// existence check and the write. The seed bytes are embedded so the Rust
+/// binary does not require the Python package at runtime.
+pub fn init_home(home: &Path) -> Result<Vec<String>, String> {
+    let registry = home.join("registry");
+    std::fs::create_dir_all(&registry).map_err(|e| e.to_string())?;
+    let seeds = [
+        (
+            home.join("config.yaml"),
+            include_str!("../../../agentrouter/seeds/config.yaml"),
+        ),
+        (
+            registry.join("providers.yaml"),
+            include_str!("../../../agentrouter/seeds/providers.yaml"),
+        ),
+        (
+            registry.join("models.yaml"),
+            include_str!("../../../agentrouter/seeds/models.yaml"),
+        ),
+    ];
+    let mut lines = Vec::new();
+    for (destination, contents) in seeds {
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&destination)
+        {
+            Ok(mut file) => {
+                file.write_all(contents.as_bytes())
+                    .map_err(|e| e.to_string())?;
+                lines.push(format!("Created {}", destination.display()));
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                lines.push(format!(
+                    "exists, skipped: {} (use --force to overwrite)",
+                    destination.display()
+                ));
+            }
+            Err(error) => return Err(error.to_string()),
+        }
+    }
+    agentrouter_storage::connect(home).map_err(|e| e.to_string())?;
+    lines.push(format!(
+        "Initialized {}",
+        home.join("agentrouter.db").display()
+    ));
+    lines.push("Ready. Try: agentrouter route \"your task here\"".to_string());
+    Ok(lines)
 }
 
 fn dirs_home() -> std::path::PathBuf {

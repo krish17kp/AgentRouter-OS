@@ -2,27 +2,30 @@
 
 ## Current checkpoint — 2026-11-09
 
-- Branch `task/rust-r1-workspace`, pushed HEAD `3281c41`, PR #25 into
+- Branch `task/rust-r1-workspace`, pushed HEAD `0ac4335`, PR #25 into
   `release/agentrouter-v0.5-rc1`. `main` and the RC were not changed.
 - Python OpenAI text execution is opt-in and rechecks the API key immediately
   before dispatch. No paid provider request was made. The release evaluation
   remains 6/7 gates; frozen context-band accuracy is 0.6667 versus 0.90.
 - Rust R4 remains partial: SQLite feedback recording, Rust route persistence
-  into the Python-readable log, stored decision JSON, and prompt regeneration
-  now have Python/Rust differential tests. The Rust
+  into the Python-readable log, stored decision JSON, prompt regeneration,
+  and non-forced `init` now have Python/Rust differential tests. The Rust
   public CLI/HTTP/MCP and later R5–R13 milestones remain outstanding.
 - Local verification: 1,300 Python tests passed, 3 skipped; Rust 1.75
   workspace tests, Clippy and formatting passed; Ruff, Bandit, dependency
   audit, wheel/sdist build passed. Mutmut 3.6.0: overall 0.9836,
   safety/policy/execution 0.9843, 0 unreviewed survivors after specific
-  equivalent-mutant review. All remote CI checks for `3281c41` passed;
-  the subsequent route-persistence probe is locally verified and awaiting
-  checks on its new commit.
-- Next: inspect all GitHub checks for the new PR #25 head, repair any failure, then resume
-  R4 CLI contract work. The untracked `website/` directory is inherited user
+  equivalent-mutant review. All remote CI checks for `3281c41` passed.
+- Next: push the locally verified `init` probe, inspect GitHub checks for
+  the new PR #25 head, then resume R4 CLI work. The untracked `website/` is inherited user
   work and must not be staged or discarded. Human context-band labels remain
   an external prerequisite under `TASK_012_OWNER_ACTIONS.md`; AI-generated
   labels cannot substitute for them.
+- Follow-up head `0ac4335` added Rust route persistence and passed local
+  parity/workspace checks. Its pull-request workflows failed before any jobs
+  started because GitHub reported an internal server error; that is an
+  external CI scheduling failure, not a passing gate. A later non-forced
+  Rust `init` probe now passes local Python/Rust parity and awaits a push.
 
 ## Historical checkpoint
 

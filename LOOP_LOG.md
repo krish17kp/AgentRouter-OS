@@ -1414,3 +1414,8 @@ score and release-branch GitHub checks are also pending. Current state lives in
   safety/policy/execution, all five gates green). Added a Rust route
   persistence probe; Python reads its SQLite decision back unchanged.
   This follow-up is locally verified and will get a separate CI run.
+- The `0ac4335` pull-request workflows for Security, Rust and mutation failed
+  before creating jobs; GitHub run pages reported internal server errors.
+  This is no code/test verdict. A non-forced Rust `init` probe was added and
+  locally matched Python seed bytes, SQLite schema, and idempotent messages.
+  Next push will trigger fresh CI.

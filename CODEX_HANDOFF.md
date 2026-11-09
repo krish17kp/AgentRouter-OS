@@ -2,7 +2,7 @@
 
 ## Current checkpoint — 2026-11-09
 
-Branch `task/rust-r1-workspace` is pushed at `3281c41` with PR #25 open
+Branch `task/rust-r1-workspace` is pushed at `0ac4335` with PR #25 open
 against the RC. The new code adds Rust decision/feedback compatibility probes
 and strengthens default-off OpenAI execution tests. Local full Python suite:
 1,300 passed, 3 skipped; Rust 1.75 workspace tests, formatting, Clippy, Ruff,
@@ -10,8 +10,11 @@ Bandit, dependency audit and package build passed. Mutation campaign:
 0.9836 overall, 0.9843 safety/policy/execution, no unreviewed survivor.
 The canonical evaluation remains 6/7, context-band 0.6667 < 0.90, so the
 product is not release ready. Remote CI on `3281c41` passed across Python,
-Windows, Rust, security and mutation jobs. A following locally verified Rust
-route-persistence probe awaits its own CI after push.
+Windows, Rust, security and mutation jobs.
+The pushed `0ac4335` CI attempt failed before job creation with GitHub
+internal server errors on Security, Rust, and mutation workflows. Local
+route-persistence parity passed. A subsequent non-forced Rust `init` probe
+also passes local parity and awaits a new push/checks.
 Next command: `gh run list --branch task/rust-r1-workspace --limit 8`;
 repair any failure and continue R4 CLI parity. Preserve the inherited
 untracked `website/` directory. No paid API call, merge, tag, or deploy

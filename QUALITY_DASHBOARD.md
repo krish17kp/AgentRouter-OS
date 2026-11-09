@@ -7,8 +7,10 @@ PR #25 (`task/rust-r1-workspace`, pushed `3281c41`) is in progress. Locally,
 formatting, Ruff, Bandit, dependency audit, and wheel/sdist build passed.
 Critical mutation testing completed with overall 0.9836 and safety/policy/
 execution 0.9843, both above the unchanged gates, and zero unreviewed
-survivors. GitHub CI on `3281c41` passed; the later Rust route-persistence
-probe is locally verified and awaits CI. The release evaluation
+survivors. GitHub CI on `3281c41` passed. The later `0ac4335` pull-request
+workflows failed before jobs began with GitHub internal server errors; no
+code verdict is available on that head. Route persistence and non-forced
+Rust `init` probes pass local parity and await a new CI run. The release evaluation
 remains 6/7: context-band accuracy 0.6667 is below 0.90. The Rust-native
 CLI/HTTP/MCP migration is incomplete, so this checkpoint is not production
 readiness evidence. Historical measurements follow.

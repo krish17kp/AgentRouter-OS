@@ -25,3 +25,7 @@ path = "src/bin/route_cli.rs"
 [[bin]]
 name = "decision_cli"
 path = "src/bin/decision_cli.rs"
+
+[[bin]]
+name = "init_cli"
+path = "src/bin/init_cli.rs"

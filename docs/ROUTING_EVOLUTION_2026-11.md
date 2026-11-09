@@ -77,7 +77,7 @@ accepted as AgentRouter benchmarks.
   CLI parity suites now run on both Linux and Windows CI, with no intentional
   skip when Cargo is installed.
 - The R4 work now includes Rust feedback recording, persisted route decisions,
-  stored-decision JSON inspection, and prompt regeneration probes. The new
+  non-forced home initialization, stored-decision JSON inspection, and prompt regeneration probes. The new
   differential tests compare those operations against Python on the same SQLite log; full
   CLI/HTTP/MCP parity is still outstanding.
 - `tests/test_openai_adapter.py` covers provider opt-in, dry run, `--yes`,

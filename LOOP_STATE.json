@@ -1,13 +1,13 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-09",
-  "current_phase": "IN_PROGRESS: PR #25 task/rust-r1-workspace green at 3281c41 across Python, Windows, Rust, security and mutation CI. A locally verified Rust route-persistence probe and handoff updates await checks on their next commit. Python remains shipping; Rust R4 partial. Context-band gate 0.6667 < 0.90 requires human labels.",
+  "current_phase": "IN_PROGRESS: PR #25 task/rust-r1-workspace at 0ac4335. 3281c41 was fully green; 0ac4335 pull-request workflows failed before any jobs began due to GitHub internal server errors. Rust route persistence and non-forced init probes pass local parity and await new CI. Python remains shipping; Rust R4 partial. Context-band gate 0.6667 < 0.90 requires human labels.",
   "current_objective": "Inspect and repair PR #25 CI, continue contract-compatible Rust CLI/HTTP/MCP migration and routing evaluation without weakening release gates, then validate production readiness. Preserve inherited untracked website/ and do not fabricate context-band labels.",
   "status": "IN_PROGRESS",
   "branch_topology": {
     "main": "stable, untouched (602321a) -- never merge without owner approval; PR #16 open against it, blocked on context_band_accuracy",
     "release/agentrouter-v0.5-rc1": "Remote RC @ 5ce3234 on 2026-11-09; NOT RELEASE READY (context-band 0.6667 < 0.90). PR #25 is open against it; this task branch has not been merged.",
-    "task/rust-r1-workspace": "PR #25 open against RC, pushed 3281c41 on 2026-11-09; Rust R4 partial and OpenAI Python execution hardening; local mutation gate passes, GitHub checks pending",
+    "task/rust-r1-workspace": "PR #25 open against RC, pushed 0ac4335 on 2026-11-09; 3281c41 passed GitHub CI, 0ac4335 PR workflows failed before jobs due GitHub internal server errors; Rust R4 partial and OpenAI execution hardening",
     "task/repo-cleanup-architecture-ponytail": "MERGED to RC (PR #14, merge commit 1ae3155); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/dynamic-skill-discovery": "MERGED to RC (PR #15, merge commit 62d5289); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/consolidation-handoff-docs": "MERGED to RC (PR #17, merge commit 73a1875); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
@@ -29,7 +29,7 @@
   "repo_sha_at_takeover": "602321af91ff298c0d5b59d6d36c24f845557fc1",
   "canonical_release_ready": false,
   "in_progress": [
-    "2026-11-09: PR #25 branch task/rust-r1-workspace at 3281c41 green across all GitHub checks. Local Python 1300 passed/3 skipped; Rust 1.75, Clippy, Ruff, Bandit, pip-audit, build pass; mutation overall 0.9836 and safety/policy/execution 0.9843 with 0 unreviewed survivors. Locally verified Rust route persistence probe awaits next CI. Rust R4 partial, R5-R13 pending, context-band human-label gate failed 0.6667<0.90.",
+    "2026-11-09: PR #25 branch task/rust-r1-workspace at 0ac4335. Prior 3281c41 passed all GitHub checks. 0ac4335 PR workflows failed before job creation due to GitHub internal server errors, so no code verdict. Local Python 1300 passed/3 skipped; Rust 1.75, Clippy, Ruff, Bandit, pip-audit, build pass; mutation 0.9836 overall and 0.9843 safety/policy/execution with 0 unreviewed survivors. Rust route persistence and non-forced init probes pass local parity and await next CI. Rust R4 partial, R5-R13 pending, context-band 0.6667<0.90.",
     "Phase 3 local engineering via the full graph-aware loop. Done+merged: TASK-013 catalog freshness status + rollback (PR #4), TASK-014 CI release-gate report/enforce split (PR #5). Next: TASK-015 trusted catalogs (file-level provenance block, deprecation reconciliation, atomic refresh, rollback hardening, provider doctor/status), then verified execution-host states, provider diagnostics/onboarding, benchmark routing infra, customer docs, observability/runbooks, API/SDK compat+load testing. External: the human annotation round (TASK-012 tooling shipped) needs two real annotators + adjudicator per TASK_012_OWNER_ACTIONS.md.",
     "ENV BLOCKER RESOLVED 2026-08-08: local pytest now runs cleanly on this machine (595 passed, 3 skipped in 18.4s; ruff clean; bandit 0). CI remains an independent cross-platform authority (3.10-3.13 + Windows) but is no longer the only usable regression signal."
   ],
@@ -94,12 +94,13 @@
     "clean_wheel": "context_band_model_v1.json packaged; loads + predicts from fresh pip install; shipped _USE_LEARNED_BAND=False confirmed in installed wheel",
     "contract": "9 operations; agentrouter contract check exit 0, 0 breaking / 0 risky / 0 additive; byte-identical when exported from a clean wheel install in an unrelated directory; CI also checks against the PR base contract so deleting the branch copy cannot turn a breaking change green",
     "graph": "graphifyy 0.9.47; 3623 nodes / 7084 edges / 309 communities from RC d81ad94; graphify-out/ is gitignored and local-only",
-    "ci_status_3281c41": "All GitHub workflows passed on 3281c41: CI Python 3.10-3.13 plus Windows/build/API/report, Security, Rust Linux/Windows parity/MSRV, and Critical Mutation Testing. A subsequent route-persistence probe has not yet run in CI."
+    "ci_status_3281c41": "All GitHub workflows passed on 3281c41: CI Python 3.10-3.13 plus Windows/build/API/report, Security, Rust Linux/Windows parity/MSRV, and Critical Mutation Testing. A subsequent route-persistence probe has not yet run in CI.",
+    "ci_status_0ac4335": "PR workflows Security, Rust, Mutation failed before creating jobs; GitHub run pages show internal server errors, no code verdict. Prior 3281c41 all green; local route-persistence/init probes pass."
   },
   "release_blockers": [
     "Frozen context-band accuracy 0.6667 remains below unchanged 0.90. Independent human annotation and adjudication under TASK_012_OWNER_ACTIONS.md remain required; AI labels cannot substitute.",
     "Rust R4 CLI remains partial; full Rust CLI/HTTP/MCP/execution, R5-R13, staging, rollback and Rust-only validation are outstanding.",
-    "A locally verified Rust route-persistence probe and documentation changes await CI on their next commit; full release gates still apply.",
+    "Current 0ac4335 pull-request workflows failed before job creation due GitHub internal server errors; fresh CI must run on next commit and pass.",
     "Paid live OpenAI execution, provider credentials, production deployment and release actions need owner-provided inputs or authorization."
   ],
   "external_or_owner_blocked": [

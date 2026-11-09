@@ -7,7 +7,9 @@
   public Rust CLI/HTTP/MCP replacement. R5–R13 remain open.
 - The local and GitHub critical mutation campaigns pass on `3281c41`
   (0.9836 overall, 0.9843 safety/policy/execution, zero unreviewed
-  survivors). A later Rust route-persistence probe awaits its own CI.
+  survivors). A later `0ac4335` workflow attempt failed before job creation
+  with GitHub internal server errors; Rust route persistence and non-forced
+  `init` now pass local parity but await fresh CI.
   The older mutation-status section below is historical.
 - The frozen context-band release gate remains 0.6667 < 0.90. The 63-candidate
   two-human annotation/adjudication round is not complete. Synthetic or AI
