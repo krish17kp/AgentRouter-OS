@@ -42,7 +42,7 @@ jobs:
       - name: Rust tests and Python parity
         run: |
           cargo test --workspace
-          python -m pytest -q tests/test_rust_compat.py tests/test_rust_routing_weights.py tests/test_rust_routing_decision.py tests/test_rust_safety_parity.py
+          python -m pytest -q tests/test_rust_compat.py tests/test_rust_registry_parity.py tests/test_rust_routing_weights.py tests/test_rust_routing_decision.py tests/test_rust_safety_parity.py
 
   test:
     runs-on: ubuntu-latest

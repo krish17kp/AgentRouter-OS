@@ -1,8 +1,9 @@
 # Routing evolution and Rust delivery plan
 
 Research date: 2026-11-09. This is an engineering plan, not a release-readiness claim.
-Python remains the shipping implementation. The Rust workspace has R1 shared types and
-the first static routing decision parity slice; neither is a complete Rust router.
+Python remains the shipping implementation. The Rust workspace has R1 shared types,
+an offline YAML registry slice, and a static routing decision parity slice.
+These are not a complete Rust router.
 
 ## What comparable systems do
 
@@ -68,4 +69,7 @@ accepted as AgentRouter benchmarks.
   compares the full static route on 30 task/constraint combinations from the
   seed registry, including no-eligible and fallback cases. `tests/test_rust_safety_parity.py`
   covers all nine risk/approval gate combinations.
+- `tests/test_rust_registry_parity.py` checks seed keys, vendor defaults,
+  generated catalog precedence, ability overrides, staleness warnings, and
+  malformed input rejection against the Python registry.
 - No Python behavior changes or release threshold changes are made by this slice.
