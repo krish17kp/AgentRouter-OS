@@ -19,6 +19,8 @@ fixtures. The staged
 `rust/agentrouter-routing` crate now ports `engine.weights_for`, the static
 eligibility/scoring/fallback decision, and `safety.gates_for` over a validated registry projection,
 with Python/Rust differential tests and Linux/Windows CI in `.github/workflows/ci.yml`.
+The registry-to-decision integration also matches Python on seed cases; the
+declared Rust 1.75 minimum builds locally and is now a separate CI job.
 The registry's filesystem discovery and remaining edge cases, classifier,
 policy controls, and host layers still need Rust ports. This is not R2 or R3
 completion. The research-backed

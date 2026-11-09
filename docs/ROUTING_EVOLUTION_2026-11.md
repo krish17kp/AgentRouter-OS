@@ -69,6 +69,9 @@ accepted as AgentRouter benchmarks.
   compares the full static route on 30 task/constraint combinations from the
   seed registry, including no-eligible and fallback cases. `tests/test_rust_safety_parity.py`
   covers all nine risk/approval gate combinations.
+- The registry-to-route probe covers six task types directly from seed YAML,
+  without a Python model projection. CI also tests the declared Rust 1.75
+  minimum version.
 - `tests/test_rust_registry_parity.py` checks seed keys, vendor defaults,
   generated catalog precedence, ability overrides, staleness warnings, and
   malformed input rejection against the Python registry.

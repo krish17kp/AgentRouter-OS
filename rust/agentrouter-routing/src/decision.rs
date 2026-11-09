@@ -37,6 +37,29 @@ impl RouteModel {
     }
 }
 
+impl From<&agentrouter_registry::ModelEntry> for RouteModel {
+    fn from(model: &agentrouter_registry::ModelEntry) -> Self {
+        Self {
+            provider: model.provider.clone(),
+            model_id: model.model_id.clone(),
+            context_window: model.context_window,
+            pricing_tier: model.pricing_tier,
+            latency_tier: model.latency_tier,
+            ability: Ability {
+                coding: model.ability.coding,
+                reasoning: model.ability.reasoning,
+                writing: model.ability.writing,
+            },
+            tool_support: model.tool_support.clone(),
+            vision_support: model.vision_support,
+            ideal_use_cases: model.ideal_use_cases.clone(),
+            avoid_use_cases: model.avoid_use_cases.clone(),
+            deprecation_status: model.deprecation_status,
+            fallback: model.fallback.clone(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Exclusion {
     pub model: String,

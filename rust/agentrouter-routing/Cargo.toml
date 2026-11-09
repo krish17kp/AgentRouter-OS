@@ -8,5 +8,6 @@ description = "Contract-parity routing policy for the staged AgentRouter Rust mi
 
 [dependencies]
 agentrouter-core = { path = "../agentrouter-core" }
+agentrouter-registry = { path = "../agentrouter-registry" }
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.128"

@@ -92,3 +92,40 @@ def test_rust_decision_matches_python(
     ):
         assert actual_row == expected_row, (index, actual_row, expected_row)
     assert actual == expected
+
+
+@pytest.mark.parametrize("task_type", list(TaskType))
+def test_rust_registry_to_route_matches_python(models, task_type):
+    cls = Classification(
+        task_type=task_type,
+        complexity=Level.medium,
+        risk=Level.low,
+        context_tokens=8_000,
+        context_band=ContextBand.medium,
+        output_type=OutputType.text,
+        tool_needs=["tool-use"],
+        approval_level=ApprovalLevel.auto,
+    )
+    payload = {
+        "providers_yaml": (SEEDS / "providers.yaml").read_text(encoding="utf-8"),
+        "models_yaml": (SEEDS / "models.yaml").read_text(encoding="utf-8"),
+        "classification": cls.model_dump(mode="json"),
+    }
+    completed = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "-p",
+            "agentrouter-routing",
+            "--bin",
+            "route_from_registry_json",
+        ],
+        cwd=ROOT,
+        input=json.dumps(payload),
+        text=True,
+        capture_output=True,
+        timeout=120,
+        check=True,
+    )
+    assert json.loads(completed.stdout) == route(models, cls)
