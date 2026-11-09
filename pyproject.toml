@@ -27,7 +27,7 @@ classifiers = [
 dependencies = ["typer>=0.12", "pydantic>=2.5", "PyYAML>=6.0"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.6", "build>=1.0"]
+dev = ["pytest>=8.0,<9.0", "pytest-cov>=5.0", "ruff>=0.6", "build>=1.0"]
 # Heavy evaluation deps — never required by the core runtime or CI-path tests.
 # datasets pinned <4: v4+ dropped script-based loaders that CLINC/BANKING77/MASSIVE still use.
 eval = ["datasets>=2.14,<4.0"]
@@ -104,6 +104,7 @@ only_mutate = [
     "agentrouter/hosts.py",
     "agentrouter/server/limits.py",
     "agentrouter/cli.py",
+    "agentrouter/openai_adapter.py",
 ]
 pytest_add_cli_args = ["--disable-warnings"]
 pytest_add_cli_args_test_selection = [
@@ -113,6 +114,7 @@ pytest_add_cli_args_test_selection = [
     "tests/test_fuzz_and_fallback.py",
     "tests/test_execute.py",
     "tests/test_execute_injection.py",
+    "tests/test_openai_adapter.py",
     "tests/test_model_catalog.py",
     "tests/test_server_limits.py",
     "tests/test_property.py",

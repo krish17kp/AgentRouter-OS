@@ -4,7 +4,7 @@
 > The **Python implementation in `agentrouter/` is the current, shipping system**
 > and remains release-gated exactly as today (see **Current production status**
 > below). This document plans a phased, contract-preserving port to a
-> Rust-native implementation. No Rust code exists yet; no Python code is
+> Rust-native implementation. Staged Rust crates exist; no Python code is
 > deleted as part of this plan. See `AGENTROUTER_FOUNDATION_REVIEW.md` (session
 > artifact, not committed) for the review this plan responds to, and the
 > **Subsystem inventory** section below for the actual recursive read of
@@ -21,11 +21,18 @@
   deleted from this role until the retirement criteria at the bottom of this
   document are met.
 - **APPROVED TARGET** — the Rust-native implementation described by this plan.
-  Approved as a direction by the owner (AD-7); no code exists yet.
+  Approved as a direction by the owner (AD-7); the current crates are staged.
 - **CURRENT PRODUCTION STATUS** — see below. Independent of implementation
   language.
 
 ## Current production status
+
+The Python CLI now has a default-off OpenAI Responses API text adapter. It is
+gated by provider opt-in, host readiness, the recorded safety decision, and
+`execute --yes`; hermetic tests do not use credentials or paid calls. The
+Rust workspace's advanced task branch has classifier/hosts/usage/storage/route
+CLI slices and now passes its declared Rust 1.75 minimum locally. Neither
+change closes the release evaluation gate below or retires Python.
 
 Per `AGENT_HANDOFF.md`'s Release truth section: **NOT RELEASE READY.**
 `context_band_accuracy = 0.6667` against the unchanged `0.90` frozen-holdout

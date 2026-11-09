@@ -13,6 +13,7 @@ use std::sync::OnceLock;
 
 use agentrouter_core::{ApprovalLevel, Classification, ContextBand, Level, OutputType, TaskType};
 use regex::Regex;
+use serde::Deserialize;
 
 fn matcher(words: &[&str]) -> Regex {
     let pattern = format!(
@@ -732,14 +733,14 @@ fn complexity(text: &str, task: TaskType, is_build: bool) -> Level {
 
 fn context_tokens(text: &str, task: TaskType) -> u32 {
     if let Some(m) = token_re().captures(text) {
-        let n: u32 = m[1].parse().unwrap_or(0);
-        return n * 1000;
+        let n = m[1].parse::<u64>().unwrap_or(u64::MAX);
+        return n.saturating_mul(1000).min(u32::MAX as u64) as u32;
     }
     if let Some(m) = token_plain_re().captures(text) {
-        return m[1].parse().unwrap_or(0);
+        return m[1].parse::<u64>().unwrap_or(u64::MAX).min(u32::MAX as u64) as u32;
     }
     if let Some(m) = quantified_context_re().captures(text) {
-        let amount: u64 = m[1].replace(',', "").parse().unwrap_or(0);
+        let amount: u64 = m[1].replace(',', "").parse().unwrap_or(u64::MAX);
         let unit = m[2].to_lowercase();
         if (unit.contains("page") || unit.contains("file") || unit.contains("document"))
             && amount >= 250
@@ -931,7 +932,8 @@ fn task_type_value(t: TaskType) -> &'static str {
 }
 
 /// Mirrors `agentrouter.classifier.classify`'s keyword overrides.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Deserialize)]
+#[serde(default, deny_unknown_fields)]
 pub struct ClassifyOptions {
     pub context_tokens: Option<u32>,
     pub risk: Option<Level>,
@@ -1038,5 +1040,17 @@ mod tests {
     fn needs_clarification_below_threshold() {
         let c = classify_default("hi");
         assert!(c.needs_clarification);
+    }
+
+    #[test]
+    fn huge_explicit_context_cannot_wrap_to_small() {
+        for task in [
+            "summarize this 9999999999k token file",
+            "summarize this 999999999999999999999999999999 tokens file",
+        ] {
+            let c = classify_default(task);
+            assert_eq!(c.context_tokens, u32::MAX);
+            assert_eq!(c.context_band, ContextBand::Large);
+        }
     }
 }

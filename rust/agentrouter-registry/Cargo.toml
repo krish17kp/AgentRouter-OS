@@ -9,8 +9,10 @@ license.workspace = true
 agentrouter-core = { path = "../agentrouter-core" }
 serde = { version = "1.0.210", features = ["derive"] }
 serde_yaml = "0.9.34"
+# serde_yaml's indexmap dependency otherwise resolves past the declared MSRV.
+indexmap = "=2.7.1"
 thiserror = "1.0.64"
 chrono = { version = "0.4.38", default-features = false, features = ["clock"] }
 
 [dev-dependencies]
-tempfile = "3.13.0"
+tempfile = "=3.13.0"

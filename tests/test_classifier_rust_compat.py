@@ -17,12 +17,19 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+from pathlib import Path
 
 import pytest
+import yaml
 
 from agentrouter.classifier import classify
+from agentrouter.schema import Level
 
 RUST_CRATE_DIR = "rust/agentrouter-classifier"
+ROOT = Path(__file__).resolve().parents[1]
+GOLD_CASES = yaml.safe_load(
+    (ROOT / "agentrouter" / "benchmarks" / "classifier_gold_v1.yaml").read_text(encoding="utf-8")
+)["cases"]
 
 pytestmark = pytest.mark.skipif(shutil.which("cargo") is None, reason="cargo not on PATH")
 
@@ -87,3 +94,51 @@ def test_classification_matches_between_python_and_rust(prompt):
     python_json = json.loads(classify(prompt).model_dump_json())
     rust_json = _rust_classification_json(prompt)
     assert rust_json == python_json, f"mismatch for prompt: {prompt!r}"
+
+
+@pytest.mark.parametrize("case", GOLD_CASES, ids=[case["id"] for case in GOLD_CASES])
+def test_gold_classifier_parity(case):
+    prompt = case["prompt"]
+    assert _rust_classification_json(prompt) == classify(prompt).model_dump(mode="json")
+
+
+def test_classifier_explicit_overrides_match_python():
+    task = "Review this repository for security issues"
+    overrides = {
+        "context_tokens": 123_000,
+        "risk": "medium",
+        "tools": ["web", "vision"],
+        "uncertainty_threshold": 0.9,
+    }
+    expected = classify(
+        task,
+        context_tokens=overrides["context_tokens"],
+        risk=Level.medium,
+        tools=overrides["tools"],
+        uncertainty_threshold=overrides["uncertainty_threshold"],
+    )
+    completed = subprocess.run(
+        ["cargo", "run", "--quiet", "-p", "agentrouter-classifier", "--bin", "classify_from_json"],
+        cwd=ROOT,
+        input=json.dumps({"task": task, "overrides": overrides}),
+        text=True,
+        capture_output=True,
+        timeout=120,
+        check=True,
+    )
+    assert json.loads(completed.stdout) == expected.model_dump(mode="json")
+
+
+@pytest.mark.parametrize("input_payload", [{"task": ""}, {"task": "hi", "overrides": {"extra": 1}}])
+def test_classifier_json_rejects_invalid_request(input_payload):
+    completed = subprocess.run(
+        ["cargo", "run", "--quiet", "-p", "agentrouter-classifier", "--bin", "classify_from_json"],
+        cwd=ROOT,
+        input=json.dumps(input_payload),
+        text=True,
+        capture_output=True,
+        timeout=120,
+        check=False,
+    )
+    assert completed.returncode != 0
+    assert completed.stdout == ""
