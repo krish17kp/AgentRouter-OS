@@ -157,6 +157,28 @@ def test_recorded_safety_gate_cannot_override_high_risk(home, monkeypatch):
     assert "Execution blocked: stored safety gate changed; route again." in result.stderr
 
 
+def test_invalid_stored_classification_is_rejected_before_dispatch(home, monkeypatch):
+    payload = _route()
+    payload["classification"] = {"risk": "low"}
+    _enable_openai(home)
+    monkeypatch.setattr(store, "load_decision", lambda *_args: payload)
+    monkeypatch.setattr(openai_adapter, "run_text_response", lambda *a, **kw: pytest.fail("called"))
+    result = runner.invoke(app, ["execute", payload["decision_id"], "--yes"])
+    assert result.exit_code == 2
+    assert "Execution blocked: stored classification is invalid; route again." in result.stderr
+
+
+def test_stored_approval_level_mismatch_is_rejected(home, monkeypatch):
+    payload = _route()
+    payload["gates"]["approval_level"] = "notify"
+    _enable_openai(home)
+    monkeypatch.setattr(store, "load_decision", lambda *_args: payload)
+    monkeypatch.setattr(openai_adapter, "run_text_response", lambda *a, **kw: pytest.fail("called"))
+    result = runner.invoke(app, ["execute", payload["decision_id"], "--yes"])
+    assert result.exit_code == 2
+    assert "Execution blocked: stored safety gate changed; route again." in result.stderr
+
+
 def test_tool_requiring_task_cannot_use_text_only_api(home, monkeypatch):
     payload = _route("Build a Python CLI and run tests")
     assert payload["classification"]["tool_needs"]
@@ -167,13 +189,14 @@ def test_tool_requiring_task_cannot_use_text_only_api(home, monkeypatch):
     assert "OpenAI API text execution requires a task with no external tools." in result.stderr
 
 
-def test_api_execution_rejects_changed_recorded_target(home, monkeypatch, capfd):
+@pytest.mark.parametrize("field", ["host", "host_model_id", "model_id", "vendor"])
+def test_api_execution_rejects_changed_recorded_target(home, monkeypatch, capfd, field):
     from agentrouter.cli import _execute_via_host
 
     payload = _route()
     _enable_openai(home)
     monkeypatch.setattr(openai_adapter, "run_text_response", lambda *a, **kw: pytest.fail("called"))
-    altered = {**payload["execution_route"], "host_model_id": "another-model"}
+    altered = {**payload["execution_route"], field: "changed"}
     with pytest.raises(typer.Exit) as error:
         _execute_via_host(
             payload["recommendation"],
@@ -239,6 +262,64 @@ def test_response_request_is_private_bounded_and_text_only(monkeypatch):
         "store": False,
         "stream": False,
     }
+
+
+def test_response_collects_only_assistant_text(monkeypatch):
+    payload = {
+        "status": "completed",
+        "output": [
+            "ignored",
+            {"type": "reasoning", "content": [{"type": "output_text", "text": "private"}]},
+            {
+                "type": "message",
+                "role": "user",
+                "content": [{"type": "output_text", "text": "input"}],
+            },
+            {
+                "type": "message",
+                "role": "assistant",
+                "content": [None, {"type": "output_text", "text": "one"}],
+            },
+            {
+                "type": "message",
+                "role": "assistant",
+                "content": [{"type": "output_text", "text": "two"}],
+            },
+        ],
+    }
+    monkeypatch.setattr(openai_adapter, "urlopen", lambda *_args, **_kw: _Response(payload))
+    assert (
+        openai_adapter.run_text_response("model", "prompt", "secret", max_output_tokens=10)
+        == "one\ntwo"
+    )
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        [],
+        {"status": "completed"},
+        {"status": "completed", "output": "not a list"},
+        {
+            "status": "completed",
+            "output": [None, {"type": "message", "role": "assistant", "content": "not a list"}],
+        },
+        {
+            "status": "completed",
+            "output": [
+                {
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [{"type": "output_text", "text": 123}],
+                }
+            ],
+        },
+    ],
+)
+def test_malformed_response_items_are_rejected(monkeypatch, payload):
+    monkeypatch.setattr(openai_adapter, "urlopen", lambda *_args, **_kw: _Response(payload))
+    with pytest.raises(openai_adapter.OpenAIAdapterError):
+        openai_adapter.run_text_response("model", "prompt", "secret", max_output_tokens=10)
 
 
 @pytest.mark.parametrize(
@@ -313,6 +394,17 @@ def test_response_size_and_json_are_bounded(monkeypatch):
         openai_adapter.run_text_response("model", "prompt", "secret", max_output_tokens=10)
     monkeypatch.setattr(openai_adapter, "MAX_RESPONSE_BYTES", 200)
     with pytest.raises(openai_adapter.OpenAIAdapterError, match="invalid JSON"):
+        openai_adapter.run_text_response("model", "prompt", "secret", max_output_tokens=10)
+
+
+def test_response_reads_one_byte_past_the_limit(monkeypatch):
+    class _BoundedResponse(_Response):
+        def read(self, limit):
+            return b"123456789"[:limit]
+
+    monkeypatch.setattr(openai_adapter, "urlopen", lambda *_args, **_kw: _BoundedResponse({}))
+    monkeypatch.setattr(openai_adapter, "MAX_RESPONSE_BYTES", 8)
+    with pytest.raises(openai_adapter.OpenAIAdapterError, match="size limit"):
         openai_adapter.run_text_response("model", "prompt", "secret", max_output_tokens=10)
 
 
