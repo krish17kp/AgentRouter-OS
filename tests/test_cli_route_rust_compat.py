@@ -19,9 +19,11 @@ import shutil
 import subprocess
 
 import pytest
+from typer.testing import CliRunner
 
 from agentrouter import hosts, store
 from agentrouter.classifier import classify
+from agentrouter.cli import app
 from agentrouter.engine import BASE_WEIGHTS
 from agentrouter.engine import route as engine_route
 from agentrouter.learning import learned_weights
@@ -91,9 +93,9 @@ def _python_route_payload(home, task: str) -> dict:
     }
 
 
-def _rust_route_payload(home, task: str) -> dict:
+def _rust_route_payload(home, task: str, *extra: str) -> dict:
     result = subprocess.run(
-        ["cargo", "run", "--quiet", "--bin", "cli_route_cli", "--", str(home), task],
+        ["cargo", "run", "--quiet", "--bin", "cli_route_cli", "--", str(home), task, *extra],
         cwd=RUST_CRATE_DIR,
         capture_output=True,
         text=True,
@@ -140,3 +142,140 @@ def test_rust_route_persists_python_readable_decision(seeded_home):
     assert loaded["prompt"] == routed["prompt"]
     assert loaded["classification"] == routed["classification"]
     assert loaded["recommendation"] == routed["recommendation"]
+
+
+def test_rust_route_respects_configured_weights_and_pricing_policy(seeded_home, monkeypatch):
+    (seeded_home / "config.yaml").write_text(
+        "weights:\n  w_cap: 0.70\n  w_cost: 0.10\n  w_lat: 0.10\n  w_ctx: 0.10\n"
+        "learning: false\npolicy:\n  max_pricing_tier: medium\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("AGENTROUTER_HOME", str(seeded_home))
+    task = "Summarize this document"
+    python = CliRunner().invoke(app, ["route", task, "--json", "--no-log"])
+    assert python.exit_code == 0, python.output
+    expected = json.loads(python.stdout)
+    expected.pop("decision_id")
+    expected.pop("task")
+    rust = _rust_route_payload(seeded_home, task)
+    assert rust == expected
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        "policy:\n  max_pricing_tier: [high]\n",
+        "policy: [high]\n",
+        "weights: [0.1, 0.9]\n",
+        "weights:\n  w_cap: true\n",
+        "[not, a, mapping]\n",
+        "policy: [\n",
+    ],
+)
+def test_rust_route_rejects_invalid_config(seeded_home, config):
+    (seeded_home / "config.yaml").write_text(config, encoding="utf-8")
+    result = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "cli_route_cli",
+            "--",
+            str(seeded_home),
+            "write a function",
+        ],
+        cwd=RUST_CRATE_DIR,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert result.stdout == ""
+
+
+@pytest.mark.parametrize("learning", [True, False])
+def test_rust_route_matches_feedback_learning_switch(seeded_home, monkeypatch, learning):
+    conn = store.connect(seeded_home)
+    for index in range(3):
+        decision_id = store.save_decision(conn, f"feedback task {index}", {})
+        conn.execute(
+            "INSERT INTO feedback (decision_id, created_at, rating, note) VALUES (?, ?, ?, ?)",
+            (int(decision_id.removeprefix("d_")), "2026-11-09T00:00:00+00:00", 2, "bad"),
+        )
+    conn.commit()
+    conn.close()
+    (seeded_home / "config.yaml").write_text(f"learning: {str(learning).lower()}\n")
+    monkeypatch.setenv("AGENTROUTER_HOME", str(seeded_home))
+    task = "Summarize this document"
+    python = CliRunner().invoke(app, ["route", task, "--json", "--no-log"])
+    assert python.exit_code == 0, python.output
+    expected = json.loads(python.stdout)
+    expected.pop("decision_id")
+    expected.pop("task")
+    rust = _rust_route_payload(seeded_home, task)
+    assert rust == expected
+    assert any("learned from" in shift for shift in rust["weight_shifts"]) is learning
+
+
+@pytest.mark.parametrize(
+    "control_args",
+    [
+        ("--vendor", "openai"),
+        ("--exclude-vendor", "anthropic"),
+        ("--model", "openai/gpt-5.6-terra"),
+        ("--host", "openai-api"),
+        ("--stable-only",),
+        ("--available-only",),
+        ("--exclude-host", "codex-cli"),
+        ("--max-price", "999"),
+        ("--prohibit-tool", "shell"),
+    ],
+)
+def test_rust_route_preserves_control_exclusions(seeded_home, monkeypatch, control_args):
+    monkeypatch.setenv("AGENTROUTER_HOME", str(seeded_home))
+    task = "Summarize this document"
+    python = CliRunner().invoke(app, ["route", task, "--json", "--no-log", *control_args])
+    assert python.exit_code in (0, 4), python.output
+    expected = json.loads(python.stdout)
+    expected.pop("decision_id")
+    expected.pop("task")
+    rust = _rust_route_payload(seeded_home, task, *control_args)
+    assert rust == expected
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        ("unknown-preference",),
+        ("--unknown-flag",),
+        ("--prohibit-tool", "made-up-tool"),
+        ("--max-price", "NaN"),
+        ("--max-price", "inf"),
+        ("--max-price", "-1"),
+    ],
+)
+def test_rust_route_fails_closed_on_unknown_controls(seeded_home, extra):
+    result = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "cli_route_cli",
+            "--",
+            str(seeded_home),
+            "write a function",
+            *extra,
+        ],
+        cwd=RUST_CRATE_DIR,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert result.stdout == ""

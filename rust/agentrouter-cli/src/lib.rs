@@ -6,8 +6,8 @@
 //! classification, routing, controls, and host resolution are all delegated
 //! to their own already-ported crates. See `tests/test_cli_route_rust_compat.py`.
 //!
-//! Scope note: this covers `route --json` with no config.yaml overrides and
-//! no `--verify-live` (that flag is a documented no-op in Python today since
+//! Scope note: this covers `route --json` with config.yaml routing overrides
+//! and hard controls, but no `--verify-live` (a documented no-op today since
 //! no live usage adapter is registered — see `agentrouter-usage`). `init`,
 //! `explain`, `feedback`, `registry list`, `prompt generate`, `plugin`, and
 //! `providers *` are not ported in this slice.
@@ -202,6 +202,63 @@ pub fn apply_policy(
         .collect())
 }
 
+/// Load the routing-relevant subset of `config.yaml`. Python accepts unknown
+/// top-level keys and ignores nonnumeric individual weight overrides; the
+/// Rust probe follows those rules while rejecting a malformed YAML document
+/// or non-mapping policy before a route is produced.
+pub fn load_route_config(
+    home: &Path,
+) -> Result<(agentrouter_routing::Weights, bool, Option<String>), String> {
+    let path = home.join("config.yaml");
+    let contents = match std::fs::read_to_string(&path) {
+        Ok(contents) => contents,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(error) => return Err(error.to_string()),
+    };
+    let config: Value = if contents.trim().is_empty() {
+        json!({})
+    } else {
+        serde_yaml::from_str(&contents).map_err(|error| format!("invalid config YAML: {error}"))?
+    };
+    let config = if config.is_null() { json!({}) } else { config };
+    let map = config
+        .as_object()
+        .ok_or_else(|| "config.yaml must be a YAML mapping".to_string())?;
+    let mut weights = agentrouter_routing::Weights::default();
+    let overrides = match map.get("weights") {
+        None | Some(Value::Null) => None,
+        Some(Value::Object(overrides)) => Some(overrides),
+        Some(_) => return Err("Config error: 'weights' must be a mapping.".to_string()),
+    };
+    if let Some(overrides) = overrides {
+        for name in ["w_cap", "w_cost", "w_lat", "w_ctx"] {
+            if overrides.get(name).is_some_and(Value::is_boolean) {
+                return Err(format!("Config error: weight '{name}' must be numeric."));
+            }
+            if let Some(value) = overrides.get(name).and_then(Value::as_f64) {
+                match name {
+                    "w_cap" => weights.w_cap = value,
+                    "w_cost" => weights.w_cost = value,
+                    "w_lat" => weights.w_lat = value,
+                    "w_ctx" => weights.w_ctx = value,
+                    _ => unreachable!(),
+                }
+            }
+        }
+    }
+    let policy = match map.get("policy") {
+        None | Some(Value::Null) => None,
+        Some(Value::Object(policy)) => match policy.get("max_pricing_tier") {
+            None | Some(Value::Null) => None,
+            Some(Value::String(tier)) => Some(tier.clone()),
+            Some(_) => return Err("Config error: invalid policy.max_pricing_tier".to_string()),
+        },
+        Some(_) => return Err("Config error: 'policy' must be a mapping.".to_string()),
+    };
+    let learning = map.get("learning") != Some(&Value::Bool(false));
+    Ok((weights, learning, policy))
+}
+
 /// Mirrors `cli._reason_for`.
 pub fn reason_for(rec: &Value, cls: &Classification, shifts: &[String]) -> String {
     let t = &rec["terms"];
@@ -347,6 +404,30 @@ pub fn route_payload(
     payload["prompt"] = Value::String(prompt);
     payload["execution_route"] = exec_route;
     payload["fallback_execution_route"] = fb_route;
+    payload
+}
+
+/// Apply user hard controls before scoring and retain every control exclusion
+/// ahead of engine exclusions, matching Python's `route` command trail.
+pub fn route_payload_with_controls(
+    task: &str,
+    models: &[ModelEntry],
+    cls: &Classification,
+    base_weights: agentrouter_routing::Weights,
+    prefer: Option<&str>,
+    weight_shift_note: Option<String>,
+    controls: &agentrouter_policy::controls::RouteControls,
+) -> Value {
+    let (kept, dropped) = agentrouter_policy::controls::apply_controls(models, controls);
+    let mut payload = route_payload(task, &kept, cls, base_weights, prefer, weight_shift_note);
+    if !dropped.is_empty() {
+        let mut excluded: Vec<Value> = dropped
+            .into_iter()
+            .map(|item| json!({"model": item.model, "reason": item.reason}))
+            .collect();
+        excluded.extend(payload["excluded"].as_array().cloned().unwrap_or_default());
+        payload["excluded"] = json!(excluded);
+    }
     payload
 }
 

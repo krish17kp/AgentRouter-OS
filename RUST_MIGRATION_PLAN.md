@@ -354,6 +354,15 @@ consistent with this repo's standing rule to reproduce before trusting.
 | R12 | Rust-only runtime validation | R11 | A build/run with the Python package absent entirely | Fresh-machine install + full CLI/HTTP/MCP smoke with no `agentrouter` Python package installed | Any feature silently requires Python |
 | R13 | Staging, rollback, release readiness | R12 | Staging deployment plan, rollback drill, update to `RELEASE.md`/`QUALITY_GATES.yaml` evidence requirements for the new implementation | Rollback drill evidence (a real revert exercised, not described); release-readiness review | Any of this plan's non-negotiables violated, or the Release truth gate (`context_band_accuracy`) still failing independent of language |
 
+R4 follow-up (2026-11-09): the Rust route probe now reads configured weights,
+pricing policy, and the learning switch, then applies the ported hard route
+controls before scoring. Differential tests include configured routing,
+feedback learning, control exclusions, no-eligible results, and malformed
+config rejection. They exposed and fixed a Rust host-discovery mismatch:
+CLI credentials are looked up in the user's home, as in Python, not under
+`AGENTROUTER_HOME`. This remains a probe; complete CLI flags, errors, and
+deployment surfaces still need parity work.
+
 R6 and R7 are deliberately placed after the interface milestones (R4–R5) and
 before the deep-hardening ones (R8–R10): nothing in orchestration or graph
 work depends on provider execution existing, but provider execution

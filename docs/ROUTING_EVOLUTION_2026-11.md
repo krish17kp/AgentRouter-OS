@@ -80,6 +80,10 @@ accepted as AgentRouter benchmarks.
   non-forced home initialization, stored-decision JSON inspection, and prompt regeneration probes. The new
   differential tests compare those operations against Python on the same SQLite log; full
   CLI/HTTP/MCP parity is still outstanding.
+- The route probe now honors config weights, pricing policy, the feedback
+  learning switch, and hard controls before scoring. A parity test caught a
+  credential-path bug in Rust host discovery and verified its fix against
+  Python across `AGENTROUTER_HOME` overrides.
 - `tests/test_openai_adapter.py` covers provider opt-in, dry run, `--yes`,
   high-risk and tool-needs gates, target drift, exact model/prompt dispatch,
   request privacy/size bounds, and malformed or incomplete responses.

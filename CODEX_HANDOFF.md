@@ -2,20 +2,22 @@
 
 ## Current checkpoint — 2026-11-09
 
-Branch `task/rust-r1-workspace` is pushed at `0ac4335` with PR #25 open
-against the RC. The new code adds Rust decision/feedback compatibility probes
-and strengthens default-off OpenAI execution tests. Local full Python suite:
-1,300 passed, 3 skipped; Rust 1.75 workspace tests, formatting, Clippy, Ruff,
+Branch `task/rust-r1-workspace` has PR #25 open against the RC. The newest
+Rust R4 work adds configured weights, pricing policy, learning switch, and
+hard route controls to the route probe, plus a host credential-path parity
+fix. Local full Python suite: 1,336 passed, 3 skipped; Rust 1.75 workspace
+tests, formatting, Clippy, Ruff,
 Bandit, dependency audit and package build passed. Mutation campaign:
 0.9836 overall, 0.9843 safety/policy/execution, no unreviewed survivor.
 The canonical evaluation remains 6/7, context-band 0.6667 < 0.90, so the
 product is not release ready. Remote CI on `3281c41` passed across Python,
 Windows, Rust, security and mutation jobs.
-The pushed `0ac4335` CI attempt failed before job creation with GitHub
-internal server errors on Security, Rust, and mutation workflows. Local
-route-persistence parity passed. A subsequent non-forced Rust `init` probe
-also passes local parity and awaits a new push/checks.
-Next command: `gh run list --branch task/rust-r1-workspace --limit 8`;
+The pushed `0ac4335` and `e8bbc58` CI attempts failed before job creation
+with GitHub internal server errors on affected workflows. They are no code
+verdict; `3281c41` is the latest fully green remote checkpoint. Route
+persistence, non-forced `init`, config/control routing, and host discovery
+pass local Python/Rust differential tests.
+Next command: `gh run list --branch task/rust-r1-workspace --limit 12`;
 repair any failure and continue R4 CLI parity. Preserve the inherited
 untracked `website/` directory. No paid API call, merge, tag, or deploy
 occurred. See `AGENT_HANDOFF.md` for the canonical current state.

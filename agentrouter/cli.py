@@ -6,6 +6,7 @@ Exit codes: 0 ok | 1 runtime error | 2 bad usage | 3 registry validation | 4 no 
 from __future__ import annotations
 
 import json
+import math
 import os
 import shutil
 import uuid
@@ -498,6 +499,9 @@ def route(
                 msg = f"Unknown --prohibit-tool {t!r}{hint}. Known: {', '.join(known)}"
                 typer.echo(msg, err=True)
                 raise typer.Exit(EXIT_USAGE)
+    if max_price is not None and (not math.isfinite(max_price) or max_price < 0):
+        typer.echo("--max-price must be finite and non-negative.", err=True)
+        raise typer.Exit(EXIT_USAGE)
     ctrl = RouteControls(
         vendor=tuple(vendor or ()),
         exclude_vendor=tuple(exclude_vendor or ()),

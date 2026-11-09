@@ -9,7 +9,8 @@
   (0.9836 overall, 0.9843 safety/policy/execution, zero unreviewed
   survivors). A later `0ac4335` workflow attempt failed before job creation
   with GitHub internal server errors; Rust route persistence and non-forced
-  `init` now pass local parity but await fresh CI.
+  `init`, configured routing/controls and host discovery now pass local
+  parity but await fresh CI.
   The older mutation-status section below is historical.
 - The frozen context-band release gate remains 0.6667 < 0.90. The 63-candidate
   two-human annotation/adjudication round is not complete. Synthetic or AI
@@ -17,6 +18,9 @@
 - OpenAI Responses API text execution is default-off and requires provider
   opt-in, a ready API host, an auto-approval decision and `execute --yes`.
   No paid live request or deployment has been validated.
+- Route price caps now reject non-finite and negative values. Registry prices
+  remain unmeasured for bundled seed models, so a valid cap still excludes
+  those models rather than assuming they are under budget.
 
 ## Historical limitations and studies
 

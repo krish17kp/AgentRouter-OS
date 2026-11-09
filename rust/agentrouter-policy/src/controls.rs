@@ -96,6 +96,9 @@ fn reject_reason(
     host_out: &HashSet<String>,
     model_pin: Option<&str>,
 ) -> Option<String> {
+    if c.max_price.is_some_and(|cap| !cap.is_finite() || cap < 0.0) {
+        return Some("invalid --max-price; cap must be finite and non-negative".to_string());
+    }
     let vkey = m.vendor().to_lowercase();
     if !vendor_in.is_empty() && !vendor_in.contains(&vkey) {
         return Some(format!(
@@ -292,6 +295,20 @@ mod tests {
         };
         let (kept, _dropped) = apply_controls(&models, &c);
         assert!(kept.is_empty());
+    }
+
+    #[test]
+    fn invalid_price_caps_cannot_admit_a_priced_model() {
+        let models = vec![model("input_price_per_million: 5.0\n")];
+        for cap in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -1.0] {
+            let controls = RouteControls {
+                max_price: Some(cap),
+                ..Default::default()
+            };
+            let (kept, dropped) = apply_controls(&models, &controls);
+            assert!(kept.is_empty());
+            assert!(dropped[0].reason.contains("invalid --max-price"));
+        }
     }
 
     #[test]

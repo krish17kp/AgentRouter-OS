@@ -140,3 +140,53 @@ def test_cli_host_installed_then_configured_then_authenticated_matches(monkeypat
     rust_result = _rust_status("claude-code", "fake-claude-cli", dict(os.environ))
     assert rust_result == python_result
     assert python_result["state"] == "authenticated"
+
+
+def test_agentrouter_data_home_does_not_relocate_cli_credentials(monkeypatch, tmp_path):
+    home = tmp_path / "user-home"
+    data_home = tmp_path / "agentrouter-data"
+    (home / ".claude").mkdir(parents=True)
+    (home / ".claude" / ".credentials.json").write_text("{}")
+    data_home.mkdir()
+    _set_home(monkeypatch, home)
+    monkeypatch.setenv("AGENTROUTER_HOME", str(data_home))
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    cmd_name = "fake-claude-cli.bat" if os.name == "nt" else "fake-claude-cli"
+    fake_cli = bin_dir / cmd_name
+    fake_cli.write_text("@echo ok\n" if os.name == "nt" else "#!/bin/sh\necho ok\n")
+    if os.name != "nt":
+        fake_cli.chmod(fake_cli.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+    monkeypatch.setenv("PATH", str(bin_dir))
+    python_result = _python_status("claude-code", "fake-claude-cli")
+    rust_result = _rust_status("claude-code", "fake-claude-cli", dict(os.environ))
+    assert rust_result == python_result
+    assert rust_result["state"] == "authenticated"
+
+
+def test_rust_host_does_not_search_current_directory_when_home_is_missing(tmp_path):
+    (tmp_path / ".claude").mkdir()
+    (tmp_path / ".claude" / ".credentials.json").write_text("{}")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    cmd_name = "fake-claude-cli.bat" if os.name == "nt" else "fake-claude-cli"
+    fake_cli = bin_dir / cmd_name
+    fake_cli.write_text("@echo ok\n" if os.name == "nt" else "#!/bin/sh\necho ok\n")
+    if os.name != "nt":
+        fake_cli.chmod(fake_cli.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+    env = dict(os.environ)
+    env.pop("HOME", None)
+    env.pop("USERPROFILE", None)
+    env.pop("ANTHROPIC_API_KEY", None)
+    env["PATH"] = str(bin_dir)
+    result = subprocess.run(
+        [_built_binary_path(), "claude-code", "fake-claude-cli"],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=True,
+    )
+    assert json.loads(result.stdout)["state"] == "installed"

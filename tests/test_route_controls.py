@@ -5,9 +5,11 @@ integration tests that exercise the wiring in `agentrouter route`.
 """
 
 import json
+import math
 from datetime import date
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 import agentrouter
@@ -92,6 +94,20 @@ def test_max_price_excludes_unknown_price_honestly():
     if unpriced:
         assert not kept
         assert any("price unknown" in d["reason"] for d in dropped)
+
+
+@pytest.mark.parametrize("cap", [math.nan, math.inf, -math.inf, -1.0])
+def test_max_price_rejects_invalid_caps(cap):
+    with pytest.raises(ValueError, match="finite and non-negative"):
+        apply_controls(_seed_models(), RouteControls(max_price=cap))
+
+
+@pytest.mark.parametrize("cap", ["nan", "inf", "-inf", "-1"])
+def test_route_cli_rejects_invalid_price_caps(cap, monkeypatch, tmp_path):
+    monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
+    result = runner.invoke(app, ["route", "Summarize this document", "--max-price", cap])
+    assert result.exit_code == 2
+    assert "finite and non-negative" in result.output
 
 
 def test_host_filter_keeps_only_models_on_host():

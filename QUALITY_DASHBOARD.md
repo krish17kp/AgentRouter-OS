@@ -2,15 +2,16 @@
 
 ## Current checkpoint — 2026-11-09
 
-PR #25 (`task/rust-r1-workspace`, pushed `3281c41`) is in progress. Locally,
-1,300 Python tests passed and 3 skipped; Rust 1.75 workspace tests, Clippy,
+PR #25 (`task/rust-r1-workspace`) is in progress. Locally,
+1,336 Python tests passed and 3 skipped; Rust 1.75 workspace tests, Clippy,
 formatting, Ruff, Bandit, dependency audit, and wheel/sdist build passed.
 Critical mutation testing completed with overall 0.9836 and safety/policy/
 execution 0.9843, both above the unchanged gates, and zero unreviewed
 survivors. GitHub CI on `3281c41` passed. The later `0ac4335` pull-request
 workflows failed before jobs began with GitHub internal server errors; no
-code verdict is available on that head. Route persistence and non-forced
-Rust `init` probes pass local parity and await a new CI run. The release evaluation
+code verdict is available on those heads. Route persistence, non-forced
+Rust `init`, config/control routing, and host discovery pass local parity
+and await a new CI run. The release evaluation
 remains 6/7: context-band accuracy 0.6667 is below 0.90. The Rust-native
 CLI/HTTP/MCP migration is incomplete, so this checkpoint is not production
 readiness evidence. Historical measurements follow.

@@ -6,8 +6,9 @@
 migration branch. Local Python/Rust, mutation, security and package checks
 pass. GitHub checks on `3281c41` passed. The later `0ac4335` pull-request
 workflows failed before any job began because of GitHub internal server
-errors; they provide no verification result. A non-forced Rust `init` probe
-has local parity evidence and awaits a new CI run. The canonical
+errors; they provide no verification result. Non-forced Rust `init`,
+config/control routing and host discovery have local parity evidence and
+await a new CI run. The canonical
 evaluation remains 6/7 gates; context-band accuracy is 0.6667 against the
 unchanged 0.90 threshold. Rust still lacks full CLI/HTTP/MCP/execution parity,
 R5–R13 validation, staging and rollback evidence. The human annotation round

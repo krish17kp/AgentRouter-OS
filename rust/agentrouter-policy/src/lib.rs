@@ -1,9 +1,7 @@
 //! Rust port of the policy-layer pieces of `agentrouter/taxonomy.py` and
-//! `agentrouter/controls.py` that don't depend on `hosts.py` (not yet
-//! ported — see `RUST_MIGRATION_PLAN.md` port order). `controls.py`'s
-//! `RouteControls`/`apply_controls` (the `--vendor`/`--host`/`--available-only`
-//! CLI filters) are deferred until `agentrouter-hosts` exists; only the
-//! preference-weight table, which is pure data, is ported here.
+//! `agentrouter/controls.py`. Route controls use `agentrouter-hosts` for
+//! availability checks and filter candidates before the routing engine scores
+//! them. See `RUST_MIGRATION_PLAN.md` for the remaining migration stages.
 
 use std::collections::HashMap;
 

@@ -101,18 +101,17 @@ fn availability_for(state: &str) -> &'static str {
     }
 }
 
-/// Indirection so tests can point this at a tempdir instead of the real
-/// home, mirroring Python's `_home_dir()` seam. Checks `AGENTROUTER_HOME`
-/// first (test/CI override only), then falls back to the real platform
-/// home dir.
-fn home_dir() -> PathBuf {
-    if let Ok(over) = std::env::var("AGENTROUTER_HOME") {
-        return PathBuf::from(over);
-    }
-    std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
+/// CLI credentials live in the user's home, not in AgentRouter's data home.
+/// Python's `Path.home()` uses USERPROFILE on Windows and HOME on Unix;
+/// AGENTROUTER_HOME only relocates registries and the decision log.
+fn home_dir() -> Option<PathBuf> {
+    #[cfg(windows)]
+    let home = std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME"));
+    #[cfg(not(windows))]
+    let home = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE"));
+    home.ok()
         .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from("."))
+        .filter(|path| path.is_absolute())
 }
 
 fn safe_exists(path: &Path) -> bool {
@@ -197,7 +196,10 @@ fn detect_cli_host(host: &str, meta: Option<&CliHost>, cmd: &str) -> HostStatus 
 
     let home = home_dir();
     for cred in meta.credential_files {
-        if safe_exists(&home.join(meta.config_dir).join(cred)) {
+        if home
+            .as_ref()
+            .is_some_and(|path| safe_exists(&path.join(meta.config_dir).join(cred)))
+        {
             return status(
                 host,
                 AUTHENTICATED,
@@ -219,7 +221,10 @@ fn detect_cli_host(host: &str, meta: Option<&CliHost>, cmd: &str) -> HostStatus 
             );
         }
     }
-    if safe_is_dir(&home.join(meta.config_dir)) {
+    if home
+        .as_ref()
+        .is_some_and(|path| safe_is_dir(&path.join(meta.config_dir)))
+    {
         return status(
             host,
             CONFIGURED,

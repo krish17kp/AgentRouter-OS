@@ -1,5 +1,26 @@
 # LOOP_LOG
 
+## 2026-11-09 — Rust R4 configured routing and controls
+
+- Added Rust route-probe loading of configured scoring weights, pricing policy,
+  and the feedback-learning switch; applied the ported hard controls before
+  scoring and kept their exclusion reasons in the decision trail.
+- Differential tests compare Rust and Python for configured routes, feedback
+  learning on/off, vendor/model/host/price/stability/availability/tool
+  controls, no-eligible routes, malformed config, and unknown controls.
+  A real mismatch exposed credential discovery using `AGENTROUTER_HOME`;
+  Rust now checks the user's home, as Python does.
+- Independent review found a non-finite price-cap bypass (also present in
+  Python) and a missing-home fallback to the current directory in Rust host
+  detection. Both were repaired with fail-closed checks and regression tests.
+- Local full regression: 1,336 Python tests passed, 3 skipped. Rust 1.75
+  workspace tests, Clippy with warnings denied, and formatting passed.
+  `git diff --check` and Ruff passed. This is a partial R4 probe, not a
+  production Rust CLI. Remote checks on recent preceding heads failed
+  before job creation with GitHub internal server errors; inspect new CI.
+- Release evaluation remains 6/7, context-band accuracy 0.6667 < 0.90;
+  human annotation remains external under `TASK_012_OWNER_ACTIONS.md`.
+
 ## Iteration 31 — 2026-09-10 — Release-gate preparation + TASK-019 resume
 
 **Goal:** two coordinated tracks. Track A: verify (never fabricate) that the

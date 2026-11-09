@@ -3,11 +3,12 @@
 ## Current checkpoint — 2026-11-09
 
 Product acceptance remains **not granted**. PR #25 is open and unmerged;
-local regression (1,300 passed/3 skipped), Rust 1.75 tests, mutation (0.9836
+local regression (1,336 passed/3 skipped), Rust 1.75 tests, mutation (0.9836
 overall; 0.9843 safety/policy/execution), security checks and package build
 pass. GitHub CI on `3281c41` passed; the later `0ac4335` workflows failed
 before job creation with GitHub internal server errors. The route-persistence
-and non-forced Rust `init` probes pass locally but await fresh CI. The context-band release gate remains
+and non-forced Rust `init`, config/control routing and host discovery probes
+pass locally but await fresh CI. The context-band release gate remains
 0.6667 < 0.90, and Rust R4 is partial with R5–R13 still outstanding. The
 table below is a historical assessment, not the latest gate result.
 
