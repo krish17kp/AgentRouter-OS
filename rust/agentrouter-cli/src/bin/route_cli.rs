@@ -6,7 +6,9 @@
 //! `tests/test_cli_route_rust_compat.py` can diff Rust output against
 //! Python's `agentrouter route` CLI for the same registries and task.
 //!
-//! Usage: route_cli <home> <task> [prefer]
+//! Usage: route_cli <home> <task> [prefer] [--save]
+//! `--save` persists the Rust decision into the existing SQLite log and emits
+//! the Python CLI's `{decision_id, task, ...payload}` JSON envelope.
 
 use std::path::PathBuf;
 
@@ -23,7 +25,9 @@ fn main() {
     let task = args
         .next()
         .expect("usage: route_cli <home> <task> [prefer]");
-    let prefer = args.next();
+    let remaining: Vec<String> = args.collect();
+    let save = remaining.iter().any(|arg| arg == "--save");
+    let prefer = remaining.iter().find(|arg| arg.as_str() != "--save");
 
     let reg_dir = home.join("registry");
     let providers = load_providers(&reg_dir.join("providers.yaml")).expect("load providers");
@@ -35,7 +39,19 @@ fn main() {
     let (weights, note) =
         agentrouter_cli::learned_weights(&conn, &Weights::default()).expect("learned weights");
 
-    let payload =
-        agentrouter_cli::route_payload(&task, &models, &cls, weights, prefer.as_deref(), note);
+    let mut payload = agentrouter_cli::route_payload(
+        &task,
+        &models,
+        &cls,
+        weights,
+        prefer.map(String::as_str),
+        note,
+    );
+    if save {
+        let decision_id = agentrouter_storage::save_decision(&conn, &task, &payload)
+            .expect("save decision to existing SQLite log");
+        payload["decision_id"] = serde_json::json!(decision_id);
+        payload["task"] = serde_json::json!(task);
+    }
     println!("{}", serde_json::to_string(&payload).unwrap());
 }

@@ -1,5 +1,17 @@
 # Product Acceptance Evidence
 
+## Current checkpoint — 2026-11-09
+
+Product acceptance remains **not granted**. PR #25 is open and unmerged;
+local regression (1,300 passed/3 skipped), Rust 1.75 tests, mutation (0.9836
+overall; 0.9843 safety/policy/execution), security checks and package build
+pass. GitHub CI on `3281c41` passed; the later route-persistence probe awaits
+checks. The context-band release gate remains
+0.6667 < 0.90, and Rust R4 is partial with R5–R13 still outstanding. The
+table below is a historical assessment, not the latest gate result.
+
+## Historical assessment
+
 _Current v0.5 release-candidate view, 2026-07-20. Historical per-task evidence is
 retained under `loop/tasks/` and `loop/reports/`._
 

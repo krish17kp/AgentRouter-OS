@@ -1,5 +1,20 @@
 # Quality Dashboard — AgentRouter OS
 
+## Current checkpoint — 2026-11-09
+
+PR #25 (`task/rust-r1-workspace`, pushed `3281c41`) is in progress. Locally,
+1,300 Python tests passed and 3 skipped; Rust 1.75 workspace tests, Clippy,
+formatting, Ruff, Bandit, dependency audit, and wheel/sdist build passed.
+Critical mutation testing completed with overall 0.9836 and safety/policy/
+execution 0.9843, both above the unchanged gates, and zero unreviewed
+survivors. GitHub CI on `3281c41` passed; the later Rust route-persistence
+probe is locally verified and awaits CI. The release evaluation
+remains 6/7: context-band accuracy 0.6667 is below 0.90. The Rust-native
+CLI/HTTP/MCP migration is incomplete, so this checkpoint is not production
+readiness evidence. Historical measurements follow.
+
+## Historical dashboard
+
 _Last refreshed: 2026-08-08 (iter26, after TASK-011/012/013/014/015/016 merged to
 the RC @ `5847c22`). Current measurements supersede historical TASK-004 in-sample
 readiness claims._

@@ -1,5 +1,23 @@
 # Known Limitations
 
+## Current migration and release limits (2026-11-09)
+
+- Python is still the shipping router. Rust R4 has route, SQLite,
+  stored-decision, prompt, and feedback compatibility probes, but no complete
+  public Rust CLI/HTTP/MCP replacement. R5–R13 remain open.
+- The local and GitHub critical mutation campaigns pass on `3281c41`
+  (0.9836 overall, 0.9843 safety/policy/execution, zero unreviewed
+  survivors). A later Rust route-persistence probe awaits its own CI.
+  The older mutation-status section below is historical.
+- The frozen context-band release gate remains 0.6667 < 0.90. The 63-candidate
+  two-human annotation/adjudication round is not complete. Synthetic or AI
+  labels cannot be submitted as human labels.
+- OpenAI Responses API text execution is default-off and requires provider
+  opt-in, a ready API host, an auto-approval decision and `execute --yes`.
+  No paid live request or deployment has been validated.
+
+## Historical limitations and studies
+
 ## Route controls (Phase P3)
 
 - `--max-price` excludes every seed model today because seeds carry no
@@ -17,7 +35,7 @@
 - P5 measured model profiles need benchmark inference. Current ability scores have
   `ability_source: curated`, not benchmark-derived evidence.
 
-## Mutation score awaits the first Linux CI result (TASK-010)
+## Historical mutation setup (TASK-010)
 
 - Windows + Python 3.13 did not produce a valid score. `mutmut` 2.4 encountered console encoding
   and test-baseline issues, mutmut 3.x supports Linux/WSL rather than native Windows, and mutatest

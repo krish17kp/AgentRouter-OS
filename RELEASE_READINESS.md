@@ -1,5 +1,19 @@
 # Release Readiness
 
+## Current checkpoint — 2026-11-09
+
+**NOT release ready.** PR #25 (`task/rust-r1-workspace`, `3281c41`) is an
+unmerged migration branch. Its local Python/Rust, mutation, security and
+package checks pass. GitHub checks on `3281c41` passed; a later Rust
+route-persistence probe awaits CI on its new head. The canonical
+evaluation remains 6/7 gates; context-band accuracy is 0.6667 against the
+unchanged 0.90 threshold. Rust still lacks full CLI/HTTP/MCP/execution parity,
+R5–R13 validation, staging and rollback evidence. The human annotation round
+in `TASK_012_OWNER_ACTIONS.md` remains required; AI-generated labels cannot
+close that gate. No paid OpenAI request or production deployment occurred.
+
+## Historical v0.5 assessment
+
 **Status: NOT release-ready.** Canonical v0.5 release-candidate assessment,
 updated 2026-08-08 (iter26, after TASK-011/012/013/014/015/016 merged to
 `release/agentrouter-v0.5-rc1`, RC @ `5847c22`).

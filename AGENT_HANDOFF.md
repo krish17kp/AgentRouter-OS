@@ -1,5 +1,31 @@
 # AGENT_HANDOFF — live checkpoint
 
+## Current checkpoint — 2026-11-09
+
+- Branch `task/rust-r1-workspace`, pushed HEAD `3281c41`, PR #25 into
+  `release/agentrouter-v0.5-rc1`. `main` and the RC were not changed.
+- Python OpenAI text execution is opt-in and rechecks the API key immediately
+  before dispatch. No paid provider request was made. The release evaluation
+  remains 6/7 gates; frozen context-band accuracy is 0.6667 versus 0.90.
+- Rust R4 remains partial: SQLite feedback recording, Rust route persistence
+  into the Python-readable log, stored decision JSON, and prompt regeneration
+  now have Python/Rust differential tests. The Rust
+  public CLI/HTTP/MCP and later R5–R13 milestones remain outstanding.
+- Local verification: 1,300 Python tests passed, 3 skipped; Rust 1.75
+  workspace tests, Clippy and formatting passed; Ruff, Bandit, dependency
+  audit, wheel/sdist build passed. Mutmut 3.6.0: overall 0.9836,
+  safety/policy/execution 0.9843, 0 unreviewed survivors after specific
+  equivalent-mutant review. All remote CI checks for `3281c41` passed;
+  the subsequent route-persistence probe is locally verified and awaiting
+  checks on its new commit.
+- Next: inspect all GitHub checks for the new PR #25 head, repair any failure, then resume
+  R4 CLI contract work. The untracked `website/` directory is inherited user
+  work and must not be staged or discarded. Human context-band labels remain
+  an external prerequisite under `TASK_012_OWNER_ACTIONS.md`; AI-generated
+  labels cannot substitute for them.
+
+## Historical checkpoint
+
 **Canonical volatile handoff.** A fresh session given only "continue from the
 previous left-off task" should recover from this file plus the repository and
 GitHub state. Detailed history belongs in `LOOP_LOG.md` and the task progress

@@ -1390,3 +1390,27 @@ score and release-branch GitHub checks are also pending. Current state lives in
   write_generated_registry + deprecation reconciliation on refresh (report-only).
 - **Next:** TASK-013 follow-up (provenance block + deprecation), then Phase 3
   priority #3 (verified execution-host states).
+
+## 2026-11-09 — Rust R4 and OpenAI execution hardening
+
+- PR #25 branch `task/rust-r1-workspace` advanced to `3281c41`; no RC/main
+  merge, release, paid call, or deployment.
+- OpenAI execution rechecks credential availability immediately before the
+  request. Hermetic tests cover opt-in, safety and host gates, target drift,
+  malformed responses, HTTP method/headers, output limits, and sanitized
+  output. Rust probes cover feedback, stored-decision JSON, and prompt
+  regeneration with Python/Rust differential checks.
+- Local full Python suite: 1,300 passed, 3 skipped. Rust 1.75 workspace tests,
+  Clippy, formatting, Ruff, Bandit, dependency audit, wheel/sdist build passed.
+  Mutation gate passed locally: 0.9836 overall, 0.9843 safety/policy/execution,
+  0 unreviewed survivors. Nine newly reviewed survivors are equivalent under
+  Python/Typer/urllib semantics; one stale allowance was removed.
+- Release evaluation unchanged: 6/7 gates, context-band 0.6667 < 0.90.
+  Remote checks for `3281c41` are running. Next: inspect/repair CI and
+  continue Rust R4; human annotation remains external.
+- Follow-up: every GitHub check on `3281c41` passed, including Python
+  3.10–3.13, Windows, Rust Linux/Windows parity, Rust 1.75, security,
+  build/API compatibility, and critical mutation (0.9836 overall, 0.9843
+  safety/policy/execution, all five gates green). Added a Rust route
+  persistence probe; Python reads its SQLite decision back unchanged.
+  This follow-up is locally verified and will get a separate CI run.

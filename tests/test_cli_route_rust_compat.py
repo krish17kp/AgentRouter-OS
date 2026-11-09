@@ -108,3 +108,35 @@ def test_route_payload_matches_between_python_and_rust(seeded_home, task):
     python_payload = _python_route_payload(seeded_home, task)
     rust_payload = _rust_route_payload(seeded_home, task)
     assert rust_payload == python_payload, f"mismatch for task: {task!r}"
+
+
+def test_rust_route_persists_python_readable_decision(seeded_home):
+    task = "Summarize this document"
+    result = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "cli_route_cli",
+            "--",
+            str(seeded_home),
+            task,
+            "--save",
+        ],
+        cwd=RUST_CRATE_DIR,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=True,
+    )
+    routed = json.loads(result.stdout)
+    conn = store.connect(seeded_home)
+    loaded = store.load_decision(conn, routed["decision_id"])
+    conn.close()
+    assert loaded is not None
+    assert loaded["task"] == task
+    assert loaded["prompt"] == routed["prompt"]
+    assert loaded["classification"] == routed["classification"]
+    assert loaded["recommendation"] == routed["recommendation"]
