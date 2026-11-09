@@ -17,6 +17,33 @@ permissions:
   contents: read
 
 jobs:
+  rust-parity:
+    # Rust is staged behind Python. Build it on both supported OS families and
+    # compare the ported contracts against the Python implementation.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Python oracle
+        run: python -m pip install -e ".[dev]"
+      - name: Format and lint Rust workspace
+        run: |
+          cargo fmt --all --check
+          cargo clippy --workspace --all-targets -- -D warnings
+      - name: Rust tests and Python parity
+        run: |
+          cargo test --workspace
+          python -m pytest -q tests/test_rust_compat.py tests/test_rust_routing_weights.py
+
   test:
     runs-on: ubuntu-latest
     strategy:

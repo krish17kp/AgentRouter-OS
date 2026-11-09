@@ -4,11 +4,20 @@
 > The **Python implementation in `agentrouter/` is the current, shipping system**
 > and remains release-gated exactly as today (see **Current production status**
 > below). This document plans a phased, contract-preserving port to a
-> Rust-native implementation. No Rust code exists yet; no Python code is
+> Rust-native implementation. Initial Rust crates exist; no Python code is
 > deleted as part of this plan. See `AGENTROUTER_FOUNDATION_REVIEW.md` (session
 > artifact, not committed) for the review this plan responds to, and the
 > **Subsystem inventory** section below for the actual recursive read of
 > `agentrouter/` this revision is built from (not assumptions from other docs).
+
+## Current implementation note (2026-11-09)
+
+R1 shared types exist in `rust/agentrouter-core`. The staged
+`rust/agentrouter-routing` crate now ports only `engine.weights_for`, with
+Python/Rust differential tests and Linux/Windows CI in `.github/workflows/ci.yml`.
+This is a partial routing proof, not R2 or R3 completion. The research-backed
+next steps and evidence policy are in `docs/ROUTING_EVOLUTION_2026-11.md`.
+The historical inventory below describes the 2026-10-13 baseline.
 
 ## Terminology
 
@@ -21,7 +30,7 @@
   deleted from this role until the retirement criteria at the bottom of this
   document are met.
 - **APPROVED TARGET** — the Rust-native implementation described by this plan.
-  Approved as a direction by the owner (AD-7); no code exists yet.
+  Approved as a direction by the owner (AD-7); initial crates are partial.
 - **CURRENT PRODUCTION STATUS** — see below. Independent of implementation
   language.
 
@@ -333,7 +342,7 @@ consistent with this repo's standing rule to reproduce before trusting.
 | # | Milestone | Depends on | Deliverables | Verification evidence | Rollback condition |
 |---|---|---|---|---|---|
 | R0 | Architecture & docs (**this PR**) | — | AD-7, this plan, doc annotations | `git diff` reviewed, `pytest -q` shows no regression | N/A — doc-only |
-| R1 | Workspace + core types | R0 | **DONE** (`task/rust-r1-workspace`, 2026-10-13) — Cargo workspace skeleton, `agentrouter-core` crate with the `Classification` struct + 6 enums mirroring `agentrouter/schema.py` field-for-field and value-for-value (`approval_level` not `approval`, `"code+tests"` not `CodeTests`, nulls emitted not omitted to match Pydantic's default dump), plus a `print_classification` bin and `tests/test_rust_compat.py` that diffs real Python `model_dump_json()` output against it | `cargo build`/`cargo test --workspace`/`cargo clippy -D warnings`/`cargo fmt --check` all green; `pytest -q` 982 passed/1 skipped (baseline 981/1, +1 new compat test, zero regressions); CI job not yet added (next step) | Workspace doesn't build cross-platform (Windows/Linux, per `AGENTS.md`'s platform invariant) — not yet verified on Windows this session, Linux only |
+| R1 | Workspace + core types | R0 | **DONE** (`task/rust-r1-workspace`, 2026-10-13) — Cargo workspace skeleton, `agentrouter-core` crate with the `Classification` struct + 6 enums mirroring `agentrouter/schema.py` field-for-field and value-for-value (`approval_level` not `approval`, `"code+tests"` not `CodeTests`, nulls emitted not omitted to match Pydantic's default dump), plus a `print_classification` bin and `tests/test_rust_compat.py` that diffs real Python `model_dump_json()` output against it | Local `cargo build`/`cargo test --workspace`/`cargo clippy -D warnings`/`cargo fmt --check` were green at R1; `pytest -q` 982 passed/1 skipped then. A Linux/Windows `rust-parity` CI job was added 2026-11-09; its remote result is pending. | Workspace doesn't build cross-platform (Windows/Linux, per `AGENTS.md`'s platform invariant) — CI evidence still pending |
 | R2 | Registries + classification | R1 | `agentrouter-registry`, `agentrouter-classifier` | Port-plan rows 1–2 passing | Any classification/registry fixture disagreement |
 | R3 | Routing + policy + safety | R2 | `agentrouter-policy`, `agentrouter-routing`, `agentrouter-execution` (hosts/usage only, no adapters yet) | Port-plan rows 1, 3–4 passing; explanation trail byte-identical | Any scoring/explanation divergence |
 | R4 | SQLite + CLI (core commands) | R3 | `agentrouter-storage`, enough of `agentrouter-cli` for `route`/`classify`/`explain`/`doctor` | Port-plan rows 5, 7, 14 (partial) passing; `CLI_SPEC.md` subset green | Any SQLite round-trip or CLI contract break |
