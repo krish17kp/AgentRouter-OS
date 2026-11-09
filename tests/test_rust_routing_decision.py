@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from agentrouter.controls import RouteControls, apply_controls
 from agentrouter.engine import route
 from agentrouter.registry import load_models, load_providers
 from agentrouter.schema import (
@@ -129,3 +130,44 @@ def test_rust_registry_to_route_matches_python(models, task_type):
         check=True,
     )
     assert json.loads(completed.stdout) == route(models, cls)
+
+
+def test_rust_policy_prefilter_then_route_matches_python(models):
+    cls = Classification(
+        task_type=TaskType.coding,
+        complexity=Level.high,
+        risk=Level.high,
+        context_tokens=8_000,
+        context_band=ContextBand.medium,
+        output_type=OutputType.code,
+        tool_needs=["file-edit"],
+        approval_level=ApprovalLevel.human_approval_required,
+    )
+    controls = RouteControls(vendor=("anthropic",), prohibit_tool=("web",))
+    kept, drops = apply_controls(models, controls)
+    expected = route(kept, cls)
+    expected["excluded"] = drops + expected["excluded"]
+    payload = {
+        "providers_yaml": (SEEDS / "providers.yaml").read_text(encoding="utf-8"),
+        "models_yaml": (SEEDS / "models.yaml").read_text(encoding="utf-8"),
+        "classification": cls.model_dump(mode="json"),
+        "controls": {"vendor": ["anthropic"], "prohibit_tool": ["web"]},
+    }
+    completed = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "-p",
+            "agentrouter-routing",
+            "--bin",
+            "route_from_registry_json",
+        ],
+        cwd=ROOT,
+        input=json.dumps(payload),
+        text=True,
+        capture_output=True,
+        timeout=120,
+        check=True,
+    )
+    assert json.loads(completed.stdout) == expected

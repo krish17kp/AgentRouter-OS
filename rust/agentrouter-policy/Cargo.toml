@@ -1,0 +1,13 @@
+[package]
+name = "agentrouter-policy"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Fail-closed route control filters and safety gates"
+
+[dependencies]
+agentrouter-core = { path = "../agentrouter-core" }
+agentrouter-registry = { path = "../agentrouter-registry" }
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = "1.0.128"

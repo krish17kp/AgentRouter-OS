@@ -1,6 +1,6 @@
 //! JSON probe for safety-gate differential tests; execution is not exposed.
 use agentrouter_core::Classification;
-use agentrouter_routing::safety::gates_for;
+use agentrouter_policy::safety::gates_for;
 use std::io::{self, Read};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

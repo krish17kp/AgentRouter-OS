@@ -16,13 +16,14 @@ R1 shared types exist in `rust/agentrouter-core`. A staged
 `rust/agentrouter-registry` crate validates manual/generated YAML, applies
 curated ability overrides, and reproduces stale-catalog warnings on offline
 fixtures. The staged
-`rust/agentrouter-routing` crate now ports `engine.weights_for`, the static
-eligibility/scoring/fallback decision, and `safety.gates_for` over a validated registry projection,
+`rust/agentrouter-policy` now owns user prefilters and safety gates;
+`rust/agentrouter-routing` ports `engine.weights_for` and the static
+eligibility/scoring/fallback decision over a validated registry projection,
 with Python/Rust differential tests and Linux/Windows CI in `.github/workflows/ci.yml`.
 The registry-to-decision integration also matches Python on seed cases; the
 declared Rust 1.75 minimum builds locally and is now a separate CI job.
 The registry's filesystem discovery and remaining edge cases, classifier,
-policy controls, and host layers still need Rust ports. This is not R2 or R3
+host availability resolution, and execution layers still need Rust ports. This is not R2 or R3
 completion. The research-backed
 next steps and evidence policy are in `docs/ROUTING_EVOLUTION_2026-11.md`.
 The historical inventory below describes the 2026-10-13 baseline.
