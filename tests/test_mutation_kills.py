@@ -506,6 +506,19 @@ def test_execution_route_block_missing_model_returns_none():
     assert execution_route_block(None, {}) is None
 
 
+def test_execution_route_block_preserves_unavailable_target(monkeypatch):
+    # Route presentation must retain the chosen target and remediation even
+    # when no execution host is currently usable.
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    model = _seed_model(execution_targets=[_target(host="openai-api", host_model_id="hmi")])
+    block = execution_route_block({"model": model.key}, {model.key: model})
+    assert block is not None
+    assert block["host"] == "openai-api"
+    assert block["host_model_id"] == "hmi"
+    assert block["availability"] == UNAVAILABLE
+    assert block["host_state"] == hosts_mod.MISSING
+
+
 def test_execution_route_block_payload_keys_and_values(monkeypatch, tmp_path):
     # kills execution_route_block 28/29,34/35,41/42,45/46,47-52 (dict key/value text).
     # Hermetic: no host config/credentials and no stray key, so the state is the

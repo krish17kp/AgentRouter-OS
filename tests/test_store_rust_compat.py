@@ -86,3 +86,16 @@ def test_load_unknown_decision_matches(seeded_home):
     python_decision = store.load_decision(store.connect(seeded_home), "d_99999")
     rust_decision = json.loads(_run(seeded_home, "load", "d_99999"))
     assert rust_decision == python_decision
+
+
+def test_rust_feedback_is_visible_to_python_and_rejects_invalid_input(seeded_home):
+    conn = store.connect(seeded_home)
+    decision_id = store.recent_ids(conn, 1)[0]
+    before = conn.execute("SELECT COUNT(*) FROM feedback").fetchone()[0]
+    assert json.loads(_run(seeded_home, "feedback", decision_id, "4", "useful")) is True
+    assert json.loads(_run(seeded_home, "feedback", "d_99999", "4", "missing")) is False
+    assert json.loads(_run(seeded_home, "feedback", decision_id, "0", "invalid")) is False
+    rows = conn.execute("SELECT decision_id, rating, note FROM feedback").fetchall()
+    assert len(rows) == before + 1
+    assert rows[-1] == (int(decision_id.removeprefix("d_")), 4, "useful")
+    conn.close()

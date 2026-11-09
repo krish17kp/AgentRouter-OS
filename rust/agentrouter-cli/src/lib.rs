@@ -110,6 +110,33 @@ Target tool: {tool_key}\n\n\
     )
 }
 
+/// Reuse the recorded prompt unless the caller explicitly chooses another
+/// tool. An override regenerates from the stored task, classification, and
+/// checklist, matching `prompt generate --from` without re-routing.
+pub fn prompt_from_decision(payload: &Value, tool: Option<&str>) -> Result<String, String> {
+    if let Some(tool) = tool {
+        if tool.is_empty() {
+            return Err("target tool must not be empty".to_string());
+        }
+        let task = payload["task"]
+            .as_str()
+            .ok_or_else(|| "stored decision has no task".to_string())?;
+        let cls: Classification = serde_json::from_value(payload["classification"].clone())
+            .map_err(|_| "stored decision has invalid classification".to_string())?;
+        let checklist = payload["gates"]["checklist"]
+            .as_array()
+            .ok_or_else(|| "stored decision has no safety checklist".to_string())?;
+        if !checklist.iter().all(Value::is_string) {
+            return Err("stored decision has invalid safety checklist".to_string());
+        }
+        return Ok(generate_prompt(task, tool, &cls, checklist));
+    }
+    payload["prompt"]
+        .as_str()
+        .map(str::to_string)
+        .ok_or_else(|| "stored decision has no prompt".to_string())
+}
+
 const MIN_FEEDBACK: i64 = 3;
 const STEP: f64 = 0.01;
 const MAX_SHIFT: f64 = 0.10;
@@ -383,6 +410,26 @@ mod tests {
             checklist.as_array().unwrap(),
         );
         assert!(p.contains("STOP before any irreversible action"));
+    }
+
+    #[test]
+    fn prompt_from_decision_reuses_or_regenerates() {
+        let c = cls(Level::Low, ApprovalLevel::Auto);
+        let gates = gates_for(&c);
+        let payload = json!({
+            "task": "do it",
+            "classification": c,
+            "gates": gates,
+            "prompt": "saved prompt",
+        });
+        assert_eq!(
+            prompt_from_decision(&payload, None).unwrap(),
+            "saved prompt"
+        );
+        let regenerated = prompt_from_decision(&payload, Some("other/tool")).unwrap();
+        assert!(regenerated.contains("Target tool: other/tool"));
+        assert!(regenerated.contains("## Task\ndo it"));
+        assert!(prompt_from_decision(&json!({}), Some("other/tool")).is_err());
     }
 
     #[test]

@@ -1119,12 +1119,16 @@ def _execute_via_host(
             raise typer.Exit(EXIT_USAGE)
         import os
 
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key or not api_key.strip():
+            typer.echo("OpenAI API key is no longer available; route again.", err=True)
+            raise typer.Exit(EXIT_USAGE)
         typer.echo(f"Running {model.name} via OpenAI API...")
         try:
             result = run_text_response(
                 tgt.host_model_id,
                 prompt,
-                os.environ.get("OPENAI_API_KEY", ""),
+                api_key,
                 max_output_tokens=model.max_output_tokens,
             )
         except OpenAIAdapterError as exc:

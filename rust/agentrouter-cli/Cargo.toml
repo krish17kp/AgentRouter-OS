@@ -21,3 +21,7 @@ serde_yaml = "0.9.34"
 [[bin]]
 name = "cli_route_cli"
 path = "src/bin/route_cli.rs"
+
+[[bin]]
+name = "decision_cli"
+path = "src/bin/decision_cli.rs"

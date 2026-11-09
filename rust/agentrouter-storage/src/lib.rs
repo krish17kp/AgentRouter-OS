@@ -262,6 +262,34 @@ pub fn load_decision(conn: &Connection, decision_id_str: &str) -> rusqlite::Resu
     Ok(Some(payload))
 }
 
+/// Record a 1–5 outcome rating for an existing decision. The insert checks
+/// existence in one SQLite statement so a stale id cannot create orphaned
+/// feedback between a separate lookup and write.
+pub fn record_feedback(
+    conn: &Connection,
+    decision_id_str: &str,
+    rating: i64,
+    note: &str,
+) -> rusqlite::Result<bool> {
+    if !(1..=5).contains(&rating) {
+        return Ok(false);
+    }
+    let Some(rowid_str) = decision_id_str.strip_prefix("d_") else {
+        return Ok(false);
+    };
+    let Ok(rowid) = rowid_str.parse::<i64>() else {
+        return Ok(false);
+    };
+    let _guard = WRITE_LOCK.lock().unwrap();
+    let now = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Micros, false);
+    let inserted = conn.execute(
+        "INSERT INTO feedback (decision_id, created_at, rating, note) \
+         SELECT id, ?1, ?2, ?3 FROM decisions WHERE id = ?4",
+        params![now, rating, note, rowid],
+    )?;
+    Ok(inserted == 1)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -277,6 +305,23 @@ mod tests {
         let loaded = load_decision(&conn, &id).unwrap().unwrap();
         assert_eq!(loaded["task"], "do thing");
         assert_eq!(loaded["decision_id"], id);
+    }
+
+    #[test]
+    fn feedback_requires_existing_decision_and_valid_rating() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = connect(dir.path()).unwrap();
+        let id = save_decision(&conn, "task", &json!({})).unwrap();
+        assert!(!record_feedback(&conn, "d_99999", 4, "no row").unwrap());
+        assert!(!record_feedback(&conn, &id, 0, "bad rating").unwrap());
+        assert!(!record_feedback(&conn, &id, 6, "bad rating").unwrap());
+        assert!(record_feedback(&conn, &id, 4, "worked").unwrap());
+        let (rating, note): (i64, String) = conn
+            .query_row("SELECT rating, note FROM feedback", [], |r| {
+                Ok((r.get(0)?, r.get(1)?))
+            })
+            .unwrap();
+        assert_eq!((rating, note.as_str()), (4, "worked"));
     }
 
     #[test]

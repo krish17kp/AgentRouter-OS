@@ -65,7 +65,10 @@ def test_api_execution_requires_provider_opt_in(home, monkeypatch):
     monkeypatch.setattr(openai_adapter, "run_text_response", lambda *a, **kw: pytest.fail("called"))
     result = runner.invoke(app, ["execute", payload["decision_id"], "--yes"])
     assert result.exit_code == 2
-    assert "OpenAI API execution is disabled for this provider." in result.stderr
+    assert result.stderr.endswith(
+        "OpenAI API execution is disabled for this provider.\n"
+        "Set supports_execution: true for openai in providers.yaml to opt in.\n"
+    )
 
 
 def test_api_dry_run_never_calls_provider(home, monkeypatch):
@@ -83,7 +86,7 @@ def test_api_execution_requires_yes(home, monkeypatch):
     monkeypatch.setattr(openai_adapter, "run_text_response", lambda *a, **kw: pytest.fail("called"))
     result = runner.invoke(app, ["execute", payload["decision_id"]])
     assert result.exit_code == 2
-    assert "--yes" in result.output
+    assert result.stdout.endswith("Next: re-run with --yes to submit this prompt to OpenAI.\n")
 
 
 def test_api_execution_requires_nonblank_key(home, monkeypatch):
@@ -165,7 +168,7 @@ def test_invalid_stored_classification_is_rejected_before_dispatch(home, monkeyp
     monkeypatch.setattr(openai_adapter, "run_text_response", lambda *a, **kw: pytest.fail("called"))
     result = runner.invoke(app, ["execute", payload["decision_id"], "--yes"])
     assert result.exit_code == 2
-    assert "Execution blocked: stored classification is invalid; route again." in result.stderr
+    assert result.stderr == "Execution blocked: stored classification is invalid; route again.\n"
 
 
 def test_stored_approval_level_mismatch_is_rejected(home, monkeypatch):
@@ -176,7 +179,7 @@ def test_stored_approval_level_mismatch_is_rejected(home, monkeypatch):
     monkeypatch.setattr(openai_adapter, "run_text_response", lambda *a, **kw: pytest.fail("called"))
     result = runner.invoke(app, ["execute", payload["decision_id"], "--yes"])
     assert result.exit_code == 2
-    assert "Execution blocked: stored safety gate changed; route again." in result.stderr
+    assert result.stderr == "Execution blocked: stored safety gate changed; route again.\n"
 
 
 def test_tool_requiring_task_cannot_use_text_only_api(home, monkeypatch):
@@ -186,7 +189,9 @@ def test_tool_requiring_task_cannot_use_text_only_api(home, monkeypatch):
     monkeypatch.setattr(openai_adapter, "run_text_response", lambda *a, **kw: pytest.fail("called"))
     result = runner.invoke(app, ["execute", payload["decision_id"], "--yes"])
     assert result.exit_code == 2
-    assert "OpenAI API text execution requires a task with no external tools." in result.stderr
+    assert result.stderr.endswith(
+        "OpenAI API text execution requires a task with no external tools.\n"
+    )
 
 
 @pytest.mark.parametrize("field", ["host", "host_model_id", "model_id", "vendor"])
@@ -207,10 +212,103 @@ def test_api_execution_rejects_changed_recorded_target(home, monkeypatch, capfd,
             classification=payload["classification"],
         )
     assert error.value.exit_code == 2
-    assert (
-        "Execution target changed since this decision was recorded; route again."
-        in capfd.readouterr().err
+    assert capfd.readouterr().err == (
+        "Execution target changed since this decision was recorded; route again.\n"
     )
+
+
+@pytest.mark.parametrize("field", ["vendor", "provider"])
+def test_api_execution_rejects_non_openai_model(home, monkeypatch, capfd, field):
+    from agentrouter import cli
+
+    payload = _route()
+    providers, models = cli._load_registries()
+    original = next(model for model in models if model.key == payload["recommendation"]["model"])
+    changed = original.model_copy(update={field: "other"})
+    monkeypatch.setattr(cli, "_load_registries", lambda: (providers, [changed]))
+    monkeypatch.setattr(openai_adapter, "run_text_response", lambda *a, **kw: pytest.fail("called"))
+    with pytest.raises(typer.Exit) as error:
+        cli._execute_via_host(
+            {"model": changed.key},
+            {},
+            payload["prompt"],
+            yes=True,
+            dry_run=False,
+            classification=payload["classification"],
+        )
+    assert error.value.exit_code == 2
+    assert capfd.readouterr().err == "OpenAI API target is not attached to an OpenAI model.\n"
+
+
+def test_api_execution_rechecks_host_readiness(home, monkeypatch, capfd):
+    from agentrouter import cli
+
+    payload = _route()
+    _enable_openai(home)
+    real_resolve = hosts.resolve_execution_route
+
+    def unavailable(model, include_unavailable=False):
+        resolved = real_resolve(model, include_unavailable=include_unavailable)
+        status = hosts.HostStatus(
+            "openai-api", hosts.UNAVAILABLE, "test: unavailable", hosts.MISSING
+        )
+        return hosts.ResolvedRoute(resolved.target, status, [status])
+
+    monkeypatch.setattr(hosts, "resolve_execution_route", unavailable)
+    monkeypatch.setattr(openai_adapter, "run_text_response", lambda *a, **kw: pytest.fail("called"))
+    with pytest.raises(typer.Exit) as error:
+        cli._execute_via_host(
+            payload["recommendation"],
+            payload["execution_route"],
+            payload["prompt"],
+            yes=True,
+            dry_run=False,
+            classification=payload["classification"],
+        )
+    assert error.value.exit_code == 2
+    assert capfd.readouterr().err == (
+        "Not enabled: host 'openai-api' is missing (test: unavailable).\n"
+    )
+
+
+def test_api_execution_rechecks_key_before_dispatch(home, monkeypatch, capfd):
+    from agentrouter import cli
+
+    payload = _route()
+    _enable_openai(home)
+    monkeypatch.delenv("OPENAI_API_KEY")
+
+    def ready(model, include_unavailable=False):
+        target = next(t for t in model.execution_targets if t.host == "openai-api")
+        status = hosts.HostStatus("openai-api", hosts.AVAILABLE, "test: ready", hosts.AUTHENTICATED)
+        return hosts.ResolvedRoute(target, status, [status])
+
+    monkeypatch.setattr(hosts, "resolve_execution_route", ready)
+    monkeypatch.setattr(openai_adapter, "run_text_response", lambda *a, **kw: pytest.fail("called"))
+    with pytest.raises(typer.Exit) as error:
+        cli._execute_via_host(
+            payload["recommendation"],
+            payload["execution_route"],
+            payload["prompt"],
+            yes=True,
+            dry_run=False,
+            classification=payload["classification"],
+        )
+    assert error.value.exit_code == 2
+    assert capfd.readouterr().err == "OpenAI API key is no longer available; route again.\n"
+
+
+def test_api_execution_sanitizes_provider_output(home, monkeypatch):
+    payload = _route()
+    _enable_openai(home)
+    monkeypatch.setattr(
+        openai_adapter, "run_text_response", lambda *a, **kw: "Hello\nWorld\t!\x1b[31m"
+    )
+    result = runner.invoke(app, ["execute", payload["decision_id"], "--yes"])
+    assert result.exit_code == 0
+    assert "Running " in result.stdout
+    assert result.stdout.endswith("Hello\nWorld\t!?[31m\n")
+    assert "\x1b" not in result.stdout
 
 
 class _Response:
@@ -255,6 +353,8 @@ def test_response_request_is_private_bounded_and_text_only(monkeypatch):
     assert timeout == openai_adapter.TIMEOUT_SECONDS
     assert request.full_url == openai_adapter.RESPONSES_URL
     assert request.get_header("Authorization") == "Bearer secret"
+    assert request.get_header("Content-type") == "application/json"
+    assert request.get_method() == "POST"
     assert json.loads(request.data) == {
         "model": "model-id",
         "input": "prompt",
@@ -295,31 +395,38 @@ def test_response_collects_only_assistant_text(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "payload",
+    ("payload", "message"),
     [
-        [],
-        {"status": "completed"},
-        {"status": "completed", "output": "not a list"},
-        {
-            "status": "completed",
-            "output": [None, {"type": "message", "role": "assistant", "content": "not a list"}],
-        },
-        {
-            "status": "completed",
-            "output": [
-                {
-                    "type": "message",
-                    "role": "assistant",
-                    "content": [{"type": "output_text", "text": 123}],
-                }
-            ],
-        },
+        ([], "OpenAI response did not complete"),
+        ({"status": "completed"}, "OpenAI response had no output items"),
+        ({"status": "completed", "output": "not a list"}, "OpenAI response had no output items"),
+        (
+            {
+                "status": "completed",
+                "output": [None, {"type": "message", "role": "assistant", "content": "not a list"}],
+            },
+            "OpenAI response contained no text output",
+        ),
+        (
+            {
+                "status": "completed",
+                "output": [
+                    {
+                        "type": "message",
+                        "role": "assistant",
+                        "content": [{"type": "output_text", "text": 123}],
+                    }
+                ],
+            },
+            "OpenAI response contained no text output",
+        ),
     ],
 )
-def test_malformed_response_items_are_rejected(monkeypatch, payload):
+def test_malformed_response_items_are_rejected(monkeypatch, payload, message):
     monkeypatch.setattr(openai_adapter, "urlopen", lambda *_args, **_kw: _Response(payload))
-    with pytest.raises(openai_adapter.OpenAIAdapterError):
+    with pytest.raises(openai_adapter.OpenAIAdapterError) as error:
         openai_adapter.run_text_response("model", "prompt", "secret", max_output_tokens=10)
+    assert str(error.value) == message
 
 
 @pytest.mark.parametrize(
@@ -357,8 +464,9 @@ def test_malformed_response_items_are_rejected(monkeypatch, payload):
 )
 def test_response_rejects_non_text_or_incomplete_results(monkeypatch, payload, message):
     monkeypatch.setattr(openai_adapter, "urlopen", lambda *_args, **_kw: _Response(payload))
-    with pytest.raises(openai_adapter.OpenAIAdapterError, match=message):
+    with pytest.raises(openai_adapter.OpenAIAdapterError) as error:
         openai_adapter.run_text_response("model", "prompt", "secret", max_output_tokens=10)
+    assert str(error.value) == message
 
 
 @pytest.mark.parametrize(
@@ -390,22 +498,39 @@ def test_response_size_and_json_are_bounded(monkeypatch):
 
     monkeypatch.setattr(openai_adapter, "urlopen", lambda *_args, **_kw: _RawResponse({}))
     monkeypatch.setattr(openai_adapter, "MAX_RESPONSE_BYTES", 8)
-    with pytest.raises(openai_adapter.OpenAIAdapterError, match="size limit"):
+    with pytest.raises(openai_adapter.OpenAIAdapterError) as error:
         openai_adapter.run_text_response("model", "prompt", "secret", max_output_tokens=10)
+    assert str(error.value) == "OpenAI response exceeded the size limit"
     monkeypatch.setattr(openai_adapter, "MAX_RESPONSE_BYTES", 200)
-    with pytest.raises(openai_adapter.OpenAIAdapterError, match="invalid JSON"):
+    with pytest.raises(openai_adapter.OpenAIAdapterError) as error:
         openai_adapter.run_text_response("model", "prompt", "secret", max_output_tokens=10)
+    assert str(error.value) == "OpenAI returned invalid JSON"
 
 
 def test_response_reads_one_byte_past_the_limit(monkeypatch):
     class _BoundedResponse(_Response):
         def read(self, limit):
+            assert limit == 9
             return b"123456789"[:limit]
 
     monkeypatch.setattr(openai_adapter, "urlopen", lambda *_args, **_kw: _BoundedResponse({}))
     monkeypatch.setattr(openai_adapter, "MAX_RESPONSE_BYTES", 8)
-    with pytest.raises(openai_adapter.OpenAIAdapterError, match="size limit"):
+    with pytest.raises(openai_adapter.OpenAIAdapterError) as error:
         openai_adapter.run_text_response("model", "prompt", "secret", max_output_tokens=10)
+    assert str(error.value) == "OpenAI response exceeded the size limit"
+
+
+def test_response_at_exact_size_limit_reaches_json_parser(monkeypatch):
+    class _ExactResponse(_Response):
+        def read(self, limit):
+            assert limit == 9
+            return b"invalid!"[:limit]
+
+    monkeypatch.setattr(openai_adapter, "urlopen", lambda *_args, **_kw: _ExactResponse({}))
+    monkeypatch.setattr(openai_adapter, "MAX_RESPONSE_BYTES", 8)
+    with pytest.raises(openai_adapter.OpenAIAdapterError) as error:
+        openai_adapter.run_text_response("model", "prompt", "secret", max_output_tokens=10)
+    assert str(error.value) == "OpenAI returned invalid JSON"
 
 
 @pytest.mark.parametrize(
@@ -415,14 +540,36 @@ def test_response_reads_one_byte_past_the_limit(monkeypatch):
         ("model", "", "secret", 10),
         ("model", "prompt", " ", 10),
         ("model", "prompt", "secret", 0),
+        ("model", "prompt", "secret", -1),
     ],
 )
 def test_invalid_request_is_rejected_before_transport(monkeypatch, model, prompt, key, limit):
     monkeypatch.setattr(openai_adapter, "urlopen", lambda *_args, **_kw: pytest.fail("called"))
     message = (
         "OpenAI output limit must be positive"
-        if limit == 0
+        if limit <= 0
         else "OpenAI model, prompt, and key are required"
     )
-    with pytest.raises(openai_adapter.OpenAIAdapterError, match=message):
+    with pytest.raises(openai_adapter.OpenAIAdapterError) as error:
         openai_adapter.run_text_response(model, prompt, key, max_output_tokens=limit)
+    assert str(error.value) == message
+
+
+def test_one_output_token_is_valid(monkeypatch):
+    monkeypatch.setattr(
+        openai_adapter,
+        "urlopen",
+        lambda *_args, **_kw: _Response(
+            {
+                "status": "completed",
+                "output": [
+                    {
+                        "type": "message",
+                        "role": "assistant",
+                        "content": [{"type": "output_text", "text": "x"}],
+                    }
+                ],
+            }
+        ),
+    )
+    assert openai_adapter.run_text_response("model", "prompt", "secret", max_output_tokens=1) == "x"

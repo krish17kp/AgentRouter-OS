@@ -9,6 +9,7 @@
 //!   recent-decisions <n>                -> JSON array
 //!   aggregate-stats                     -> JSON object
 //!   load <decision_id>                  -> JSON object or null
+//!   feedback <decision_id> <rating> <note> -> JSON bool
 
 use std::path::PathBuf;
 
@@ -46,6 +47,17 @@ fn main() {
             let id = args.next().expect("decision id");
             let d = load_decision(&conn, &id).unwrap();
             println!("{}", serde_json::to_string(&d).unwrap());
+        }
+        "feedback" => {
+            let id = args.next().expect("decision id");
+            let rating: i64 = args
+                .next()
+                .expect("rating")
+                .parse()
+                .expect("integer rating");
+            let note = args.next().unwrap_or_default();
+            let recorded = record_feedback(&conn, &id, rating, &note).unwrap();
+            println!("{}", serde_json::to_string(&recorded).unwrap());
         }
         other => panic!("unknown op {other}"),
     }
