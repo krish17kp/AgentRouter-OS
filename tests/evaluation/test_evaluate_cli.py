@@ -173,9 +173,25 @@ def test_prepare_fixture_only_dataset_is_skipped_external_not_a_fallback():
     assert "SKIPPED_EXTERNAL" in r.output
 
 
-def test_prepare_unknown_dataset_reports_unavailable_without_failing_all_run():
+def test_prepare_all_reports_unavailable_without_network_access(monkeypatch):
+    # `prepare --all` is intentionally an offline test. In environments with
+    # the optional `datasets` extra installed, an unmocked prepare can contact
+    # Hugging Face and download multiple corpora.
+    calls = []
+
+    class UnavailableAdapter:
+        def prepare(self, limit=None):
+            calls.append(limit)
+            from agentrouter.evaluation.base import SkippedExternal
+
+            raise SkippedExternal("offline test")
+
+    monkeypatch.setattr(evaluation_cli, "dataset_names", lambda: ["mock-dataset"])
+    monkeypatch.setattr(evaluation_cli, "try_get_adapter", lambda _name: UnavailableAdapter())
     r = runner.invoke(app, ["eval", "prepare", "--all"])
     assert r.exit_code == 0, r.output
+    assert calls == [None]
+    assert "SKIPPED_EXTERNAL" in r.output
 
 
 def test_report_renders_markdown_from_result_json(tmp_path):
