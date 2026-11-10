@@ -1,0 +1,15 @@
+[package]
+name = "agentrouter-core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Shared types for AgentRouter OS (Task, Decision, model/registry enums, errors) — no routing logic. Mirrors agentrouter/schema.py."
+
+[dependencies]
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = "1.0.128"
+thiserror = "1.0.64"
+
+[dev-dependencies]
+serde_yaml = "0.9.34"

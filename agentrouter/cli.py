@@ -6,6 +6,7 @@ Exit codes: 0 ok | 1 runtime error | 2 bad usage | 3 registry validation | 4 no 
 from __future__ import annotations
 
 import json
+import math
 import os
 import shutil
 import uuid
@@ -498,6 +499,9 @@ def route(
                 msg = f"Unknown --prohibit-tool {t!r}{hint}. Known: {', '.join(known)}"
                 typer.echo(msg, err=True)
                 raise typer.Exit(EXIT_USAGE)
+    if max_price is not None and (not math.isfinite(max_price) or max_price < 0):
+        typer.echo("--max-price must be finite and non-negative.", err=True)
+        raise typer.Exit(EXIT_USAGE)
     ctrl = RouteControls(
         vendor=tuple(vendor or ()),
         exclude_vendor=tuple(exclude_vendor or ()),
@@ -971,11 +975,12 @@ def providers_doctor():
     broken = 0
     for path in gen_paths:
         provider = path.name[len("models.") : -len(".generated.yaml")]
+        provider_label = "".join(c if c.isprintable() else "?" for c in provider)[:120]
         try:
             st = catalog_ops.read_status(path)
             load_models(path, providers)
         except (RegistryError, catalog_ops.CatalogError, yaml.YAMLError, OSError) as e:
-            typer.echo(f"[FAIL ] {provider:<12} {e}")
+            typer.echo(f"[FAIL ] {provider_label:<12} {e}")
             broken += 1
             continue
         mark = "STALE" if st.stale else "OK   "
@@ -1049,9 +1054,17 @@ def prompt_generate(
 # --- execute (M6 — opt-in, hard safety gate) ---------------------------------------
 
 
-def _execute_via_host(rec: dict, er: dict, prompt: str, *, yes: bool, dry_run: bool):
+def _execute_via_host(
+    rec: dict,
+    er: dict,
+    prompt: str,
+    *,
+    yes: bool,
+    dry_run: bool,
+    classification: dict | None = None,
+):
     """Run the exact model on its resolved host (argv, shell=False). Phase 7."""
-    _, models = _load_registries()
+    providers, models = _load_registries()
     model = next((m for m in models if m.key == rec["model"]), None)
     if model is None:
         typer.echo(f"Model '{rec['model']}' is no longer in the registry.", err=True)
@@ -1060,6 +1073,16 @@ def _execute_via_host(rec: dict, er: dict, prompt: str, *, yes: bool, dry_run: b
     tgt, status = resolved.target, resolved.status
     if tgt is None or status is None:
         typer.echo(f"No execution target for {model.key}.", err=True)
+        raise typer.Exit(EXIT_USAGE)
+    if er and (
+        er.get("host") != tgt.host
+        or er.get("host_model_id") != tgt.host_model_id
+        or er.get("model_id") != model.model_id
+        or er.get("vendor") != model.vendor
+    ):
+        typer.echo(
+            "Execution target changed since this decision was recorded; route again.", err=True
+        )
         raise typer.Exit(EXIT_USAGE)
 
     typer.echo(f"Model:       {model.name} ({model.vendor}/{model.model_id})")
@@ -1071,6 +1094,52 @@ def _execute_via_host(rec: dict, er: dict, prompt: str, *, yes: bool, dry_run: b
     # --dry-run previews safely and NEVER executes, regardless of availability.
     if dry_run:
         typer.echo("Dry run: nothing executed.")
+        raise typer.Exit(0)
+
+    if tgt.host == "openai-api":
+        from .openai_adapter import OpenAIAdapterError, run_text_response
+
+        provider = providers.get(model.provider)
+        if model.vendor != "openai" or model.provider != "openai":
+            typer.echo("OpenAI API target is not attached to an OpenAI model.", err=True)
+            raise typer.Exit(EXIT_USAGE)
+        if provider is None or not provider.supports_execution:
+            typer.echo("OpenAI API execution is disabled for this provider.", err=True)
+            typer.echo(
+                "Set supports_execution: true for openai in providers.yaml to opt in.", err=True
+            )
+            raise typer.Exit(EXIT_USAGE)
+        if classification is None or classification.get("tool_needs"):
+            typer.echo(
+                "OpenAI API text execution requires a task with no external tools.", err=True
+            )
+            raise typer.Exit(EXIT_USAGE)
+        if status.availability != hosts.AVAILABLE:
+            typer.echo(
+                f"Not enabled: host '{tgt.host}' is {status.state} ({status.reason}).", err=True
+            )
+            raise typer.Exit(EXIT_USAGE)
+        if not yes:
+            typer.echo("Next: re-run with --yes to submit this prompt to OpenAI.")
+            raise typer.Exit(EXIT_USAGE)
+        import os
+
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key or not api_key.strip():
+            typer.echo("OpenAI API key is no longer available; route again.", err=True)
+            raise typer.Exit(EXIT_USAGE)
+        typer.echo(f"Running {model.name} via OpenAI API...")
+        try:
+            result = run_text_response(
+                tgt.host_model_id,
+                prompt,
+                api_key,
+                max_output_tokens=model.max_output_tokens,
+            )
+        except OpenAIAdapterError as exc:
+            typer.echo(f"Execution failed: {exc}", err=True)
+            raise typer.Exit(EXIT_RUNTIME) from None
+        typer.echo("".join(c if c.isprintable() or c in "\n\t" else "?" for c in result))
         raise typer.Exit(0)
 
     if not tgt.command_template:
@@ -1231,8 +1300,9 @@ def execute(
 ):
     """Run the recommended tool for a logged decision (opt-in; high risk never executes).
 
-    Requires the recommendation's provider to have supports_execution: true and an
-    exec_command in providers.yaml - both ship disabled by default.
+    Requires explicit provider opt-in. Legacy CLI providers also need an
+    exec_command; OpenAI API text execution needs OPENAI_API_KEY. All ship
+    disabled by default.
     """
     # Delegate to an undecorated helper so the safety-critical execution logic is
     # reachable by mutation testing (mutmut does not instrument @app.command funcs).
@@ -1251,7 +1321,20 @@ def _execute(decision_id: str, *, yes: bool, dry_run: bool):
             typer.echo(f"Next: try a recent id: {', '.join(recent)}", err=True)
         raise typer.Exit(EXIT_USAGE)
 
-    gates = payload["gates"]
+    try:
+        recorded_classification = Classification.model_validate(payload["classification"])
+    except (KeyError, TypeError, ValueError):
+        typer.echo("Execution blocked: stored classification is invalid; route again.", err=True)
+        raise typer.Exit(EXIT_USAGE) from None
+    recomputed_gates = gates_for(recorded_classification)
+    gates = payload.get("gates")
+    if (
+        not isinstance(gates, dict)
+        or gates.get("auto_execute_allowed") is not recomputed_gates["auto_execute_allowed"]
+        or gates.get("approval_level") != recomputed_gates["approval_level"]
+    ):
+        typer.echo("Execution blocked: stored safety gate changed; route again.", err=True)
+        raise typer.Exit(EXIT_USAGE)
     if not gates["auto_execute_allowed"]:
         typer.echo(f"Execution blocked for {decision_id}.", err=True)
         typer.echo(
@@ -1284,7 +1367,14 @@ def _execute(decision_id: str, *, yes: bool, dry_run: bool):
     if not legacy_opt_in:
         er = payload.get("execution_route")
         if er and er.get("command_preview") and er.get("host_model_id"):
-            _execute_via_host(rec, er, payload["prompt"], yes=yes, dry_run=dry_run)
+            _execute_via_host(
+                rec,
+                er,
+                payload["prompt"],
+                yes=yes,
+                dry_run=dry_run,
+                classification=payload["classification"],
+            )
             return
 
     if provider is None or not provider.supports_execution or not provider.exec_command:
