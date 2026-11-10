@@ -1,19 +1,13 @@
 # Product Acceptance Evidence
 
-## Current checkpoint — 2026-11-09
+## Current checkpoint — 2026-11-10
 
-Product acceptance remains **not granted**. PR #25 is open and unmerged;
-local regression (1,338 passed/3 skipped), Rust 1.75 tests, mutation (0.9836
-overall; 0.9843 safety/policy/execution), security checks and package build
-pass. GitHub CI on `3281c41` passed; the later `0ac4335` workflows failed
-before job creation with GitHub internal server errors. The route-persistence
-and non-forced Rust `init`, config/control routing and host discovery probes
-pass locally but await fresh CI. The context-band release gate remains
-0.6667 < 0.90, and Rust R4 is partial with R5–R13 still outstanding. The
-table below is a historical assessment, not the latest gate result.
-The `4157fd2` CI, Rust parity, and Security workflows passed; mutation failed
-on three new price-cap validation survivors. Targeted local tests kill them,
-but the full remote campaign must pass before this change is accepted.
+Product acceptance remains **not granted**. PR #25 is open and unmerged.
+Pushed parent `eda4c7a` passed the complete GitHub matrix, including mutation
+(0.9837 overall; 0.9844 safety/policy/execution; zero unreviewed survivors).
+The current Rust registry-list/model-validation slice has local parity but
+awaits push/CI. The context-band release gate remains 0.6667 < 0.90, Rust
+R4 is partial, and R5–R13 remain outstanding. The table below is historical.
 
 ## Historical assessment
 

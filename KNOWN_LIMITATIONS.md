@@ -1,16 +1,14 @@
 # Known Limitations
 
-## Current migration and release limits (2026-11-09)
+## Current migration and release limits (2026-11-10)
 
 - Python is still the shipping router. Rust R4 has route, SQLite,
   stored-decision, prompt, and feedback compatibility probes, but no complete
   public Rust CLI/HTTP/MCP replacement. R5–R13 remain open.
-- The local and GitHub critical mutation campaigns pass on `3281c41`
-  (0.9836 overall, 0.9843 safety/policy/execution, zero unreviewed
-  survivors). A later `0ac4335` workflow attempt failed before job creation
-  with GitHub internal server errors; Rust route persistence and non-forced
-  `init`, configured routing/controls and host discovery now pass local
-  parity but await fresh CI.
+- Pushed parent `eda4c7a` passed GitHub CI, Rust Linux/Windows parity,
+  Security, and critical mutation testing (0.9837 overall, 0.9844
+  safety/policy/execution, zero unreviewed survivors). The current Rust
+  registry-list/model-validation slice awaits its own remote checks.
   The older mutation-status section below is historical.
 - The frozen context-band release gate remains 0.6667 < 0.90. The 63-candidate
   two-human annotation/adjudication round is not complete. Synthetic or AI
@@ -21,9 +19,8 @@
 - Route price caps now reject non-finite and negative values. Registry prices
   remain unmeasured for bundled seed models, so a valid cap still excludes
   those models rather than assuming they are under budget.
-- Remote mutation verification on the controls-boundary test repair remains
-  pending after `4157fd2` reported three new survivors. All three are killed
-  in a fresh targeted local mutant run; the full gate has not yet passed.
+- The controls-boundary mutation repair passed on `eda4c7a` with zero
+  unreviewed survivors.
 
 ## Historical limitations and studies
 

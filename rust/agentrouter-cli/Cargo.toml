@@ -29,3 +29,7 @@ path = "src/bin/decision_cli.rs"
 [[bin]]
 name = "init_cli"
 path = "src/bin/init_cli.rs"
+
+[[bin]]
+name = "registry_cli"
+path = "src/bin/registry_cli.rs"

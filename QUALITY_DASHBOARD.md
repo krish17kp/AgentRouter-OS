@@ -1,24 +1,16 @@
 # Quality Dashboard — AgentRouter OS
 
-## Current checkpoint — 2026-11-09
+## Current checkpoint — 2026-11-10
 
-PR #25 (`task/rust-r1-workspace`) is in progress. Locally,
-1,338 Python tests passed and 3 skipped; Rust 1.75 workspace tests, Clippy,
-formatting, Ruff, Bandit, dependency audit, and wheel/sdist build passed.
-Critical mutation testing completed with overall 0.9836 and safety/policy/
-execution 0.9843, both above the unchanged gates, and zero unreviewed
-survivors. GitHub CI on `3281c41` passed. The later `0ac4335` pull-request
-workflows failed before jobs began with GitHub internal server errors; no
-code verdict is available on those heads. Route persistence, non-forced
-Rust `init`, config/control routing, and host discovery pass local parity
-and await a new CI run. The release evaluation
-remains 6/7: context-band accuracy 0.6667 is below 0.90. The Rust-native
-CLI/HTTP/MCP migration is incomplete, so this checkpoint is not production
-readiness evidence. Historical measurements follow.
-
-On `4157fd2`, GitHub CI, Rust Linux/Windows parity and Security passed, but
-mutation failed with three new controls survivors. Targeted local tests now
-kill those three; the repair requires fresh remote mutation evidence.
+PR #25 (`task/rust-r1-workspace`) is in progress. Pushed parent `eda4c7a`
+passed GitHub CI, Rust Linux/Windows parity, Security, and mutation. Mutation
+scored 0.9837 overall, 0.9844 safety/policy/execution, 0.9815 routing, with
+zero unreviewed survivors. The new Rust `registry list` and shared model
+validation slice passes 19 focused parity cases, Rust 1.75 workspace tests,
+Clippy, formatting, and Ruff; full Python regression passed 1,357 tests with
+3 skips. Release evaluation remains 6/7:
+context-band accuracy 0.6667 < 0.90. Full Rust CLI/HTTP/MCP parity and
+R5–R13 remain outstanding. Historical measurements follow.
 
 ## Historical dashboard
 

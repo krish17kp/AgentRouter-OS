@@ -1,36 +1,30 @@
 # AGENT_HANDOFF — live checkpoint
 
-## Current checkpoint — 2026-11-09
+## Current checkpoint — 2026-11-10
 
 - Branch `task/rust-r1-workspace`, PR #25 into
-  `release/agentrouter-v0.5-rc1`. `main` and the RC were not changed.
-- Python OpenAI text execution is opt-in and rechecks the API key immediately
-  before dispatch. No paid provider request was made. The release evaluation
-  remains 6/7 gates; frozen context-band accuracy is 0.6667 versus 0.90.
-- Rust R4 remains partial: SQLite feedback recording, Rust route persistence
-  into the Python-readable log, stored decision JSON, prompt regeneration,
-  non-forced `init`, configured weights/policy/learning, and hard route controls
-  now have Python/Rust differential tests. Host credential discovery matches
-  Python when `AGENTROUTER_HOME` is set. The Rust
-  public CLI/HTTP/MCP and later R5–R13 milestones remain outstanding.
-- Local verification: 1,338 Python tests passed, 3 skipped; Rust 1.75
-  workspace tests, Clippy and formatting passed; Ruff, Bandit, dependency
-  audit, wheel/sdist build passed. Mutmut 3.6.0: overall 0.9836,
-  safety/policy/execution 0.9843, 0 unreviewed survivors after specific
-  equivalent-mutant review. All remote CI checks for `3281c41` passed.
-- Next: inspect GitHub checks on the latest PR #25 head, repair any code
-  failures, then resume R4 CLI work. The untracked `website/` is inherited user
-  work and must not be staged or discarded. Human context-band labels remain
-  an external prerequisite under `TASK_012_OWNER_ACTIONS.md`; AI-generated
-  labels cannot substitute for them.
-- `3281c41` is the latest fully green remote checkpoint. Subsequent GitHub
-  attempts failed before jobs began with internal server errors; these are
-  no code verdict. This checkpoint adds Rust config/control parity and the
-  host-path fix after the already pushed non-forced `init` probe at `e8bbc58`.
-- On `4157fd2`, GitHub CI, Rust Linux/Windows parity, and Security passed;
-  mutation found three new `controls.apply_controls` survivors. The new
-  boundary/exact-error tests kill all three in a fresh local mutant run and
-  await a full remote campaign on the repair commit.
+  `release/agentrouter-v0.5-rc1`. `main` and the RC are unchanged. Pushed
+  parent `eda4c7a` passed GitHub CI, Rust Linux/Windows parity, Security,
+  and mutation. Mutation: 0.9837 overall, 0.9844 safety/policy/execution,
+  0.9815 routing, 0 unreviewed survivors.
+- Rust R4 remains partial. Route persistence, feedback, stored decisions,
+  prompt regeneration, non-forced `init`, configured routing/controls, and
+  host discovery have Python/Rust differential tests. The current slice adds
+  a Rust `registry list` probe with JSON/table/filter parity and shared
+  registry validation of numeric/date constraints. An independent review
+  found the malformed-catalog gap and prompted the validation repair.
+- Local Rust 1.75 workspace tests, Clippy, formatting, Ruff, and 19 focused
+  registry parity cases pass. Full Python regression passed 1,357 tests with
+  3 skips; TS SDK tests/typecheck, Bandit,
+  pip-audit, build, and clean-wheel smoke passed on the preceding slice.
+- Python remains the shipping implementation. The public Rust CLI/HTTP/MCP
+  and R5–R13 remain outstanding. Release evaluation remains 6/7 gates:
+  frozen context-band accuracy 0.6667 < unchanged 0.90. Two human annotators
+  and adjudication are required under `TASK_012_OWNER_ACTIONS.md`; AI labels
+  cannot replace them. No paid OpenAI call, merge, tag, or deploy occurred.
+- Next: push the registry probe, inspect PR #25 CI,
+  repair any failure, then continue R4. Preserve inherited untracked
+  `website/`; do not stage or discard it.
 
 ## Historical checkpoint
 

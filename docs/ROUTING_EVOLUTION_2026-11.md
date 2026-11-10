@@ -84,6 +84,9 @@ accepted as AgentRouter benchmarks.
   learning switch, and hard controls before scoring. A parity test caught a
   credential-path bug in Rust host discovery and verified its fix against
   Python across `AGENTROUTER_HOME` overrides.
+- Rust registry inspection now has a Python/Rust differential probe. Its
+  review exposed malformed numeric catalog facts accepted by serde but
+  rejected by Python; shared Rust validation closes that path before scoring.
 - `tests/test_openai_adapter.py` covers provider opt-in, dry run, `--yes`,
   high-risk and tool-needs gates, target drift, exact model/prompt dispatch,
   request privacy/size bounds, and malformed or incomplete responses.

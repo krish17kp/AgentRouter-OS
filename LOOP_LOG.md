@@ -1,5 +1,22 @@
 # LOOP_LOG
 
+## 2026-11-10 — Rust R4 registry inspection
+
+- Pushed `eda4c7a` passed GitHub Python/Windows CI, Rust Linux/Windows parity,
+  Security, and critical mutation testing. Mutation scored 0.9837 overall,
+  0.9844 safety/policy/execution, 0.9815 routing, 0 unreviewed survivors.
+- Added Rust `registry list` probe with JSON/table output, provider and active
+  filters, malformed-registry failure, and a non-skipping CI parity suite.
+  Independent review found that Rust accepted non-finite ability confidence,
+  zero context/output size, and negative prices that Python rejects.
+  Repaired the shared Rust registry loader with Pydantic-equivalent numeric
+  and ISO-date checks before any routing surface consumes a model.
+- Nineteen focused Python/Rust parity cases pass, including invalid catalog
+  fields. Rust 1.75 workspace tests, Clippy, formatting, and Ruff pass. Full
+  Python regression passed 1,357 tests, 3 skipped. New-head CI remains.
+- Python remains shipping; R4 is partial. Context-band accuracy remains
+  0.6667 < unchanged 0.90, pending two real human annotators/adjudication.
+
 ## 2026-11-09 — Rust R4 configured routing and controls
 
 - Added Rust route-probe loading of configured scoring weights, pricing policy,

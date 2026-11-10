@@ -1,22 +1,16 @@
 # Release Readiness
 
-## Current checkpoint — 2026-11-09
+## Current checkpoint — 2026-11-10
 
-**NOT release ready.** PR #25 (`task/rust-r1-workspace`) is an unmerged
-migration branch. Local Python/Rust, mutation, security and package checks
-pass. GitHub checks on `3281c41` passed. The later `0ac4335` pull-request
-workflows failed before any job began because of GitHub internal server
-errors; they provide no verification result. Non-forced Rust `init`,
-config/control routing and host discovery have local parity evidence and
-await a new CI run. The canonical
-evaluation remains 6/7 gates; context-band accuracy is 0.6667 against the
-unchanged 0.90 threshold. Rust still lacks full CLI/HTTP/MCP/execution parity,
-R5–R13 validation, staging and rollback evidence. The human annotation round
-in `TASK_012_OWNER_ACTIONS.md` remains required; AI-generated labels cannot
-close that gate. No paid OpenAI request or production deployment occurred.
-The first `4157fd2` run passed CI, Rust parity and Security but failed
-mutation on three new price-cap validation survivors. Targeted local tests
-kill them; full remote recheck remains pending.
+**NOT release ready.** PR #25 is an unmerged migration branch. Pushed parent
+`eda4c7a` passed the complete GitHub CI, Rust parity, Security and mutation
+matrix. The current Rust registry-list/model-validation slice passes local
+parity and awaits its own push and CI. The canonical evaluation remains 6/7:
+context-band accuracy 0.6667 against the unchanged 0.90 threshold. Rust
+still lacks full CLI/HTTP/MCP/execution parity, R5–R13, staging and rollback
+evidence. The two-human annotation/adjudication round in
+`TASK_012_OWNER_ACTIONS.md` remains required; AI labels cannot close it.
+No paid OpenAI request or production deployment occurred.
 
 ## Historical v0.5 assessment
 

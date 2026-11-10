@@ -150,7 +150,7 @@ fn default_true() -> bool {
 /// Mirrors `schema.ModelEntry`. `vendor` defaults to `provider` (the Python
 /// `_default_vendor` validator) via [`ModelEntry::vendor`] rather than a
 /// serde default, since the default depends on another field's value.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ModelEntry {
     pub provider: String,
@@ -214,6 +214,56 @@ fn default_ability_source() -> AbilitySource {
 }
 
 impl ModelEntry {
+    /// Enforce the Pydantic `Field` constraints from `schema.ModelEntry`.
+    /// Serde's primitive types alone allow zero sizes and non-finite floats.
+    fn validate(&self) -> Result<(), String> {
+        if self.context_window == 0 {
+            return Err("context_window must be greater than 0".to_string());
+        }
+        if self.max_input_tokens == Some(0) {
+            return Err("max_input_tokens must be greater than 0".to_string());
+        }
+        if self.max_output_tokens == 0 {
+            return Err("max_output_tokens must be greater than 0".to_string());
+        }
+        for (name, score) in [
+            ("ability.coding", self.ability.coding),
+            ("ability.reasoning", self.ability.reasoning),
+            ("ability.writing", self.ability.writing),
+        ] {
+            if score > 10 {
+                return Err(format!("{name} must be at most 10"));
+            }
+        }
+        for (name, price) in [
+            ("input_price_per_million", self.input_price_per_million),
+            ("output_price_per_million", self.output_price_per_million),
+        ] {
+            if price.is_some_and(|value| !value.is_finite() || value < 0.0) {
+                return Err(format!("{name} must be finite and non-negative"));
+            }
+        }
+        if self
+            .ability_confidence
+            .is_some_and(|value| !value.is_finite() || !(0.0..=1.0).contains(&value))
+        {
+            return Err("ability_confidence must be finite and between 0 and 1".to_string());
+        }
+        for (name, date) in [
+            (
+                "pricing_effective_date",
+                self.pricing_effective_date.as_ref(),
+            ),
+            ("last_updated", self.last_updated.as_ref()),
+            ("last_verified", self.last_verified.as_ref()),
+        ] {
+            if date.is_some_and(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d").is_err()) {
+                return Err(format!("{name} must be an ISO date"));
+            }
+        }
+        Ok(())
+    }
+
     pub fn vendor(&self) -> &str {
         self.vendor.as_deref().unwrap_or(&self.provider)
     }
@@ -310,9 +360,14 @@ pub fn load_models(
         let m: ModelEntry =
             serde_yaml::from_value(raw).map_err(|e| RegistryError::InvalidModel {
                 path: path.to_path_buf(),
-                model: fallback_id,
+                model: fallback_id.clone(),
                 reason: e.to_string(),
             })?;
+        m.validate().map_err(|reason| RegistryError::InvalidModel {
+            path: path.to_path_buf(),
+            model: fallback_id,
+            reason,
+        })?;
         if !providers.contains_key(&m.provider) {
             return Err(RegistryError::UnknownProvider {
                 path: path.to_path_buf(),
@@ -595,6 +650,36 @@ models:
         let mpath = write(dir.path(), "models.yaml", &yaml);
         let err = load_models(&mpath, &providers).unwrap_err();
         assert!(matches!(err, RegistryError::InvalidModel { .. }));
+    }
+
+    #[test]
+    fn schema_constraints_reject_zero_and_non_finite_values() {
+        let dir = tempfile::tempdir().unwrap();
+        let providers =
+            load_providers(&write(dir.path(), "providers.yaml", PROVIDERS_YAML)).unwrap();
+        for (old, new) in [
+            ("context_window: 100000", "context_window: 0"),
+            ("max_output_tokens: 4096", "max_output_tokens: 0"),
+            ("coding: 8", "coding: 11"),
+            (
+                "pricing_tier: high",
+                "pricing_tier: high\n    input_price_per_million: -.inf",
+            ),
+            (
+                "pricing_tier: high",
+                "pricing_tier: high\n    ability_confidence: .nan",
+            ),
+        ] {
+            let path = write(
+                dir.path(),
+                "models.yaml",
+                &MODEL_YAML_TEMPLATE.replace(old, new),
+            );
+            assert!(matches!(
+                load_models(&path, &providers),
+                Err(RegistryError::InvalidModel { .. })
+            ));
+        }
     }
 
     #[test]
