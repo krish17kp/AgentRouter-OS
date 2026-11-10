@@ -40,7 +40,10 @@ server = ["fastapi>=0.110", "uvicorn>=0.29", "httpx>=0.27"]
 # Optional OpenTelemetry tracing (backlog L1). Absent -> route_span is a no-op.
 otel = ["opentelemetry-api>=1.20", "opentelemetry-sdk>=1.20"]
 # MCP server (backlog L2). Reuses the server extra's service layer.
-mcp = ["mcp>=1.2"]
+# mcp 2.x renamed FastMCP -> MCPServer and changed its registration API;
+# agentrouter/mcp_server.py targets the 1.x FastMCP API, so pin below the
+# breaking major until that module is migrated.
+mcp = ["mcp>=1.2,<2.0"]
 # Supply-chain: CycloneDX SBOM generation (backlog L7). Used at release time / in CI.
 sbom = ["cyclonedx-bom>=4.0"]
 all-eval = [
