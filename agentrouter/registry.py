@@ -46,7 +46,8 @@ class _UniqueKeyLoader(yaml.SafeLoader):
 
 
 def _safe_load_yaml(text: str):
-    return yaml.load(text, Loader=_UniqueKeyLoader)
+    # B506 flags yaml.load regardless of the explicit SafeLoader subclass.
+    return yaml.load(text, Loader=_UniqueKeyLoader)  # nosec B506
 
 
 def _read_text_nofollow(path: Path) -> str:
