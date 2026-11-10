@@ -11,9 +11,13 @@
   forced-init slice awaits its own remote checks.
   The older mutation-status section below is historical.
 - The Rust init probe uses directory-handle-relative seed writes and rejects
-  existing linked SQLite targets. `agentrouter_storage::connect(home)` still
-  reopens the database by path; concurrent path swaps can redirect that open.
-  This is an R4 production blocker.
+  existing linked SQLite targets. SQLite still canonicalizes and reopens the
+  database by path; a concurrent leaf or ancestor swap can redirect that open.
+  Linux's proc-fd path helps after a swap before connect, but is not a complete
+  race-safe SQLite strategy. This is an R4 production blocker.
+- The first forced-init push `32eee6f` failed Windows Rust compilation on a
+  capability metadata link-count method. A standard file-handle check repairs
+  it locally; remote Windows recheck is pending.
 - The frozen context-band release gate remains 0.6667 < 0.90. The 63-candidate
   two-human annotation/adjudication round is not complete. Synthetic or AI
   labels cannot be submitted as human labels.

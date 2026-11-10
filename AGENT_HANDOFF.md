@@ -12,7 +12,11 @@
   discovery have Python/Rust differential tests. The current forced-init
   slice adds backup/reseed parity and hardens seed paths after an independent
   security review. SQLite's path-based open still permits a concurrent path
-  swap, so the Rust init probe is not production ready.
+  swap, so the Rust init probe is not production ready. First push `32eee6f`
+  failed Windows Rust compilation on capability-metadata link count; the
+  uncommitted file-handle repair needs remote recheck. Linux has a proc-fd
+  directory-path regression for a home swap before SQLite connects, while
+  later path swaps remain unsafe.
 - Local Rust 1.75 workspace tests, Clippy, formatting, Ruff, and 10 focused
   init parity cases pass. Full Python regression passed 1,366 tests with
   3 skips; TS SDK
@@ -23,7 +27,7 @@
   frozen context-band accuracy 0.6667 < unchanged 0.90. Two human annotators
   and adjudication are required under `TASK_012_OWNER_ACTIONS.md`; AI labels
   cannot replace them. No paid OpenAI call, merge, tag, or deploy occurred.
-- Next: finish full regression, record results and continue R4 CLI parity.
+- Next: push the Windows repair, inspect CI, then continue R4 CLI parity.
   Preserve inherited untracked `website/`; do not stage or discard it.
 
 ## Historical checkpoint

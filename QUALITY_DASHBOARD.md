@@ -10,7 +10,9 @@ slice passes 10 focused parity cases and Rust 1.75 workspace tests; full
 Python regression passed 1,366 tests with 3 skips. Its SQLite path-based open remains a documented
 R4 blocker. Release evaluation remains 6/7, with context-band accuracy
 0.6667 < 0.90. Full Rust CLI/HTTP/MCP parity and R5–R13 remain outstanding.
-Historical measurements follow.
+First forced-init push `32eee6f` passed Ubuntu Rust parity but failed Windows
+compilation on a capability-metadata link-count method; a file-handle repair
+awaits remote recheck. Historical measurements follow.
 
 ## Historical dashboard
 

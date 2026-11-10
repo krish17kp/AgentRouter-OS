@@ -376,7 +376,9 @@ the Python CLI on ordinary files. A security review reproduced linked-parent
 and hard-link escapes; directory-handle-relative seed writes and atomic
 replacement now preserve outside hard-linked files. The probe also rejects
 linked database/WAL/SHM/journal paths before SQLite initialization. SQLite
-still reopens the database by path, leaving a concurrent path-swap risk;
+still canonicalizes and reopens the database by path, leaving a concurrent
+path-swap risk. A Linux proc-fd path helps after a swap before connect but
+does not close later or leaf swaps;
 handle-safe database initialization and the complete public CLI remain R4
 work. This probe is not a production replacement for Python.
 

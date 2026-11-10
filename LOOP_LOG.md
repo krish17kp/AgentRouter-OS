@@ -17,6 +17,11 @@
 - Python remains shipping. Rust R4 is partial, R5–R13 pending. Context-band
   accuracy remains 0.6667 < unchanged 0.90; the real-human annotation round
   is still external.
+- First forced-init push `32eee6f` failed Windows Rust compilation because a
+  capability metadata method was unavailable. The repair reads link count
+  through a standard file handle. Linux now tests database/WAL/SHM placement
+  after the original home path is swapped before SQLite connects. SQLite's
+  later path resolution remains a production blocker; remote recheck pending.
 
 ## 2026-11-10 — Rust R4 registry inspection
 

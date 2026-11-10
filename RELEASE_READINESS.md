@@ -12,6 +12,8 @@ still lacks full CLI/HTTP/MCP/execution parity, R5–R13, staging and rollback
 evidence. The two-human annotation/adjudication round in
 `TASK_012_OWNER_ACTIONS.md` remains required; AI labels cannot close it.
 No paid OpenAI request or production deployment occurred.
+The first forced-init push `32eee6f` failed Windows Rust compilation; a
+file-handle repair awaits remote recheck.
 
 ## Historical v0.5 assessment
 

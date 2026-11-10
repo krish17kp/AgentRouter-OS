@@ -9,6 +9,8 @@ The current Rust forced-init slice passes local parity but retains a
 path-based SQLite initialization race and awaits its own remote checks. The
 context-band release gate remains 0.6667 < 0.90, Rust R4 is partial, and
 R5–R13 remain outstanding. The table below is historical.
+The first forced-init push `32eee6f` failed Windows Rust compilation; a
+file-handle repair awaits remote recheck.
 
 ## Historical assessment
 

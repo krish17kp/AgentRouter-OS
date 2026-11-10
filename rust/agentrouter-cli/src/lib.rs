@@ -565,21 +565,40 @@ fn atomic_replace<R: Read>(
     result
 }
 
-fn has_multiple_links(metadata: &cap_std::fs::Metadata) -> bool {
+fn has_multiple_links(
+    home_dir: &cap_std::fs::Dir,
+    name: &str,
+    metadata: &cap_std::fs::Metadata,
+) -> Result<bool, String> {
     #[cfg(unix)]
     {
         use cap_std::fs::MetadataExt;
-        metadata.nlink() > 1
+        let _ = (home_dir, name);
+        Ok(metadata.nlink() > 1)
     }
     #[cfg(windows)]
     {
-        use cap_std::fs::MetadataExt;
-        metadata.number_of_links().map_or(true, |links| links > 1)
+        use std::os::windows::fs::MetadataExt;
+        let _ = metadata;
+        let parent_file = home_dir
+            .try_clone()
+            .map_err(|e| e.to_string())?
+            .into_std_file();
+        let mut options = fs_at::OpenOptions::default();
+        options.read(true).follow(false);
+        let file = options
+            .open_at(&parent_file, name)
+            .map_err(|e| e.to_string())?;
+        Ok(file
+            .metadata()
+            .map_err(|e| e.to_string())?
+            .number_of_links()
+            .map_or(true, |links| links > 1))
     }
     #[cfg(not(any(unix, windows)))]
     {
-        let _ = metadata;
-        true
+        let _ = (home_dir, name, metadata);
+        Ok(true)
     }
 }
 
@@ -591,22 +610,39 @@ fn validate_database_targets(home: &Path, home_dir: &cap_std::fs::Dir) -> Result
         "agentrouter.db-journal",
     ] {
         match home_dir.symlink_metadata(name) {
-            Ok(metadata)
+            Ok(metadata) => {
                 if !metadata.file_type().is_file()
                     || metadata.file_type().is_symlink()
-                    || has_multiple_links(&metadata) =>
-            {
-                return Err(format!(
-                    "unsafe database target: {}",
-                    home.join(name).display()
-                ));
+                    || has_multiple_links(home_dir, name, &metadata)?
+                {
+                    return Err(format!(
+                        "unsafe database target: {}",
+                        home.join(name).display()
+                    ));
+                }
             }
-            Ok(_) => {}
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
             Err(error) => return Err(error.to_string()),
         }
     }
     Ok(())
+}
+
+fn storage_home(home: &Path, home_dir: &cap_std::fs::Dir) -> PathBuf {
+    #[cfg(target_os = "linux")]
+    {
+        use std::os::fd::AsRawFd;
+        let _ = home;
+        // SQLite opens the database and WAL sidecars by pathname. A proc-fd
+        // directory pathname resolves through this pinned directory handle
+        // even if the original home path is renamed or replaced concurrently.
+        PathBuf::from(format!("/proc/self/fd/{}", home_dir.as_raw_fd()))
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = home_dir;
+        home.to_path_buf()
+    }
 }
 
 /// Force reseeding mirrors Python's backup-before-overwrite behavior for
@@ -711,7 +747,7 @@ pub fn init_home_with_force(home: &Path, force: bool) -> Result<Vec<String>, Str
         }
     }
     validate_database_targets(home, &home_dir)?;
-    agentrouter_storage::connect(home).map_err(|e| e.to_string())?;
+    agentrouter_storage::connect(&storage_home(home, &home_dir)).map_err(|e| e.to_string())?;
     lines.push(format!(
         "Initialized {}",
         home.join("agentrouter.db").display()
@@ -729,6 +765,41 @@ fn dirs_home() -> std::path::PathBuf {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn sqlite_init_uses_pinned_home_after_path_swap() {
+        use std::os::unix::fs::symlink;
+        let root = std::env::temp_dir().join(format!(
+            "agentrouter-pinned-home-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let home = root.join("home");
+        let moved = root.join("moved");
+        let outside = root.join("outside");
+        std::fs::create_dir_all(&home).unwrap();
+        std::fs::create_dir(&outside).unwrap();
+        let pinned = cap_std::fs::Dir::from_std_file(super::open_safe_home(&home).unwrap());
+        std::fs::rename(&home, &moved).unwrap();
+        symlink(&outside, &home).unwrap();
+        let storage_home = super::storage_home(&home, &pinned);
+        let conn = agentrouter_storage::connect(&storage_home).unwrap();
+        conn.execute("CREATE TABLE pinned_test (id INTEGER)", [])
+            .unwrap();
+        assert!(moved.join("agentrouter.db").exists());
+        assert!(moved.join("agentrouter.db-wal").exists());
+        assert!(moved.join("agentrouter.db-shm").exists());
+        assert!(!outside.join("agentrouter.db").exists());
+        assert!(!outside.join("agentrouter.db-wal").exists());
+        assert!(!outside.join("agentrouter.db-shm").exists());
+        drop(conn);
+        std::fs::remove_file(&home).unwrap();
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
     use super::*;
     use agentrouter_core::{ContextBand, OutputType, TaskType};
 

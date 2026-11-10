@@ -30,8 +30,21 @@ file, so it does not load the whole prior file into memory.
 - Rust 1.75 workspace tests and current-toolchain Clippy with warnings denied:
   pass. Rustfmt passes.
 - Full Python suite: 1,366 passed, 3 skipped.
-- Previous head `6ee8d3e` passed all GitHub workflows; this slice awaits its
-  own remote checks.
+- Previous head `6ee8d3e` passed all GitHub workflows. First forced-init push
+  `32eee6f` exposed the Windows compile error described below.
+
+## Follow-up after first push
+
+Commit `32eee6f` passed Ubuntu Rust and compatibility jobs, but Windows Rust
+build failed because the capability metadata type does not expose the
+`number_of_links` method through the imported trait. The Windows check now
+opens the database entry relative to the home handle and reads the link count
+from standard file metadata. Linux also uses a proc-fd directory path for
+SQLite initialization; a regression test renames the original home and
+replaces it with an outside symlink, then verifies the database and WAL/SHM
+sidecars appear under the moved home. SQLite canonicalizes paths before opening
+them, so this does not close a concurrent leaf or later ancestor swap. The
+path race remains a production blocker until SQLite access is handle safe.
 
 ## Release status
 

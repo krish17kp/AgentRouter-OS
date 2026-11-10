@@ -2,7 +2,7 @@
 
 ## Current checkpoint — 2026-11-10
 
-Branch `task/rust-r1-workspace` has PR #25 open against the RC. Pushed parent
+Branch `task/rust-r1-workspace` has PR #25 open against the RC. Parent
 `6ee8d3e` passed GitHub Python 3.10–3.13/Windows, Rust Linux/Windows/MSRV,
 Security, and mutation workflows. Mutation score was 0.9837 overall, 0.9844
 safety/policy/execution, 0.9815 routing, with zero unreviewed survivors.
@@ -12,8 +12,13 @@ linked SQLite database escape. Directory-handle-relative seed replacement
 and static database target checks repair the reproducible cases. SQLite still
 opens by path, so concurrent path swaps remain a production blocker. Ten
 focused parity cases and Rust 1.75 workspace tests pass; full Python
-regression passed 1,366 tests with 3 skips. Next: finish verification, record results, and continue
-R4 CLI parity. Preserve inherited untracked `website/`.
+regression passed 1,366 tests with 3 skips. First forced-init push `32eee6f`
+failed Windows Rust compilation on a missing capability-metadata link-count
+method; a standard file-handle repair is uncommitted and needs Windows CI.
+Linux now has a proc-fd SQLite path and a regression test for a home swap
+before connect, while SQLite's later path resolution and leaf swaps remain
+unsafe. Next: push the repair, inspect CI, then continue R4 CLI parity.
+Preserve inherited untracked `website/`.
 
 Python remains shipping. The canonical evaluation is 6/7, context-band
 0.6667 < 0.90; full Rust CLI/HTTP/MCP and R5–R13 are outstanding. No paid
