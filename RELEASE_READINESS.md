@@ -3,17 +3,15 @@
 ## Current checkpoint — 2026-11-10
 
 **NOT release ready.** PR #25 is an unmerged migration branch. Pushed parent
-`eda4c7a` passed the complete GitHub CI, Rust parity, Security and mutation
-matrix. The current Rust registry-list/model-validation slice passes local
-parity and awaits its own push and CI. The canonical evaluation remains 6/7:
+`6ee8d3e` passed the full GitHub CI, Rust parity, Security, and mutation
+matrix. The current Rust forced-init slice passes local focused parity, but
+SQLite initialization still uses a path-based open and is not production
+safe against concurrent path swaps. The canonical evaluation remains 6/7:
 context-band accuracy 0.6667 against the unchanged 0.90 threshold. Rust
 still lacks full CLI/HTTP/MCP/execution parity, R5–R13, staging and rollback
 evidence. The two-human annotation/adjudication round in
 `TASK_012_OWNER_ACTIONS.md` remains required; AI labels cannot close it.
 No paid OpenAI request or production deployment occurred.
-The first `e4b06e2` Windows parity job failed on a test fixture that wrote
-non-UTF-8 YAML. The fixture now writes UTF-8, but this head still needs a
-passing Windows CI recheck.
 
 ## Historical v0.5 assessment
 

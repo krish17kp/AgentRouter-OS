@@ -13,8 +13,8 @@
 //! `providers *` are not ported in this slice.
 
 use std::collections::HashMap;
-use std::io::Write;
-use std::path::Path;
+use std::io::{Read, Write};
+use std::path::{Component, Path, PathBuf};
 
 use agentrouter_core::{ApprovalLevel, Classification, Level};
 use agentrouter_registry::ModelEntry;
@@ -443,29 +443,259 @@ pub fn home_dir() -> std::path::PathBuf {
 /// existence check and the write. The seed bytes are embedded so the Rust
 /// binary does not require the Python package at runtime.
 pub fn init_home(home: &Path) -> Result<Vec<String>, String> {
+    init_home_with_force(home, false)
+}
+
+fn is_link_or_reparse(metadata: &std::fs::Metadata) -> bool {
+    if metadata.file_type().is_symlink() {
+        return true;
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        // FILE_ATTRIBUTE_REPARSE_POINT includes junctions, not only symlinks.
+        metadata.file_attributes() & 0x400 != 0
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
+}
+
+fn open_directory_child(parent: &std::fs::File, name: &Path) -> Result<std::fs::File, String> {
+    let mut options = fs_at::OpenOptions::default();
+    options.read(true).follow(false);
+    let opened = match options.open_dir_at(parent, name) {
+        Ok(opened) => opened,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            match options.mkdir_at(parent, name) {
+                Ok(_) => {}
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+                Err(error) => return Err(error.to_string()),
+            }
+            options
+                .open_dir_at(parent, name)
+                .map_err(|e| format!("open directory {}: {e}", name.display()))?
+        }
+        Err(error) => return Err(format!("open directory {}: {error}", name.display())),
+    };
+    if is_link_or_reparse(&opened.metadata().map_err(|e| e.to_string())?) {
+        return Err(format!("unsafe linked path: {}", name.display()));
+    }
+    Ok(opened)
+}
+
+fn open_safe_home(home: &Path) -> Result<std::fs::File, String> {
+    let absolute = if home.is_absolute() {
+        home.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .map_err(|e| e.to_string())?
+            .join(home)
+    };
+    let mut root = PathBuf::new();
+    let mut names = Vec::new();
+    for component in absolute.components() {
+        match component {
+            Component::Prefix(prefix) => root.push(prefix.as_os_str()),
+            Component::RootDir => root.push(component.as_os_str()),
+            Component::Normal(name) => names.push(name.to_os_string()),
+            Component::CurDir => {}
+            Component::ParentDir => return Err("home path cannot contain '..'".to_string()),
+        }
+    }
+    let mut current = cap_std::fs::Dir::open_ambient_dir(&root, cap_std::ambient_authority())
+        .map_err(|e| format!("open root {}: {e}", root.display()))?
+        .into_std_file();
+    for name in names {
+        current = open_directory_child(&current, Path::new(&name))?;
+    }
+    Ok(current)
+}
+
+fn atomic_replace<R: Read>(
+    parent: &cap_std::fs::Dir,
+    name: &Path,
+    contents: &mut R,
+    permissions: Option<&cap_std::fs::Permissions>,
+) -> Result<(), String> {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let mut temporary_name = None;
+    let mut temporary = None;
+    for _ in 0..16 {
+        let candidate = format!(
+            ".agentrouter-init-{}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|e| e.to_string())?
+                .as_nanos(),
+            COUNTER.fetch_add(1, Ordering::Relaxed)
+        );
+        let mut options = cap_std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        match parent.open_with(&candidate, &options) {
+            Ok(file) => {
+                temporary_name = Some(candidate);
+                temporary = Some(file);
+                break;
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(error.to_string()),
+        }
+    }
+    let temporary_name = temporary_name.ok_or("could not create a unique seed file")?;
+    let mut temporary = temporary.ok_or("could not create a unique seed file")?;
+    let result = (|| {
+        std::io::copy(contents, &mut temporary).map_err(|e| e.to_string())?;
+        if let Some(permissions) = permissions {
+            temporary
+                .set_permissions(permissions.clone())
+                .map_err(|e| e.to_string())?;
+        }
+        drop(temporary);
+        parent
+            .rename(&temporary_name, parent, name)
+            .map_err(|e| e.to_string())
+    })();
+    if result.is_err() {
+        let _ = parent.remove_file(&temporary_name);
+    }
+    result
+}
+
+fn has_multiple_links(metadata: &cap_std::fs::Metadata) -> bool {
+    #[cfg(unix)]
+    {
+        use cap_std::fs::MetadataExt;
+        metadata.nlink() > 1
+    }
+    #[cfg(windows)]
+    {
+        use cap_std::fs::MetadataExt;
+        metadata.number_of_links().map_or(true, |links| links > 1)
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        let _ = metadata;
+        true
+    }
+}
+
+fn validate_database_targets(home: &Path, home_dir: &cap_std::fs::Dir) -> Result<(), String> {
+    for name in [
+        "agentrouter.db",
+        "agentrouter.db-wal",
+        "agentrouter.db-shm",
+        "agentrouter.db-journal",
+    ] {
+        match home_dir.symlink_metadata(name) {
+            Ok(metadata)
+                if !metadata.file_type().is_file()
+                    || metadata.file_type().is_symlink()
+                    || has_multiple_links(&metadata) =>
+            {
+                return Err(format!(
+                    "unsafe database target: {}",
+                    home.join(name).display()
+                ));
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error.to_string()),
+        }
+    }
+    Ok(())
+}
+
+/// Force reseeding mirrors Python's backup-before-overwrite behavior for
+/// ordinary files. Refuse links before writing because following one could
+/// redirect a forced overwrite outside AgentRouter's home.
+pub fn init_home_with_force(home: &Path, force: bool) -> Result<Vec<String>, String> {
     let registry = home.join("registry");
-    std::fs::create_dir_all(&registry).map_err(|e| e.to_string())?;
+    let home_file = open_safe_home(home)?;
+    let registry_file = open_directory_child(&home_file, Path::new("registry"))?;
+    let home_dir = cap_std::fs::Dir::from_std_file(home_file);
+    let registry_dir = cap_std::fs::Dir::from_std_file(registry_file);
     let seeds = [
         (
             home.join("config.yaml"),
             include_str!("../../../agentrouter/seeds/config.yaml"),
+            &home_dir,
         ),
         (
             registry.join("providers.yaml"),
             include_str!("../../../agentrouter/seeds/providers.yaml"),
+            &registry_dir,
         ),
         (
             registry.join("models.yaml"),
             include_str!("../../../agentrouter/seeds/models.yaml"),
+            &registry_dir,
         ),
     ];
     let mut lines = Vec::new();
-    for (destination, contents) in seeds {
-        match std::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&destination)
-        {
+    for (destination, contents, parent) in seeds {
+        let name = Path::new(destination.file_name().ok_or("invalid seed destination")?);
+        if force {
+            match parent.symlink_metadata(name) {
+                Ok(metadata) => {
+                    if !metadata.file_type().is_file() || metadata.file_type().is_symlink() {
+                        return Err(format!("unsafe seed target: {}", destination.display()));
+                    }
+                    let mut backup_name = destination.as_os_str().to_os_string();
+                    backup_name.push(".bak");
+                    let backup = std::path::PathBuf::from(backup_name);
+                    let backup_file_name = backup.file_name().ok_or("invalid backup name")?;
+                    let backup_leaf = Path::new(backup_file_name);
+                    let mut backup_permissions = None;
+                    if let Ok(metadata) = parent.symlink_metadata(backup_leaf) {
+                        if !metadata.file_type().is_file() || metadata.file_type().is_symlink() {
+                            return Err(format!("unsafe backup target: {}", backup.display()));
+                        }
+                        backup_permissions = Some(metadata.permissions());
+                    }
+                    let mut options = fs_at::OpenOptions::default();
+                    options.read(true).follow(false);
+                    let parent_file = parent
+                        .try_clone()
+                        .map_err(|e| e.to_string())?
+                        .into_std_file();
+                    let mut source = options
+                        .open_at(&parent_file, name)
+                        .map_err(|e| e.to_string())?;
+                    let source_metadata = source.metadata().map_err(|e| e.to_string())?;
+                    if !source_metadata.is_file() || is_link_or_reparse(&source_metadata) {
+                        return Err(format!("unsafe seed target: {}", destination.display()));
+                    }
+                    atomic_replace(
+                        parent,
+                        backup_leaf,
+                        &mut source,
+                        backup_permissions.as_ref(),
+                    )?;
+                    lines.push(format!(
+                        "Backed up {} -> {}",
+                        destination.display(),
+                        backup.display()
+                    ));
+                    atomic_replace(
+                        parent,
+                        name,
+                        &mut contents.as_bytes(),
+                        Some(&metadata.permissions()),
+                    )?;
+                    lines.push(format!("Created {}", destination.display()));
+                    continue;
+                }
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                Err(error) => return Err(error.to_string()),
+            }
+        }
+        let mut options = cap_std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        match parent.open_with(name, &options) {
             Ok(mut file) => {
                 file.write_all(contents.as_bytes())
                     .map_err(|e| e.to_string())?;
@@ -480,6 +710,7 @@ pub fn init_home(home: &Path) -> Result<Vec<String>, String> {
             Err(error) => return Err(error.to_string()),
         }
     }
+    validate_database_targets(home, &home_dir)?;
     agentrouter_storage::connect(home).map_err(|e| e.to_string())?;
     lines.push(format!(
         "Initialized {}",

@@ -2,18 +2,15 @@
 
 ## Current checkpoint — 2026-11-10
 
-PR #25 (`task/rust-r1-workspace`) is in progress. Pushed parent `eda4c7a`
-passed GitHub CI, Rust Linux/Windows parity, Security, and mutation. Mutation
-scored 0.9837 overall, 0.9844 safety/policy/execution, 0.9815 routing, with
-zero unreviewed survivors. The new Rust `registry list` and shared model
-validation slice passes 19 focused parity cases, Rust 1.75 workspace tests,
-Clippy, formatting, and Ruff; full Python regression passed 1,357 tests with
-3 skips. Release evaluation remains 6/7:
-context-band accuracy 0.6667 < 0.90. Full Rust CLI/HTTP/MCP parity and
-R5–R13 remain outstanding. Historical measurements follow.
-The first `e4b06e2` Windows parity job failed on a test fixture's locale
-encoded YAML rewrite; explicit UTF-8 repair passes focused tests and awaits
-a new Windows CI result.
+PR #25 (`task/rust-r1-workspace`) is in progress. Pushed parent `6ee8d3e`
+passed GitHub Python/Windows, Rust Linux/Windows/MSRV, Security, and mutation.
+Mutation scored 0.9837 overall, 0.9844 safety/policy/execution, 0.9815
+routing, with zero unreviewed survivors. The current Rust forced-init
+slice passes 10 focused parity cases and Rust 1.75 workspace tests; full
+Python regression passed 1,366 tests with 3 skips. Its SQLite path-based open remains a documented
+R4 blocker. Release evaluation remains 6/7, with context-band accuracy
+0.6667 < 0.90. Full Rust CLI/HTTP/MCP parity and R5–R13 remain outstanding.
+Historical measurements follow.
 
 ## Historical dashboard
 

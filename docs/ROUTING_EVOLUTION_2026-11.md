@@ -87,6 +87,11 @@ accepted as AgentRouter benchmarks.
 - Rust registry inspection now has a Python/Rust differential probe. Its
   review exposed malformed numeric catalog facts accepted by serde but
   rejected by Python; shared Rust validation closes that path before scoring.
+- Rust forced initialization now backs up user edits before reseeding. The
+  seed writes use no-follow directory handles and atomic replacement, so a
+  linked parent or hard-linked seed cannot redirect them. The Rust probe
+  rejects linked SQLite targets, while SQLite's path-based open still leaves
+  a concurrent path-swap risk for R4 to resolve.
 - `tests/test_openai_adapter.py` covers provider opt-in, dry run, `--yes`,
   high-risk and tool-needs gates, target drift, exact model/prompt dispatch,
   request privacy/size bounds, and malformed or incomplete responses.

@@ -3,20 +3,17 @@
 ## Current checkpoint — 2026-11-10
 
 Branch `task/rust-r1-workspace` has PR #25 open against the RC. Pushed parent
-`eda4c7a` passed the complete GitHub Python/Windows, Rust Linux/Windows,
-Security and mutation workflows. Mutation score was 0.9837 overall, 0.9844
+`6ee8d3e` passed GitHub Python 3.10–3.13/Windows, Rust Linux/Windows/MSRV,
+Security, and mutation workflows. Mutation score was 0.9837 overall, 0.9844
 safety/policy/execution, 0.9815 routing, with zero unreviewed survivors.
-The current Rust R4 slice adds a `registry list` probe and repairs shared
-registry validation after an independent review found Rust accepted model
-fields Python rejected. Nineteen JSON/table/filter/malformed-catalog parity
-cases, Rust 1.75 workspace tests, Clippy, formatting, and Ruff pass locally;
-full Python regression passed 1,357 tests with 3 skips. Next command: `gh run list --branch
-task/rust-r1-workspace --limit 12` after the push; repair any failure and
-continue R4 CLI parity. Preserve inherited untracked `website/`.
-The first `e4b06e2` Rust workflow failed in Windows parity because a test
-fixture used the Windows default encoding when rewriting YAML. The fixture
-now writes UTF-8 explicitly and all 19 focused cases pass; Windows CI recheck
-is pending.
+The current Rust R4 forced-init probe backs up and reseeds ordinary files.
+An independent security review found seed symlink/hard-link escapes and a
+linked SQLite database escape. Directory-handle-relative seed replacement
+and static database target checks repair the reproducible cases. SQLite still
+opens by path, so concurrent path swaps remain a production blocker. Ten
+focused parity cases and Rust 1.75 workspace tests pass; full Python
+regression passed 1,366 tests with 3 skips. Next: finish verification, record results, and continue
+R4 CLI parity. Preserve inherited untracked `website/`.
 
 Python remains shipping. The canonical evaluation is 6/7, context-band
 0.6667 < 0.90; full Rust CLI/HTTP/MCP and R5–R13 are outstanding. No paid

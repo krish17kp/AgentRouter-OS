@@ -370,6 +370,16 @@ The shared Rust loader now checks positive sizes, ability scores, finite
 non-negative prices, bounded finite ability confidence, and ISO date fields
 before routing or listing. Full command/error parity is still outstanding.
 
+R4 follow-up (2026-11-10, forced initialization): the Rust `init` probe now
+supports `--force`, backs up edited seed files before reseeding, and matches
+the Python CLI on ordinary files. A security review reproduced linked-parent
+and hard-link escapes; directory-handle-relative seed writes and atomic
+replacement now preserve outside hard-linked files. The probe also rejects
+linked database/WAL/SHM/journal paths before SQLite initialization. SQLite
+still reopens the database by path, leaving a concurrent path-swap risk;
+handle-safe database initialization and the complete public CLI remain R4
+work. This probe is not a production replacement for Python.
+
 R6 and R7 are deliberately placed after the interface milestones (R4–R5) and
 before the deep-hardening ones (R8–R10): nothing in orchestration or graph
 work depends on provider execution existing, but provider execution

@@ -4,32 +4,27 @@
 
 - Branch `task/rust-r1-workspace`, PR #25 into
   `release/agentrouter-v0.5-rc1`. `main` and the RC are unchanged. Pushed
-  parent `eda4c7a` passed GitHub CI, Rust Linux/Windows parity, Security,
+  parent `6ee8d3e` passed GitHub CI, Rust Linux/Windows parity, Security,
   and mutation. Mutation: 0.9837 overall, 0.9844 safety/policy/execution,
   0.9815 routing, 0 unreviewed survivors.
 - Rust R4 remains partial. Route persistence, feedback, stored decisions,
-  prompt regeneration, non-forced `init`, configured routing/controls, and
-  host discovery have Python/Rust differential tests. The current slice adds
-  a Rust `registry list` probe with JSON/table/filter parity and shared
-  registry validation of numeric/date constraints. An independent review
-  found the malformed-catalog gap and prompted the validation repair.
-- Local Rust 1.75 workspace tests, Clippy, formatting, Ruff, and 19 focused
-  registry parity cases pass. Full Python regression passed 1,357 tests with
-  3 skips; TS SDK tests/typecheck, Bandit,
+  prompt regeneration, `init`, configured routing/controls, and host
+  discovery have Python/Rust differential tests. The current forced-init
+  slice adds backup/reseed parity and hardens seed paths after an independent
+  security review. SQLite's path-based open still permits a concurrent path
+  swap, so the Rust init probe is not production ready.
+- Local Rust 1.75 workspace tests, Clippy, formatting, Ruff, and 10 focused
+  init parity cases pass. Full Python regression passed 1,366 tests with
+  3 skips; TS SDK
+  tests/typecheck, Bandit,
   pip-audit, build, and clean-wheel smoke passed on the preceding slice.
 - Python remains the shipping implementation. The public Rust CLI/HTTP/MCP
   and R5–R13 remain outstanding. Release evaluation remains 6/7 gates:
   frozen context-band accuracy 0.6667 < unchanged 0.90. Two human annotators
   and adjudication are required under `TASK_012_OWNER_ACTIONS.md`; AI labels
   cannot replace them. No paid OpenAI call, merge, tag, or deploy occurred.
-- Next: push the fixture repair, inspect PR #25 CI,
-  repair any failure, then continue R4. Preserve inherited untracked
-  `website/`; do not stage or discard it.
-- On pushed `e4b06e2`, Ubuntu Rust parity, Rust workspace and MSRV passed,
-  but both Windows parity jobs failed because the active-filter test rewrote
-  seed YAML with Windows' default text encoding. The fixture now writes
-  explicit UTF-8; 19 focused parity cases pass locally. The repair awaits
-  a push and Windows CI recheck.
+- Next: finish full regression, record results and continue R4 CLI parity.
+  Preserve inherited untracked `website/`; do not stage or discard it.
 
 ## Historical checkpoint
 

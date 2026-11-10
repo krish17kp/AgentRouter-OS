@@ -1,5 +1,23 @@
 # LOOP_LOG
 
+## 2026-11-10 — Rust R4 forced initialization
+
+- Prior pushed `6ee8d3e` passed GitHub Python 3.10–3.13/Windows CI, Rust
+  Linux/Windows parity, Security, and critical mutation testing (0.9837
+  overall, 0.9844 safety/policy/execution, 0 unreviewed survivors).
+- Added Rust `init --force` compatibility: edited config/models are backed up
+  before reseeding, with Python/Rust output and bytes compared. Independent
+  security review reproduced symlinked-registry and hard-linked-seed writes
+  outside the home, plus a linked SQLite database escape. Seed writes now use
+  no-follow directory handles and atomic replacement; existing linked
+  database/WAL/SHM/journal paths are rejected. Ten focused tests cover the
+  escapes, POSIX modes, and ordinary parity. SQLite still reopens the DB by
+  path and can be redirected by a concurrent swap; production R4 work remains.
+  Full Python regression passed 1,366 tests with 3 skips; new-head CI remains.
+- Python remains shipping. Rust R4 is partial, R5–R13 pending. Context-band
+  accuracy remains 0.6667 < unchanged 0.90; the real-human annotation round
+  is still external.
+
 ## 2026-11-10 — Rust R4 registry inspection
 
 - Pushed `eda4c7a` passed GitHub Python/Windows CI, Rust Linux/Windows parity,

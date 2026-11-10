@@ -5,14 +5,15 @@
 - Python is still the shipping router. Rust R4 has route, SQLite,
   stored-decision, prompt, and feedback compatibility probes, but no complete
   public Rust CLI/HTTP/MCP replacement. R5–R13 remain open.
-- Pushed parent `eda4c7a` passed GitHub CI, Rust Linux/Windows parity,
+- Pushed parent `6ee8d3e` passed GitHub CI, Rust Linux/Windows parity,
   Security, and critical mutation testing (0.9837 overall, 0.9844
   safety/policy/execution, zero unreviewed survivors). The current Rust
-  registry-list/model-validation slice awaits its own remote checks.
+  forced-init slice awaits its own remote checks.
   The older mutation-status section below is historical.
-- The first `e4b06e2` Windows parity attempt failed on a test fixture that
-  wrote seed YAML with the Windows default encoding. The fixture now writes
-  UTF-8 explicitly; Windows recheck is pending.
+- The Rust init probe uses directory-handle-relative seed writes and rejects
+  existing linked SQLite targets. `agentrouter_storage::connect(home)` still
+  reopens the database by path; concurrent path swaps can redirect that open.
+  This is an R4 production blocker.
 - The frozen context-band release gate remains 0.6667 < 0.90. The 63-candidate
   two-human annotation/adjudication round is not complete. Synthetic or AI
   labels cannot be submitted as human labels.
@@ -22,7 +23,7 @@
 - Route price caps now reject non-finite and negative values. Registry prices
   remain unmeasured for bundled seed models, so a valid cap still excludes
   those models rather than assuming they are under budget.
-- The controls-boundary mutation repair passed on `eda4c7a` with zero
+- The controls-boundary mutation repair passed on `6ee8d3e` with zero
   unreviewed survivors.
 
 ## Historical limitations and studies
