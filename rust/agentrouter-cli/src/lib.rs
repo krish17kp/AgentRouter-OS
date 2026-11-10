@@ -578,7 +578,11 @@ fn has_multiple_links(
     }
     #[cfg(windows)]
     {
-        use std::os::windows::fs::MetadataExt;
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::Foundation::HANDLE;
+        use windows_sys::Win32::Storage::FileSystem::{
+            GetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION,
+        };
         let _ = metadata;
         let parent_file = home_dir
             .try_clone()
@@ -589,11 +593,15 @@ fn has_multiple_links(
         let file = options
             .open_at(&parent_file, name)
             .map_err(|e| e.to_string())?;
-        Ok(file
-            .metadata()
-            .map_err(|e| e.to_string())?
-            .number_of_links()
-            .map_or(true, |links| links > 1))
+        let mut information = std::mem::MaybeUninit::<BY_HANDLE_FILE_INFORMATION>::uninit();
+        let handle: HANDLE = file.as_raw_handle();
+        // SAFETY: `file` owns a valid handle for the call, and the Win32 API
+        // initializes `information` on success before we read its link count.
+        let succeeded = unsafe { GetFileInformationByHandle(handle, information.as_mut_ptr()) };
+        if succeeded == 0 {
+            return Err(std::io::Error::last_os_error().to_string());
+        }
+        Ok(unsafe { information.assume_init() }.nNumberOfLinks > 1)
     }
     #[cfg(not(any(unix, windows)))]
     {

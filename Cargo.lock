@@ -24,11 +24,13 @@ dependencies = [
  "agentrouter-routing",
  "agentrouter-storage",
  "cap-std",
+ "chrono",
  "fs_at",
  "rusqlite",
  "serde",
  "serde_json",
  "serde_yaml",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -71,10 +73,12 @@ dependencies = [
  "agentrouter-core",
  "chrono",
  "indexmap",
+ "libc",
  "serde",
  "serde_yaml",
  "tempfile",
  "thiserror",
+ "unicode-general-category",
 ]
 
 [[package]]
@@ -790,6 +794,12 @@ dependencies = [
  "quote",
  "syn 2.0.119",
 ]
+
+[[package]]
+name = "unicode-general-category"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2281c8c1d221438e373249e065ca4989c4c36952c211ff21a0ee91c44a3869e7"
 
 [[package]]
 name = "unicode-ident"

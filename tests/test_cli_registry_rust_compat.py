@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 
@@ -77,6 +78,28 @@ def test_rust_registry_rejects_invalid_registry(seeded_home):
     (seeded_home / "registry" / "providers.yaml").write_text("[not, a, mapping]\n")
     rust = _rust_registry(seeded_home, "--json")
     assert rust.returncode == 3
+    assert rust.stdout == ""
+
+
+def test_generated_catalog_symlink_is_rejected_by_python_and_rust(seeded_home, tmp_path):
+    outside = tmp_path / "outside.yaml"
+    outside.write_text("models: []\n", encoding="utf-8")
+    try:
+        os.symlink(outside, seeded_home / "registry" / "models.other.generated.yaml")
+    except (OSError, NotImplementedError):
+        pytest.skip("symlink creation unavailable")
+    python = runner.invoke(app, ["registry", "list", "--json"])
+    rust = _rust_registry(seeded_home, "--json")
+    assert python.exit_code == rust.returncode == 3
+    assert rust.stdout == ""
+
+
+def test_duplicate_registry_keys_are_rejected_by_python_and_rust(seeded_home):
+    path = seeded_home / "registry" / "models.other.generated.yaml"
+    path.write_text("models: []\nmodels: []\n", encoding="utf-8")
+    python = runner.invoke(app, ["registry", "list", "--json"])
+    rust = _rust_registry(seeded_home, "--json")
+    assert python.exit_code == rust.returncode == 3
     assert rust.stdout == ""
 
 

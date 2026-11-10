@@ -4,6 +4,7 @@
 //! compatibility test in `tests/` checks against the real seed registries.
 
 use std::collections::{HashMap, HashSet};
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use chrono::NaiveDate;
@@ -11,8 +12,9 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 pub use agentrouter_core::PricingTier;
+pub mod catalog_ops;
 
-const STALE_AFTER_DAYS: i64 = 90;
+pub const STALE_AFTER_DAYS: i64 = 90;
 const OVERRIDES_FILE: &str = "ability_overrides.yaml";
 
 /// Mirrors `agentrouter.registry.RegistryError` — the CLI maps this to exit
@@ -304,11 +306,64 @@ fn default_auth_model() -> String {
     "none".to_string()
 }
 
+pub(crate) fn read_text_nofollow(path: &Path) -> std::io::Result<String> {
+    let metadata = std::fs::symlink_metadata(path)?;
+    if !metadata.file_type().is_file() || metadata.file_type().is_symlink() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "linked or non-file registry path",
+        ));
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        if metadata.file_attributes() & 0x400 != 0 {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "linked registry path",
+            ));
+        }
+    }
+    let mut options = std::fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        options.custom_flags(0x0020_0000); // FILE_FLAG_OPEN_REPARSE_POINT
+    }
+    let mut file = options.open(path)?;
+    let opened = file.metadata()?;
+    if !opened.is_file() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "linked or non-file registry path",
+        ));
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        if opened.file_attributes() & 0x400 != 0 {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "linked registry path",
+            ));
+        }
+    }
+    let mut text = String::new();
+    file.read_to_string(&mut text)?;
+    Ok(text)
+}
+
 fn load_yaml(path: &Path) -> Result<serde_yaml::Mapping, RegistryError> {
     if !path.exists() {
         return Err(RegistryError::NotFound(path.to_path_buf()));
     }
-    let text = std::fs::read_to_string(path)
+    let text = read_text_nofollow(path)
         .map_err(|e| RegistryError::InvalidYaml(path.to_path_buf(), e.to_string()))?;
     let value: serde_yaml::Value = serde_yaml::from_str(&text)
         .map_err(|e| RegistryError::InvalidYaml(path.to_path_buf(), e.to_string()))?;

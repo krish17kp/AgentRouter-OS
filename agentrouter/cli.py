@@ -975,11 +975,12 @@ def providers_doctor():
     broken = 0
     for path in gen_paths:
         provider = path.name[len("models.") : -len(".generated.yaml")]
+        provider_label = "".join(c if c.isprintable() else "?" for c in provider)[:120]
         try:
             st = catalog_ops.read_status(path)
             load_models(path, providers)
         except (RegistryError, catalog_ops.CatalogError, yaml.YAMLError, OSError) as e:
-            typer.echo(f"[FAIL ] {provider:<12} {e}")
+            typer.echo(f"[FAIL ] {provider_label:<12} {e}")
             broken += 1
             continue
         mark = "STALE" if st.stale else "OK   "

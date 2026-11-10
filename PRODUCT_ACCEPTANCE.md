@@ -5,12 +5,11 @@
 Product acceptance remains **not granted**. PR #25 is open and unmerged.
 Pushed parent `6ee8d3e` passed the complete GitHub matrix, including mutation
 (0.9837 overall; 0.9844 safety/policy/execution; zero unreviewed survivors).
-The current Rust forced-init slice passes local parity but retains a
+The current Rust forced-init/provider-status slices pass local parity but retain a
 path-based SQLite initialization race and awaits its own remote checks. The
 context-band release gate remains 0.6667 < 0.90, Rust R4 is partial, and
 R5–R13 remain outstanding. The table below is historical.
-The first forced-init push `32eee6f` failed Windows Rust compilation; a
-file-handle repair awaits remote recheck.
+The current Win32 file-handle repair awaits Windows CI.
 
 ## Historical assessment
 
