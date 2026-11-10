@@ -22,9 +22,14 @@
   frozen context-band accuracy 0.6667 < unchanged 0.90. Two human annotators
   and adjudication are required under `TASK_012_OWNER_ACTIONS.md`; AI labels
   cannot replace them. No paid OpenAI call, merge, tag, or deploy occurred.
-- Next: push the registry probe, inspect PR #25 CI,
+- Next: push the fixture repair, inspect PR #25 CI,
   repair any failure, then continue R4. Preserve inherited untracked
   `website/`; do not stage or discard it.
+- On pushed `e4b06e2`, Ubuntu Rust parity, Rust workspace and MSRV passed,
+  but both Windows parity jobs failed because the active-filter test rewrote
+  seed YAML with Windows' default text encoding. The fixture now writes
+  explicit UTF-8; 19 focused parity cases pass locally. The repair awaits
+  a push and Windows CI recheck.
 
 ## Historical checkpoint
 

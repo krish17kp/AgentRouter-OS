@@ -63,7 +63,8 @@ def test_rust_registry_active_filter_removes_deprecated_model(seeded_home):
     path = seeded_home / "registry" / "models.yaml"
     original = path.read_text(encoding="utf-8")
     path.write_text(
-        original.replace("deprecation_status: active", "deprecation_status: deprecated", 1)
+        original.replace("deprecation_status: active", "deprecation_status: deprecated", 1),
+        encoding="utf-8",
     )
     python = runner.invoke(app, ["registry", "list", "--active-only", "--json"])
     rust = _rust_registry(seeded_home, "--active-only", "--json")

@@ -1,13 +1,13 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-10",
-  "current_phase": "IN_PROGRESS: PR #25 task/rust-r1-workspace. Pushed parent eda4c7a passed full GitHub CI, Rust, Security and mutation. Current Rust R4 registry-list/model-validation probe passes focused parity, Rust workspace checks, and full Python regression (1357 passed/3 skipped); awaits push and CI. Python remains shipping; Rust R4 partial. Context-band gate 0.6667 < 0.90 requires human labels.",
+  "current_phase": "IN_PROGRESS: PR #25 task/rust-r1-workspace. Pushed parent eda4c7a passed full GitHub CI, Rust, Security and mutation. New e4b06e2 registry slice passed Ubuntu Rust parity, but Windows parity failed on a test fixture writing YAML with locale encoding. Explicit UTF-8 repair passes 19 focused cases and awaits Windows CI recheck. Python remains shipping; Rust R4 partial. Context-band gate 0.6667 < 0.90 requires human labels.",
   "current_objective": "Inspect and repair PR #25 CI, continue contract-compatible Rust CLI/HTTP/MCP migration and routing evaluation without weakening release gates, then validate production readiness. Preserve inherited untracked website/ and do not fabricate context-band labels.",
   "status": "IN_PROGRESS",
   "branch_topology": {
     "main": "stable, untouched (602321a) -- never merge without owner approval; PR #16 open against it, blocked on context_band_accuracy",
     "release/agentrouter-v0.5-rc1": "Remote RC @ 5ce3234 on 2026-11-09; NOT RELEASE READY (context-band 0.6667 < 0.90). PR #25 is open against it; this task branch has not been merged.",
-    "task/rust-r1-workspace": "PR #25 open against RC; pushed parent eda4c7a passed complete GitHub CI/Rust/Security/mutation; current registry-list/model-validation probe awaits push and CI; Rust R4 partial and OpenAI execution hardening",
+    "task/rust-r1-workspace": "PR #25 open against RC; eda4c7a passed complete GitHub CI/Rust/Security/mutation; e4b06e2 registry probe Windows parity failed on locale-encoded test fixture; UTF-8 repair awaits push/recheck; Rust R4 partial and OpenAI execution hardening",
     "task/repo-cleanup-architecture-ponytail": "MERGED to RC (PR #14, merge commit 1ae3155); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/dynamic-skill-discovery": "MERGED to RC (PR #15, merge commit 62d5289); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/consolidation-handoff-docs": "MERGED to RC (PR #17, merge commit 73a1875); deleted local, remote deletion blocked by pre_tool_guard (owner action)",

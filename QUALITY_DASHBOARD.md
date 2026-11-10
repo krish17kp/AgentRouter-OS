@@ -11,6 +11,9 @@ Clippy, formatting, and Ruff; full Python regression passed 1,357 tests with
 3 skips. Release evaluation remains 6/7:
 context-band accuracy 0.6667 < 0.90. Full Rust CLI/HTTP/MCP parity and
 R5–R13 remain outstanding. Historical measurements follow.
+The first `e4b06e2` Windows parity job failed on a test fixture's locale
+encoded YAML rewrite; explicit UTF-8 repair passes focused tests and awaits
+a new Windows CI result.
 
 ## Historical dashboard
 

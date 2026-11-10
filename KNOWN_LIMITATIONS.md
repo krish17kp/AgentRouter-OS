@@ -10,6 +10,9 @@
   safety/policy/execution, zero unreviewed survivors). The current Rust
   registry-list/model-validation slice awaits its own remote checks.
   The older mutation-status section below is historical.
+- The first `e4b06e2` Windows parity attempt failed on a test fixture that
+  wrote seed YAML with the Windows default encoding. The fixture now writes
+  UTF-8 explicitly; Windows recheck is pending.
 - The frozen context-band release gate remains 0.6667 < 0.90. The 63-candidate
   two-human annotation/adjudication round is not complete. Synthetic or AI
   labels cannot be submitted as human labels.

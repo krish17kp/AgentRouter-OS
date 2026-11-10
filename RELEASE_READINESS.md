@@ -11,6 +11,9 @@ still lacks full CLI/HTTP/MCP/execution parity, R5–R13, staging and rollback
 evidence. The two-human annotation/adjudication round in
 `TASK_012_OWNER_ACTIONS.md` remains required; AI labels cannot close it.
 No paid OpenAI request or production deployment occurred.
+The first `e4b06e2` Windows parity job failed on a test fixture that wrote
+non-UTF-8 YAML. The fixture now writes UTF-8, but this head still needs a
+passing Windows CI recheck.
 
 ## Historical v0.5 assessment
 

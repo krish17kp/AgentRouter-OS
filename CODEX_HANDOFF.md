@@ -13,6 +13,10 @@ cases, Rust 1.75 workspace tests, Clippy, formatting, and Ruff pass locally;
 full Python regression passed 1,357 tests with 3 skips. Next command: `gh run list --branch
 task/rust-r1-workspace --limit 12` after the push; repair any failure and
 continue R4 CLI parity. Preserve inherited untracked `website/`.
+The first `e4b06e2` Rust workflow failed in Windows parity because a test
+fixture used the Windows default encoding when rewriting YAML. The fixture
+now writes UTF-8 explicitly and all 19 focused cases pass; Windows CI recheck
+is pending.
 
 Python remains shipping. The canonical evaluation is 6/7, context-band
 0.6667 < 0.90; full Rust CLI/HTTP/MCP and R5–R13 are outstanding. No paid

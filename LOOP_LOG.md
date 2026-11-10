@@ -16,6 +16,11 @@
   Python regression passed 1,357 tests, 3 skipped. New-head CI remains.
 - Python remains shipping; R4 is partial. Context-band accuracy remains
   0.6667 < unchanged 0.90, pending two real human annotators/adjudication.
+- First `e4b06e2` CI: Ubuntu Rust parity, Rust workspace and MSRV passed.
+  Windows parity failed because the active-filter test rewrote seed YAML
+  with the platform default encoding, creating non-UTF-8 bytes that the Rust
+  loader correctly rejects. Added explicit UTF-8 to the fixture; all 19
+  focused parity cases pass again and Windows CI must recheck.
 
 ## 2026-11-09 — Rust R4 configured routing and controls
 

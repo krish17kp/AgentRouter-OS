@@ -8,6 +8,8 @@ Pushed parent `eda4c7a` passed the complete GitHub matrix, including mutation
 The current Rust registry-list/model-validation slice has local parity but
 awaits push/CI. The context-band release gate remains 0.6667 < 0.90, Rust
 R4 is partial, and R5–R13 remain outstanding. The table below is historical.
+The first `e4b06e2` Windows parity job failed on a locale-encoded test
+fixture; explicit UTF-8 repair needs a passing Windows CI recheck.
 
 ## Historical assessment
 

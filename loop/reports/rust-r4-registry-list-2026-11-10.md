@@ -16,6 +16,9 @@
 - Rust 1.75 workspace tests, Clippy with warnings denied, formatting: pass.
 - Ruff and `git diff --check`: pass.
 - Full Python regression: 1,357 passed, 3 skipped, 1 warning.
+- First `e4b06e2` Windows parity run found a fixture rewrite using the
+  platform default encoding. Rust rejected the non-UTF-8 catalog. The test
+  now writes UTF-8 explicitly; 19 focused cases pass after the repair.
 - Pushed parent `eda4c7a` passed all GitHub workflows, including mutation
   (0.9837 overall, 0.9844 safety/policy/execution, 0 unreviewed survivors).
   The new registry slice needs its own remote CI verdict.
