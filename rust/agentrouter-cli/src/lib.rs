@@ -26,6 +26,7 @@ pub mod bundle;
 pub mod dashboard;
 pub mod diagnostics;
 pub mod harness;
+pub mod limits;
 pub mod observability;
 pub mod openai;
 

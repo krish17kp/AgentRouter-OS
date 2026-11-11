@@ -12,7 +12,7 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 1,940 passed, 6 skipped |
+| Python regression | 1,944 passed, 6 skipped |
 | Line coverage | 92.34% (6,617 / 7,166 statements) |
 | Branch coverage | 87.37% (1,840 / 2,106 branch outcomes) |
 | Combined coverage reported by pytest-cov | 91.21% |
@@ -29,6 +29,8 @@ boolean and integer coercion, underscore-separated and integral-decimal
 integer strings, underscore datetime separators, numeric Unix timestamp
 rounding, leap-second rejection, and invalid-input rejection. An additional
 40-value Python/Rust timestamp corpus has no output or acceptance mismatch.
+The release suite also exercises Rust fixed-window rate limiting, idempotency
+cache expiry, and response replay fields against the Python server primitives.
 The candidate package version is `0.5.0rc1`. The six skips are
 environment-dependent; CI is responsible for Windows and macOS confirmation.
 Coverage does not replace mutation, security, parity, or release-evaluation

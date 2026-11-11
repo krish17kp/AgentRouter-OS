@@ -84,7 +84,7 @@ release authority until the full set is complete.
 | `agentrouter/sdk.py` | `—` | Not ported |
 | `agentrouter/server/__init__.py` | `agentrouter-evaluation::package_markers::SERVER_PUBLIC_EXPORTS` | Parity |
 | `agentrouter/server/app.py` | `—` | Not ported |
-| `agentrouter/server/limits.py` | `—` | Not ported |
+| `agentrouter/server/limits.py` | `agentrouter-cli::limits` | Partial |
 | `agentrouter/server/schemas.py` | `—` | Not ported |
 | `agentrouter/server/service.py` | `—` | Not ported |
 | `agentrouter/store.py` | `agentrouter-storage` | Partial |
@@ -122,6 +122,10 @@ release authority until the full set is complete.
   temporary home and compares the same decision, feedback, and aggregation
   checks. The platform evaluator matches scoring for a caller-supplied CLI
   command/group manifest; runtime Typer command discovery remains Python-only.
+- The Rust limits module matches fixed-window rate checks, retry-after values,
+  response TTL and media type, and per-key single-flight semantics. It is a
+  process-local primitive; the HTTP middleware and server request lifecycle
+  still run through Python.
 - Performance scoring and classification/routing timing now run in Rust for
   caller-supplied models and tasks. Seed loading and injected classifier
   behavior remain Python-side; latency values are machine-dependent.

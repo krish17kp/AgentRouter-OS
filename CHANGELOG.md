@@ -35,6 +35,8 @@ All notable changes to AgentRouter OS. Format loosely follows
   strings in Rust annotation manifests.
 - Match Python annotation datetime handling for rejected leap seconds, signed
   numeric timestamp strings, exponent forms, and microsecond rounding.
+- Add Rust fixed-window rate limiting, TTL idempotency caching, and keyed
+  single-flight primitives with Python contract checks.
 - Added Rust types and validation for the human annotation artifact schemas;
   supported datetime forms now normalize to Python-compatible ISO JSON while
   full scalar coercion and `fromisoformat` edge coverage remain open.
