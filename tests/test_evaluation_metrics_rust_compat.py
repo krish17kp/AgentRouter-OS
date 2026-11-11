@@ -854,3 +854,42 @@ def test_rust_performance_score_matches_python(classify_seconds, route_seconds):
         check=True,
     )
     assert json.loads(process.stdout) == expected
+
+
+def test_rust_performance_evaluator_measures_classifier_and_router():
+    tasks = [
+        "Refactor the payment module and add unit tests",
+        "Write a blog post about our API launch",
+        "Summarize this 30k token incident report",
+    ]
+    models = load_seed_models()
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_performance_run_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps(
+            {
+                "models": [model.model_dump(mode="json") for model in models],
+                "tasks": tasks,
+            }
+        ),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+        check=True,
+    )
+    result = json.loads(process.stdout)
+    detail = result["detail"]
+    assert detail["n_samples"] == len(tasks)
+    assert detail["classify_median_ms"] >= 0
+    assert detail["route_median_ms"] >= 0
+    assert 0 <= result["score"] <= 1
+    assert detail["note"] == "smoke perf check on this machine; not a benchmark"

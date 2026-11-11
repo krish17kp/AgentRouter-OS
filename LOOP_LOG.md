@@ -1816,3 +1816,22 @@ Clippy, formatting, Ruff, and Python formatting pass. Full Python suite 1,742
 passed / 6 skipped; 91.15% line, 85.61% branch, and 89.89% combined coverage.
 Cross-platform CI for the previous platform/newline slice is still running;
 this performance slice needs CI after push.
+
+## Iteration 48 — 2026-11-11 — Rust runtime performance measurement
+
+Extended the Rust evaluator from scoring supplied elapsed-time samples to
+measuring the default Rust classifier and router over supplied model/task
+fixtures. The smoke test checks sample count, valid timings/score, and the
+explicit non-benchmark label; the exact score formula remains differentially
+tested. Packaged seed loading and Python's injected-classifier hook remain
+partial.
+
+Verification: five performance differential/runtime tests, full Rust
+workspace/Clippy/format, Ruff, and Python formatting pass. Full Python suite
+1,743 passed / 6 skipped with 91.15% line, 85.61% branch, 89.89% combined
+coverage. Cross-platform CI for this runtime evaluator is pending.
+
+PR #16 code/spec review found no separate implementation defect in the
+reviewed scope. Release requirements remain unmet: context-band accuracy is
+0.6667 < 0.90; independent human annotation is required, so promotion remains
+blocked.

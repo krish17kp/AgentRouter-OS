@@ -53,7 +53,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/context_bands.py` | `—` | Not ported |
 | `agentrouter/evaluation/evaluators/__init__.py` | `—` | Not ported |
 | `agentrouter/evaluation/evaluators/feedback.py` | `agentrouter-evaluation::evaluate_feedback` | Parity |
-| `agentrouter/evaluation/evaluators/performance.py` | `agentrouter-evaluation::summarize_performance` | Partial |
+| `agentrouter/evaluation/evaluators/performance.py` | `agentrouter-evaluation::{evaluate_performance,summarize_performance}` | Partial |
 | `agentrouter/evaluation/evaluators/platform.py` | `agentrouter-evaluation::evaluate_platform` | Partial |
 | `agentrouter/evaluation/evaluators/provider.py` | `agentrouter-evaluation::evaluate_provider` | Partial |
 | `agentrouter/evaluation/evaluators/routing.py` | `agentrouter-evaluation::evaluate_routing` | Partial |
@@ -115,8 +115,9 @@ release authority until the full set is complete.
   temporary home and compares the same decision, feedback, and aggregation
   checks. The platform evaluator matches scoring for a caller-supplied CLI
   command/group manifest; runtime Typer command discovery remains Python-only.
-- Performance summary scoring matches from supplied elapsed-time samples;
-  Rust does not yet measure the classifier and router pipeline itself.
+- Performance scoring and classification/routing timing now run in Rust for
+  caller-supplied models and tasks. Seed loading and injected classifier
+  behavior remain Python-side; latency values are machine-dependent.
 - Routing evaluation now scores caller-supplied model catalogs against gold
   constraints or the declared distinct-fallback proxy. Loading seed models and
   custom classifier injection remain Python-only.

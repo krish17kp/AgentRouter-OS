@@ -568,6 +568,37 @@ pub fn summarize_performance(classify_seconds: &[f64], route_seconds: &[f64]) ->
     })
 }
 
+/// Measure the default Rust classifier and router over caller-supplied cases.
+/// Callers supply the model catalog and task list; seed loading remains in the
+/// packaging/runtime adapter.
+pub fn evaluate_performance(
+    models: &[agentrouter_registry::ModelEntry],
+    tasks: &[String],
+) -> serde_json::Value {
+    use std::time::Instant;
+
+    let mut classify_seconds = Vec::with_capacity(tasks.len());
+    let mut route_seconds = Vec::with_capacity(tasks.len());
+    for task in tasks {
+        let classify_start = Instant::now();
+        let classification = agentrouter_classifier::classify(
+            task,
+            &agentrouter_classifier::ClassifyOptions::default(),
+        );
+        let route_start = Instant::now();
+        let _route = std::hint::black_box(agentrouter_routing::route(
+            models,
+            &classification,
+            agentrouter_routing::Weights::default(),
+            None,
+        ));
+        let route_end = Instant::now();
+        classify_seconds.push(route_start.duration_since(classify_start).as_secs_f64());
+        route_seconds.push(route_end.duration_since(route_start).as_secs_f64());
+    }
+    summarize_performance(&classify_seconds, &route_seconds)
+}
+
 fn median_milliseconds(samples_seconds: &[f64]) -> f64 {
     if samples_seconds.is_empty() {
         return 0.0;
