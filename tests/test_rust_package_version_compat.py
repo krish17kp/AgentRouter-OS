@@ -16,7 +16,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_rust_package_version_matches_python_distribution():
     process = subprocess.run(
-        ["cargo", "run", "--quiet", "--locked", "--bin", "package_version_from_json", "-p", "agentrouter-core"],
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "package_version_from_json",
+            "-p",
+            "agentrouter-core",
+        ],
         capture_output=True,
         text=True,
         encoding="utf-8",

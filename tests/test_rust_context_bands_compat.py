@@ -47,7 +47,9 @@ def test_rust_context_band_generalization_report_matches_python():
 def test_rust_context_split_leakage_matches_python_sequence_matcher():
     holdout = [
         ContextBandCase("exact", "A small prompt, with punctuation!", "small", "coding"),
-        ContextBandCase("near", "Analyze this production repository for security risks", "large", "audit"),
+        ContextBandCase(
+            "near", "Analyze this production repository for security risks", "large", "audit"
+        ),
         ContextBandCase("popular", "z" * 210 + " marker alpha beta", "medium", "review"),
     ]
     references = {
