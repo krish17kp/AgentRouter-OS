@@ -24,6 +24,9 @@ All notable changes to AgentRouter OS. Format loosely follows
   single datasets, with deterministic sampling, provenance and dataset-quality
   reports, classification grading, and a composed seven-dimension `measure_all`
   scorecard. Real dataset downloads remain explicit external skips.
+- Add the `agentrouter-evaluate` Rust command for dataset listing/validation,
+  offline runs, Markdown reports, comparisons, availability status, explicit
+  real-data preparation blockers, and context-band generalization.
 - Tighten Rust annotation timestamp parsing to match the accepted Python
   datetime forms in differential fixtures and reject invalid separators.
 - Added Rust types and validation for the human annotation artifact schemas;

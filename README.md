@@ -465,6 +465,10 @@ ruff check . && ruff format --check .     # lint + format
 
 No test needs internet or an API key — provider-refresh tests mock the HTTP layer. CI runs the same suite on Python 3.10 / 3.11 / 3.12 / 3.13, then a **`build-smoke` job** builds the real sdist + wheel, installs the wheel into a clean venv, and smoke-tests the *installed* artifact (`--version` → `init` → `route --json` → `stats` → `registry list`). That catches packaging bugs — a missing seed file, a broken entrypoint — that editable installs never hit. See [TESTING.md](TESTING.md).
 
+The workspace also provides a separate Rust offline evaluator; see the
+[Rust evaluation CLI guide](docs/RUST_EVALUATION_CLI.md) for fixture profiles,
+report generation, and current migration boundaries.
+
 ---
 
 ## Architecture

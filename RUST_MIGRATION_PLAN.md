@@ -438,6 +438,16 @@ so they may run concurrently with R6/R7 without violating any dependency.
 
 ## Python retirement criteria
 
+### R9 follow-up (2026-11-11)
+
+Rust now includes registered fixture collection and the `agentrouter-evaluate`
+command for dataset discovery/validation, offline profile runs, Markdown
+reports, comparisons, and context-band generalization. The runner supports
+classification-only and all seven scorecard dimensions, and records unavailable
+real data without substituting fixtures. This separate Rust command does not
+yet replace the full `agentrouter` command tree. Real external dataset
+preparation and annotation workflows remain outstanding.
+
 Python (`agentrouter/`) is not removed, deprecated-flagged, or demoted from
 release-gate authority until **all** of the following hold simultaneously:
 
