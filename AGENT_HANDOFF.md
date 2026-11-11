@@ -1,34 +1,26 @@
 # AGENT_HANDOFF — live checkpoint
 
-## Current checkpoint — 2026-11-10
+## Current checkpoint — 2026-11-11
 
-- Branch `task/rust-r1-workspace`, PR #25 into
-  `release/agentrouter-v0.5-rc1`. `main` and the RC are unchanged. Pushed
-  parent `6ee8d3e` passed GitHub CI, Rust Linux/Windows parity, Security,
-  and mutation. Mutation: 0.9837 overall, 0.9844 safety/policy/execution,
-  0.9815 routing, 0 unreviewed survivors.
-- Rust R4 remains partial. Route persistence, feedback, stored decisions,
-  prompt regeneration, `init`, configured routing/controls, and host
-  discovery have Python/Rust differential tests. The current forced-init
-  slice adds backup/reseed parity and hardens seed paths after an independent
-  security review. SQLite's path-based open still permits a concurrent path
-  swap, so the Rust init probe is not production ready. First push `32eee6f`
-  failed Windows Rust compilation on capability-metadata link count; the
-  uncommitted file-handle repair needs remote recheck. Linux has a proc-fd
-  directory-path regression for a home swap before SQLite connects, while
-  later path swaps remain unsafe.
-- Local Rust 1.75 workspace tests, Clippy, formatting, Ruff, and 10 focused
-  init parity cases pass. Full Python regression passed 1,366 tests with
-  3 skips; TS SDK
-  tests/typecheck, Bandit,
-  pip-audit, build, and clean-wheel smoke passed on the preceding slice.
-- Python remains the shipping implementation. The public Rust CLI/HTTP/MCP
-  and R5–R13 remain outstanding. Release evaluation remains 6/7 gates:
-  frozen context-band accuracy 0.6667 < unchanged 0.90. Two human annotators
-  and adjudication are required under `TASK_012_OWNER_ACTIONS.md`; AI labels
-  cannot replace them. No paid OpenAI call, merge, tag, or deploy occurred.
-- Next: push the Windows repair, inspect CI, then continue R4 CLI parity.
-  Preserve inherited untracked `website/`; do not stage or discard it.
+- Active branch: `release/agentrouter-v0.5-rc1`, pushed through `2ff36f7`.
+  Open PR: #16 to `main`; current Python/Rust OS matrix checks pass, but
+  `enforce-release-gate` fails because frozen context-band accuracy is 0.6667
+  against 0.90. Do not merge or tag while this gate fails.
+- Current local slice: Rust R4 doctor bundle plus Python/Rust environment-value
+  privacy hardening. The default bundle is allowlisted, bounded and redacted;
+  including SQLite is opt-in, uses online backup and warns that task text is
+  included. All environment values except the resolved home path are withheld.
+- Local evidence: full Python suite 1,701 passed, 6 skipped; 90.99% line and
+  85.19% branch coverage. Focused bundle/doctor compatibility tests pass; Rust
+  workspace tests, formatting, Clippy, and Ruff pass. Security audit, package
+  build, cargo audit, and evaluation reruns are still collecting. Current local
+  changes need commit/push and fresh cross-platform CI.
+- Python remains the shipping implementation. The 77-module matrix is
+  incomplete; Rust CLI/HTTP/MCP, plugins/skills, evaluation/annotation, and
+  R5–R13 remain. Human annotation, OpenAI live validation, and production
+  credentials are listed under Needs Krish in `PRODUCTION_STATUS.md`.
+- Preserve inherited untracked `.codex/` and
+  `loop/reports/open-pr-review-2026-11-10.md`; do not stage or discard them.
 
 ## Historical checkpoint
 

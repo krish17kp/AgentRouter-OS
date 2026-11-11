@@ -13,6 +13,11 @@
   database by path; a concurrent leaf or ancestor swap can redirect that open.
   Linux's proc-fd path helps after a swap before connect, but is not a complete
   race-safe SQLite strategy. This is an R4 production blocker.
+- The Rust diagnostic-bundle probe now has an allowlisted file set, redaction,
+  bounded text artifacts, and opt-in SQLite snapshot support. This local slice
+  withholds non-home environment values in both Python and Rust and has focused
+  tests; full CLI parity, Windows ACL restrictions, and cross-platform CI for
+  this change remain open.
 - Rust provider-status parity is a new probe, not full `providers` CLI parity.
 - Latest full Python coverage is 90.96% line / 85.09% branch, meeting the
   unchanged 90%/85% gates; see `docs/COVERAGE_REPORT_2026-11-11.md`.

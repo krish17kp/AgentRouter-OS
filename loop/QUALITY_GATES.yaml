@@ -1,13 +1,13 @@
 # Machine-readable desired thresholds and current evidence for AgentRouter OS.
 version: 2
-updated: 2026-07-20
+updated: 2026-11-11
 canonical_release_ready: false
 
 testing:
   mandatory_tests_pass:
     required: true
-    current: pending_full_rerun
-    last_full_baseline_passed: 427
+    current: pass_local
+    last_full_baseline_passed: 1701
   unexplained_failures:
     required: 0
     current: 0
@@ -20,13 +20,21 @@ coverage:
   branch_min: 0.85
   safety_execution_gateway_branch: 1.00
   policy_enforcement_branch: 1.00
-  current: pending_final_measurement
+  current: pass_local
+  line: 0.909916
+  branch: 0.851852
+  evidence: docs/COVERAGE_REPORT_2026-11-11.md
 
 mutation:
   overall_min: 0.85
   safety_execution_policy_min: 0.95
-  measured: false
-  current: pending_first_linux_ci_run
+  measured: true
+  current: pass
+  overall: 0.9693
+  safety_execution_policy: 0.9663
+  routing: 0.9815
+  unreviewed_survivors: 0
+  evidence: PR-13 Critical Mutation Testing workflow
   fabricated_score: false
 
 evaluation:
@@ -65,28 +73,29 @@ evaluation:
     pass: true
 
 static_quality:
-  ruff_clean: pending_full_rerun
-  format_clean: pending_full_rerun
+  ruff_clean: pass_local
+  format_clean: pass_local
   type_checker_green: pending_full_rerun
   no_broad_new_ignores: true
 
 security:
-  bandit_clean_or_justified: pending_final_rerun
-  pip_audit_clean_or_mitigated: pending_final_rerun
-  secret_scan_clean: pending_final_rerun
-  plugin_permission_audit_pass: pending_independent_reaudit
+  bandit_clean_or_justified: pass_local
+  pip_audit_clean_or_mitigated: pass_local
+  secret_scan_clean: pass_on_previous_pushed_rc_pending_current_change
+  plugin_permission_audit_pass: pass_PR_13
 
 packaging:
-  wheel_and_sdist_build: pending_final_rerun
-  wheel_installs_clean_env: pending_final_rerun
-  cli_starts: pending_final_rerun
-  plugins_included: pending_final_rerun
-  install_upgrade_uninstall: pending_final_rerun
+  wheel_and_sdist_build: pass_local
+  wheel_installs_clean_env: pass_local
+  cli_starts: pass_local
+  plugins_included: pass_prior_rc
+  install_upgrade_uninstall: pass_prior_rc
 
 platforms:
-  windows_local_green: pending_final_rerun
-  github_linux_green: false
-  github_windows_green: false
+  windows_local_green: pending
+  github_linux_green: pass_on_previous_pushed_rc_pending_current_change
+  github_windows_green: pass_on_previous_pushed_rc_pending_current_change
+  github_macos_green: pass_on_previous_pushed_rc_pending_current_change
 
 open:
   - id: context_band_generalization
@@ -99,7 +108,7 @@ open:
     reason: real mutmut 3.6.0 score awaits the first Linux GitHub Actions run
   - id: release_branch_ci
     blocking: true
-    reason: release branch and its GitHub checks do not exist yet
+    reason: current local bundle/privacy changes still need fresh cross-platform GitHub checks
 
 historical_corrections:
   - claim: context_band_accuracy_0.945_release_ready

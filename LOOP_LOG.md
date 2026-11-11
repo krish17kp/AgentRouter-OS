@@ -1518,3 +1518,26 @@ current RC; continue the Rust R4 public CLI and SQLite race work, then proceed
 through the remaining Rust parity milestones. Do not merge PR #16 until all gates
 pass; human annotations, live paid OpenAI validation, and deployment credentials
 remain in `PRODUCTION_STATUS.md` under Needs Krish.
+
+## Iteration 30 — 2026-11-11 — Rust diagnostic bundle and environment privacy
+
+Continued R4 with a Rust `doctor --bundle` slice. The bundle uses an explicit
+file allowlist, bounded text writes, redaction, exclusive creation, and refusal
+of existing or symlink destinations. SQLite inclusion requires
+`--include-database`, uses the online snapshot helper, and the README clearly
+warns that this opt-in database contains routed task text.
+
+The privacy review found an inconsistency in both languages: `AGENTROUTER_USER`
+and non-secret settings such as `AGENTROUTER_LOG` were copied verbatim even
+though the bundle states configuration values are withheld. Both Python and
+Rust now preserve only set/unset/blank status for all settings except the
+resolved `AGENTROUTER_HOME` path. Regression tests assert identifiers and paths
+do not enter the bundle.
+
+Verification: full Python regression 1,701 passed / 6 skipped; 90.9916% line,
+85.1852% branch, 89.6719% combined. Rust workspace tests, format, and Clippy
+pass; focused Python/Rust bundle tests pass; Ruff, Bandit, pip-audit,
+cargo-audit, wheel/sdist build, and clean-wheel install/CLI/bundle smoke pass.
+The seven-gate evaluation is 6/7 with context-band accuracy 0.6667 < 0.90, so
+release-ready remains NO. Cross-platform CI for this local slice is pending
+push. Python remains the shipping authority and the parity matrix stays partial.

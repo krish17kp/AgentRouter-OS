@@ -82,13 +82,14 @@ def _environment_summary() -> dict[str, Any]:
         raw = os.environ.get(name)
         if raw is None:
             summary[name] = "unset"
+        elif name == "AGENTROUTER_HOME":
+            summary[name] = str(Path(raw).resolve())
         elif name.endswith(("_KEY", "_TOKEN", "_SECRET")):
             # presence only, never the value
             summary[name] = "set (value withheld)" if raw.strip() else "set but blank"
-        elif name == "AGENTROUTER_HOME":
-            summary[name] = str(Path(raw).resolve())
         else:
-            summary[name] = raw
+            # Config values and user identifiers can themselves be private.
+            summary[name] = "set (value withheld)" if raw.strip() else "set but blank"
     return summary
 
 

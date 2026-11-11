@@ -16,3 +16,7 @@ serde_yaml = { package = "noyalib-serde-yaml", version = "=0.0.60" }
 [[bin]]
 name = "route_cli"
 path = "src/bin/route_cli.rs"
+
+[[bin]]
+name = "routing_bench"
+path = "src/bin/routing_bench.rs"

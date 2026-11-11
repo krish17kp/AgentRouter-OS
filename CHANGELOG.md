@@ -20,6 +20,9 @@ All notable changes to AgentRouter OS. Format loosely follows
 - macOS Python and Rust CI coverage now passes the configured platform jobs.
 - Rust harness detection now matches the Python module's verified environment markers and conservative fallback behavior across eight differential cases.
 - Rust now mirrors the dormant Python context-band model's deterministic features, artifact validation, and logistic inference, with 30 cross-language differential cases; classification remains rule-based and unchanged by default.
+- The Rust diagnostics probe now writes an allowlisted redacted support bundle; including the SQLite log requires explicit opt-in and uses SQLite online backup. This remains a migration probe, not the shipped Python CLI.
+- Diagnostic bundles now withhold all configured environment values except the resolved home path in both the Python implementation and Rust probe; user identifiers and configuration values are no longer copied into shareable artifacts.
+- Added a release-mode Rust routing benchmark with the same synthetic fleet setup as the Python baseline; local paired results and limits are recorded in `docs/ROUTING_BENCHMARK_RESULTS_2026-11-11.md`.
 - Upgrade bundled SQLite to the patched 3.54.1 release and replace the unmaintained YAML parser with a pure-Rust serde-compatible layer; the Rust minimum is now 1.89.
 
 ### Fixed

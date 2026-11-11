@@ -9,12 +9,15 @@ required independent human annotation and adjudication round is incomplete.
 - Hardened local REST API request limits, privacy, and observability.
 - Rust migration slices for registry validation, routing, policy, hosts,
   decision storage, provider status, dashboard reporting, harness detection,
-  observability helpers, context-band inference, and structured diagnostics.
+  observability helpers, context-band inference, and structured diagnostics with
+  an allowlisted diagnostic bundle and opt-in SQLite snapshot; plus a paired
+  release-mode Rust routing benchmark with documented synthetic-workload limits.
 - Rust/OpenAI Responses transport support behind the existing opt-in and safety
   gates; live provider validation has not been run.
 - Cross-platform Rust and Python compatibility coverage and measured local
   routing latency and Python coverage reports.
 - Website interface and product-truth updates.
+- Diagnostic bundle settings show presence only; configured values such as user identifiers and log paths are withheld in both Python and Rust.
 
 ## Release gates still open
 

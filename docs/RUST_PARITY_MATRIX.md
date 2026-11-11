@@ -26,7 +26,7 @@ release authority until the full set is complete.
 | `agentrouter/annotation/schema.py` | `—` | Not ported |
 | `agentrouter/annotation/splits.py` | `—` | Not ported |
 | `agentrouter/annotation/store.py` | `—` | Not ported |
-| `agentrouter/bundle.py` | `—` | Not ported |
+| `agentrouter/bundle.py` | `agentrouter-cli::bundle` | Partial |
 | `agentrouter/catalog_ops.py` | `agentrouter-registry::catalog_ops` | Partial |
 | `agentrouter/classifier.py` | `agentrouter-classifier` | Parity |
 | `agentrouter/cli.py` | `agentrouter-cli probes` | Partial |

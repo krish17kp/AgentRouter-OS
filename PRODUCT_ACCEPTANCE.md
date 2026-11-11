@@ -2,18 +2,20 @@
 
 ## Current checkpoint — 2026-11-11
 
-Product acceptance remains **not granted**. RC `9958dd8` includes PRs #27–#29
+Product acceptance remains **not granted**. RC `2ff36f7` includes PRs #27–#33
 and #13,
 and the macOS Python/Rust CI changes have passed their PR checks. PR #13's local
 plugin mutation run passes at 0.9693 overall and 0.9663 safety/policy/execution,
 with zero unreviewed survivors; commit `984db4b` passed the currently reported
 cross-platform checks.
 
-The latest complete Python run passed 1,660 tests with 6 skips and measured
-90.96% line / 85.09% branch coverage, meeting the unchanged 90% / 85% gates.
+The latest complete Python run passed 1,701 tests with 6 skips and measured
+90.99% line / 85.19% branch coverage, meeting the unchanged 90% / 85% gates.
 The context-band gate remains 0.6667 < 0.90 and requires real independent human
 labels and adjudication. Rust R4 is partial and R5–R13 remain outstanding. The
 website is in the RC; no production deployment or paid OpenAI request occurred.
+The latest local work adds Rust diagnostic-bundle parity and tighter environment
+value withholding; focused tests pass, with cross-platform CI pending.
 The table below is historical.
 
 ## Historical assessment

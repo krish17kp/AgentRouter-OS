@@ -57,6 +57,18 @@ def test_the_api_key_value_is_never_recorded(home, tmp_path, monkeypatch):
     assert "value withheld" in body
 
 
+def test_environment_settings_withhold_user_and_configuration_values(home, tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_USER", "PRIVATE-USER-IDENTIFIER-931")
+    monkeypatch.setenv("AGENTROUTER_LOG", "PRIVATE-LOG-PATH-482")
+    written = bundle.create(home, tmp_path / "b")
+    body = _text(written.directory)
+    settings = json.loads((written.directory / "environment.json").read_text())["settings"]
+    assert "PRIVATE-USER-IDENTIFIER-931" not in body
+    assert "PRIVATE-LOG-PATH-482" not in body
+    assert settings["AGENTROUTER_USER"] == "set (value withheld)"
+    assert settings["AGENTROUTER_LOG"] == "set (value withheld)"
+
+
 def test_a_blank_api_key_is_reported_as_blank_not_as_set(home, tmp_path, monkeypatch):
     monkeypatch.setenv("AGENTROUTER_API_KEY", "   ")
     written = bundle.create(home, tmp_path / "b")

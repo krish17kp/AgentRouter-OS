@@ -122,3 +122,116 @@ def test_missing_home_is_a_failure_but_report_is_complete(tmp_path):
     assert checks["data.home"]["status"] == "fail"
     assert "registry.load" in checks
     assert "observability.logging" in checks
+
+
+def _bundle_text(directory):
+    return "\n".join(
+        path.read_text(encoding="utf-8", errors="replace")
+        for path in directory.iterdir()
+        if path.suffix in {".json", ".txt"}
+    )
+
+
+def test_bundle_is_allowlisted_and_withholds_secret_and_task_text(tmp_path):
+    from agentrouter import store
+
+    home = tmp_path / "agentrouter"
+    initialized = _init(home)
+    assert initialized.returncode == 0, initialized.stderr
+    secret = "sk-livekey0123456789abcdefghij"
+    task = "CONFIDENTIAL-ROUTED-TASK-99631"
+    (home / ".env").write_text(f"OPENAI_API_KEY={secret}\n", encoding="utf-8")
+    (home / "credentials.json").write_text(json.dumps({"key": secret}), encoding="utf-8")
+    conn = store.connect(home)
+    try:
+        store.save_decision(conn, task, {"prompt": "PRIVATE-PROMPT-718"})
+    finally:
+        conn.close()
+
+    destination = tmp_path / "bundle"
+    result = _doctor(
+        home,
+        "--json",
+        "--bundle",
+        str(destination),
+        env={
+            "AGENTROUTER_API_KEY": secret,
+            "AGENTROUTER_USER": "PRIVATE-USER-IDENTIFIER-931",
+            "AGENTROUTER_LOG": "PRIVATE-LOG-PATH-482",
+        },
+    )
+    assert result.returncode == 0, result.stderr
+    assert {path.name for path in destination.iterdir()} == {
+        "doctor.json",
+        "environment.json",
+        "data-shape.json",
+        "README.txt",
+    }
+    contents = _bundle_text(destination)
+    assert secret not in contents
+    assert "PRIVATE-USER-IDENTIFIER-931" not in contents
+    assert "PRIVATE-LOG-PATH-482" not in contents
+    assert task not in contents
+    assert "PRIVATE-PROMPT-718" not in contents
+    environment = json.loads((destination / "environment.json").read_text(encoding="utf-8"))
+    assert environment["settings"]["AGENTROUTER_API_KEY"] == "set (value withheld)"
+    assert environment["settings"]["AGENTROUTER_USER"] == "set (value withheld)"
+    assert environment["settings"]["AGENTROUTER_LOG"] == "set (value withheld)"
+    shape = json.loads((destination / "data-shape.json").read_text(encoding="utf-8"))
+    assert shape["decisions"] == 1
+
+
+def test_bundle_database_is_opt_in_snapshot_with_task_text_warning(tmp_path):
+    import sqlite3
+
+    from agentrouter import store
+
+    home = tmp_path / "agentrouter"
+    assert _init(home).returncode == 0
+    task = "TASK-ONLY-IN-OPT-IN-DB"
+    conn = store.connect(home)
+    try:
+        store.save_decision(conn, task, {"prompt": "snapshot body"})
+    finally:
+        conn.close()
+
+    destination = tmp_path / "bundle-with-db"
+    result = _doctor(home, "--bundle", str(destination), "--include-database")
+    assert result.returncode == 0, result.stderr
+    assert (destination / "decisions.db").is_file()
+    readme = (destination / "README.txt").read_text(encoding="utf-8")
+    assert "INCLUDING task text" in readme
+    assert "Review it before sharing" in readme
+    copied = sqlite3.connect(f"file:{destination / 'decisions.db'}?mode=ro", uri=True)
+    try:
+        assert copied.execute("SELECT COUNT(*) FROM decisions").fetchone()[0] == 1
+        assert copied.execute("SELECT task FROM decisions").fetchone()[0] == task
+    finally:
+        copied.close()
+
+
+def test_bundle_refuses_existing_destination_without_overwriting(tmp_path):
+    home = tmp_path / "agentrouter"
+    assert _init(home).returncode == 0
+    destination = tmp_path / "existing-bundle"
+    destination.mkdir()
+    keep = destination / "keep.txt"
+    keep.write_text("keep this", encoding="utf-8")
+    result = _doctor(home, "--bundle", str(destination))
+    assert result.returncode == 2
+    assert keep.read_text(encoding="utf-8") == "keep this"
+
+
+@pytest.mark.skipif(os.name == "nt", reason="directory symlink privilege varies on Windows")
+def test_bundle_refuses_symlink_destination_without_touching_target(tmp_path):
+    home = tmp_path / "agentrouter"
+    assert _init(home).returncode == 0
+    target = tmp_path / "preserved"
+    target.mkdir()
+    keep = target / "keep.txt"
+    keep.write_text("preserve me", encoding="utf-8")
+    destination = tmp_path / "bundle-link"
+    destination.symlink_to(target, target_is_directory=True)
+    result = _doctor(home, "--bundle", str(destination))
+    assert result.returncode == 2
+    assert keep.read_text(encoding="utf-8") == "preserve me"
