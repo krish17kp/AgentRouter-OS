@@ -2107,3 +2107,15 @@ multiword values, duplicate/out-of-pool labels, merge order, disagreement
 filtering, blinding, and quoted CSV fields. The module now meets its full
 contract parity bar. Hosted TASK-035/036 checks are running while this local
 slice is validated.
+
+## 2026-11-11 — TASK-038: Rust annotation artifact store
+
+Ported YAML candidate/dataset save-load, JSONL label save-load, manifest JSON,
+and canonical split SHA-256. The canonical encoding sorts items and keys,
+excludes nulls, escapes Unicode like Python, and uses compact separators.
+Four focused file/hash differentials pass, including exact JSONL and manifest
+bytes plus Unicode hash parity. The store module is marked Parity.
+
+Next: add this test to the cross-platform CI matrix, run workspace/quality and
+full regression/coverage, push, inspect hosted checks, and continue the Rust
+annotation CLI migration.

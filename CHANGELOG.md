@@ -15,6 +15,9 @@ All notable changes to AgentRouter OS. Format loosely follows
 - Added Rust annotation pack ordering, resume filtering, progress, merging,
   disagreement-only adjudication packs, and CSV export with CPython-compatible
   seeded shuffling.
+- Added Rust annotation artifact persistence for YAML candidates/datasets,
+  JSONL labels, sorted JSON manifests, and Python-compatible canonical split
+  hashes including Unicode.
 - Ported deterministic annotation train/dev/private-holdout splits to Rust,
   including cluster preservation and a fail-closed frozen-holdout leakage check.
 - Ported annotation duplicate and leakage guards to Rust, including Python

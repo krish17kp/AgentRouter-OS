@@ -150,3 +150,7 @@ path = "src/bin/evaluation_annotation_graph_signal_from_json.rs"
 [[bin]]
 name = "evaluation_annotation_packs_from_json"
 path = "src/bin/evaluation_annotation_packs_from_json.rs"
+
+[[bin]]
+name = "evaluation_annotation_store_from_json"
+path = "src/bin/evaluation_annotation_store_from_json.rs"
