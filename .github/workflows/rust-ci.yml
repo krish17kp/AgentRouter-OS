@@ -34,11 +34,11 @@ jobs:
         run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 
   rust-msrv:
-    name: Declared Rust 1.75 minimum
+    name: Declared Rust 1.89 minimum
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.75.0
+      - uses: dtolnay/rust-toolchain@1.89.0
       - name: Build and test minimum supported toolchain
         run: cargo test --workspace --locked
 

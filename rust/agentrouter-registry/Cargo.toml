@@ -8,9 +8,7 @@ license.workspace = true
 [dependencies]
 agentrouter-core = { path = "../agentrouter-core" }
 serde = { version = "1.0.210", features = ["derive"] }
-serde_yaml = "0.9.34"
-# serde_yaml's indexmap dependency otherwise resolves past the declared MSRV.
-indexmap = "=2.7.1"
+serde_yaml = { package = "noyalib-serde-yaml", version = "=0.0.60" }
 thiserror = "1.0.64"
 chrono = { version = "0.4.38", default-features = false, features = ["clock"] }
 unicode-general-category = "=0.6.0"

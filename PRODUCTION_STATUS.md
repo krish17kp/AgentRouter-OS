@@ -4,11 +4,11 @@ Updated: 2026-11-11
 
 ## Definition of done
 
-- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PR #13 head `848450e` has no reported failures and its Python 3.10/3.11/macOS checks are still running. PR #16 is blocked by the unchanged context-band gate.
+- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PR #30 merged at `bd98b6b`; PR #31 contains harness parity and dependency hardening and is running refreshed CI after rebasing onto PR #30; PR #32 records additional latency and coverage evidence and depends on PR #31. PR #16 remains blocked by the unchanged context-band gate.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
-- [x] Full Python suite: 1,652 passed, 6 skipped; 90.96% line and 85.09% branch coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; exact evidence is in `docs/COVERAGE_REPORT_2026-11-11.md`.
-- [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations.
-- [ ] Changelog and coverage report updates are prepared locally; commit/push them with the offline coverage tests. Release version bump/release notes remain pending final parity and all release gates.
+- [x] Full Python suite: 1,658 passed, 6 skipped; 90.96% line and 85.09% branch coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; exact evidence is in `docs/COVERAGE_REPORT_2026-11-11.md`.
+- [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations; PR #32 adds a measured local baseline for 10/100/1,000 candidate fleets.
+- [ ] Changelog and coverage evidence are updated in the active release-candidate work. Release version bump and release notes remain pending final parity and all release gates.
 - [ ] Release candidate promoted to `main` with a tagged release.
 
 ## Completed / in progress
@@ -23,9 +23,11 @@ Updated: 2026-11-11
 - [ ] PR #16 remains blocked by context-band accuracy 0.6667 < 0.90; no gate or label policy was changed.
 - [x] macOS CI is merged for Python 3.12 and Rust workspace/parity; all checks on PR #28 passed.
 - [ ] Rust R4 full CLI parity and race-safe SQLite initialization.
-- [ ] Rust dashboard renderer/loopback server and Rust/Python feedback-stat parity are implemented on PR #30; workspace and focused compatibility tests pass. Its command remains a migration probe until the unified Rust CLI lands.
-- [ ] Rust observability redaction/safe-echo helpers now pass a Python/Rust differential fixture; structured logging, request context, traceback handling, and OTel integration remain unported. Rust OpenAI Responses has a bounded reqwest/rustls transport and offline request/response tests; live credentials, CLI wiring, and Python/Rust end-to-end parity remain open.
-- [ ] Rust R5-R13 milestones and cross-platform parity. A bounded OpenAI Responses HTTPS transport is added in the current follow-up; integration into the guarded execution command is still outstanding.
+- [ ] Rust dashboard renderer/loopback server and Rust/Python feedback-stat parity merged via PR #30 at `bd98b6b`; the command remains a migration probe until the unified Rust CLI lands.
+- [ ] Rust observability redaction/safe-echo helpers and bounded `ureq`/rustls OpenAI Responses transport merged via PR #30; structured logging, request context, traceback handling, and OTel integration remain unported. Live credentials, CLI wiring, and Python/Rust end-to-end parity remain open.
+- [ ] Rust R5-R13 milestones and cross-platform parity. PR #30 added a bounded OpenAI Responses HTTPS transport; integration into the guarded execution command remains outstanding.
+- [ ] Rust `agentrouter-cli::harness` matches all eight Python harness detection cases locally; cross-platform CI and release-candidate validation are pending.
+- [ ] Rust dependency hardening upgrades bundled SQLite to 3.54.1 and replaces `unsafe-libyaml`; local workspace tests, Clippy, and `cargo audit --deny warnings` pass across 160 locked dependencies. Rust 1.89 is required; refreshed cross-platform CI is pending.
 - [x] Website product-truth fixes, font hierarchy/motion redesign, unused shadcn CLI removal, server limits/API tests, and website lint/build CI merged via PR #27. npm build/lint and production dependency audit passed; full npm audit still reports moderate dev-tool advisories.
 - [x] Benchmark evidence merged via PR #29: 12/12 routing gold scenarios and 15 focused tests; live latency/cost are explicitly not claimed.
 - [ ] Full Rust parity is not complete: R4 public CLI and race-safe SQLite work remains; HTTP/MCP, provider execution, plugins/skills, evaluation/annotation, and R5-R13 remain.

@@ -7,7 +7,7 @@
 are merged. PR #13's mutation campaign passed (0.9693 overall, 0.9663
 safety/policy/execution, 0.9815 routing, zero unreviewed survivors) and its
 currently reported platform checks are green. The latest local full Python run
-passed 1,652 tests, 6 skipped, with 90.96% line / 85.09% branch coverage,
+passed 1,658 tests, 6 skipped, with 90.96% line / 85.09% branch coverage,
 meeting the unchanged 90% / 85% gates. The enforce-release-gate for PR #16 remains red because frozen
 context-band accuracy is 0.6667 < 0.90. Full Rust CLI/HTTP/MCP, provider
 execution, plugins/skills, evaluation/annotation, R5–R13, Rust-only install,

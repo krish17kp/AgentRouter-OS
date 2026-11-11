@@ -2,7 +2,7 @@
 
 ## Current checkpoint — 2026-11-11
 
-Active branch `task/rust-openai-contract`, based on PR #30. PR #13 `TASK-019`
+PR #30 dashboard, privacy, observability, and OpenAI transport helpers merged to RC at `bd98b6b`; PR #31 harness and dependency-hardening update is in CI. PR #13 `TASK-019`
 was merged into RC at `9958dd8` after its mutation, security, Python, Rust, and
 Linux/Windows/macOS checks passed. The plugin mutation campaign passed: 1,629 selected mutants,
 0.9693 overall, 0.9663 safety/policy/execution, 0.9815 routing, and zero
@@ -14,7 +14,7 @@ benchmark/coverage evidence merged. PR #21 was closed as redundant because its
 change was already on RC. PR #16 remains blocked by context-band accuracy
 0.6667 < 0.90. Python remains the shipping authority.
 
-Latest full Python run: 1,652 passed, 6 skipped; 90.96% line and 85.09% branch
+Latest full Python run: 1,658 passed, 6 skipped; 90.96% line and 85.09% branch
 coverage, meeting unchanged 90%/85% gates. Rust workspace tests,
 formatting, and Clippy pass locally. R4 remains partial; full public CLI,
 HTTP/MCP, plugins, evaluation, and R5–R13 remain. Human annotation, paid OpenAI
