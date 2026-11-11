@@ -5,18 +5,37 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
-
-import agentrouter.evaluation.adapters as adapters
-import agentrouter.server as server
 
 pytestmark = pytest.mark.skipif(shutil.which("cargo") is None, reason="cargo not on PATH")
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_empty_python_package_exports_match_rust_markers():
+    python = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import json; import agentrouter.evaluation.adapters as a; "
+                "import agentrouter.server as s; "
+                "print(json.dumps({'evaluation.adapters': "
+                "[n for n in vars(a) if not n.startswith('_') and n != 'annotations'], "
+                "'server': [n for n in vars(s) if not n.startswith('_') "
+                "and n != 'annotations']}))"
+            ),
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=ROOT,
+        timeout=30,
+        check=True,
+    )
+    expected = json.loads(python.stdout)
     process = subprocess.run(
         [
             "cargo",
@@ -36,13 +55,5 @@ def test_empty_python_package_exports_match_rust_markers():
         check=False,
     )
     assert process.returncode == 0, process.stderr
-    expected = {
-        "evaluation.adapters": [
-            name for name in vars(adapters) if not name.startswith("_") and name != "annotations"
-        ],
-        "server": [
-            name for name in vars(server) if not name.startswith("_") and name != "annotations"
-        ],
-    }
     assert expected == {"evaluation.adapters": [], "server": []}
     assert json.loads(process.stdout) == expected

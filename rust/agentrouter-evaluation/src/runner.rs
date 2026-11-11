@@ -7,8 +7,9 @@
 use agentrouter_classifier::{classify, ClassifyOptions};
 
 use crate::{
-    classification_metrics, dataset_quality, grade_classification, EvaluationCase, MetricCase,
-    QualityCase,
+    classification_metrics, dataset_quality, evaluate_feedback, evaluate_performance,
+    evaluate_platform, evaluate_provider, evaluate_routing, evaluate_safety, grade_classification,
+    round_to, EvaluationCase, MetricCase, QualityCase,
 };
 
 fn strings<T: serde::Serialize>(values: &[T]) -> Vec<String> {
@@ -105,6 +106,16 @@ fn quality_cases(cases: &[EvaluationCase]) -> Vec<QualityCase> {
         .collect()
 }
 
+#[derive(Debug, Clone)]
+pub struct RunOptions {
+    pub profile: Option<String>,
+    pub seed: i64,
+    pub source: String,
+    pub environment: serde_json::Value,
+    pub datasets: serde_json::Value,
+    pub context_band_generalization: Option<serde_json::Value>,
+}
+
 /// Run the Rust classifier and classification-only grade over normalized cases.
 /// Runtime-dependent values are explicit inputs, keeping the report reproducible.
 pub fn run_classification(
@@ -125,4 +136,121 @@ pub fn run_classification(
     report["seed"] = seed.into();
     report["source"] = source.into();
     report
+}
+
+/// Run the complete seven-dimension scorecard used by Python `grade(...,
+/// measure_all=true)`. Inputs that depend on the caller's installed CLI or
+/// registry are explicit, and feedback storage uses the crate's isolated
+/// temporary database probe. Performance remains a local smoke measurement,
+/// with the same eight task prompts and thresholds as Python.
+pub fn run_all_dimensions(
+    cases: &[EvaluationCase],
+    models: &[agentrouter_registry::ModelEntry],
+    commands: &[String],
+    groups: &[String],
+    options: RunOptions,
+) -> Result<serde_json::Value, String> {
+    use serde_json::{json, Value};
+
+    const DIMENSIONS: [(&str, u64); 7] = [
+        ("classification", 30),
+        ("routing", 25),
+        ("safety", 15),
+        ("cli_platform", 10),
+        ("provider_registry", 8),
+        ("feedback_storage", 7),
+        ("performance", 5),
+    ];
+    const PERFORMANCE_TASKS: [&str; 8] = [
+        "Refactor the payment module and add unit tests",
+        "Write a blog post about our API launch",
+        "Summarize this 30k token incident report",
+        "Design a scalable multi-tenant architecture",
+        "Fix the off-by-one bug in the pagination helper",
+        "Analyze the query plan and recommend indexes",
+        "Rotate the production API keys and update secrets",
+        "Draft release notes for version 2.1",
+    ];
+
+    let mut report = run_classification(
+        cases,
+        options.profile.as_deref(),
+        options.seed,
+        &options.source,
+        options.environment,
+        options.datasets,
+        options.context_band_generalization.as_ref(),
+    );
+    let measured = [
+        ("routing", evaluate_routing(cases, models)),
+        ("safety", evaluate_safety(cases)),
+        ("cli_platform", evaluate_platform(commands, groups)),
+        ("provider_registry", evaluate_provider(models)),
+        (
+            "feedback_storage",
+            evaluate_feedback().map_err(|error| error.to_string())?,
+        ),
+        (
+            "performance",
+            evaluate_performance(
+                models,
+                &PERFORMANCE_TASKS
+                    .iter()
+                    .map(|task| (*task).to_owned())
+                    .collect::<Vec<_>>(),
+            ),
+        ),
+    ];
+
+    let mut dimensions = report["dimensions"]
+        .as_object()
+        .cloned()
+        .ok_or_else(|| "classification grade has no dimensions object".to_owned())?;
+    let class_points = report["dimensions"]["classification"]["achieved"]
+        .as_f64()
+        .unwrap_or(0.0);
+    let mut achieved = 0.0;
+    let mut gates = report["release_gates"]
+        .as_object()
+        .cloned()
+        .ok_or_else(|| "classification grade has no release gates object".to_owned())?;
+    for (name, result) in measured {
+        let score = result["score"].as_f64().unwrap_or(0.0);
+        let weight = DIMENSIONS
+            .iter()
+            .find(|(dimension, _)| *dimension == name)
+            .map(|(_, weight)| *weight)
+            .ok_or_else(|| format!("missing weight for evaluator {name}"))?;
+        let points = round_to(weight as f64 * score, 3);
+        achieved += points;
+        dimensions.insert(
+            name.to_owned(),
+            json!({
+                "weight": weight,
+                "status": "measured",
+                "score": round_to(score, 4),
+                "achieved": points,
+                "detail": result["detail"],
+            }),
+        );
+        if name == "safety" {
+            gates.insert("high_risk_gated==1.00".to_owned(), json!(score == 1.0));
+        } else if name == "routing" {
+            gates.insert(
+                "synthetic_routing_top1>=0.95".to_owned(),
+                json!(score >= 0.95),
+            );
+        }
+    }
+    achieved += class_points;
+    let achieved = round_to(achieved, 2);
+    let release_ready = gates.values().all(|gate| gate.as_bool() == Some(true));
+    report["dimensions"] = Value::Object(dimensions);
+    report["release_gates"] = Value::Object(std::mem::take(&mut gates));
+    report["release_ready"] = json!(release_ready);
+    report["achieved_points"] = json!(achieved);
+    report["possible_measured_points"] = json!(100);
+    report["grade_over_100"] = json!(achieved);
+    report["grade_of_measured"] = json!(achieved);
+    Ok(report)
 }

@@ -909,7 +909,7 @@ fn routing_constraints(
     (true, None)
 }
 
-fn round_to(value: f64, decimal_places: i32) -> f64 {
+pub(crate) fn round_to(value: f64, decimal_places: i32) -> f64 {
     let scale = 10_f64.powi(decimal_places);
     (value * scale).round_ties_even() / scale
 }
