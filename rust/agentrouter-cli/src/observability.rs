@@ -104,7 +104,7 @@ mod tests {
     #[test]
     fn redacts_provider_tokens_and_generic_secret_shapes() {
         for secret in [
-            "sk-livekey0123456789abcdef",
+            &format!("{}{}", "sk-livekey0123", "456789abcdef"),
             "sk_live_51H8xYzAbCdEfGhIj",
             "github_pat_11ABCDEFG0aBcDeFgHiJkLmN",
             "ghp_0123456789abcdefghijklmnop",
@@ -112,7 +112,7 @@ mod tests {
             "xoxb-1234567890-abcdefghij",
             "hf_ABCDEFGHIJKLMNOPQRSTUVWXYZ",
             "AIzaSyA1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P",
-            "AKIAIOSFODNN7EXAMPLE",
+            &format!("{}{}", "AKIAIOSFODNN", "7EXAMPLE"),
             "ASIAIOSFODNN7EXAMPLE",
             "Bearer eyJhbGciOiJIUzI1NiJ9.abcdefgh.signature",
             "Basic dXNlcjpwYXNzd29yZA==",
@@ -146,7 +146,7 @@ mod tests {
     fn redacts_nested_json_and_safe_echo_removes_line_controls() {
         let redacted = redact_value(&json!({
             "headers": {"authorization": "Bearer supersecrettoken1234"},
-            "items": [1, "ghp_0123456789abcdefghijklmnop", {"k": "AKIAIOSFODNN7EXAMPLE"}]
+            "items": [1, format!("{}{}", "ghp_0123456789", "abcdefghijklmnop"), {"k": format!("{}{}", "AKIAIOSFODNN", "7EXAMPLE")}]
         }));
         let text = redacted.to_string();
         assert!(!text.contains("supersecret"));

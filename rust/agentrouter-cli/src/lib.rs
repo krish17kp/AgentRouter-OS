@@ -23,6 +23,7 @@ use serde_json::{json, Value};
 
 pub mod dashboard;
 pub mod observability;
+pub mod openai;
 
 /// Mirrors `safety._CHECKLISTS` + `safety.gates_for`.
 pub fn gates_for(cls: &Classification) -> Value {

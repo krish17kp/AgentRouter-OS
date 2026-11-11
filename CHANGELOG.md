@@ -15,6 +15,7 @@ All notable changes to AgentRouter OS. Format loosely follows
   `agentrouter doctor` as `plugins.state`, delegating to the plugin module rather
   than re-deriving its ownership rules.
 - Rust migration probes for routing, registry validation, provider status, SQLite decision storage, and forced initialization. Python remains the shipping implementation until full contract parity and all release gates pass.
+- Rust OpenAI Responses adapter slice with a rustls HTTPS transport, redirects disabled, bounded response reads, no automatic retries, and offline contract tests. It is not yet wired into a guarded Rust execution command.
 - Dated routing benchmark report: 12/12 committed gold scenarios and 15 focused benchmark/invariant tests pass; live latency and cost remain unmeasured.
 - macOS Python and Rust CI coverage now passes the configured platform jobs.
 

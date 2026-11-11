@@ -4,9 +4,9 @@ Updated: 2026-11-11
 
 ## Definition of done
 
-- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PR #13 at `984db4b` has green checks on all platforms; added offline coverage cases are being validated before merge. PR #16 is blocked by the unchanged context-band gate.
+- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PR #13 head `848450e` has no reported failures and its Python 3.10/3.11/macOS checks are still running. PR #16 is blocked by the unchanged context-band gate.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
-- [x] Full Python suite: 1,650 passed, 6 skipped; 90.96% line and 85.09% branch coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; exact evidence is in `docs/COVERAGE_REPORT_2026-11-11.md`.
+- [x] Full Python suite: 1,652 passed, 6 skipped; 90.96% line and 85.09% branch coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; exact evidence is in `docs/COVERAGE_REPORT_2026-11-11.md`.
 - [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations.
 - [ ] Changelog and coverage report updates are prepared locally; commit/push them with the offline coverage tests. Release version bump/release notes remain pending final parity and all release gates.
 - [ ] Release candidate promoted to `main` with a tagged release.
@@ -19,13 +19,13 @@ Updated: 2026-11-11
 - [x] PR #20 pytest constrained below 9 for compatibility with pinned `mutmut==3.6.0`; merged after current-RC CI and mutation checks passed.
 - [x] PR #26 reviewed and closed as superseded; its legacy registry-print binary no longer compiled against the evolved registry API.
 - [x] PR #27 website, #28 macOS CI, and #29 routing benchmark/coverage evidence merged to RC (`3fcfd05`). PR #21 was closed as redundant after confirming the RC already contains its hook interpreter change.
-- [ ] PR #13 plugin hardening local mutation campaign passes: 0.9693 overall, 0.9663 safety/policy/execution, 0.9815 routing, zero unreviewed survivors. Commit `984db4b` passed Python, Rust, security, macOS, and cross-platform parity checks; new tests and refreshed evidence are awaiting CI.
+- [x] PR #13 plugin hardening merged into the release candidate at `9958dd8` after every check passed. The mutation campaign passed: 0.9693 overall, 0.9663 safety/policy/execution, 0.9815 routing, zero unreviewed survivors; portable coverage fixes also passed Linux, Windows, macOS and supported Python CI.
 - [ ] PR #16 remains blocked by context-band accuracy 0.6667 < 0.90; no gate or label policy was changed.
 - [x] macOS CI is merged for Python 3.12 and Rust workspace/parity; all checks on PR #28 passed.
 - [ ] Rust R4 full CLI parity and race-safe SQLite initialization.
-- [ ] Rust dashboard renderer/loopback server and Rust/Python feedback-stat parity are implemented locally on `task/rust-dashboard-parity`; workspace and focused compatibility tests pass. Its command remains a migration probe until the unified Rust CLI lands.
-- [ ] Rust observability redaction/safe-echo helpers now pass a Python/Rust differential fixture; structured logging, request context, traceback handling, and OTel integration remain unported.
-- [ ] Rust R5-R13 milestones and cross-platform parity.
+- [ ] Rust dashboard renderer/loopback server and Rust/Python feedback-stat parity are implemented on PR #30; workspace and focused compatibility tests pass. Its command remains a migration probe until the unified Rust CLI lands.
+- [ ] Rust observability redaction/safe-echo helpers now pass a Python/Rust differential fixture; structured logging, request context, traceback handling, and OTel integration remain unported. Rust OpenAI Responses has a bounded reqwest/rustls transport and offline request/response tests; live credentials, CLI wiring, and Python/Rust end-to-end parity remain open.
+- [ ] Rust R5-R13 milestones and cross-platform parity. A bounded OpenAI Responses HTTPS transport is added in the current follow-up; integration into the guarded execution command is still outstanding.
 - [x] Website product-truth fixes, font hierarchy/motion redesign, unused shadcn CLI removal, server limits/API tests, and website lint/build CI merged via PR #27. npm build/lint and production dependency audit passed; full npm audit still reports moderate dev-tool advisories.
 - [x] Benchmark evidence merged via PR #29: 12/12 routing gold scenarios and 15 focused tests; live latency/cost are explicitly not claimed.
 - [ ] Full Rust parity is not complete: R4 public CLI and race-safe SQLite work remains; HTTP/MCP, provider execution, plugins/skills, evaluation/annotation, and R5-R13 remain.
