@@ -48,6 +48,7 @@ def _rust(prompt: str) -> dict:
         input=prompt,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         cwd=ROOT,
         timeout=120,
         check=True,
