@@ -64,7 +64,7 @@ Updated: 2026-11-11
 - [ ] TASK-052 aligns manifest integer coercion with Python for schema version and count maps, including signed values, numeric strings, booleans, and integral floats. The annotation schema stays Partial pending string/coercion and datetime edge audits.
 - [ ] TASK-053 adds the Rust dataset registry facade and differential tests for dataset ordering, profiles, descriptor names, availability, unknown lookups, and error text; actual adapter factories and optional remote loading remain Partial.
 - [ ] TASK-054 adds an offline Rust evaluation runner for normalized cases, including classifier scoring, classification-only grade, quality, explicit runtime metadata, and composed `measure_all` across all seven dimensions. Python/Rust differentials cover grade details and release gates; adapter collection, runtime discovery, and locally supplied CLI/registry inputs remain Partial.
-- [ ] TASK-055 tightens annotation timestamp parity: the Rust parser matches tested Python forms for date-only, compact offset, fractional seconds, comma fractions, and omitted seconds, and rejects invalid separators/date shapes. The annotation module remains Partial pending broader scalar coercion and a full accepted-input grammar audit.
+- [x] TASK-055 tightens annotation timestamp parity: 26 focused cases now cover Python-compatible date-only, compact offset, fractional seconds, comma fractions, omitted seconds, and rejected invalid separators/date shapes. The annotation module remains Partial pending broader scalar coercion and a full accepted-input grammar audit.
 - [x] PR #31 upgraded bundled SQLite to 3.54.1, replaced `unsafe-libyaml`, and raised the Rust minimum to 1.89; workspace tests, Clippy, security audit, and cross-platform CI passed before merge at `a246cf6`.
 - [x] Website product-truth fixes, font hierarchy/motion redesign, unused shadcn CLI removal, server limits/API tests, and website lint/build CI merged via PR #27. npm build/lint and production dependency audit passed; full npm audit still reports moderate dev-tool advisories.
 - [x] Benchmark evidence merged via PR #29: 12/12 routing gold scenarios and 15 focused tests; live latency/cost are explicitly not claimed.
@@ -76,16 +76,18 @@ Updated: 2026-11-11
 - OpenAI live validation: provide an API key through the documented secret/environment setup and authorize one bounded paid smoke test. No secret should be committed.
 - Production release/deployment: provide hosting/domain/store credentials and approve paid infrastructure/deployment after the local release gates pass; no production deployment has been run.
 
-Latest local release checks on 2026-11-11: full Python suite and coverage,
+Latest local checks on 2026-11-11: full Python suite and coverage,
 Ruff/format, Rust workspace tests/format/Clippy, Bandit, pip-audit,
 cargo-audit, wheel/sdist build, and clean-wheel install/CLI/bundle smoke pass.
 The seven-gate evaluation reports six pass and context-band fail. PR #16's
 cross-platform Python/Rust, security, mutation, package, API, and site checks
 pass; its promotion-only gate fails on context-band 0.6667 < 0.90, and live
 smoke is skipped without credentials. The full local regression now passes:
-1,893 passed, 6 skipped; 92.16% line, 87.27% branch, and 91.05% combined
-coverage. Rust workspace tests, Clippy, Rust format, Ruff, and Python format
-pass on the current Rust adapter work. TASK-022, TASK-023, and TASK-024 Rust workspace and compatibility CI, security, website, and mutation checks pass across platforms. General CI has no code/test failure; the only failure is the unchanged frozen context-band promotion gate. TASK-025 Linux/Windows/macOS Rust compatibility, security, website, and mutation checks pass; broader Python platform checks are finishing. TASK-026 Linux/Windows/macOS Rust workspace and Linux/macOS adapter compatibility pass; Windows compatibility is finishing. TASK-027 Linux/Windows/macOS Rust workspace and compatibility pass; security and website pass. At TASK-028 commit `5767ddc`, Rust workspace and compatibility, security, website, and mutation checks pass; general Python CI is still running. TASK-029 TwinRouterBench status compatibility and full local Python regression pass; its CI awaits push.
+1,900 passed, 6 skipped; 92.20% line, 87.27% branch, and 91.08% combined
+coverage. The Rust workspace tests, workspace Clippy, Rust formatting, Ruff,
+and Python formatting pass at `681f4ff`. CI at `681f4ff` is in progress; the
+website job is green. PR #16 remains promotion-blocked by the unchanged frozen
+context-band result and the human annotation requirement.
 
 PR #16 was reviewed against its release contract and code standards: no
 separate implementation defect was identified in the reviewed diff, but the
