@@ -1,0 +1,21 @@
+[package]
+name = "agentrouter-hosts"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+agentrouter-registry = { path = "../agentrouter-registry" }
+which = "6.0.3"
+# which's home dependency must stay on an edition-2021 release for Rust 1.75.
+home = "=0.5.9"
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = "1.0.128"
+
+[[bin]]
+name = "detect_host_cli"
+path = "src/bin/detect_host_cli.rs"
+
+[dev-dependencies]
+tempfile = "=3.13.0"

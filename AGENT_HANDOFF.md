@@ -1,5 +1,37 @@
 # AGENT_HANDOFF — live checkpoint
 
+## Current checkpoint — 2026-11-10
+
+- Branch `task/rust-r1-workspace`, PR #25 into
+  `release/agentrouter-v0.5-rc1`. `main` and the RC are unchanged. Pushed
+  parent `6ee8d3e` passed GitHub CI, Rust Linux/Windows parity, Security,
+  and mutation. Mutation: 0.9837 overall, 0.9844 safety/policy/execution,
+  0.9815 routing, 0 unreviewed survivors.
+- Rust R4 remains partial. Route persistence, feedback, stored decisions,
+  prompt regeneration, `init`, configured routing/controls, and host
+  discovery have Python/Rust differential tests. The current forced-init
+  slice adds backup/reseed parity and hardens seed paths after an independent
+  security review. SQLite's path-based open still permits a concurrent path
+  swap, so the Rust init probe is not production ready. First push `32eee6f`
+  failed Windows Rust compilation on capability-metadata link count; the
+  uncommitted file-handle repair needs remote recheck. Linux has a proc-fd
+  directory-path regression for a home swap before SQLite connects, while
+  later path swaps remain unsafe.
+- Local Rust 1.75 workspace tests, Clippy, formatting, Ruff, and 10 focused
+  init parity cases pass. Full Python regression passed 1,366 tests with
+  3 skips; TS SDK
+  tests/typecheck, Bandit,
+  pip-audit, build, and clean-wheel smoke passed on the preceding slice.
+- Python remains the shipping implementation. The public Rust CLI/HTTP/MCP
+  and R5–R13 remain outstanding. Release evaluation remains 6/7 gates:
+  frozen context-band accuracy 0.6667 < unchanged 0.90. Two human annotators
+  and adjudication are required under `TASK_012_OWNER_ACTIONS.md`; AI labels
+  cannot replace them. No paid OpenAI call, merge, tag, or deploy occurred.
+- Next: push the Windows repair, inspect CI, then continue R4 CLI parity.
+  Preserve inherited untracked `website/`; do not stage or discard it.
+
+## Historical checkpoint
+
 **Canonical volatile handoff.** A fresh session given only "continue from the
 previous left-off task" should recover from this file plus the repository and
 GitHub state. Detailed history belongs in `LOOP_LOG.md` and the task progress
@@ -14,16 +46,16 @@ authoritative for Claude sessions; where the two disagree, this file wins.
 
 | Field | Value |
 |---|---|
-| Last updated | 2026-10-13 (Rust R1 session) |
+| Last updated | 2026-10-17 (Rust R2/R3 session) |
 | Repository | `/run/media/krish/New Volume/Krish/04 - Dev Projects/Agentrouteros` (path confirmed this session; prior path strings below are historical and may not match the current mount) |
 | Filesystem | NTFS/fuseblk, verified **rw** this session (`findmnt` + write test) |
 | Rust toolchain | **Installed this session** via official `rustup` (owner-authorized) — `rustc`/`cargo` 1.99.0 stable. Was absent at session start. |
-| Active branch | `task/rust-r1-workspace`, branched from `task/rust-migration-foundation` (PR #24, left untouched at `2bcaf5e`) |
+| Active branch | `task/rust-r1-workspace` (unchanged branch, now carrying R1+R2+R3), branched from `task/rust-migration-foundation` (PR #24, left untouched at `2bcaf5e`) |
 | RC | **`5ce3234`** (merge of PR #23, `task/fix-registry-staleness-test-fragility`, on top of PR #19's handoff-docs reconciliation). Open PRs/branches ahead of this point, per `gh pr list` this session: #22 (mcp dep pin), #21 (hook interpreter fix), #20 (eval CLI coverage), #16 (RC→`main` promotion, still blocked — see Release truth), #13 (TASK-019, still unmerged per instruction). The four branches this file previously listed as "safe to delete, blocked by `pre_tool_guard`" were not re-verified this session — treat that claim as historical, not current, until re-checked. |
 | `main` | not re-verified this session; historical value below (`602321a`) may be stale |
 | Open PRs | **#16** (RC → `main`, still blocked only on `context_band_accuracy`, see Release truth) · **#13** (TASK-019, historical state below not re-verified this session) · **#20, #21, #22** (opened since this file's last update, not yet reviewed by this session) |
-| Milestone | **Rust milestone R1 shipped (this session)** — real Rust code, not just docs: Cargo workspace + `agentrouter-core` crate (6 enums + `Classification` struct mirroring `agentrouter/schema.py` field-for-field), `print_classification` bin, and a real Python/Rust JSON-compatibility test (`tests/test_rust_compat.py`) that diffs live Pydantic output against live Rust serde output. `cargo build`/`test`/`clippy -D warnings`/`fmt --check` all green; full `pytest -q` 982 passed/1 skipped (baseline 981/1, +1 new test, 0 regressions). No Python code modified, no release gate touched. |
-| Next milestone | R2 (registries + classification port) per `RUST_MIGRATION_PLAN.md`'s milestone table. Add a CI job that builds/tests the Rust workspace (not yet done this session) before starting R2. Everything below this point in the file is **historical** (prior sessions' own "what shipped" records) and is preserved, not re-verified, except where a line explicitly says otherwise. |
+| Milestone | **R1 (prior session) + R2 + R3 + R4-partial shipped (this session)** — real Rust code, not just docs. R2: `agentrouter-registry` (port of `registry.py`) and `agentrouter-classifier` (port of `classifier.py`), each with its own Python/Rust compat test (seed-registry load test; 40-prompt `tests/test_classifier_rust_compat.py`). R3: `agentrouter-routing` (port of `engine.py`, 12-scenario compat test), `agentrouter-hosts` (port of `hosts.py`'s availability state machine, env/filesystem-controlled compat test `tests/test_hosts_rust_compat.py` — this test's fixture had two real cross-platform bugs, now fixed: an extensionless shell-script shim `shutil.which` can't find on Windows, and Python's `Path.home()` preferring `USERPROFILE` over `HOME` on Windows while the Rust port's `home_dir()` checks `HOME` first), `agentrouter-usage` (port of `usage.py`'s quota state machine — deliberately excludes `apply_live_verification`, the CLI/route re-ranking glue, deferred to R4/R5), `agentrouter-policy` (port of `taxonomy.py` + `controls.py`, 9-case compat test `tests/test_controls_rust_compat.py`). R4 (partial): `agentrouter-storage` DONE — full port of `store.py`'s SQLite DecisionLog (`connect`/`save_decision`/`recent_ids`/`recent_decisions`/`aggregate_stats`/`load_decision`/`snapshot`, via `rusqlite` with the `bundled`+`backup` features), verified against a real SQLite file both languages read (`tests/test_store_rust_compat.py`); new `agentrouter-cli` crate ports the `route --json` pipeline (`safety.gates_for`, `prompts.generate_prompt`, `learning.learned_weights`, `cli._apply_policy`/`_reason_for`, `hosts.execution_route_block`, assembled into the same payload `cli.route()` builds), verified against the real seed registries for 4 tasks (`tests/test_cli_route_rust_compat.py`) — **this compat test caught a real latent bug in R3's `agentrouter-routing`**: `round_half_even` scaled by `10^ndigits` in floating point before rounding, which can land off the true `.5` boundary (e.g. producing `0.635` where Python's `round()` gives `0.64`); fixed by delegating to Rust's `{:.N}` float formatting, which — verified directly against CPython — performs the same correctly-rounded, ties-to-even decimal conversion of the exact binary value that `round()` does. `explain`/`doctor`/`init`/`feedback`/`registry list`/`prompt generate`/`plugin`/`providers *` remain **not started**. All seven crates' `#[cfg(test)]` suites plus `cargo fmt --all`/`cargo build --workspace`/`cargo clippy --workspace --all-targets --all-features -- -D warnings`/`cargo test --workspace` green. Full `pytest -q` 1059 passed/1 skipped (0 regressions, +4 vs. the storage checkpoint, +9 vs. the R3 checkpoint). No Python code modified, no release gate touched. Also fixed a non-blocking stop-hook bug: `.claude/settings.json`'s three hook commands invoked bare `python3`, which lacks `ruff` and the project's other dependencies on this machine (only the venv's `python3` has them) — repointed at `$HOME/.venvs/agentrouter/bin/python3` explicitly. |
+| Next milestone | Finish R4: port `agentrouter-cli`'s remaining commands (`explain`, `doctor`, `init`, `feedback`, `registry list`, `prompt generate`, `plugin`, `providers *`) against `CLI_SPEC.md`, then R5 (HTTP API + TS SDK + MCP) per `RUST_MIGRATION_PLAN.md`'s milestone table. A CI job that builds/tests the Rust workspace still has not been added (carried over from the R1 note) — do this before or alongside finishing R4. Everything below this point in the file is **historical** (prior sessions' own "what shipped" records) and is preserved, not re-verified, except where a line explicitly says otherwise. |
 
 ### Graphify — corrected stale claim
 

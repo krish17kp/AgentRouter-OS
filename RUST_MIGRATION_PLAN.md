@@ -4,7 +4,7 @@
 > The **Python implementation in `agentrouter/` is the current, shipping system**
 > and remains release-gated exactly as today (see **Current production status**
 > below). This document plans a phased, contract-preserving port to a
-> Rust-native implementation. No Rust code exists yet; no Python code is
+> Rust-native implementation. Staged Rust crates exist; no Python code is
 > deleted as part of this plan. See `AGENTROUTER_FOUNDATION_REVIEW.md` (session
 > artifact, not committed) for the review this plan responds to, and the
 > **Subsystem inventory** section below for the actual recursive read of
@@ -21,11 +21,18 @@
   deleted from this role until the retirement criteria at the bottom of this
   document are met.
 - **APPROVED TARGET** — the Rust-native implementation described by this plan.
-  Approved as a direction by the owner (AD-7); no code exists yet.
+  Approved as a direction by the owner (AD-7); the current crates are staged.
 - **CURRENT PRODUCTION STATUS** — see below. Independent of implementation
   language.
 
 ## Current production status
+
+The Python CLI now has a default-off OpenAI Responses API text adapter. It is
+gated by provider opt-in, host readiness, the recorded safety decision, and
+`execute --yes`; hermetic tests do not use credentials or paid calls. The
+Rust workspace's advanced task branch has classifier/hosts/usage/storage/route
+CLI slices and now passes its declared Rust 1.75 minimum locally. Neither
+change closes the release evaluation gate below or retires Python.
 
 Per `AGENT_HANDOFF.md`'s Release truth section: **NOT RELEASE READY.**
 `context_band_accuracy = 0.6667` against the unchanged `0.90` frozen-holdout
@@ -334,9 +341,9 @@ consistent with this repo's standing rule to reproduce before trusting.
 |---|---|---|---|---|---|
 | R0 | Architecture & docs (**this PR**) | — | AD-7, this plan, doc annotations | `git diff` reviewed, `pytest -q` shows no regression | N/A — doc-only |
 | R1 | Workspace + core types | R0 | **DONE** (`task/rust-r1-workspace`, 2026-10-13) — Cargo workspace skeleton, `agentrouter-core` crate with the `Classification` struct + 6 enums mirroring `agentrouter/schema.py` field-for-field and value-for-value (`approval_level` not `approval`, `"code+tests"` not `CodeTests`, nulls emitted not omitted to match Pydantic's default dump), plus a `print_classification` bin and `tests/test_rust_compat.py` that diffs real Python `model_dump_json()` output against it | `cargo build`/`cargo test --workspace`/`cargo clippy -D warnings`/`cargo fmt --check` all green; `pytest -q` 982 passed/1 skipped (baseline 981/1, +1 new compat test, zero regressions); CI job not yet added (next step) | Workspace doesn't build cross-platform (Windows/Linux, per `AGENTS.md`'s platform invariant) — not yet verified on Windows this session, Linux only |
-| R2 | Registries + classification | R1 | `agentrouter-registry`, `agentrouter-classifier` | Port-plan rows 1–2 passing | Any classification/registry fixture disagreement |
-| R3 | Routing + policy + safety | R2 | `agentrouter-policy`, `agentrouter-routing`, `agentrouter-execution` (hosts/usage only, no adapters yet) | Port-plan rows 1, 3–4 passing; explanation trail byte-identical | Any scoring/explanation divergence |
-| R4 | SQLite + CLI (core commands) | R3 | `agentrouter-storage`, enough of `agentrouter-cli` for `route`/`classify`/`explain`/`doctor` | Port-plan rows 5, 7, 14 (partial) passing; `CLI_SPEC.md` subset green | Any SQLite round-trip or CLI contract break |
+| R2 | Registries + classification | R1 | **DONE** (`task/rust-r1-workspace`) — `agentrouter-registry` (port of `registry.py`), `agentrouter-classifier` (port of `classifier.py`) | Port-plan rows 1–2 passing — 40-prompt compat test (`tests/test_classifier_rust_compat.py`) and real seed-registry load test both green | Any classification/registry fixture disagreement |
+| R3 | Routing + policy + safety | R2 | **DONE** (`task/rust-r1-workspace`) — `agentrouter-policy` (`taxonomy.py` + `controls.py` ports), `agentrouter-routing` (`engine.py` port), `agentrouter-hosts` (`hosts.py` port), `agentrouter-usage` (`usage.py` state machine, minus the CLI/route presentation glue `apply_live_verification`, deferred to R4/R5 alongside the typed `RouteResult` it re-ranks) | Port-plan rows 1, 3–4 passing — 12-scenario routing compat test, 9-case controls compat test (`tests/test_controls_rust_compat.py`), env-controlled hosts compat test (`tests/test_hosts_rust_compat.py`), all byte-identical against Python; full `cargo test --workspace` and `pytest -q` (1050 passed/1 skipped) green | Any scoring/explanation divergence |
+| R4 | SQLite + CLI (core commands) | R3 | **PARTIAL** (`task/rust-r1-workspace`) — `agentrouter-storage` ports `connect`/`save_decision`/`recent_ids`/`recent_decisions`/`aggregate_stats`/`load_decision`/`snapshot` and validates and records decision feedback atomically. `agentrouter-cli` has the `route --json` pipeline, a probe that persists its Rust route into the Python-readable SQLite log, stored-decision `explain --json`/`prompt generate --from` probes, a non-forced `init` probe, and a `registry list` JSON/table/filter probe. Python/Rust differential tests use the same SQLite log and seeded registries. These are probes, not a replacement public CLI. `doctor`/forced `init`/`plugin`/`providers *` and full option/error parity remain outstanding. | Port-plan row 5 (storage) passing; row 7 (CLI) partial — route, persisted decision, init, registry list, prompt and feedback probes passing; full CLI contract outstanding | Any SQLite round-trip or CLI contract break |
 | R5 | HTTP API + TS SDK + MCP | R4 | `agentrouter-api`, `agentrouter-mcp` | `api-compatibility` CI job green against Rust server; TS SDK test suite unchanged and green against it | Any semantic contract diff the existing gate would catch |
 | R6 | Provider execution + auth (adapters) | R3, owner credential action | `agentrouter-execution` adapter trait + first real adapter, behind default-off flag | Lifecycle test matrix from **Real-execution requirements** above, all green; security review | Remote execution ever defaults on, or an adapter bypasses policy gating |
 | R7 | Multi-agent orchestration | R6 | `agentrouter-orchestration` | Full test matrix from **Multi-agent orchestration architecture** above (loop/duplicate/cost/tool/conflict guards each independently tested) | Any guard in that section fails under adversarial fixture |
@@ -346,6 +353,34 @@ consistent with this repo's standing rule to reproduce before trusting.
 | R11 | Full Python/Rust parity validation | R1–R10 | Every module in the port-plan table running in Rust, diffed against Python on the full existing regression suite | Side-by-side run, zero behavioral diffs beyond reviewed/accepted ones | Any unreviewed diff |
 | R12 | Rust-only runtime validation | R11 | A build/run with the Python package absent entirely | Fresh-machine install + full CLI/HTTP/MCP smoke with no `agentrouter` Python package installed | Any feature silently requires Python |
 | R13 | Staging, rollback, release readiness | R12 | Staging deployment plan, rollback drill, update to `RELEASE.md`/`QUALITY_GATES.yaml` evidence requirements for the new implementation | Rollback drill evidence (a real revert exercised, not described); release-readiness review | Any of this plan's non-negotiables violated, or the Release truth gate (`context_band_accuracy`) still failing independent of language |
+
+R4 follow-up (2026-11-09): the Rust route probe now reads configured weights,
+pricing policy, and the learning switch, then applies the ported hard route
+controls before scoring. Differential tests include configured routing,
+feedback learning, control exclusions, no-eligible results, and malformed
+config rejection. They exposed and fixed a Rust host-discovery mismatch:
+CLI credentials are looked up in the user's home, as in Python, not under
+`AGENTROUTER_HOME`. This remains a probe; complete CLI flags, errors, and
+deployment surfaces still need parity work.
+
+R4 follow-up (2026-11-10): Rust `registry list` now has JSON/table and filter
+parity probes. Independent review found primitive serde deserialization
+accepted malformed numeric model facts that Python's Pydantic schema rejects.
+The shared Rust loader now checks positive sizes, ability scores, finite
+non-negative prices, bounded finite ability confidence, and ISO date fields
+before routing or listing. Full command/error parity is still outstanding.
+
+R4 follow-up (2026-11-10, forced initialization): the Rust `init` probe now
+supports `--force`, backs up edited seed files before reseeding, and matches
+the Python CLI on ordinary files. A security review reproduced linked-parent
+and hard-link escapes; directory-handle-relative seed writes and atomic
+replacement now preserve outside hard-linked files. The probe also rejects
+linked database/WAL/SHM/journal paths before SQLite initialization. SQLite
+still canonicalizes and reopens the database by path, leaving a concurrent
+path-swap risk. A Linux proc-fd path helps after a swap before connect but
+does not close later or leaf swaps;
+handle-safe database initialization and the complete public CLI remain R4
+work. This probe is not a production replacement for Python.
 
 R6 and R7 are deliberately placed after the interface milestones (R4–R5) and
 before the deep-hardening ones (R8–R10): nothing in orchestration or graph

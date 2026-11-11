@@ -1,5 +1,21 @@
 # Release Readiness
 
+## Current checkpoint — 2026-11-10
+
+**NOT release ready.** PR #25 is an unmerged migration branch. Pushed parent
+`6ee8d3e` passed the full GitHub CI, Rust parity, Security, and mutation
+matrix. The current Rust forced-init/provider-status slices pass local focused parity, but
+SQLite initialization still uses a path-based open and is not production
+safe against concurrent path swaps. The canonical evaluation remains 6/7:
+context-band accuracy 0.6667 against the unchanged 0.90 threshold. Rust
+still lacks full CLI/HTTP/MCP/execution parity, R5–R13, staging and rollback
+evidence. The two-human annotation/adjudication round in
+`TASK_012_OWNER_ACTIONS.md` remains required; AI labels cannot close it.
+No paid OpenAI request or production deployment occurred.
+Windows CI has not checked the current Win32 file-handle repair.
+
+## Historical v0.5 assessment
+
 **Status: NOT release-ready.** Canonical v0.5 release-candidate assessment,
 updated 2026-08-08 (iter26, after TASK-011/012/013/014/015/016 merged to
 `release/agentrouter-v0.5-rc1`, RC @ `5847c22`).
