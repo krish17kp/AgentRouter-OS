@@ -57,9 +57,7 @@ def _rust(prompt: str) -> dict:
 
 def test_rust_model_artifact_matches_python_source_of_truth():
     python_artifact = ROOT / "agentrouter/benchmarks/context_band_model_v1.json"
-    rust_artifact = (
-        ROOT / "rust/agentrouter-classifier/resources/context_band_model_v1.json"
-    )
+    rust_artifact = ROOT / "rust/agentrouter-classifier/resources/context_band_model_v1.json"
     assert rust_artifact.read_bytes() == python_artifact.read_bytes()
 
 
