@@ -1,6 +1,7 @@
-//! Offline freshness reports for generated provider catalogs.
-//! Mirrors `agentrouter.catalog_ops.read_status` and `list_generated`.
+//! Offline operations for generated provider catalogs.
+//! Mirrors the read-only subset of `agentrouter.catalog_ops`.
 
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use chrono::NaiveDate;
@@ -18,6 +19,8 @@ pub struct CatalogStatus {
     pub age_days: Option<i64>,
     pub stale: bool,
     pub source_url: Option<String>,
+    pub fetched_at: Option<String>,
+    pub tool_version: Option<String>,
 }
 
 impl CatalogStatus {
@@ -168,11 +171,14 @@ pub fn read_status(path: &Path, today: NaiveDate) -> Result<CatalogStatus, Strin
         .max();
     let age_days = newest.map(|date| today.signed_duration_since(date).num_days());
     let stale = age_days.is_none_or(|days| days > STALE_AFTER_DAYS);
-    let source_url = raw
-        .get("provenance")
-        .and_then(|value| value.get("source_url"))
-        .and_then(Value::as_str)
-        .map(sanitize);
+    let provenance = raw.get("provenance").and_then(Value::as_mapping);
+    let provenance_value = |name: &str| {
+        provenance
+            .and_then(|mapping| mapping.get(name))
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+    };
+    let source_url = provenance_value("source_url").as_deref().map(sanitize);
     Ok(CatalogStatus {
         provider,
         path: path.to_path_buf(),
@@ -181,7 +187,26 @@ pub fn read_status(path: &Path, today: NaiveDate) -> Result<CatalogStatus, Strin
         age_days,
         stale,
         source_url,
+        fetched_at: provenance_value("fetched_at"),
+        tool_version: provenance_value("tool_version"),
     })
+}
+
+/// Return the provenance mapping when the file is valid; malformed or legacy
+/// files are a best-effort miss, matching Python's read-only helper.
+pub fn read_provenance(path: &Path) -> Option<Value> {
+    let text = read_text_nofollow(path).ok()?;
+    let raw: Value = serde_yaml::from_str(&text).ok()?;
+    raw.get("provenance")
+        .and_then(Value::as_mapping)
+        .map(|mapping| Value::Mapping(mapping.clone()))
+}
+
+/// Ids removed between catalog snapshots, in stable sorted order.
+pub fn deprecations(previous_ids: &HashSet<String>, current_ids: &HashSet<String>) -> Vec<String> {
+    let mut removed: Vec<_> = previous_ids.difference(current_ids).cloned().collect();
+    removed.sort();
+    removed
 }
 
 pub fn list_generated(reg_dir: &Path, today: NaiveDate) -> Result<Vec<CatalogStatus>, String> {
@@ -204,4 +229,53 @@ pub fn list_generated(reg_dir: &Path, today: NaiveDate) -> Result<Vec<CatalogSta
         .into_iter()
         .map(|path| read_status(&path, today))
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn deprecations_are_sorted_and_report_only() {
+        let previous = ["zeta", "removed", "alpha"]
+            .into_iter()
+            .map(str::to_owned)
+            .collect();
+        let current = ["zeta", "new"].into_iter().map(str::to_owned).collect();
+        assert_eq!(deprecations(&previous, &current), ["alpha", "removed"]);
+    }
+
+    #[test]
+    fn read_provenance_is_best_effort_and_mapping_only() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("models.openai.generated.yaml");
+        std::fs::write(
+            &path,
+            "models: []\nprovenance:\n  source_url: https://example.test\n",
+        )
+        .unwrap();
+        assert_eq!(
+            read_provenance(&path),
+            Some(serde_yaml::from_str("source_url: https://example.test").unwrap())
+        );
+        std::fs::write(&path, "provenance: [not, a, mapping]\n").unwrap();
+        assert_eq!(read_provenance(&path), None);
+        std::fs::write(&path, "provenance: [\n").unwrap();
+        assert_eq!(read_provenance(&path), None);
+    }
+
+    #[test]
+    fn status_preserves_all_provenance_fields() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("models.openai.generated.yaml");
+        std::fs::write(
+            &path,
+            "models: []\nprovenance:\n  source_url: https://example.test\n  fetched_at: 2026-11-12T00:00:00Z\n  tool_version: 0.5.0rc1\n",
+        )
+        .unwrap();
+        let status = read_status(&path, NaiveDate::from_ymd_opt(2026, 11, 12).unwrap()).unwrap();
+        assert_eq!(status.source_url.as_deref(), Some("https://example.test"));
+        assert_eq!(status.fetched_at.as_deref(), Some("2026-11-12T00:00:00Z"));
+        assert_eq!(status.tool_version.as_deref(), Some("0.5.0rc1"));
+    }
 }

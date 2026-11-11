@@ -68,3 +68,7 @@ path = "src/bin/doctor_cli.rs"
 [[bin]]
 name = "limits_from_json"
 path = "src/bin/limits_from_json.rs"
+
+[[bin]]
+name = "catalog_ops_from_json"
+path = "src/bin/catalog_ops_from_json.rs"
