@@ -2229,3 +2229,9 @@ Aligned manifest schema-version and integer-map parsing with Pydantic, including
 signed counts, numeric strings, booleans, and integral floats. The annotation
 schema differential suite remains 23 passing cases and Clippy passes locally.
 The broader module stays Partial for other edge coercions.
+# TASK-053 — Rust evaluation registry facade
+
+Added the Rust dataset registry facade and a Python differential test for
+dataset order, profile membership/order, adapter descriptors, optional lookup,
+and unknown-dataset error text. Adapter factories and optional remote dataset
+loading remain partial; local validation and hosted checks are pending.

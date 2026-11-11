@@ -191,3 +191,7 @@ path = "src/bin/evaluation_evaluators_api_from_json.rs"
 [[bin]]
 name = "evaluation_package_markers_from_json"
 path = "src/bin/evaluation_package_markers_from_json.rs"
+
+[[bin]]
+name = "evaluation_registry_api_from_json"
+path = "src/bin/evaluation_registry_api_from_json.rs"
