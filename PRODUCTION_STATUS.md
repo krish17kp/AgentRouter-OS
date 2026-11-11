@@ -4,11 +4,11 @@ Updated: 2026-11-11
 
 ## Definition of done
 
-- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PR #30 merged at `bd98b6b`; PR #31 contains harness parity and dependency hardening and is running refreshed CI after rebasing onto PR #30; PR #32 records additional latency and coverage evidence and depends on PR #31. PR #16 remains blocked by the unchanged context-band gate.
+- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PRs #30, #31, and #32 are merged through RC `ed02176`. PR #33 adds Rust context-model parity and is in CI. PR #16 remains blocked by the unchanged context-band gate.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [x] Full Python suite: 1,660 passed, 6 skipped; 90.96% line and 85.09% branch coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; exact evidence is in `docs/COVERAGE_REPORT_2026-11-11.md`.
-- [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations; PR #32 adds a measured local baseline for 10/100/1,000 candidate fleets.
-- [ ] Changelog and coverage evidence are updated in the active release-candidate work. Release version bump and release notes remain pending final parity and all release gates.
+- [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations; PR #32 merged a measured local baseline for 10/100/1,000 candidate fleets.
+- [x] Changelog, coverage evidence, and local latency measurements are committed to the release candidate. Release version bump and release notes remain pending final parity and all release gates.
 - [ ] Release candidate promoted to `main` with a tagged release.
 
 ## Completed / in progress
@@ -26,9 +26,9 @@ Updated: 2026-11-11
 - [ ] Rust dashboard renderer/loopback server and Rust/Python feedback-stat parity merged via PR #30 at `bd98b6b`; the command remains a migration probe until the unified Rust CLI lands.
 - [ ] Rust observability redaction/safe-echo helpers and bounded `ureq`/rustls OpenAI Responses transport merged via PR #30; structured logging, request context, traceback handling, and OTel integration remain unported. Live credentials, CLI wiring, and Python/Rust end-to-end parity remain open.
 - [ ] Rust R5-R13 milestones and cross-platform parity. PR #30 added a bounded OpenAI Responses HTTPS transport; integration into the guarded execution command remains outstanding.
-- [ ] Rust `agentrouter-cli::harness` matches all eight Python harness detection cases locally; cross-platform CI and release-candidate validation are pending.
-- [ ] Rust context-band model features, artifact validation, and inference match Python locally across 15 prompts (30 feature/prediction differential checks); cross-platform CI is pending. It remains disconnected from the default rule classifier until evaluation approves enabling learned routing.
-- [ ] Rust dependency hardening upgrades bundled SQLite to 3.54.1 and replaces `unsafe-libyaml`; local workspace tests, Clippy, and `cargo audit --deny warnings` pass across 160 locked dependencies. Rust 1.89 is required; refreshed cross-platform CI is pending.
+- [x] PR #31 ported Rust `agentrouter-cli::harness` with eight Python/Rust cases, cross-platform CI, and dependency hardening; merged at `a246cf6`.
+- [ ] PR #33 ports Rust context-band model features, artifact validation, and inference; 15 prompts (30 feature/prediction checks) plus artifact-sync test pass locally, cross-platform CI is pending. It remains disconnected from the default rule classifier until evaluation approves enabling learned routing.
+- [x] PR #31 upgraded bundled SQLite to 3.54.1, replaced `unsafe-libyaml`, and raised the Rust minimum to 1.89; workspace tests, Clippy, security audit, and cross-platform CI passed before merge at `a246cf6`.
 - [x] Website product-truth fixes, font hierarchy/motion redesign, unused shadcn CLI removal, server limits/API tests, and website lint/build CI merged via PR #27. npm build/lint and production dependency audit passed; full npm audit still reports moderate dev-tool advisories.
 - [x] Benchmark evidence merged via PR #29: 12/12 routing gold scenarios and 15 focused tests; live latency/cost are explicitly not claimed.
 - [ ] Full Rust parity is not complete: R4 public CLI and race-safe SQLite work remains; HTTP/MCP, provider execution, plugins/skills, evaluation/annotation, and R5-R13 remain.

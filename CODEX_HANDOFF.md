@@ -2,15 +2,15 @@
 
 ## Current checkpoint — 2026-11-11
 
-PR #30 dashboard, privacy, observability, and OpenAI transport helpers merged to RC at `bd98b6b`; PR #31 harness and dependency-hardening update is in CI. PR #13 `TASK-019`
+PR #30 dashboard, privacy, observability, and OpenAI transport helpers merged at `bd98b6b`; PR #31 harness/dependency hardening and PR #32 benchmark/coverage evidence merged to RC at `ed02176`. PR #33 context-model parity is in CI. PR #13 `TASK-019`
 was merged into RC at `9958dd8` after its mutation, security, Python, Rust, and
 Linux/Windows/macOS checks passed. The plugin mutation campaign passed: 1,629 selected mutants,
 0.9693 overall, 0.9663 safety/policy/execution, 0.9815 routing, and zero
 unreviewed survivors. Exact-path and lifecycle tests cover Windows reserved
 aliases, link/reparse detection, ownership identity, and failure recovery.
 
-RC is `9958dd8` after PR #27 website, PR #28 macOS CI, PR #29 routing
-benchmark/coverage evidence merged. PR #21 was closed as redundant because its
+RC is `ed02176` after PR #27 website, PR #28 macOS CI, PR #29 routing
+benchmark/coverage evidence, and PRs #30–#32 merged. PR #21 was closed as redundant because its
 change was already on RC. PR #16 remains blocked by context-band accuracy
 0.6667 < 0.90. Python remains the shipping authority.
 

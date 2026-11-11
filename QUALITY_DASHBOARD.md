@@ -2,15 +2,17 @@
 
 ## Current checkpoint — 2026-11-11
 
-RC `bd98b6b` includes the website redesign, macOS Python/Rust CI, and routing
-benchmark/coverage evidence. PR #13 plugin mutation campaign is green locally
+RC `ed02176` includes the website redesign, macOS Python/Rust CI, routing
+benchmark/coverage evidence, Rust dashboard/OpenAI helpers, harness parity, and
+dependency hardening. PR #13 plugin mutation campaign is green locally
 (1,629 selected mutants; 0.9693 overall, 0.9663 safety/policy/execution,
 0.9815 routing; zero unreviewed survivors); PR #13 was merged after all checks
 passed. The latest full Python run passed
 1,660 tests with 6 skips and measured 90.96% line / 85.09% branch coverage,
-meeting the unchanged 90%/85% thresholds. Rust workspace tests, formatting, and
-Clippy and `cargo audit --deny warnings` pass locally; bundled SQLite is 3.54.1 and `unsafe-libyaml` has been removed. Context-band accuracy remains 0.6667 < 0.90; Rust R4 and
-R5–R13 remain incomplete. This project is not release-ready.
+meeting the unchanged 90%/85% thresholds. Rust workspace tests, formatting,
+Clippy, and `cargo audit --deny warnings` pass locally; bundled SQLite is 3.54.1
+and `unsafe-libyaml` has been removed. Context-band accuracy remains 0.6667 <
+0.90; Rust R4 and R5–R13 remain incomplete. This project is not release-ready.
 
 ## Historical dashboard
 
