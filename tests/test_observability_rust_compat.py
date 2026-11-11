@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import unicodedata
 from pathlib import Path
 
 import pytest
@@ -40,6 +41,17 @@ def test_redaction_and_safe_echo_match_python_contract():
         {"text": "x" * 70, "limit": 64},
         {"text": "a\u200bb\u2028c", "limit": 64},
         {"text": "abcdef", "limit": 0},
+        {
+            "text": "before"
+            + "".join(
+                chr(codepoint)
+                for codepoint in range(0x110000)
+                if unicodedata.category(chr(codepoint)) in {"Cc", "Cf"}
+                or codepoint in {0x2028, 0x2029}
+            )
+            + "after",
+            "limit": 64,
+        },
     ]
     payload = {"redact": secrets, "echo": echo_inputs}
     root = Path(__file__).resolve().parents[1]

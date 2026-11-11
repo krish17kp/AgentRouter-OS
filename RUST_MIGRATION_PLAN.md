@@ -395,7 +395,8 @@ CLI remains part of the outstanding full CLI migration.
 R4 follow-up (2026-11-11, observability slice): added Rust `redact`, recursive
 JSON redaction, and Unicode-safe `safe_echo` helpers with a Python/Rust
 differential fixture matrix for all 16 supported credential formats, ordinary
-diagnostics, path preservation, and line/control characters. This is a partial
+diagnostics, path preservation, and every Python-classified control/format
+character and line separator. This is a partial
 port only; request-ID context, structured logging, API-error traceback policy,
 and optional OTel spans remain outstanding.
 
