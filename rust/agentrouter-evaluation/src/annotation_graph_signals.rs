@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
+use unicode_general_category::{get_general_category, GeneralCategory};
 
 pub const DEFAULT_GRAPH_PATH: &str = "graphify-out/graph.json";
 const GRAPH_CACHE_SIZE: usize = 4;
@@ -54,7 +55,7 @@ pub fn impact_for(prompt: &str, graph_path: impl AsRef<Path>) -> Result<ImpactSi
     let tokens = Regex::new(r"(?i-u)[A-Za-z_][A-Za-z0-9_.-]{2,}")
         .expect("constant token regex")
         .find_iter(prompt)
-        .map(|m| m.as_str().to_lowercase())
+        .map(|m| python_lowercase(m.as_str()))
         .collect::<BTreeSet<_>>();
     let matched = tokens
         .intersection(&graph.names)
@@ -110,13 +111,9 @@ fn load_graph(path: &str) -> Result<Option<Arc<GraphData>>, String> {
                 };
                 if !value.is_empty() {
                     let basename = value.rsplit('/').next().unwrap_or(value);
-                    names.insert(
-                        basename
-                            .split('.')
-                            .next()
-                            .unwrap_or(basename)
-                            .to_lowercase(),
-                    );
+                    names.insert(python_lowercase(
+                        basename.split('.').next().unwrap_or(basename),
+                    ));
                 }
             }
         }
@@ -137,9 +134,9 @@ fn load_graph(path: &str) -> Result<Option<Arc<GraphData>>, String> {
                 continue;
             };
             adjacency
-                .entry(source.to_lowercase())
+                .entry(python_lowercase(source))
                 .or_default()
-                .push(target.to_lowercase());
+                .push(python_lowercase(target));
         }
         Ok(Some(Arc::new(GraphData { names, adjacency })))
     })();
@@ -168,6 +165,55 @@ fn is_truthy(value: &Value) -> bool {
         Value::Array(value) => !value.is_empty(),
         Value::Object(value) => !value.is_empty(),
     }
+}
+
+/// Match Python `str.lower()`'s context-sensitive Greek final sigma rule.
+fn python_lowercase(value: &str) -> String {
+    let characters = value.chars().collect::<Vec<_>>();
+    let mut output = String::with_capacity(value.len());
+    for (index, character) in characters.iter().copied().enumerate() {
+        if character != '\u{03a3}' {
+            output.extend(character.to_lowercase());
+            continue;
+        }
+        let preceded_by_cased = characters[..index]
+            .iter()
+            .rev()
+            .copied()
+            .find(|candidate| !is_case_ignorable(*candidate))
+            .is_some_and(is_cased);
+        let followed_by_cased = characters[index + 1..]
+            .iter()
+            .copied()
+            .find(|candidate| !is_case_ignorable(*candidate))
+            .is_some_and(is_cased);
+        output.push(if preceded_by_cased && !followed_by_cased {
+            '\u{03c2}'
+        } else {
+            '\u{03c3}'
+        });
+    }
+    output
+}
+
+fn is_cased(character: char) -> bool {
+    character.is_lowercase()
+        || character.is_uppercase()
+        || get_general_category(character) == GeneralCategory::TitlecaseLetter
+}
+
+fn is_case_ignorable(character: char) -> bool {
+    matches!(
+        get_general_category(character),
+        GeneralCategory::NonspacingMark
+            | GeneralCategory::EnclosingMark
+            | GeneralCategory::Format
+            | GeneralCategory::ModifierLetter
+            | GeneralCategory::ModifierSymbol
+    ) || matches!(
+        character,
+        '\'' | '\u{00b7}' | '\u{0387}' | '\u{05f3}' | '\u{05f4}' | '\u{2019}'
+    )
 }
 
 fn python_iterable(value: Option<&Value>, field: &str) -> Result<Vec<Value>, String> {

@@ -151,6 +151,25 @@ def test_rust_graph_signal_matches_python_mapping_node_iteration(tmp_path):
     _assert_parity("inspect classifier", graph)
 
 
+def test_rust_graph_signal_matches_python_contextual_unicode_lowercase(tmp_path):
+    graph = tmp_path / "unicode-lowercase.json"
+    graph.write_text(
+        json.dumps(
+            {
+                "nodes": [{"id": "module"}],
+                "edges": [
+                    {"source": "module", "target": "ΟΣ"},
+                    {"source": "module", "target": "οσ"},
+                    {"source": "module", "target": "ΟΣΑ"},
+                    {"source": "module", "target": "οσα"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    _assert_parity("inspect module", graph)
+
+
 def test_rust_graph_signal_matches_four_entry_python_lru_cache(tmp_path):
     paths = [tmp_path / f"cache-{index}.json" for index in range(5)]
     sequence = [

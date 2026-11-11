@@ -2166,3 +2166,12 @@ is 1,876 passed/6 skipped (92.15% line, 87.22% branch, 91.03% combined); full
 Rust workspace/Clippy/format, Ruff, and diff checks pass locally. The module is
 still Partial for contextual Unicode lowercase differences in graph edge IDs.
 Cross-platform CI starts after push.
+
+## 2026-11-11 — TASK-043: graph identifier Unicode casing parity
+
+Added Python-compatible contextual Greek final-sigma lowercasing for graph node,
+edge, and token identifiers. Thirteen graph differentials pass, including
+`ΟΣ` versus `οσ` and medial sigma; the graph signal module now meets the parity
+bar. Full Python suite: 1,877 passed/6 skipped; coverage 92.15% line, 87.22%
+branch, and 91.03% combined. Full Rust workspace, Clippy, format, Ruff, and diff
+checks pass locally. Cross-platform hosted confirmation starts after push.

@@ -21,7 +21,7 @@ release authority until the full set is complete.
 | `agentrouter/annotation/cli.py` | `—` | Not ported |
 | `agentrouter/annotation/compare.py` | `agentrouter-evaluation::annotation_compare` | Parity |
 | `agentrouter/annotation/dedup.py` | `agentrouter-evaluation::annotation_dedup` | Parity |
-| `agentrouter/annotation/graph_signals.py` | `agentrouter-evaluation::annotation_graph_signals` | Partial |
+| `agentrouter/annotation/graph_signals.py` | `agentrouter-evaluation::annotation_graph_signals` | Parity |
 | `agentrouter/annotation/packs.py` | `agentrouter-evaluation::annotation_packs` | Parity |
 | `agentrouter/annotation/schema.py` | `agentrouter-evaluation::annotation_schema` | Partial |
 | `agentrouter/annotation/splits.py` | `agentrouter-evaluation::annotation_splits` | Parity |
@@ -102,10 +102,9 @@ release authority until the full set is complete.
 - Context-band model inference is ported but remains disabled in the default
   classifier. The frozen evaluation gate still controls whether learned routing
   can be enabled.
-- The optional repository graph signal now matches Python's four-entry LRU
-  cache, including cached text-only fallbacks and eviction; Unicode contextual
-  lowercase behavior for non-ASCII graph edge identifiers remains under parity
-  review.
+- The optional repository graph signal matches Python's four-entry LRU cache,
+  cached fallbacks, malformed-shape behavior, and contextual Unicode lowercase
+  for graph edge identifiers.
 - Context-band annotation comparison matches rules, learned and hybrid
   prediction reports, including macro-F1, per-band recall, deterministic
   CPython-seeded bootstrap confidence intervals, ECE, abstention and fallback
