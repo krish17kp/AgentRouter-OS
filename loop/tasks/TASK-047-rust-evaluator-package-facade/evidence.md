@@ -9,7 +9,7 @@ discovery is still incomplete, so the parity matrix remains Partial.
 Validation:
 
 - `.venv/bin/python -m pytest -q tests/test_rust_evaluation_evaluators_api_compat.py`:
-  passed locally; it compares all 81 packaged model identities/orderings and
+  1 passed locally; it compares all packaged model identities/orderings and
   the seven public exports against Python.
 - `cargo test -p agentrouter-evaluation --offline`, Rust formatting, and
   evaluation-crate Clippy with warnings denied: passed locally.
