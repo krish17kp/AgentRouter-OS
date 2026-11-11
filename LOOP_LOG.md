@@ -1998,7 +1998,7 @@ Ported TwinRouterBench's dynamic-track `SKIPPED_EXTERNAL` status and exact
 reason/commands to the Rust evaluation crate. Its static fixture contract is
 covered by the shared adapter-base differential test. Focused differential
 tests (7 cases), Rust workspace tests, Clippy, format, Ruff, and diff checks
-pass locally. The full Python suite passes: 1,769 passed/6 skipped and
+pass locally. The full Python suite passes: 1,770 passed/6 skipped and
 92.09% line, 87.04% branch, 90.94% combined coverage. TASK-028 hosted Rust
 migration, mutation, security, and website workflows pass; general Python CI
 is still running, with the unchanged frozen context-band release gate as the
@@ -2014,8 +2014,8 @@ Added deterministic Rust `environment_snapshot` output for the four fields
 reported by Python and a JSON probe with injected runtime values. Existing
 dataset-quality/leakage behavior plus the new snapshot contract are covered by
 Python/Rust differential tests. Focused provenance checks, Rust workspace,
-Clippy, format, Ruff, and diff checks pass locally. Full suite and hosted CI are
-being checked while this task continues.
+Clippy, format, Ruff, and diff checks pass locally; full Python regression
+passes 1,770/6 with 92.09/87.04/90.94 coverage. Cross-platform CI is running.
 
-Next: complete full-suite evidence, commit/push TASK-030, inspect CI for
-TASK-029/030, and continue remaining evaluation and public-module parity.
+Next: inspect CI for TASK-029/030, repair failures, and continue remaining
+evaluation and public-module parity.

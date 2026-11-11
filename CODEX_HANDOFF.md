@@ -3,7 +3,7 @@
 ## Current checkpoint — 2026-11-11
 
 PRs #27–#33 and #13 are merged into `release/agentrouter-v0.5-rc1`; RC head is
-`55d5fbd` and PR #16 remains open to `main`. TASK-028 Rust workspace and
+`d1ba467` and PR #16 remains open to `main`. TASK-028 Rust workspace and
 Python/Rust compatibility pass Linux; Windows/macOS and broad Python checks
 are still running. Security and website pass. Frozen context-band accuracy
 0.6667 against 0.90 remains the promotion blocker.
@@ -11,7 +11,7 @@ are still running. Security and website pass. Frozen context-band accuracy
 Current local task completes TwinRouterBench's offline dynamic-track status
 contract, alongside static fixture behavior from the shared adapter base.
 Focused differential tests, Rust workspace, Clippy, format, Ruff, and the full
-Python suite pass: 1,769 passed, 6 skipped; 92.09% line, 87.04% branch, and
+Python suite pass: 1,770 passed, 6 skipped; 92.09% line, 87.04% branch, and
 90.94% combined coverage. Remaining
 adapter transformations, remote runs, evaluation
 runner/CLI/annotation, and many public modules are inventoried in
