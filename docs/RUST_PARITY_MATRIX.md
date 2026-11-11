@@ -49,7 +49,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/adapters/twinrouterbench.py` | `—` | Not ported |
 | `agentrouter/evaluation/base.py` | `—` | Not ported |
 | `agentrouter/evaluation/cli.py` | `—` | Not ported |
-| `agentrouter/evaluation/comparison.py` | `agentrouter-evaluation::{compare_results,write_comparison}` | Partial |
+| `agentrouter/evaluation/comparison.py` | `agentrouter-evaluation::{compare_results,load_result,write_comparison}` | Parity |
 | `agentrouter/evaluation/context_bands.py` | `—` | Not ported |
 | `agentrouter/evaluation/evaluators/__init__.py` | `—` | Not ported |
 | `agentrouter/evaluation/evaluators/feedback.py` | `agentrouter-evaluation::evaluate_feedback` | Parity |
@@ -118,8 +118,8 @@ release authority until the full set is complete.
 - Performance scoring and classification/routing timing now run in Rust for
   caller-supplied models and tasks. Seed loading and injected classifier
   behavior remain Python-side; latency values are machine-dependent.
-- Baseline/current comparison scoring and Markdown/CSV artifact generation
-  match Python. Loading result files remains a caller/runtime responsibility.
+- Baseline/current comparison scoring, UTF-8 result loading, and Markdown/CSV
+  artifact generation match Python.
 - Routing evaluation now scores caller-supplied model catalogs against gold
   constraints or the declared distinct-fallback proxy. Loading seed models and
   custom classifier injection remain Python-only.

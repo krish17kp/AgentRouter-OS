@@ -1849,3 +1849,16 @@ Verification: comparison/artifact differential and full Rust/Clippy/format/
 Ruff checks pass. The 24 evaluation compatibility cases pass. Full Python suite
 1,744 passed / 6 skipped; 91.15% line, 85.61% branch, and 89.89% combined
 coverage. Cross-platform CI is pending after push.
+
+## Iteration 50 — 2026-11-11 — Rust evaluation result loading
+
+Completed the remaining public `evaluation/comparison.py` file-loading
+operation in Rust. It reads the same UTF-8 JSON report and preserves the
+structured payload; the migration matrix now marks the comparison module
+Parity, backed by load/compare/write differential fixtures.
+
+Verification: the result-loader and comparison artifact differential tests,
+Rust workspace/Clippy/format, Ruff, and Python formatting pass. Full Python
+suite 1,745 passed / 6 skipped; 91.15% line, 85.61% branch, 89.89% combined
+coverage. Rust Linux/Windows/macOS CI passed for the comparison commit; Python
+Windows CI remains in progress, and the result-loader extension needs CI.

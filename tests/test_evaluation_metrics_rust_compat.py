@@ -985,3 +985,33 @@ def test_rust_evaluation_comparison_and_artifacts_match_python(tmp_path):
         b"## Improvements\n\n"
     )
     assert (rust_empty_dir / "comparison.md").read_bytes() == expected_empty_markdown
+
+
+def test_rust_loads_evaluation_result_json(tmp_path):
+    result = {
+        "report_schema_version": 1,
+        "grade_over_100": 72.5,
+        "release_gates": {"context_band_accuracy>=0.90": False},
+        "environment": {"python": "3.12.15", "platform": "Linux"},
+    }
+    result_path = tmp_path / "result.json"
+    result_path.write_text(json.dumps(result), encoding="utf-8")
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_load_result_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps({"path": str(result_path)}),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+        check=True,
+    )
+    assert json.loads(process.stdout) == result

@@ -679,6 +679,14 @@ pub fn compare_results(
     })
 }
 
+/// Load a previously written evaluation report from UTF-8 JSON.
+pub fn load_result(
+    path: &std::path::Path,
+) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+    let contents = std::fs::read_to_string(path)?;
+    Ok(serde_json::from_str(&contents)?)
+}
+
 /// Render the stable comparison Markdown and CSV artifacts.
 pub fn write_comparison(
     comparison: &serde_json::Value,
