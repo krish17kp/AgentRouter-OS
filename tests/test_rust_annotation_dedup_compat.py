@@ -40,13 +40,11 @@ def test_rust_annotation_dedup_matches_python():
     expected = {
         "normalized": [dedup.normalize(prompt) for prompt in prompts],
         "similarities": [
-            dedup.similarity(left, right)
-            for left, right in zip(prompts, prompts[1:], strict=False)
+            dedup.similarity(left, right) for left, right in zip(prompts, prompts[1:], strict=False)
         ],
         "clusters": dedup.cluster(prompts, threshold),
         "leakage": [
-            duplicate.__dict__
-            for duplicate in dedup.find_leakage(candidate, reference, threshold)
+            duplicate.__dict__ for duplicate in dedup.find_leakage(candidate, reference, threshold)
         ],
     }
     process = subprocess.run(

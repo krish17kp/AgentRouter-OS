@@ -2,17 +2,17 @@
 
 ## Current checkpoint — 2026-11-11
 
-- Active RC worktree: `release/agentrouter-v0.5-rc1` at `e45cd5f`. PRs #27–#33 and #13 are merged; PR #16 remains open to `main`.
+- Active RC worktree: `release/agentrouter-v0.5-rc1` at `3e579da`. PRs #27–#33 and #13 are merged; PR #16 remains open to `main`.
 - TASK-028 is pushed. Rust workspace and non-skipping Python/Rust compatibility pass Linux; Windows/macOS and general Python checks are still running. Security and website pass. The unchanged frozen context-band gate (0.6667 < 0.90) remains the promotion blocker.
 - TASK-029 locally completes TwinRouterBench's dynamic-track full-run skip report. The focused differential test, shared adapter tests, full Python suite, Rust workspace, Clippy, format, Ruff, and diff checks pass.
 - TASK-029 has been pushed as `55d5fbd`; hosted Rust and Python/Rust checks pass on Linux, with Windows/macOS and general tests running. TASK-030 is pushed as `d1ba467`; its cross-platform Rust/compatibility runs are in progress.
-- Latest Python evidence: 1,778 passed, 6 skipped; 92.09% line (6,599/7,166), 87.04% branch (1,833/2,106), 90.94% combined. See `docs/COVERAGE_REPORT_2026-11-11.md`.
+- Latest Python evidence: 1,779 passed, 6 skipped; 92.10% line (6,600/7,166), 87.08% branch (1,834/2,106), 90.96% combined. See `docs/COVERAGE_REPORT_2026-11-11.md`.
 - The 77-module matrix is in `docs/RUST_PARITY_MATRIX.md`; external data execution, other adapter transforms, evaluation runner/CLI/annotation, most public CLI, HTTP/MCP, plugins/skills, and provider execution remain incomplete. Python remains the shipping authority.
 - TASK-029 ports TwinRouterBench's dynamic-track full-run status, with fixture behavior covered by the shared adapter test. Focused differential tests, full Python suite, Rust workspace, Clippy, format, Ruff, and diff checks pass.
 - TASK-030 ports the remaining evaluation provenance environment snapshot; existing dataset-quality/leakage aggregation is also differential-tested. Rust workspace/compatibility and general Python CI are running for the pushed head. Next: inspect/repair CI and continue parity. Do not merge/tag while the frozen release gate fails.
-- TASK-031 closes evaluation-schema parity, including serialization, Unicode hashes, checksum copies, and malformed input rejection. TASK-032 is pushed; seven focused adjudication cases, Rust workspace, Clippy, format, Ruff, and diff checks pass. TASK-033 locally ports annotation deduplication/leakage checks and its focused differential passes.
-- Latest full regression: 1,778 passed, 6 skipped; coverage percentages remain 92.09% line, 87.04% branch, and 90.94% combined. TASK-033's differential test was added after that run; refresh full evidence after its push.
-- TASK-029/030 cross-platform checks pass; TASK-031/032 checks are running. PR #16's immutable release gate still reports context-band accuracy 0.6667 < 0.90.
+- TASK-031 closes evaluation-schema parity, including serialization, Unicode hashes, checksum copies, and malformed input rejection. TASK-032 is pushed; seven focused adjudication cases, Rust workspace, Clippy, format, Ruff, and diff checks pass. TASK-033 has cross-platform Rust/Python checks; a hosted Ruff format failure is fixed locally. TASK-034 adds split assignment and frozen-holdout leak checks; focused differential tests pass.
+- Latest full regression: 1,779 passed, 6 skipped; coverage is 92.10% line, 87.08% branch, and 90.96% combined. TASK-034's two differential tests were added after that run; refresh full evidence after its push.
+- TASK-029 through TASK-032 cross-platform Rust/Python checks pass. TASK-033's hosted Ruff check failed, and the format correction is included locally with TASK-034. PR #16's immutable release gate still reports context-band accuracy 0.6667 < 0.90.
 - Owner actions are in `PRODUCTION_STATUS.md` under **Needs Krish**: independent human annotation/adjudication, bounded paid OpenAI validation credentials, and production deployment credentials/approval.
 
 ## Historical checkpoint

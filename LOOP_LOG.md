@@ -2056,3 +2056,15 @@ holdout labels.
 
 Next: push TASK-033, inspect CI alongside TASK-032, run full suite/coverage, and
 continue the annotation package and remaining public-module parity.
+
+## 2026-11-11 — TASK-034: Rust annotation dataset splits
+
+Ported deterministic split assignment with duplicate-cluster preservation,
+SHA-256 bucketing, default/custom ratios, ID ordering, and frozen prompt
+leakage rejection with Python-compatible error text. Focused tests compare
+default/custom results and an exact frozen-prompt leak. Rust workspace, Clippy,
+format, Ruff, and diff checks pass locally. The complete Python suite passes
+1,779/6 with 92.10/87.08/90.96 coverage before this increment's two tests.
+
+Next: push TASK-034 and the TASK-033 format repair, inspect CI, refresh full
+suite/coverage evidence, and continue annotation and public-module parity.

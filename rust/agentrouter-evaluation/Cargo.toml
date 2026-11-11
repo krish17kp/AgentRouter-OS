@@ -132,3 +132,7 @@ path = "src/bin/evaluation_adjudicate_from_json.rs"
 [[bin]]
 name = "evaluation_annotation_dedup_from_json"
 path = "src/bin/evaluation_annotation_dedup_from_json.rs"
+
+[[bin]]
+name = "evaluation_annotation_splits_from_json"
+path = "src/bin/evaluation_annotation_splits_from_json.rs"

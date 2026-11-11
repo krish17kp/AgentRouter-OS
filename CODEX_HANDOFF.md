@@ -13,7 +13,7 @@ alongside static fixture behavior from the shared adapter base. TASK-030
 completes evaluation provenance parity. Current local task closes evaluation
 schema serialization, hashing/checksum, and invalid-input parity. Focused
 differential tests, Rust workspace, Clippy, format, Ruff, and the full Python
-suite pass: 1,778 passed, 6 skipped; 92.09% line, 87.04% branch, and 90.94%
+suite pass: 1,779 passed, 6 skipped; 92.10% line, 87.08% branch, and 90.96%
 combined coverage. Remaining
 adapter transformations, remote runs, evaluation
 runner/CLI/annotation, and many public modules are inventoried in
