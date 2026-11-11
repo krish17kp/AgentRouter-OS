@@ -101,7 +101,9 @@ def test_api_secrets_are_never_printed_and_usage_is_opt_in(tmp_path):
     home = tmp_path / "agentrouter"
     home.mkdir()
     secret = "sk-livekey0123456789abcdefghij"
-    ordinary = _doctor(home, "--json", env={"AGENTROUTER_API_KEY": secret, "OPENAI_API_KEY": secret})
+    ordinary = _doctor(
+        home, "--json", env={"AGENTROUTER_API_KEY": secret, "OPENAI_API_KEY": secret}
+    )
     assert secret not in ordinary.stdout + ordinary.stderr
     assert "usage.openai-api" not in ordinary.stdout
     live = _doctor(home, "--verify-live", "--json", env={"OPENAI_API_KEY": secret})
