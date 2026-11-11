@@ -60,7 +60,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/evaluators/safety.py` | `agentrouter-evaluation::evaluate_safety` | Partial |
 | `agentrouter/evaluation/grading.py` | `agentrouter-evaluation::grade_classification` | Partial |
 | `agentrouter/evaluation/metrics.py` | `agentrouter-evaluation::classification_metrics` | Parity |
-| `agentrouter/evaluation/provenance.py` | `agentrouter-evaluation::dataset_quality` | Partial |
+| `agentrouter/evaluation/provenance.py` | `agentrouter-evaluation::{dataset_quality,environment_snapshot}` | Parity |
 | `agentrouter/evaluation/registry.py` | `agentrouter-evaluation::profile_datasets` | Partial |
 | `agentrouter/evaluation/reports.py` | `agentrouter-evaluation::{render_markdown, write_reports}` | Parity |
 | `agentrouter/evaluation/runner.py` | `—` | Not ported |
@@ -122,6 +122,7 @@ release authority until the full set is complete.
   artifact generation match Python.
 - The AgentRouter gold adapter now matches Python metadata, availability, description, all 165 records, checksums, and deterministic sampling; the full behavior is differentially tested, including Unicode/default handling.
 - Shared fixture-mode evaluation adapter behavior now matches six fixture-backed adapters for metadata, availability, description, JSONL record loading/checksums, deterministic sampling, and explicit skipped-external behavior. Real dataset downloads, preparation, and adapter-specific real-data mappings remain Python-only.
+- Evaluation provenance now matches Python for dataset-quality/leakage aggregation and the complete four-field runtime environment snapshot.
 - Routing evaluation now scores caller-supplied model catalogs against gold
   constraints or the declared distinct-fallback proxy. Loading seed models and
   custom classifier injection remain Python-only.

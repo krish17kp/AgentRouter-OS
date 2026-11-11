@@ -2007,3 +2007,15 @@ only known failure.
 Next: commit/push TASK-029, inspect its cross-platform CI, repair failures,
 and continue the public-module parity matrix. Do not merge/tag while the frozen
 release gate fails.
+
+## 2026-11-11 — TASK-030: Rust evaluation provenance parity
+
+Added deterministic Rust `environment_snapshot` output for the four fields
+reported by Python and a JSON probe with injected runtime values. Existing
+dataset-quality/leakage behavior plus the new snapshot contract are covered by
+Python/Rust differential tests. Focused provenance checks, Rust workspace,
+Clippy, format, Ruff, and diff checks pass locally. Full suite and hosted CI are
+being checked while this task continues.
+
+Next: complete full-suite evidence, commit/push TASK-030, inspect CI for
+TASK-029/030, and continue remaining evaluation and public-module parity.

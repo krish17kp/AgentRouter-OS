@@ -2518,6 +2518,23 @@ pub fn dataset_quality(cases: &[QualityCase]) -> serde_json::Value {
     })
 }
 
+/// Build the reproducibility metadata returned by Python
+/// `evaluation.provenance.environment_snapshot`. Runtime-specific values are
+/// supplied by the caller so the contract stays deterministic and testable.
+pub fn environment_snapshot(
+    agentrouter_version: &str,
+    python: &str,
+    platform: &str,
+    git_sha: Option<&str>,
+) -> serde_json::Value {
+    serde_json::json!({
+        "agentrouter_version": agentrouter_version,
+        "python": python,
+        "platform": platform,
+        "git_sha": git_sha,
+    })
+}
+
 #[derive(Debug, Clone)]
 struct Pair {
     acceptable: Vec<String>,

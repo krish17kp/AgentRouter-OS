@@ -264,6 +264,49 @@ def test_rust_dataset_quality_matches_python_aggregation():
     assert json.loads(process.stdout) == dataset_quality(cases)
 
 
+@pytest.mark.parametrize("git_sha", [None, "abc123"])
+def test_rust_environment_snapshot_matches_python_contract(git_sha):
+    import platform
+    import sys
+    from importlib.metadata import version
+
+    from agentrouter.evaluation.provenance import environment_snapshot
+
+    python = sys.version.split()[0]
+    platform_name = platform.platform()
+    try:
+        agentrouter_version = version("agentrouter-os")
+    except Exception:  # noqa: BLE001 - mirror best-effort package version lookup
+        agentrouter_version = "unknown"
+    expected = environment_snapshot(git_sha=git_sha)
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_environment_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps(
+            {
+                "agentrouter_version": agentrouter_version,
+                "python": python,
+                "platform": platform_name,
+                "git_sha": git_sha,
+            }
+        ),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+        check=True,
+    )
+    assert json.loads(process.stdout) == expected
+
+
 @pytest.mark.parametrize(
     ("items", "limit", "seed"),
     [

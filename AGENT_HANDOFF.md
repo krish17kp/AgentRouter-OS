@@ -2,9 +2,10 @@
 
 ## Current checkpoint — 2026-11-11
 
-- Active RC worktree: `release/agentrouter-v0.5-rc1` at `5767ddc`. PRs #27–#33 and #13 are merged; PR #16 remains open to `main`.
+- Active RC worktree: `release/agentrouter-v0.5-rc1` at `55d5fbd`. PRs #27–#33 and #13 are merged; PR #16 remains open to `main`.
 - TASK-028 is pushed. Rust workspace and non-skipping Python/Rust compatibility pass Linux; Windows/macOS and general Python checks are still running. Security and website pass. The unchanged frozen context-band gate (0.6667 < 0.90) remains the promotion blocker.
 - TASK-029 locally completes TwinRouterBench's dynamic-track full-run skip report. The focused differential test, shared adapter tests, full Python suite, Rust workspace, Clippy, format, Ruff, and diff checks pass.
+- TASK-029 has been pushed as `55d5fbd`; its cross-platform CI is running. TASK-030 locally adds Rust evaluation environment snapshot parity; focused differential and Rust workspace checks pass, with full-suite and CI evidence pending.
 - Latest Python evidence: 1,769 passed, 6 skipped; 92.09% line (6,599/7,166), 87.04% branch (1,833/2,106), 90.94% combined. See `docs/COVERAGE_REPORT_2026-11-11.md`.
 - The 77-module matrix is in `docs/RUST_PARITY_MATRIX.md`; external data execution, other adapter transforms, evaluation runner/CLI/annotation, most public CLI, HTTP/MCP, plugins/skills, and provider execution remain incomplete. Python remains the shipping authority.
 - TASK-029 locally ports TwinRouterBench's dynamic-track full-run status, with fixture behavior covered by the shared adapter test. Focused differential tests, full Python suite, Rust workspace, Clippy, format, Ruff, and diff checks pass.
