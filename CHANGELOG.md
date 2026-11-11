@@ -6,6 +6,17 @@ All notable changes to AgentRouter OS. Format loosely follows
 ## [Unreleased]
 
 ### Added
+- Rust migration probes for routing, registry validation, provider status, SQLite decision storage, and forced initialization. Python remains the shipping implementation until full contract parity and all release gates pass.
+- Dated routing benchmark report: 12/12 committed gold scenarios and 15 focused benchmark/invariant tests pass; live latency and cost remain unmeasured.
+- macOS Python and Rust CI coverage is being added; final cross-platform checks are pending.
+
+### Fixed
+- Evaluation `prepare --all` tests now use an offline mock and cannot download Hugging Face datasets during CI.
+- Duplicate YAML keys are rejected by the Python registry loader, matching Rust fail-closed behavior.
+- Website routing labels stay tied to the selected model across sorting; fallback provider text now reflects the actual pair.
+
+
+### Added
 - **Local REST API** (`agentrouter server`, `[server]` extra): classify/route/
   explain plus a dry-run-only execute preview. No remote execution.
 - **MCP server** (`agentrouter mcp`, `[mcp]` extra): read-only route/classify/
