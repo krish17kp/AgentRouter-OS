@@ -4,11 +4,11 @@ Updated: 2026-11-11
 
 ## Definition of done
 
-- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate.
+- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PR #13 at `984db4b` has green checks on all platforms; added offline coverage cases are being validated before merge. PR #16 is blocked by the unchanged context-band gate.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
-- [x] Full Python suite: 1,408 passed, 3 skipped; 87.56% line coverage and 82.08% branch coverage (Linux/Python 3.12).
+- [x] Full Python suite: 1,650 passed, 6 skipped; 90.96% line and 85.09% branch coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; exact evidence is in `docs/COVERAGE_REPORT_2026-11-11.md`.
 - [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations.
-- [ ] Changelog updated and coverage report committed; release version bump/release notes remain pending final parity and all release gates.
+- [ ] Changelog and coverage report updates are prepared locally; commit/push them with the offline coverage tests. Release version bump/release notes remain pending final parity and all release gates.
 - [ ] Release candidate promoted to `main` with a tagged release.
 
 ## Completed / in progress
@@ -18,14 +18,18 @@ Updated: 2026-11-11
 - [x] PR #20 `prepare --all` test made offline-safe; local focused tests pass.
 - [x] PR #20 pytest constrained below 9 for compatibility with pinned `mutmut==3.6.0`; merged after current-RC CI and mutation checks passed.
 - [x] PR #26 reviewed and closed as superseded; its legacy registry-print binary no longer compiled against the evolved registry API.
-- [ ] PRs #13, #16, #21, #27 need final disposition against the latest RC; PR #13 mutation gate currently fails.
-- [ ] macOS CI added for Python 3.12 full tests and the Rust workspace/parity matrix; awaits checks.
+- [x] PR #27 website, #28 macOS CI, and #29 routing benchmark/coverage evidence merged to RC (`3fcfd05`). PR #21 was closed as redundant after confirming the RC already contains its hook interpreter change.
+- [ ] PR #13 plugin hardening local mutation campaign passes: 0.9693 overall, 0.9663 safety/policy/execution, 0.9815 routing, zero unreviewed survivors. Commit `984db4b` passed Python, Rust, security, macOS, and cross-platform parity checks; new tests and refreshed evidence are awaiting CI.
+- [ ] PR #16 remains blocked by context-band accuracy 0.6667 < 0.90; no gate or label policy was changed.
+- [x] macOS CI is merged for Python 3.12 and Rust workspace/parity; all checks on PR #28 passed.
 - [ ] Rust R4 full CLI parity and race-safe SQLite initialization.
 - [ ] Rust R5-R13 milestones and cross-platform parity.
-- [x] PR #27 website product-truth fixes, unused shadcn CLI removal, and site CI added; npm build/lint and production dependency audit pass. Full npm audit still reports moderate dev-tool advisories.
+- [x] Website product-truth fixes, font hierarchy/motion redesign, unused shadcn CLI removal, server limits/API tests, and website lint/build CI merged via PR #27. npm build/lint and production dependency audit passed; full npm audit still reports moderate dev-tool advisories.
+- [x] Benchmark evidence merged via PR #29: 12/12 routing gold scenarios and 15 focused tests; live latency/cost are explicitly not claimed.
+- [ ] Full Rust parity is not complete: R4 public CLI and race-safe SQLite work remains; HTTP/MCP, provider execution, plugins/skills, evaluation/annotation, and R5-R13 remain.
 
 ## Needs Krish
 
-- Human evaluation: arrange two independent annotators plus an adjudicator for the prepared TASK-012 blinded packs. Return completed annotation files and adjudication output; AI-generated labels cannot substitute.
-- OpenAI live validation: provide an API key through the documented secret/environment setup and authorize a bounded paid smoke test. No secret should be committed.
-- Production release credentials/ownership: supply required hosting/domain/store credentials and approve any paid infrastructure or production deployment once local release gates pass.
+- Human evaluation: arrange two independent annotators to label all 63 blinded TASK-012 cases separately; provide their JSONL outputs, then have an adjudicator resolve only disagreements and return the adjudications JSON. Run the documented dataset build/compare workflow; do not label or adjudicate with AI and do not tune against the frozen holdout.
+- OpenAI live validation: provide an API key through the documented secret/environment setup and authorize one bounded paid smoke test. No secret should be committed.
+- Production release/deployment: provide hosting/domain/store credentials and approve paid infrastructure/deployment after the local release gates pass; no production deployment has been run.

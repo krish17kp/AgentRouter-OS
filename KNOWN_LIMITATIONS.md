@@ -1,22 +1,21 @@
 # Known Limitations
 
-## Current migration and release limits (2026-11-10)
+## Current migration and release limits (2026-11-11)
 
 - Python is still the shipping router. Rust R4 has route, SQLite,
   stored-decision, prompt, and feedback compatibility probes, but no complete
   public Rust CLI/HTTP/MCP replacement. R5–R13 remain open.
-- Pushed parent `6ee8d3e` passed GitHub CI, Rust Linux/Windows parity,
-  Security, and critical mutation testing (0.9837 overall, 0.9844
-  safety/policy/execution, zero unreviewed survivors). The current Rust
-  forced-init slice awaits its own remote checks.
-  The older mutation-status section below is historical.
+- Plugin mutation testing on `984db4b` passes locally (1,629 selected mutants,
+  0.9693 overall, 0.9663 safety/policy/execution, 0.9815 routing, zero
+  unreviewed survivors); its currently reported PR checks are green.
 - The Rust init probe uses directory-handle-relative seed writes and rejects
   existing linked SQLite targets. SQLite still canonicalizes and reopens the
   database by path; a concurrent leaf or ancestor swap can redirect that open.
   Linux's proc-fd path helps after a swap before connect, but is not a complete
   race-safe SQLite strategy. This is an R4 production blocker.
 - Rust provider-status parity is a new probe, not full `providers` CLI parity.
-  Windows CI has not checked the current Win32 link-count implementation.
+- Latest full Python coverage is 90.96% line / 85.09% branch, meeting the
+  unchanged 90%/85% gates; see `docs/COVERAGE_REPORT_2026-11-11.md`.
 - The frozen context-band release gate remains 0.6667 < 0.90. The 63-candidate
   two-human annotation/adjudication round is not complete. Synthetic or AI
   labels cannot be submitted as human labels.
@@ -26,8 +25,7 @@
 - Route price caps now reject non-finite and negative values. Registry prices
   remain unmeasured for bundled seed models, so a valid cap still excludes
   those models rather than assuming they are under budget.
-- The controls-boundary mutation repair passed on `6ee8d3e` with zero
-  unreviewed survivors.
+- macOS Python/Rust CI is now configured and passed on PR #28.
 
 ## Historical limitations and studies
 

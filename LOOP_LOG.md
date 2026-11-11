@@ -1494,3 +1494,27 @@ score and release-branch GitHub checks are also pending. Current state lives in
 ## 2026-11-11 — TASK-019 plugin hardening integration
 
 PR #13 was rebased by merging the current RC. Plugin lifecycle changes and safety regressions are retained; mutation targeting and survivor evidence are being reconciled with the newer OpenAI adapter gate.
+
+## 2026-11-11 — production loop resumed; RC PRs integrated, plugin mutation gate repaired
+
+Merged PR #29 (routing benchmark and coverage evidence), PR #28 (macOS Python/Rust
+CI), and PR #27 (website redesign, truth fixes, and site CI) into the RC; RC is
+`3fcfd05`. Closed PR #21 after confirming it had no diff against RC because the
+hook interpreter change was already included. PR #16 remains blocked by the real
+context-band result (0.6667 < 0.90).
+
+On TASK-019 PR #13, added path and lifecycle assertions to the mutation-selected
+plugin tests and fixed Windows reserved-device aliases that include spaces before
+a suffix by trimming only Windows-significant ASCII dot/space characters. Local
+full mutation campaign: 1,629 mutants; 0.9693 overall, 0.9663 safety/policy/
+execution, 0.9815 routing; zero unreviewed survivors. Commit `c1fa8fa` pushed;
+PR CI is the next gate. Full Python regression before syncing the latest RC:
+1,603 passed, 6 skipped; line coverage 87.17%, branch 81.80%, below the unchanged
+90%/85% quality gates. Rust workspace tests, formatting, and Clippy pass locally.
+The coverage report needs an updated post-sync run, and coverage gaps remain.
+
+Next: inspect PR #13 CI and repair any failures; rerun the full suite/coverage on
+current RC; continue the Rust R4 public CLI and SQLite race work, then proceed
+through the remaining Rust parity milestones. Do not merge PR #16 until all gates
+pass; human annotations, live paid OpenAI validation, and deployment credentials
+remain in `PRODUCTION_STATUS.md` under Needs Krish.

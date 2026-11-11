@@ -1,26 +1,26 @@
 # Codex Handoff - AgentRouter OS
 
-## Current checkpoint — 2026-11-10
+## Current checkpoint — 2026-11-11
 
-Branch `task/rust-r1-workspace` has PR #25 open against the RC. Parent
-`6ee8d3e` passed GitHub Python 3.10–3.13/Windows, Rust Linux/Windows/MSRV,
-Security, and mutation workflows. Mutation score was 0.9837 overall, 0.9844
-safety/policy/execution, 0.9815 routing, with zero unreviewed survivors.
-The current Rust R4 work adds forced-init and provider-status compatibility probes. The provider-status suite covers 25 differential cases; 91 focused Python cases and the full Python regression pass (1,395 passed, 3 skipped). Rust workspace tests, formatting, Clippy, and local Linux parity pass.
-An independent security review found seed symlink/hard-link escapes and a
-linked SQLite database escape. Directory-handle-relative seed replacement
-and static database target checks repair the reproducible cases. SQLite still
-opens by path, so concurrent path swaps remain a production blocker. Ten
-focused parity cases and Rust 1.75 workspace tests pass; full Python
-regression passed 1,366 tests with 3 skips. Push `32eee6f` failed Windows Rust compilation; `b637780` also failed because the standard-library link-count API was unstable. The current uncommitted repair uses Win32 `GetFileInformationByHandle` and needs Windows CI.
-Linux now has a proc-fd SQLite path and a regression test for a home swap
-before connect, while SQLite's later path resolution and leaf swaps remain
-unsafe. Next: push the repair, inspect CI, then continue R4 CLI parity.
-Preserve inherited untracked `website/`.
+Active branch `task/TASK-019-plugin-installer-hardening`, head `984db4b`, PR #13
+against RC. The local plugin mutation campaign passes: 1,629 selected mutants,
+0.9693 overall, 0.9663 safety/policy/execution, 0.9815 routing, and zero
+unreviewed survivors. Exact-path and lifecycle tests cover Windows reserved
+aliases, link/reparse detection, ownership identity, and failure recovery. PR #13
+its currently reported CI checks are green. New offline coverage additions are
+local and need to be pushed for their own CI run.
 
-Python remains shipping. The canonical evaluation is 6/7, context-band
-0.6667 < 0.90; full Rust CLI/HTTP/MCP and R5–R13 are outstanding. No paid
-API call, merge, tag, or deploy occurred. `AGENT_HANDOFF.md` is authoritative.
+RC is `3fcfd05` after PR #27 website, PR #28 macOS CI, and PR #29 routing
+benchmark/coverage evidence merged. PR #21 was closed as redundant because its
+change was already on RC. PR #16 remains blocked by context-band accuracy
+0.6667 < 0.90. Python remains the shipping authority.
+
+Latest full Python run: 1,650 passed, 6 skipped; 90.96% line and 85.09% branch
+coverage, meeting unchanged 90%/85% gates. Rust workspace tests,
+formatting, and Clippy pass locally. R4 remains partial; full public CLI,
+HTTP/MCP, plugins, evaluation, and R5–R13 remain. Human annotation, paid OpenAI
+validation, and production/release credentials are listed in
+`PRODUCTION_STATUS.md` under **Needs Krish**. `AGENT_HANDOFF.md` is authoritative.
 
 ## Historical narrative
 

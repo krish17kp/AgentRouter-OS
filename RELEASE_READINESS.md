@@ -1,18 +1,19 @@
 # Release Readiness
 
-## Current checkpoint — 2026-11-10
+## Current checkpoint — 2026-11-11
 
-**NOT release ready.** PR #25 is an unmerged migration branch. Pushed parent
-`6ee8d3e` passed the full GitHub CI, Rust parity, Security, and mutation
-matrix. The current Rust forced-init/provider-status slices pass local focused parity, but
-SQLite initialization still uses a path-based open and is not production
-safe against concurrent path swaps. The canonical evaluation remains 6/7:
-context-band accuracy 0.6667 against the unchanged 0.90 threshold. Rust
-still lacks full CLI/HTTP/MCP/execution parity, R5–R13, staging and rollback
-evidence. The two-human annotation/adjudication round in
-`TASK_012_OWNER_ACTIONS.md` remains required; AI labels cannot close it.
-No paid OpenAI request or production deployment occurred.
-Windows CI has not checked the current Win32 file-handle repair.
+**NOT release ready.** RC is `3fcfd05`; PRs #27 (website), #28 (macOS CI), and
+#29 (routing benchmark/coverage evidence) are merged. PR #13 head `984db4b`
+has a passing local mutation campaign (0.9693 overall, 0.9663
+safety/policy/execution, 0.9815 routing, zero unreviewed survivors) and its
+currently reported platform checks are green. The latest local full Python run
+passed 1,650 tests, 6 skipped, with 90.96% line / 85.09% branch coverage,
+meeting the unchanged 90% / 85% gates. The enforce-release-gate for PR #16 remains red because frozen
+context-band accuracy is 0.6667 < 0.90. Full Rust CLI/HTTP/MCP, provider
+execution, plugins/skills, evaluation/annotation, R5–R13, Rust-only install,
+and staging/rollback remain incomplete. Human annotation, live OpenAI validation,
+and production credentials remain owner inputs. No paid request or production
+deployment occurred.
 
 ## Historical v0.5 assessment
 
