@@ -22,6 +22,8 @@ All notable changes to AgentRouter OS. Format loosely follows
   annotation artifacts; remaining edge coercions stay explicitly Partial.
 - Add a Partial Rust offline evaluation runner for caller-supplied normalized
   cases, with Python-matched classification grading and dataset-quality output.
+- Tighten Rust annotation timestamp parsing to match the accepted Python
+  datetime forms in differential fixtures and reject invalid separators.
 - Added Rust types and validation for the human annotation artifact schemas;
   supported datetime forms now normalize to Python-compatible ISO JSON while
   full scalar coercion and `fromisoformat` edge coverage remain open.

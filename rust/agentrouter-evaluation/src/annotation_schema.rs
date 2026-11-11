@@ -348,12 +348,65 @@ mod optional_datetime {
         if let Ok(parsed) = DateTime::<FixedOffset>::parse_from_rfc3339(value) {
             return Ok(format_aware(parsed));
         }
-        // Python fromisoformat accepts a space separator and date-only input.
-        let iso = value.replace(' ', "T");
+        // Match the extended forms accepted by Pydantic's datetime parser:
+        // lowercase/space separators, omitted seconds, and comma fractions.
+        let mut iso = value.to_owned();
+        if !iso.starts_with(char::is_numeric) && iso.len() > 10 {
+            return Err(format!("invalid datetime {value:?}"));
+        }
+        if iso.as_bytes().get(4) != Some(&b'-') {
+            return Err(format!("invalid datetime {value:?}"));
+        }
+        if iso.len() > 10 {
+            let separator = iso.as_bytes()[10];
+            if !matches!(separator, b'T' | b't' | b' ') {
+                return Err(format!("invalid datetime {value:?}"));
+            }
+            iso.replace_range(10..11, "T");
+        }
+        iso = iso.replace(',', ".");
+
+        // chrono accepts at most nanoseconds; Python truncates longer
+        // fractional-second input to its six-digit microsecond precision.
+        if let Some(dot) = iso.find('.') {
+            let tail = &iso[dot + 1..];
+            let digits = tail.bytes().take_while(u8::is_ascii_digit).count();
+            if digits > 9 {
+                iso.replace_range(dot + 10..dot + digits + 1, "");
+            }
+        }
+        if let Some(t_pos) = iso.find('T') {
+            let time_start = t_pos + 1;
+            let zone_pos = iso[time_start..]
+                .find(['+', '-'])
+                .map(|pos| pos + time_start)
+                .unwrap_or(iso.len());
+            let time = &iso[time_start..zone_pos];
+            if time.matches(':').count() == 1 {
+                iso.insert_str(zone_pos, ":00");
+            }
+        }
+        // Pydantic accepts compact numeric UTC offsets (+HHMM).
+        if let Some(time_start) = iso.find('T').map(|position| position + 1) {
+            if let Some(zone_pos) = iso[time_start..]
+                .rfind(['+', '-'])
+                .map(|position| position + time_start)
+            {
+                let zone = &iso[zone_pos + 1..];
+                if zone.len() == 4 && zone.bytes().all(|byte| byte.is_ascii_digit()) {
+                    iso.insert(zone_pos + 3, ':');
+                } else if zone.matches(':').count() > 1 {
+                    return Err(format!("invalid datetime {value:?}"));
+                }
+            }
+        }
+        if let Ok(parsed) = DateTime::<FixedOffset>::parse_from_rfc3339(&iso) {
+            return Ok(format_aware(parsed));
+        }
         if let Ok(parsed) = NaiveDateTime::parse_from_str(&iso, "%Y-%m-%dT%H:%M:%S%.f") {
             return Ok(format_naive(parsed));
         }
-        if let Ok(parsed) = NaiveDate::parse_from_str(value, "%Y-%m-%d") {
+        if let Ok(parsed) = NaiveDate::parse_from_str(&iso, "%Y-%m-%d") {
             return Ok(format_naive(
                 parsed.and_hms_opt(0, 0, 0).expect("valid midnight"),
             ));

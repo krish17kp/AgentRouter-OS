@@ -182,14 +182,18 @@ def test_rust_annotation_datetime_matches_python_parse_and_serialization(timesta
     assert json.loads(process.stdout) == {"value": expected}
 
 
-def test_rust_annotation_datetime_rejects_invalid_value_like_python():
+@pytest.mark.parametrize(
+    "timestamp",
+    ["not-a-date", "20261111T123000", "2026-11-11X12:30", "2026-W46-3T12:30:00"],
+)
+def test_rust_annotation_datetime_rejects_invalid_value_like_python(timestamp):
     invalid = {
         "annotator": "reviewer-a",
         "band": "medium",
         "abstain": False,
         "rationale": "invalid timestamp fixture",
         "confidence": 0.75,
-        "at": "not-a-date",
+        "at": timestamp,
     }
     process = _rust("annotator_label", invalid)
     assert process.returncode != 0
