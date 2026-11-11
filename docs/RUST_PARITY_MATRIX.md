@@ -73,7 +73,7 @@ release authority until the full set is complete.
 | `agentrouter/observability.py` | `agentrouter-cli::observability` | Partial |
 | `agentrouter/openai_adapter.py` | `agentrouter-cli::openai` | Partial |
 | `agentrouter/plugins.py` | `—` | Not ported |
-| `agentrouter/prompts.py` | `agentrouter-cli prompt helpers` | Partial |
+| `agentrouter/prompts.py` | `agentrouter-cli::generate_prompt` | Parity |
 | `agentrouter/refresh.py` | `—` | Not ported |
 | `agentrouter/registry.py` | `agentrouter-registry` | Parity |
 | `agentrouter/reliability/__init__.py` | `—` | Not ported |
