@@ -162,12 +162,15 @@ impl LearnedBandModel {
             .map(|logit| (logit - max_logit).exp())
             .collect();
         let denominator: f64 = exponentials.iter().sum();
-        let (best, confidence) = exponentials
-            .iter()
-            .enumerate()
-            .map(|(index, value)| (index, value / denominator))
-            .max_by(|left, right| left.1.total_cmp(&right.1))
-            .expect("three classes are validated");
+        let mut best = (0, exponentials[0] / denominator);
+        for (index, value) in exponentials.iter().enumerate().skip(1) {
+            let confidence = value / denominator;
+            // Python's max(key=...) retains the first item on ties.
+            if confidence > best.1 {
+                best = (index, confidence);
+            }
+        }
+        let (best, confidence) = best;
         Prediction {
             band: self.classes[best].clone(),
             confidence,
@@ -203,5 +206,16 @@ mod tests {
         value["features"][0] = serde_json::Value::String("wrong".into());
         assert!(LearnedBandModel::validate_json(&value.to_string()).is_err());
         assert!(LearnedBandModel::validate_json("[]").is_err());
+    }
+
+    #[test]
+    fn tied_logits_keep_python_first_class_behavior() {
+        let model = LearnedBandModel {
+            features: FEATURES.iter().map(|value| (*value).to_string()).collect(),
+            classes: CLASSES.iter().map(|value| (*value).to_string()).collect(),
+            coef: vec![vec![0.0; FEATURES.len()]; CLASSES.len()],
+            intercept: vec![0.0; CLASSES.len()],
+        };
+        assert_eq!(model.predict("ordinary prompt").band, "small");
     }
 }
