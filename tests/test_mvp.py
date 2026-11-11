@@ -1,12 +1,14 @@
 """MVP acceptance tests — mirrors the M1 validation checklist in MILESTONES.md."""
 
 import json
+from datetime import date
 from pathlib import Path
 
 import pytest
 import yaml
 from typer.testing import CliRunner
 
+from agentrouter import registry as registry_module
 from agentrouter.classifier import classify
 from agentrouter.engine import eligibility, route
 from agentrouter.registry import RegistryError, load_models, load_providers
@@ -17,11 +19,24 @@ runner = CliRunner()
 
 SEEDS = Path(__file__).resolve().parents[1] / "agentrouter" / "seeds"
 
+# Not testing registry staleness here; freeze the registry's clock to the
+# bundled seed catalog's own curated date so an unrelated, correct staleness
+# warning (stderr) never leaks into CliRunner's merged output and breaks
+# these tests' JSON parsing as real time passes.
+_FROZEN_TODAY = date(2026, 7, 14)
+
+
+class _FrozenDate(date):
+    @classmethod
+    def today(cls):
+        return _FROZEN_TODAY
+
 
 @pytest.fixture()
 def home(tmp_path, monkeypatch):
     """Isolated AGENTROUTER_HOME, initialized via the real init command."""
     monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
+    monkeypatch.setattr(registry_module, "date", _FrozenDate)
     from agentrouter.cli import app
 
     result = runner.invoke(app, ["init"])

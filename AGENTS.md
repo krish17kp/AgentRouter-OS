@@ -20,6 +20,12 @@ completed work without first reproducing it.
   violations, and ambiguous release evidence. Preserve Python 3.10-3.13 and Windows/Linux support.
 - Preserve `.claude/` as historical/reference material, but do not assume its hooks, agents, or
   skills run in Codex. Put deterministic protections in tests, CI, scripts, and this file.
+- The Python implementation is the current shipping system and sole release-gate authority.
+  An approved Rust-native port (`ARCHITECTURE_DECISIONS.md` AD-7, `RUST_MIGRATION_PLAN.md`)
+  is staged module-by-module behind the existing CLI/HTTP/MCP/registry/SQLite contracts; it
+  never deletes Python code before the full migration is complete, never lowers a release,
+  coverage, or mutation threshold, and is subject to the same engineering loop and review
+  requirements as any other change in this file.
 
 ## Mandatory reading order
 

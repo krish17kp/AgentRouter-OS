@@ -5,11 +5,15 @@ integration tests that exercise the wiring in `agentrouter route`.
 """
 
 import json
+import math
+from datetime import date
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 import agentrouter
+from agentrouter import registry as registry_module
 from agentrouter.cli import app
 from agentrouter.controls import PREFERENCE_WEIGHTS, RouteControls, apply_controls
 from agentrouter.registry import load_all_models, load_providers
@@ -17,6 +21,18 @@ from agentrouter.registry import load_all_models, load_providers
 runner = CliRunner()
 
 _SEEDS = Path(agentrouter.__file__).parent / "seeds"
+
+# Not testing registry staleness here; freeze the registry's clock to the
+# bundled seed catalog's own curated date so an unrelated, correct staleness
+# warning (stderr) never leaks into CliRunner's merged output and breaks
+# these tests' JSON parsing as real time passes.
+_FROZEN_TODAY = date(2026, 7, 14)
+
+
+class _FrozenDate(date):
+    @classmethod
+    def today(cls):
+        return _FROZEN_TODAY
 
 
 def _seed_models():
@@ -80,6 +96,27 @@ def test_max_price_excludes_unknown_price_honestly():
         assert any("price unknown" in d["reason"] for d in dropped)
 
 
+@pytest.mark.parametrize("cap", [math.nan, math.inf, -math.inf, -1.0])
+def test_max_price_rejects_invalid_caps(cap):
+    with pytest.raises(ValueError) as error:
+        apply_controls(_seed_models(), RouteControls(max_price=cap))
+    assert str(error.value) == "max_price must be finite and non-negative"
+
+
+@pytest.mark.parametrize("cap", [0.0, 0.5])
+def test_max_price_accepts_finite_non_negative_caps(cap):
+    kept, dropped = apply_controls(_seed_models(), RouteControls(max_price=cap))
+    assert len(kept) + len(dropped) == len(_seed_models())
+
+
+@pytest.mark.parametrize("cap", ["nan", "inf", "-inf", "-1"])
+def test_route_cli_rejects_invalid_price_caps(cap, monkeypatch, tmp_path):
+    monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
+    result = runner.invoke(app, ["route", "Summarize this document", "--max-price", cap])
+    assert result.exit_code == 2
+    assert "finite and non-negative" in result.output
+
+
 def test_host_filter_keeps_only_models_on_host():
     models = _seed_models()
     some_host = next(iter(models[0].execution_targets)).host
@@ -101,6 +138,7 @@ def test_preference_vectors_sum_to_one():
 
 def _route_json(tmp_path, monkeypatch, *args):
     monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
+    monkeypatch.setattr(registry_module, "date", _FrozenDate)
     runner.invoke(app, ["init"])
     r = runner.invoke(app, ["route", *args, "--json", "--no-log"])
     return r

@@ -2,6 +2,13 @@
 
 Not published to PyPI yet — releases are git tags + GitHub Releases for now.
 
+> **Implementation status:** this checklist and the seven evaluation gates it
+> depends on govern releases of the **Python implementation**, the current
+> shipping system. The approved Rust-native port (see
+> [RUST_MIGRATION_PLAN.md](RUST_MIGRATION_PLAN.md)) does not change this
+> checklist or lower any gate; a ported module only becomes release-eligible
+> once it passes the same gates this checklist already enforces.
+
 ## Before tagging
 
 ```console

@@ -30,11 +30,7 @@ MUTANT_PATTERNS = (
     "agentrouter.server.limits.*",
     "agentrouter.cli.x__execute__mutmut_*",
     "agentrouter.cli.x__execute_via_host__mutmut_*",
-    # TASK-019: the plugin decisions that can destroy a user's file. Deliberately
-    # NOT the whole module — mutating all 818 statements would roughly double the
-    # campaign and push CI past its timeout, which would get the gate disabled
-    # rather than obeyed. These four are the ones that decide whether a path is
-    # safe to write through and whether something is ours to delete.
+    "agentrouter.openai_adapter.*",
     "agentrouter.plugins.x__safe_relative__mutmut_*",
     "agentrouter.plugins.x__is_link_or_reparse__mutmut_*",
     "agentrouter.plugins.x__entry_matches__mutmut_*",
@@ -49,6 +45,7 @@ GROUPS = {
             "agentrouter.server.limits.*",
             "agentrouter.cli.x__execute__mutmut_*",
             "agentrouter.cli.x__execute_via_host__mutmut_*",
+            "agentrouter.openai_adapter.*",
             "agentrouter.plugins.x__safe_relative__mutmut_*",
             "agentrouter.plugins.x__is_link_or_reparse__mutmut_*",
             "agentrouter.plugins.x__entry_matches__mutmut_*",

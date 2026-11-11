@@ -1,13 +1,34 @@
 """Phase 11 — real model catalog, vendor/host separation, two-stage routing."""
 
 import json
+from datetime import date
 
+import pytest
 from typer.testing import CliRunner
 
 from agentrouter import hosts
+from agentrouter import registry as registry_module
 from agentrouter.cli import app
 
 runner = CliRunner()
+
+# Not testing registry staleness here; freeze the registry's clock to the
+# bundled seed catalog's own curated date so an unrelated, correct staleness
+# warning (stderr) never leaks into CliRunner's merged output and breaks
+# these tests' JSON parsing as real time passes.
+_FROZEN_TODAY = date(2026, 7, 14)
+
+
+class _FrozenDate(date):
+    @classmethod
+    def today(cls):
+        return _FROZEN_TODAY
+
+
+@pytest.fixture(autouse=True)
+def _frozen_registry_clock(monkeypatch):
+    monkeypatch.setattr(registry_module, "date", _FrozenDate)
+
 
 _PLACEHOLDERS = {
     "frontier-coding-model",
