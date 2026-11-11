@@ -2,24 +2,22 @@
 
 ## Current checkpoint — 2026-11-11
 
-PRs #27–#33 and #13 are merged into `release/agentrouter-v0.5-rc1`; the RC
-head is `a7e5cf3` and PR #16 is the sole open PR to `main`. Its cross-platform
-Python/Rust, compatibility, security, site, API, build, and mutation checks
-pass. The unchanged promotion gate fails honestly because frozen context-band
-accuracy is 0.6667 against the 0.90 threshold. Python remains the shipping
-authority; no merge/tag is allowed while that gate fails.
+PRs #27–#33 and #13 are merged into `release/agentrouter-v0.5-rc1`; RC head is
+`2065075` and PR #16 is the sole open PR to `main`. TASK-022 Rust migration CI
+passes Linux/Windows/macOS workspace and adapter compatibility; website,
+security, and mutation workflows pass. General CI's only failure is the
+unchanged promotion gate: frozen context-band accuracy 0.6667 against 0.90.
+Python remains the shipping authority; do not merge/tag while the gate fails.
 
-Current local task TASK-022 ports shared fixture-mode evaluation adapter-base
-behavior into Rust, differentially checked against six dataset adapters. It
-covers metadata, availability, description, JSONL fixture loading and
-validation, seeded sampling, checksums, and explicit real-mode skip behavior.
-Focused adapter/gold tests (12), Rust workspace, Clippy, format, Ruff, and full
-Python regression pass: 1,757 passed, 6 skipped; 91.24% line, 85.80% branch,
-and 90.00% combined coverage. The 77-module matrix is
-`docs/RUST_PARITY_MATRIX.md`; real downloads/transforms, evaluation runner/CLI,
-annotation, and many public modules remain incomplete. Human annotation, live
-OpenAI validation, and production credentials remain under **Needs Krish** in
-`PRODUCTION_STATUS.md`. `AGENT_HANDOFF.md` is authoritative.
+Current local task TASK-023 ports CLINC150 intent mapping and raw-row
+normalization, including all curated substring hints, defaults, OOS handling,
+deduplication, provenance, and checksums. Eight focused CLINC150/shared adapter
+tests, Rust workspace, Clippy, formatting, Ruff, and full Python regression
+pass: 1,759 passed, 6 skipped; 91.50% line, 86.18% branch, and 90.29% combined
+coverage. Remote downloads, evaluation runner/CLI/annotation, and many public
+modules remain incomplete in `docs/RUST_PARITY_MATRIX.md`. Owner-dependent
+human annotation, live OpenAI validation, and production credentials are under
+**Needs Krish** in `PRODUCTION_STATUS.md`. `AGENT_HANDOFF.md` is authoritative.
 
 ## Historical narrative
 

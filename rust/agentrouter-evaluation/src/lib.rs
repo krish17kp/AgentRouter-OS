@@ -1623,6 +1623,125 @@ pub fn describe_adapter(
     })
 }
 
+const CLINC_INTENT_HINTS: &[(&str, &[&str])] = &[
+    ("translate", &["writing", "general"]),
+    ("definition", &["general", "writing"]),
+    ("spelling", &["writing"]),
+    ("calculator", &["general"]),
+    ("math", &["reasoning", "general"]),
+    ("how_busy", &["general"]),
+    ("meaning_of_life", &["general"]),
+    ("text", &["writing"]),
+    ("todo", &["general"]),
+    ("reminder", &["general"]),
+    ("calendar", &["general"]),
+];
+
+/// Match `CLINC150Adapter.map_intent`, retaining its ordered substring rules.
+pub fn clinc150_map_intent(intent: &str) -> (Vec<String>, bool) {
+    for (hint, families) in CLINC_INTENT_HINTS {
+        if intent.contains(hint) {
+            return (
+                families.iter().map(|value| (*value).to_string()).collect(),
+                true,
+            );
+        }
+    }
+    (vec!["general".to_string()], false)
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Clinc150RawRow {
+    pub text: String,
+    pub intent: usize,
+}
+
+/// Normalize caller-supplied rows from the CLINC150 `plus` test split.
+/// Dataset fetching remains an explicit external-runtime responsibility.
+pub fn normalize_clinc150_rows(
+    label_names: &[String],
+    rows: &[Clinc150RawRow],
+) -> Result<Vec<EvaluationCase>, String> {
+    let mut out = Vec::new();
+    let mut seen = BTreeSet::new();
+    for (index, row) in rows.iter().enumerate() {
+        let task = row.text.trim().to_string();
+        if !seen.insert(task.to_lowercase()) {
+            continue;
+        }
+        let intent = label_names.get(row.intent).ok_or_else(|| {
+            format!(
+                "clinc150: intent index {} is outside label names",
+                row.intent
+            )
+        })?;
+        let is_oos = intent == "oos";
+        let (families, curated) = if is_oos {
+            (vec!["general".to_string()], false)
+        } else {
+            clinc150_map_intent(intent)
+        };
+        let tags = if is_oos {
+            vec!["out-of-scope".to_string()]
+        } else if curated {
+            vec![intent.clone()]
+        } else {
+            vec![intent.clone(), "needs-review".to_string()]
+        };
+        out.push(EvaluationCase {
+            id: format!("clinc-{index}"),
+            dataset: "clinc150".to_string(),
+            task,
+            dataset_version: Some("plus".to_string()),
+            source: Some("https://huggingface.co/datasets/clinc_oos".to_string()),
+            source_split: Some("test".to_string()),
+            language: default_language(),
+            domain: Some(if is_oos { "oos" } else { "intent" }.to_string()),
+            tags,
+            paraphrase_group: None,
+            expected: ExpectedClassification {
+                task_types: families
+                    .into_iter()
+                    .map(|value| match value.as_str() {
+                        "analysis" => TaskType::Analysis,
+                        "coding" => TaskType::Coding,
+                        "general" => TaskType::General,
+                        "reasoning" => TaskType::Reasoning,
+                        "summarization" => TaskType::Summarization,
+                        "writing" => TaskType::Writing,
+                        _ => unreachable!("CLINC intent map contains a known task family"),
+                    })
+                    .collect(),
+                ..ExpectedClassification::default()
+            },
+            routing: None,
+            safety: None,
+            context_tokens: None,
+            cost_metadata: BTreeMap::new(),
+            model_outcomes: BTreeMap::new(),
+            provenance: Provenance {
+                method: AnnotationMethod::Heuristic,
+                reviewer: None,
+                source_license: Some("CC BY 3.0".to_string()),
+                source_record_id: Some(index.to_string()),
+                retrieved: None,
+            },
+            review_status: ReviewStatus::Pending,
+            checksum: None,
+            notes: Some(format!("clinc_intent={intent}")),
+        });
+    }
+    let mut normalized = Vec::new();
+    let mut hashes = BTreeSet::new();
+    for case in out {
+        if hashes.insert(case.task_hash()) {
+            normalized.push(case.with_checksum());
+        }
+    }
+    Ok(normalized)
+}
+
 #[derive(Debug, Deserialize)]
 struct AgentRouterGoldDocument {
     #[serde(default = "default_gold_version")]

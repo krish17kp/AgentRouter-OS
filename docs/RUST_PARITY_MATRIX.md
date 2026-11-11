@@ -41,7 +41,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/adapters/__init__.py` | `—` | Not ported |
 | `agentrouter/evaluation/adapters/agentrouter_gold.py` | `agentrouter-evaluation::AgentRouterGoldAdapter` | Parity |
 | `agentrouter/evaluation/adapters/banking77.py` | `—` | Not ported |
-| `agentrouter/evaluation/adapters/clinc150.py` | `—` | Not ported |
+| `agentrouter/evaluation/adapters/clinc150.py` | `agentrouter-evaluation::normalize_clinc150_rows` | Partial |
 | `agentrouter/evaluation/adapters/llmrouterbench.py` | `—` | Not ported |
 | `agentrouter/evaluation/adapters/longbench_v2.py` | `—` | Not ported |
 | `agentrouter/evaluation/adapters/massive.py` | `—` | Not ported |

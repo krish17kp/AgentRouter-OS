@@ -1903,3 +1903,19 @@ Next: commit and push TASK-022 to the authorized RC, inspect all platform CI,
 repair failures, then continue the next unfinished parity slice. PR #16 remains
 blocked by the frozen context-band accuracy 0.6667 < 0.90; do not weaken or
 bypass the release gate.
+
+
+## 2026-11-11 — TASK-023: Rust CLINC150 normalization parity
+
+Ported CLINC150's curated ordered intent mapping and raw-row transformation to
+Rust, including row indexing, OOS labels, review-needed fallback, both
+deduplication stages, provenance, and checksums. Two differential fixtures
+cover every curated hint plus fallback, OOS, overlap, and duplicate behavior.
+Focused CLINC150/shared-base checks: 8 passed. Rust workspace, Clippy, rustfmt,
+Ruff and full Python regression pass (1,759 passed/6 skipped; 91.50% line,
+86.18% branch, 90.29% combined coverage). TASK-022 cross-platform migration CI
+passes; this new slice awaits push and CI. The frozen release gate remains
+0.6667 < 0.90 and is unchanged.
+
+Next: commit and push TASK-023 to the authorized RC, inspect all checks, repair
+failures, then continue with the next adapter and remaining public modules.

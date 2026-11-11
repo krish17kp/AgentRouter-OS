@@ -92,3 +92,7 @@ path = "src/bin/evaluation_gold_from_json.rs"
 [[bin]]
 name = "evaluation_adapter_from_json"
 path = "src/bin/evaluation_adapter_from_json.rs"
+
+[[bin]]
+name = "evaluation_clinc150_from_json"
+path = "src/bin/evaluation_clinc150_from_json.rs"

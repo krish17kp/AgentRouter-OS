@@ -4,10 +4,10 @@ Updated: 2026-11-11
 
 ## Definition of done
 
-- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PRs #27–#33 are merged through the current Rust evaluation work on RC; PR #16 is the sole open PR. Its Python/Rust, Linux, Windows, macOS, security, site, API, build, and mutation checks pass; `enforce-release-gate` fails on the unchanged context-band score of 0.6667 < 0.90. Main promotion remains blocked.
+- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PRs #27–#33 are merged; TASK-022 is on RC commit `2065075`, and TASK-023 CLINC150 normalization is in progress; PR #16 is the sole open PR. Its Python/Rust, Linux, Windows, macOS, security, site, API, build, and mutation checks pass; `enforce-release-gate` fails on the unchanged context-band score of 0.6667 < 0.90. Main promotion remains blocked.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is now tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md); current gaps are explicit, and only modules with full-module differential tests are marked parity (17 modules currently meet that bar).
-- [x] Full Python suite: 1,757 passed, 6 skipped; 91.24% line (6,538/7,166), 85.80% branch (1,807/2,106), and 90.00% combined coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; exact evidence is in `docs/COVERAGE_REPORT_2026-11-11.md`.
+- [x] Full Python suite: 1,759 passed, 6 skipped; 91.50% line (6,557/7,166), 86.18% branch (1,815/2,106), and 90.29% combined coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; exact evidence is in `docs/COVERAGE_REPORT_2026-11-11.md`.
 - [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations; the Rust release benchmark now runs the same 10/100/1,000 candidate fleets, with a paired local p50 ratio of 2.70×–3.25× under stated synthetic conditions.
 - [x] Changelog, coverage evidence, and local latency measurements are committed to the release candidate. Candidate package version is now `0.5.0rc1`, with draft release notes in `docs/RELEASE_NOTES_v0.5.0rc1.md`; final `0.5.0` packaging and publication remain blocked on parity and all release gates.
 - [ ] Release candidate promoted to `main` with a tagged release.
@@ -56,9 +56,9 @@ The seven-gate evaluation reports six pass and context-band fail. PR #16's
 cross-platform Python/Rust, security, mutation, package, API, and site checks
 pass; its promotion-only gate fails on context-band 0.6667 < 0.90, and live
 smoke is skipped without credentials. The full local regression now passes:
-1,757 passed, 6 skipped; 91.24% line, 85.80% branch, and 90.00% combined
+1,759 passed, 6 skipped; 91.50% line, 86.18% branch, and 90.29% combined
 coverage. Rust workspace tests, Clippy, Rust format, Ruff, and Python format
-pass on the current gold-adapter slice. New adapter CI has not run yet.
+pass on the current Rust adapter work. TASK-022 Rust migration CI, all three Rust platforms, security, website, and mutation checks pass. Cross-platform Python CI passed; the only CI failure is the unchanged frozen context-band promotion gate. TASK-023 CLINC150 parity is local and awaits its push.
 
 PR #16 was reviewed against its release contract and code standards: no
 separate implementation defect was identified in the reviewed diff, but the

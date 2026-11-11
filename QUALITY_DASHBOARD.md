@@ -2,14 +2,15 @@
 
 ## Current checkpoint — 2026-11-11
 
-The current release-candidate base is `ab98662`, with PRs #27–#33 and #13
+The current release-candidate head is `2065075`, with PRs #27–#33 and #13
 merged. PR #16's Python 3.10–3.13, Windows/macOS Python, Rust Linux/Windows/
 macOS, Python/Rust compatibility, security, site, API, build, and mutation
 checks pass. The promotion gate correctly remains red: frozen context-band
-accuracy is 0.6667 < 0.90. The Rust AgentRouter-gold adapter matches Python on
+accuracy is 0.6667 < 0.90. Rust now differentially normalizes CLINC150 raw rows and supports shared fixture
+adapter behavior for six datasets. The AgentRouter-gold adapter matches Python
 metadata, availability, description, all 165 records, checksum, and seeded
 sampling, including Unicode/default behavior. Full Python regression passes:
-1,757 passed, 6 skipped; coverage is 91.24% line, 85.80% branch, and 90.00%
+1,759 passed, 6 skipped; coverage is 91.50% line, 86.18% branch, and 90.29%
 combined. Python remains the shipping authority, and the full Rust migration
 is not complete.
 
