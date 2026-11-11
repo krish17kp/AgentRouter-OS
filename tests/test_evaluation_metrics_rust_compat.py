@@ -413,8 +413,19 @@ def test_rust_evaluation_schema_and_hash_match_python():
     actual = json.loads(process.stdout)
     assert actual["cases"] == input_cases
     assert actual["task_hashes"] == [normalized_hash(case.task) for case in cases]
+    assert actual["checksummed_cases"] == [
+        case.with_checksum().model_dump(mode="json") for case in cases
+    ]
 
     invalid = EvaluationCase.model_construct(id="empty", dataset="fixture", task="   ")
+    invalid_cases = [invalid.model_dump(mode="json")]
+    unknown_field = cases[0].model_dump(mode="json") | {"unknown": True}
+    invalid_enum = cases[0].model_dump(mode="json")
+    invalid_enum["review_status"] = "not-a-review-state"
+    wrong_type = cases[0].model_dump(mode="json")
+    wrong_type["task"] = 42
+    for invalid_case in [unknown_field, invalid_enum, wrong_type]:
+        invalid_cases.append(invalid_case)
     rejected = subprocess.run(
         [
             "cargo",
@@ -426,7 +437,7 @@ def test_rust_evaluation_schema_and_hash_match_python():
             "-p",
             "agentrouter-evaluation",
         ],
-        input=json.dumps({"cases": [invalid.model_dump(mode="json")]}),
+        input=json.dumps({"cases": invalid_cases}),
         capture_output=True,
         text=True,
         encoding="utf-8",

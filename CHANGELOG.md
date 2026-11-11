@@ -6,6 +6,8 @@ All notable changes to AgentRouter OS. Format loosely follows
 ## [Unreleased]
 
 ### Changed
+- Completed Rust evaluation-schema parity for serialized cases, normalized
+  hashes, checksum copies, and invalid-input rejection.
 - Completed Rust parity for evaluation provenance snapshots alongside the
   existing dataset-quality and leakage aggregation.
 - Ported TwinRouterBench's dynamic-track offline status and actionable Docker

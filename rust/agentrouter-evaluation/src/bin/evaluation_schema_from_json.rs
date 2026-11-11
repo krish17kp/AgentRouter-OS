@@ -24,9 +24,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .iter()
         .map(EvaluationCase::task_hash)
         .collect();
+    let checksummed_cases: Vec<_> = request
+        .cases
+        .iter()
+        .cloned()
+        .map(EvaluationCase::with_checksum)
+        .collect();
     println!(
         "{}",
-        json!({ "cases": request.cases, "task_hashes": checksums })
+        json!({ "cases": request.cases, "task_hashes": checksums, "checksummed_cases": checksummed_cases })
     );
     Ok(())
 }

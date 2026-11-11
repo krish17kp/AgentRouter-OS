@@ -2019,3 +2019,14 @@ passes 1,770/6 with 92.09/87.04/90.94 coverage. Cross-platform CI is running.
 
 Next: inspect CI for TASK-029/030, repair failures, and continue remaining
 evaluation and public-module parity.
+
+## 2026-11-11 — TASK-031: Rust evaluation schema parity
+
+Completed the schema differential probe for normalized case serialization,
+Unicode task hashes, and checksummed copies. Added rejection coverage for blank
+tasks, unrecognized fields/enums, and wrong task types. Focused test, Rust
+workspace, Clippy, format, Ruff, and diff checks pass locally. Hosted CI is
+still running for the RC branch.
+
+Next: push TASK-031, inspect/repair cross-platform CI for TASK-029–031, then
+continue the parity inventory. Release gates remain unchanged.
