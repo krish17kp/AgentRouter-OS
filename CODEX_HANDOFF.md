@@ -3,17 +3,17 @@
 ## Current checkpoint — 2026-11-11
 
 Active RC branch `release/agentrouter-v0.5-rc1`; latest pushed head is
-`7399b3b` (TASK-042 graph cache); TASK-043 contextual Unicode casing is
-locally complete and awaiting push/hosted CI. PR #16 is the sole open PR. TASK-038 Windows CRLF parity was
-fixed after hosted Windows tests caught the mismatch; cross-platform CI is
-running on the fix. TASK-039 (candidate generation) and TASK-040 (rules,
-learned and hybrid comparison with CPython-seeded bootstrap intervals) have
-focused parity evidence. Full Python regression is 1,868 passed/6 skipped;
-coverage is 92.15% line, 87.22% branch, 91.03% combined. Rust workspace,
-Clippy, Ruff, and formatting pass locally. Do not merge PR #16 while the frozen
-context-band score is 0.6667 < 0.90. Human annotation, bounded OpenAI live
-validation, and deployment credentials are under **Needs Krish** in
-`PRODUCTION_STATUS.md`. Continue with the next module and hosted-check review;
+`740355d` (TASK-052 annotation integer coercion). TASK-044 ports complete
+context-band evaluation and split-leak checking; TASK-045–051 add package
+facades and exact version/export contracts. Latest full Python regression is
+1,893 passed/6 skipped; coverage is 92.16% statements, 87.27% branch, and
+91.05% combined. Rust workspace, formatting, and Clippy pass through TASK-051;
+focused annotation schema and Clippy pass through TASK-052. Hosted workflows
+for the latest head are running/queued and must be checked by exact SHA. The
+77-module matrix has 35 Parity, 25 Partial, and 17 Not ported. PR #16 remains
+blocked by the frozen 0.6667 < 0.90 context-band gate. Human annotation, bounded
+OpenAI live validation, and deployment credentials remain under **Needs Krish**
+in `PRODUCTION_STATUS.md`. Continue with the next migration gap;
 `AGENT_HANDOFF.md` remains authoritative.
 
 ## Historical narrative

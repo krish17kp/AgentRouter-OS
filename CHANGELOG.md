@@ -12,6 +12,14 @@ All notable changes to AgentRouter OS. Format loosely follows
 - Match Python error and fallback behavior for malformed optional graph shapes.
 - Port the annotation graph loader's bounded four-entry LRU cache semantics.
 - Match Python contextual Unicode lowercase behavior for graph dependency IDs.
+- Port the frozen context-band evaluation report, confidence intervals, seeded
+  bootstrap, custom scoring, and prompt split-leak checks to Rust with exact
+  Python/Rust report comparisons.
+- Add Rust package contracts for evaluation, annotation constants, evaluator
+  seed models, and the canonical distribution version; preserve empty package
+  initializer exports where those Python packages intentionally expose none.
+- Match Pydantic confidence, boolean, and manifest integer coercion in Rust
+  annotation artifacts; remaining edge coercions stay explicitly Partial.
 - Added Rust types and validation for the human annotation artifact schemas;
   supported datetime forms now normalize to Python-compatible ISO JSON while
   full scalar coercion and `fromisoformat` edge coverage remain open.

@@ -12,10 +12,10 @@ PYTHONPATH=. python -m pytest -q --cov=agentrouter --cov-branch --cov-report=ter
 
 | Measure | Result |
 |---|---:|
-| Python regression | 1,877 passed, 6 skipped |
-| Line coverage | 92.15% (6,603 / 7,166 statements) |
-| Branch coverage | 87.22% (1,837 / 2,106 branch outcomes) |
-| Combined coverage reported by pytest-cov | 91.03% |
+| Python regression | 1,893 passed, 6 skipped |
+| Line coverage | 92.16% (6,604 / 7,166 statements) |
+| Branch coverage | 87.27% (1,838 / 2,106 branch outcomes) |
+| Combined coverage reported by pytest-cov | 91.05% |
 | Project line / branch thresholds | 90% / 85% — both passed |
 | CI total-coverage threshold | 80% — passed |
 | Warnings | 1 Starlette/httpx deprecation warning |
@@ -33,7 +33,8 @@ deterministic candidate-generation parity, rules/learned/hybrid annotation
 comparison with exact seeded bootstrap confidence intervals, and Python/Rust
 graph-signal malformed-shape, four-entry LRU cache, and contextual Unicode
 lowercase parity;
-canonical LF report artifacts; Rust Markdown, grading, safety, provider,
+canonical LF report artifacts; Python/Rust context-band report and split-leak
+parity; package export and distribution-version contracts; Rust Markdown, grading, safety, provider,
 feedback, and routing evaluator differential cases; plus explicit UTF-8
 subprocess decoding alongside learning, quota-routing, doctor,
 evaluation-metrics/provenance, sampler, schema, and registry compatibility

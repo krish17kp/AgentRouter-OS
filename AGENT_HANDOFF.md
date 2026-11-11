@@ -2,12 +2,12 @@
 
 ## Current checkpoint — 2026-11-11
 
-- Active RC branch `release/agentrouter-v0.5-rc1`; latest pushed head is `7399b3b` (TASK-042 graph cache). TASK-043 contextual Unicode casing is locally complete and awaiting push/hosted CI. PR #16 is the sole open PR to `main`.
-- TASK-038’s Windows CI failure found that Python text-mode file writes use CRLF while Rust wrote LF. The Rust store now translates text newlines by platform; new cross-platform CI is running on `1c88b3c`.
-- TASK-039 ports the 63-prompt deterministic candidate bank. TASK-040 ports rules/learned/hybrid comparison, all report metrics, and CPython-seeded bootstrap intervals. TASK-041 aligns graph malformed-shape handling; TASK-042/043 complete four-entry Python LRU and contextual Unicode lowercase. Thirteen focused graph differential cases pass.
-- Latest full Python regression after TASK-040: 1,877 passed, 6 skipped; 92.15% line, 87.22% branch, 91.03% combined coverage. Rust workspace and Clippy pass locally; Ruff and formatting pass.
+- Active RC branch `release/agentrouter-v0.5-rc1`; latest pushed head is `740355d` (TASK-052 annotation integer coercion). PR #16 remains the sole open PR to `main` and must not merge while the frozen gate is below threshold.
+- TASK-044 ports the frozen context-band report, scoring, intervals, bootstrap, and split-leak checks; full Python/Rust report output matches. TASK-045–048 port public package exports, validated embedded evaluator seed loading, and canonical distribution version. TASK-049–052 extend Pydantic-compatible annotation scalar coercions. TASK-051 verified the evaluation-adapters and server package markers expose no runtime API.
+- Latest full Python regression: 1,893 passed, 6 skipped; 92.16% statement/line, 87.27% branch, 91.05% combined coverage. Full Rust workspace tests, format, and Clippy pass through TASK-051; focused annotation schema tests and evaluation crate Clippy pass through TASK-052.
+- Latest hosted CI for `740355d` is still pending/running; inspect the run for that exact head and continue work while it runs. Earlier pushes created queued workflow runs; do not treat an older green SHA as evidence for the latest head.
 - PR #16 must remain open: the frozen context-band release gate is 0.6667 against 0.90. Do not enable learned routing or alter the gate. Human annotation, bounded OpenAI live smoke credentials, and production deployment credentials remain under **Needs Krish** in `PRODUCTION_STATUS.md`.
-- The 77-module inventory is in `docs/RUST_PARITY_MATRIX.md`; Python remains the shipping authority until all public surfaces reach measured parity and release gates pass. Continue immediately with the next Partial/Not ported module, inspect hosted checks, review every open PR, and update `PRODUCTION_STATUS.md` after each slice.
+- The 77-module inventory is in `docs/RUST_PARITY_MATRIX.md`; 35 modules are parity-complete, 25 Partial, and 17 Not ported. Python remains the shipping authority until every surface reaches measured parity and release gates pass. Continue with the next module, inspect hosted checks for the latest head, review every open PR, and update `PRODUCTION_STATUS.md` after each slice.
 
 ## Historical checkpoint
 
