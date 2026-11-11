@@ -3,21 +3,21 @@
 ## Current checkpoint — 2026-11-11
 
 PRs #27–#33 and #13 are merged into `release/agentrouter-v0.5-rc1`; RC head is
-`2065075` and PR #16 is the sole open PR to `main`. TASK-022 Rust migration CI
-passes Linux/Windows/macOS workspace and adapter compatibility; website,
-security, and mutation workflows pass. General CI's only failure is the
-unchanged promotion gate: frozen context-band accuracy 0.6667 against 0.90.
-Python remains the shipping authority; do not merge/tag while the gate fails.
+`19392f8` and PR #16 remains the sole open PR to `main`. TASK-022 and TASK-023
+are pushed. Rust workspace and adapter compatibility checks pass across Linux,
+Windows, and macOS, along with security, website, and mutation checks at the
+prior slice. The unchanged promotion gate remains red: frozen context-band
+accuracy is 0.6667 against 0.90. Python remains the shipping authority.
 
-Current local task TASK-023 ports CLINC150 intent mapping and raw-row
-normalization, including all curated substring hints, defaults, OOS handling,
-deduplication, provenance, and checksums. Eight focused CLINC150/shared adapter
-tests, Rust workspace, Clippy, formatting, Ruff, and full Python regression
-pass: 1,759 passed, 6 skipped; 91.50% line, 86.18% branch, and 90.29% combined
-coverage. Remote downloads, evaluation runner/CLI/annotation, and many public
-modules remain incomplete in `docs/RUST_PARITY_MATRIX.md`. Owner-dependent
-human annotation, live OpenAI validation, and production credentials are under
-**Needs Krish** in `PRODUCTION_STATUS.md`. `AGENT_HANDOFF.md` is authoritative.
+Current local task TASK-024 ports Banking77 real-row normalization into Rust,
+including deduplication, intent tagging, low-risk classification, provenance,
+and checksums. Ten focused Banking77/CLINC150/shared-base tests, Rust workspace,
+Clippy, formatting, Ruff, and the full Python suite pass: 1,761 passed, 6
+skipped; 91.52% line, 86.23% branch, and 90.31% combined coverage. Remote data
+fetching, evaluation runner/CLI/annotation, and many public modules remain
+incomplete in `docs/RUST_PARITY_MATRIX.md`. Owner-dependent human annotation,
+live OpenAI validation, and production credentials are recorded under **Needs
+Krish** in `PRODUCTION_STATUS.md`. `AGENT_HANDOFF.md` is authoritative.
 
 ## Historical narrative
 

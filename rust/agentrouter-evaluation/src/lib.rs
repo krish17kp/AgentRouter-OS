@@ -1743,6 +1743,74 @@ pub fn normalize_clinc150_rows(
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Banking77RawRow {
+    pub text: String,
+    pub label: usize,
+}
+
+/// Normalize caller-supplied rows from the PolyAI/Banking77 test split.
+pub fn normalize_banking77_rows(
+    label_names: &[String],
+    rows: &[Banking77RawRow],
+) -> Result<Vec<EvaluationCase>, String> {
+    let mut out = Vec::new();
+    let mut seen = BTreeSet::new();
+    for (index, row) in rows.iter().enumerate() {
+        let task = row.text.trim().to_string();
+        if !seen.insert(task.to_lowercase()) {
+            continue;
+        }
+        let intent = label_names.get(row.label).ok_or_else(|| {
+            format!(
+                "banking77: label index {} is outside label names",
+                row.label
+            )
+        })?;
+        out.push(EvaluationCase {
+            id: format!("banking77-{index}"),
+            dataset: "banking77".to_string(),
+            task,
+            dataset_version: Some("v1".to_string()),
+            source: Some("https://huggingface.co/datasets/PolyAI/banking77".to_string()),
+            source_split: Some("test".to_string()),
+            language: default_language(),
+            domain: Some("banking".to_string()),
+            tags: vec![intent.clone()],
+            paraphrase_group: None,
+            expected: ExpectedClassification {
+                task_types: vec![TaskType::General, TaskType::Analysis],
+                risks: vec![Level::Low],
+                ..ExpectedClassification::default()
+            },
+            routing: None,
+            safety: None,
+            context_tokens: None,
+            cost_metadata: BTreeMap::new(),
+            model_outcomes: BTreeMap::new(),
+            provenance: Provenance {
+                method: AnnotationMethod::Heuristic,
+                reviewer: None,
+                source_license: Some("MIT".to_string()),
+                source_record_id: Some(index.to_string()),
+                retrieved: None,
+            },
+            review_status: ReviewStatus::Pending,
+            checksum: None,
+            notes: Some(format!("banking77_intent={intent}")),
+        });
+    }
+    let mut normalized = Vec::new();
+    let mut hashes = BTreeSet::new();
+    for case in out {
+        if hashes.insert(case.task_hash()) {
+            normalized.push(case.with_checksum());
+        }
+    }
+    Ok(normalized)
+}
+
+#[derive(Debug, Deserialize)]
 struct AgentRouterGoldDocument {
     #[serde(default = "default_gold_version")]
     version: u64,

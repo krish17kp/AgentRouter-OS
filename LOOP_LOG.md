@@ -1919,3 +1919,17 @@ passes; this new slice awaits push and CI. The frozen release gate remains
 
 Next: commit and push TASK-023 to the authorized RC, inspect all checks, repair
 failures, then continue with the next adapter and remaining public modules.
+
+
+## 2026-11-11 — TASK-024: Rust Banking77 normalization parity
+
+Ported the Banking77 raw-row transformation to Rust, including duplicate
+handling, intent tags, low-risk informational labels, provenance, and checksums.
+Two raw-row fixtures compare against Python's `_load_real` contract; focused
+Banking77/CLINC150/shared-base tests: 10 passed. Rust workspace, Clippy,
+rustfmt, Ruff and the full Python suite pass (1,761 passed/6 skipped; 91.52%
+line, 86.23% branch, 90.31% combined coverage). TASK-023 cross-platform Rust
+compatibility CI passes; broader CI/mutation checks are still running.
+
+Next: commit and push TASK-024 to the authorized RC, inspect all checks, repair
+failures, then continue with other adapter transformations and public modules.

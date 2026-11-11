@@ -2,13 +2,13 @@
 
 ## Current checkpoint — 2026-11-11
 
-- Active release-candidate worktree: `release/agentrouter-v0.5-rc1` at `2065075`. PRs #27–#33 and #13 are merged; PR #16 is the sole open PR to `main`.
-- TASK-022 is committed at `2065075`. Rust migration CI passes Linux, Windows, and macOS workspace, Rust 1.89, and non-skipping Python/Rust compatibility. Security, website, and mutation checks pass. General CI has no code/test failure; the promotion-only `enforce-release-gate` fails on frozen context-band accuracy 0.6667 < 0.90. Live smoke is skipped without owner credentials.
-- Current local task TASK-023 ports CLINC150 intent mapping and raw-row normalization; two differential fixtures cover every mapping hint, fallbacks, OOS labels, deduplication, provenance, and checksums. Eight focused CLINC150/shared-base checks pass, as do Rust workspace tests, Clippy, format, Ruff, and the cumulative Python suite.
-- Latest full Python evidence: 1,759 passed, 6 skipped; 91.50% line (6,557/7,166), 86.18% branch (1,815/2,106), 90.29% combined coverage. Evidence: `docs/COVERAGE_REPORT_2026-11-11.md`.
-- Rust parity inventory covers 77 Python files in `docs/RUST_PARITY_MATRIX.md`; real downloads/transforms beyond CLINC150, evaluation runner/CLI/annotation, most public CLI, HTTP/MCP, plugins/skills, and provider execution remain incomplete. Python remains the shipping authority.
-- Next: commit/push TASK-023, inspect CI and repair failures, then continue remaining parity work. Do not merge/tag while the release gate fails.
-- Owner actions are listed in `PRODUCTION_STATUS.md` under **Needs Krish**: independent human annotations/adjudication, bounded paid OpenAI live validation credentials, and production deployment credentials/approval.
+- Active RC worktree: `release/agentrouter-v0.5-rc1` at `19392f8`. PRs #27–#33 and #13 are merged; PR #16 remains open to `main`.
+- TASK-022 and TASK-023 are pushed. TASK-022 Rust workspace/compatibility, security, website, and mutation checks pass. TASK-023 Rust CI passes Linux, Windows, macOS, Rust 1.89, and Python/Rust compatibility; full CI and mutation workflows are finishing. PR #16's frozen promotion gate remains 0.6667 < 0.90. Live smoke is skipped without owner credentials.
+- Current local task TASK-024 ports Banking77 raw-row normalization. Two differential fixtures cover labels, low-risk calibration, source row indices, duplicate removal, provenance, and checksums. Ten Banking77/CLINC150/shared-base tests pass; Rust workspace, Clippy, format, Ruff, and the cumulative Python regression pass.
+- Latest full Python evidence: 1,761 passed, 6 skipped; 91.52% line (6,558/7,166), 86.23% branch (1,816/2,106), 90.31% combined. See `docs/COVERAGE_REPORT_2026-11-11.md`.
+- The 77-file Rust parity inventory is in `docs/RUST_PARITY_MATRIX.md`; additional real dataset loaders, evaluation runner/CLI/annotation, most public CLI, HTTP/MCP, plugins/skills, and provider execution remain incomplete. Python remains the shipping authority.
+- Next: commit/push TASK-024, inspect all CI, repair failures, then continue the remaining parity work. Do not merge/tag while the frozen release gate fails.
+- Owner actions remain in `PRODUCTION_STATUS.md` under **Needs Krish**: independent human annotation/adjudication, bounded paid OpenAI validation credentials, and production deployment credentials/approval.
 
 ## Historical checkpoint
 

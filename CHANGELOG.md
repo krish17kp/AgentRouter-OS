@@ -7,8 +7,8 @@ All notable changes to AgentRouter OS. Format loosely follows
 
 ### Added
 - Rust evaluation parity now includes shared fixture-adapter behavior across six
-  datasets and CLINC150 raw-row intent normalization. Remote dataset fetching
-  remains external-runtime-only and is reported as such.
+  datasets and raw-row normalization for CLINC150 and Banking77. Remote dataset
+  fetching remains external-runtime-only and is reported as such.
 - **`agentrouter plugin doctor` now diagnoses instead of describing.** For every
   plugin destination it reports the state and the exact safe fix, with exit `0`
   installed and unmodified, `1` blocked, `2` needs attention, plus `--json`. It
