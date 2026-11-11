@@ -13,3 +13,7 @@ serde_json = "1.0.128"
 [[bin]]
 name = "evaluation_metrics_from_json"
 path = "src/bin/evaluation_metrics_from_json.rs"
+
+[[bin]]
+name = "evaluation_quality_from_json"
+path = "src/bin/evaluation_quality_from_json.rs"

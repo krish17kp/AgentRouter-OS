@@ -9,7 +9,8 @@ import subprocess
 import pytest
 
 from agentrouter.evaluation.metrics import classification_metrics
-from agentrouter.evaluation.schema import EvaluationCase, ExpectedClassification
+from agentrouter.evaluation.provenance import dataset_quality
+from agentrouter.evaluation.schema import EvaluationCase, ExpectedClassification, Provenance
 
 pytestmark = pytest.mark.skipif(shutil.which("cargo") is None, reason="cargo not on PATH")
 
@@ -160,3 +161,81 @@ def test_rust_metrics_match_python_for_ambiguous_and_empty_labels():
         check=True,
     )
     assert json.loads(process.stdout) == python_report
+
+
+def test_rust_dataset_quality_matches_python_aggregation():
+    cases = [
+        EvaluationCase(
+            id="quality-1",
+            dataset="quality",
+            task="Hello, WORLD!",
+            domain="security",
+            expected=ExpectedClassification(task_types=["coding"], risks=["high"]),
+            provenance=Provenance(method="human"),
+            paraphrase_group="family-a",
+            source_split="train",
+        ),
+        EvaluationCase(
+            id="quality-2",
+            dataset="quality",
+            task="Write a careful report",
+            expected=ExpectedClassification(task_types=["reasoning"], risks=["low"]),
+            provenance=Provenance(method="model_assisted"),
+            paraphrase_group="family-a",
+            source_split="validation",
+        ),
+        EvaluationCase(
+            id="quality-3",
+            dataset="quality",
+            task="hello world",
+            language="fr",
+            domain="security",
+            expected=ExpectedClassification(task_types=["coding"], risks=["high"]),
+            provenance=Provenance(method="heuristic"),
+        ),
+        EvaluationCase(
+            id="quality-4",
+            dataset="quality",
+            task="A third unique task",
+            paraphrase_group="family-b",
+            source_split="",
+        ),
+        EvaluationCase(
+            id="quality-5",
+            dataset="quality",
+            task="A fourth unique task",
+            paraphrase_group="",
+            source_split="validation",
+        ),
+    ]
+    rust_cases = [
+        {
+            "task_hash": case.task_hash,
+            "paraphrase_group": case.paraphrase_group,
+            "source_split": case.source_split,
+            "language": case.language,
+            "domain": case.domain,
+            "risk": case.expected.risks[0].value if case.expected.risks else None,
+            "task_type": case.expected.task_types[0].value if case.expected.task_types else None,
+            "provenance_method": case.provenance.method.value,
+        }
+        for case in cases
+    ]
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_quality_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps({"cases": rust_cases}),
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=True,
+    )
+    assert json.loads(process.stdout) == dataset_quality(cases)

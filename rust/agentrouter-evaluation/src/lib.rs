@@ -33,6 +33,95 @@ pub struct MetricCase {
     pub predicted_tools: Vec<String>,
 }
 
+/// The evaluation-provenance fields required to compute `dataset_quality`.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct QualityCase {
+    pub task_hash: String,
+    #[serde(default)]
+    pub paraphrase_group: Option<String>,
+    #[serde(default)]
+    pub source_split: Option<String>,
+    #[serde(default = "default_language")]
+    pub language: String,
+    #[serde(default)]
+    pub domain: Option<String>,
+    #[serde(default)]
+    pub risk: Option<String>,
+    #[serde(default)]
+    pub task_type: Option<String>,
+    #[serde(default = "default_provenance_method")]
+    pub provenance_method: String,
+}
+
+fn default_language() -> String {
+    "en".to_owned()
+}
+
+fn default_provenance_method() -> String {
+    "model_assisted".to_owned()
+}
+
+/// Mirror the dataset-quality aggregation in `evaluation.provenance`.
+/// Environment metadata is intentionally separate because its values are
+/// runtime- and platform-specific rather than dataset-derived.
+pub fn dataset_quality(cases: &[QualityCase]) -> serde_json::Value {
+    let mut hashes = BTreeSet::new();
+    let mut family_splits = BTreeMap::<String, BTreeSet<String>>::new();
+    let mut languages = BTreeMap::<String, usize>::new();
+    let mut domains = BTreeMap::<String, usize>::new();
+    let mut risks = BTreeMap::<String, usize>::new();
+    let mut task_types = BTreeMap::<String, usize>::new();
+    let mut provenance = BTreeMap::<String, usize>::new();
+    for case in cases {
+        hashes.insert(case.task_hash.as_str());
+        if let Some(group) = case
+            .paraphrase_group
+            .as_deref()
+            .filter(|group| !group.is_empty())
+        {
+            let split = case
+                .source_split
+                .as_deref()
+                .filter(|split| !split.is_empty())
+                .unwrap_or("default");
+            family_splits
+                .entry(group.to_owned())
+                .or_default()
+                .insert(split.to_owned());
+        }
+        *languages.entry(case.language.clone()).or_default() += 1;
+        if let Some(domain) = case.domain.as_deref() {
+            *domains.entry(domain.to_owned()).or_default() += 1;
+        }
+        if let Some(risk) = case.risk.as_deref() {
+            *risks.entry(risk.to_owned()).or_default() += 1;
+        }
+        if let Some(task_type) = case.task_type.as_deref() {
+            *task_types.entry(task_type.to_owned()).or_default() += 1;
+        }
+        *provenance
+            .entry(case.provenance_method.clone())
+            .or_default() += 1;
+    }
+    let leaked: Vec<_> = family_splits
+        .iter()
+        .filter_map(|(family, splits)| (splits.len() > 1).then_some(family.clone()))
+        .collect();
+    serde_json::json!({
+        "n_cases": cases.len(),
+        "exact_duplicates": cases.len() - hashes.len(),
+        "paraphrase_families": family_splits.len(),
+        "leaked_paraphrase_families": leaked,
+        "language_distribution": languages,
+        "domain_distribution": domains,
+        "risk_distribution": risks,
+        "task_type_distribution": task_types,
+        "provenance_distribution": provenance,
+        "model_assisted_count": cases.iter().filter(|case| case.provenance_method == "model_assisted").count(),
+    })
+}
+
 #[derive(Debug, Clone)]
 struct Pair {
     acceptable: Vec<String>,

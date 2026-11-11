@@ -60,7 +60,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/evaluators/safety.py` | `—` | Not ported |
 | `agentrouter/evaluation/grading.py` | `—` | Not ported |
 | `agentrouter/evaluation/metrics.py` | `agentrouter-evaluation::classification_metrics` | Parity |
-| `agentrouter/evaluation/provenance.py` | `—` | Not ported |
+| `agentrouter/evaluation/provenance.py` | `agentrouter-evaluation::dataset_quality` | Partial |
 | `agentrouter/evaluation/registry.py` | `—` | Not ported |
 | `agentrouter/evaluation/reports.py` | `—` | Not ported |
 | `agentrouter/evaluation/runner.py` | `—` | Not ported |

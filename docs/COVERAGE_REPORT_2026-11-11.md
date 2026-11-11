@@ -12,7 +12,7 @@ PYTHONPATH=. python -m pytest -q --cov=agentrouter --cov-branch --cov-report=ter
 
 | Measure | Result |
 |---|---:|
-| Python regression | 1,721 passed, 6 skipped |
+| Python regression | 1,722 passed, 6 skipped |
 | Line coverage | 91.01% (6,516 / 7,160 statements) |
 | Branch coverage | 85.23% (1,795 / 2,106 branch outcomes) |
 | Combined coverage reported by pytest-cov | 89.69% |
@@ -22,7 +22,7 @@ PYTHONPATH=. python -m pytest -q --cov=agentrouter --cov-branch --cov-report=ter
 
 Run used Python 3.12.15 on Linux against RC commit `a4d2f79` plus the local
 Rust feedback-learning and evaluation-metrics crates; the regression includes
-nine learning, ten quota-routing, nine doctor, and one evaluation-metrics
+nine learning, ten quota-routing, nine doctor, and two evaluation
 Python/Rust compatibility cases. The
 candidate package version is
 `0.5.0rc1`. The six skips are environment-

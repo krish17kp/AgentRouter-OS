@@ -1618,3 +1618,19 @@ the cross-platform Rust/Python, security, and mutation jobs; it failed only the
 unchanged frozen context-band promotion gate. CI for this metrics slice remains
 pending its push. Evaluation schema, datasets, runners, CLI, and annotation
 workflow remain unported.
+
+## Iteration 35 — 2026-11-11 — Rust dataset-quality aggregation
+
+Extended `agentrouter-evaluation` with a Rust port of the dataset-derived
+portion of `evaluation.provenance.dataset_quality`: exact duplicate counts,
+paraphrase-family split leakage, and language/domain/risk/task/provenance
+distributions. The Python/Rust differential fixture checks duplicate task
+hashes, leaked and non-leaked families, blank split/group values, and
+model-assisted counts. Runtime environment snapshots remain Python-only, so
+the module remains partial in the parity inventory.
+
+Verification: full Python regression 1,722 passed / 6 skipped; 91.0056% line,
+85.2327% branch, 89.6935% combined. Workspace tests, Clippy, formatting, Ruff,
+and focused Python/Rust tests pass. Cross-platform CI for the preceding
+evaluation-metrics commit is still running; this follow-on change also needs
+CI after push.
