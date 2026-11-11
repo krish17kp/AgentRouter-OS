@@ -15,12 +15,13 @@ Updated: 2026-11-11
 - [x] PR #22 MCP dependency bound merged to release candidate.
 - [x] PR #25 staged Rust migration, registry and provider-status probes merged to release candidate as `99f5b76`; Python remains the shipping authority.
 - [x] PR #20 `prepare --all` test made offline-safe; local focused tests pass.
-- [x] PR #20 pytest constrained below 9 to match pinned `mutmut==3.6.0` API; current CI exposed baseline CLI and staleness test failures that are being diagnosed.
-- [ ] PR #20 mutation gate rerun on new commit `839a0c4`; Python matrix currently fails and needs repair against current RC.
-- [ ] PRs #13, #16, #21, #26, #27 reviewed against latest release candidate and disposition recorded.
+- [x] PR #20 pytest constrained below 9 for compatibility with pinned `mutmut==3.6.0`; merged after current-RC CI and mutation checks passed.
+- [x] PR #26 reviewed and closed as superseded; its legacy registry-print binary no longer compiled against the evolved registry API.
+- [ ] PRs #13, #16, #21, #27 need final disposition against the latest RC; PR #13 mutation gate currently fails.
+- [ ] macOS CI added for Python 3.12 full tests and the Rust workspace/parity matrix; awaits checks.
 - [ ] Rust R4 full CLI parity and race-safe SQLite initialization.
 - [ ] Rust R5-R13 milestones and cross-platform parity.
-- [ ] PR #27 website product-truth fixes, security/dependency cleanup, and website CI.
+- [x] PR #27 website product-truth fixes, unused shadcn CLI removal, and site CI added; npm build/lint and production dependency audit pass. Full npm audit still reports moderate dev-tool advisories.
 
 ## Needs Krish
 
