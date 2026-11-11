@@ -1,41 +1,29 @@
-# Routing benchmark results — 2026-11-11
+# Routing latency benchmark — 2026-11-11
 
-## Reproduction
+## Method
+
+Run with:
 
 ```console
-.venv/bin/python -m pytest tests/test_routing_benchmark.py -q
+.venv/bin/python scripts/benchmark_routing_latency.py --iterations 2000
 ```
 
-The fixture-level routing gold check is also reproducible with:
+The benchmark measures only the pure in-process Python filtering and ranking
+pass using deterministic synthetic candidate fleets. It warms up for 100 calls,
+then times 2,000 routes per fleet. It excludes classification, registry and
+SQLite work, network calls, model execution, and OpenAI/provider latency. These
+numbers are a local baseline, not end-to-end or production service latency.
 
-```python
-from pathlib import Path
-import agentrouter
-from agentrouter.evaluate import evaluate_routing
+Environment: Python 3.12.15; Linux 7.0.0-43-generic; x86_64; glibc 2.43.
 
-path = Path(agentrouter.__file__).parent / "benchmarks" / "routing_gold_v1.yaml"
-print(evaluate_routing(path))
-```
+## Results
 
-## Result
+| Candidates | Iterations | p50 (µs) | p95 (µs) | Routes/s |
+|---:|---:|---:|---:|---:|
+| 10 | 2,000 | 31.15 | 34.54 | 31,624.64 |
+| 100 | 2,000 | 292.62 | 319.43 | 3,382.60 |
+| 1,000 | 2,000 | 3,427.17 | 3,776.61 | 284.78 |
 
-| Measure | Result |
-|---|---:|
-| Routing gold scenarios | 12 / 12 passed (100%) |
-| Focused routing benchmark and invariant tests | 15 passed |
-| Scenario failures | 0 |
-| Measured latency or token cost | Not measured |
-
-The 12 scenarios cover context-window exclusions, required tools, vision support,
-ability ranking, declared fallback, price-tier caps, deprecated/retired model
-behavior, no-eligible outcomes, cost fit, and cross-provider fallback. The
-additional tests check monotonic safety and eligibility properties. These are
-contract and decision-quality checks over checked-in fixtures, not live model
-quality, provider reliability, latency, throughput, or pricing measurements.
-
-## Interpretation
-
-The current routing implementation satisfies every committed gold scenario and
-all 15 focused benchmark/invariant tests. No scoring weights were changed from
-this result. Any production routing optimization should add a before/after
-benchmark, held-out tasks, and measured outcomes before it changes ranking.
+Re-run on target hardware and with realistic registry sizes before using this
+baseline for capacity or latency commitments. Rust and Python numbers should
+only be compared under the same workload, host, warm-up, and timing method.
