@@ -2,12 +2,13 @@
 
 ## Current checkpoint — 2026-11-11
 
-- Active RC worktree: `release/agentrouter-v0.5-rc1` at `4005a78`. PRs #27–#33 and #13 are merged; PR #16 remains open to `main`.
-- TASK-027 is pushed. Rust workspace and non-skipping Python/Rust compatibility pass Linux/Windows/macOS; security and website pass. Mutation and general Python workflows are finishing. The unchanged frozen context-band gate (0.6667 < 0.90) remains the promotion blocker.
-- Current local task completes LLMRouterBench adapter parity: fixture records, metadata, availability, mapping requirement, full-run skip report, describe, sample, checksum, and real-mode error. Focused differential test, Rust workspace, Clippy, format, Ruff, and full Python regression pass.
-- Latest Python evidence: 1,768 passed, 6 skipped; 92.09% line (6,599/7,166), 87.04% branch (1,833/2,106), 90.94% combined. See `docs/COVERAGE_REPORT_2026-11-11.md`.
+- Active RC worktree: `release/agentrouter-v0.5-rc1` at `5767ddc`. PRs #27–#33 and #13 are merged; PR #16 remains open to `main`.
+- TASK-028 is pushed. Rust workspace and non-skipping Python/Rust compatibility pass Linux; Windows/macOS and general Python checks are still running. Security and website pass. The unchanged frozen context-band gate (0.6667 < 0.90) remains the promotion blocker.
+- TASK-029 locally completes TwinRouterBench's dynamic-track full-run skip report. The focused differential test, shared adapter tests, full Python suite, Rust workspace, Clippy, format, Ruff, and diff checks pass.
+- Latest Python evidence: 1,769 passed, 6 skipped; 92.09% line (6,599/7,166), 87.04% branch (1,833/2,106), 90.94% combined. See `docs/COVERAGE_REPORT_2026-11-11.md`.
 - The 77-module matrix is in `docs/RUST_PARITY_MATRIX.md`; external data execution, other adapter transforms, evaluation runner/CLI/annotation, most public CLI, HTTP/MCP, plugins/skills, and provider execution remain incomplete. Python remains the shipping authority.
-- Next: commit/push TASK-028, inspect all CI, repair failures, and continue parity. Do not merge/tag while the frozen release gate fails.
+- TASK-029 locally ports TwinRouterBench's dynamic-track full-run status, with fixture behavior covered by the shared adapter test. Focused differential tests, full Python suite, Rust workspace, Clippy, format, Ruff, and diff checks pass.
+- TASK-028 Rust migration CI, mutation, security, and website pass; broad Python CI is still running. Next: commit/push TASK-029, inspect cross-platform CI, fix failures, and continue parity. Do not merge/tag while the frozen release gate fails.
 - Owner actions are in `PRODUCTION_STATUS.md` under **Needs Krish**: independent human annotation/adjudication, bounded paid OpenAI validation credentials, and production deployment credentials/approval.
 
 ## Historical checkpoint

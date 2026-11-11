@@ -2126,6 +2126,20 @@ pub fn llmrouterbench_full_run_status() -> serde_json::Value {
     })
 }
 
+pub fn twinrouterbench_full_run_status() -> serde_json::Value {
+    serde_json::json!({
+        "status": "SKIPPED_EXTERNAL",
+        "reason": "The dynamic track replays full multi-agent workflows through a containerized agent runtime to measure live per-step routing. It requires a running Docker daemon and the benchmark's workflow images, neither available in offline CI. The static track is covered here from the committed fixture.",
+        "commands": [
+            "git clone <TwinRouterBench repo> twinrouterbench && cd twinrouterbench",
+            "# install and start Docker (daemon must be running)",
+            "docker info",
+            "docker compose up -d  # bring up the workflow runtime",
+            "python -m twinrouterbench.run --track dynamic --router agentrouter"
+        ]
+    })
+}
+
 #[derive(Debug, Deserialize)]
 struct AgentRouterGoldDocument {
     #[serde(default = "default_gold_version")]

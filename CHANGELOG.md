@@ -5,6 +5,11 @@ All notable changes to AgentRouter OS. Format loosely follows
 
 ## [Unreleased]
 
+### Changed
+- Ported TwinRouterBench's dynamic-track offline status and actionable Docker
+  run instructions to Rust, with Python/Rust differential coverage. Its static
+  fixture contract continues to use the shared Rust evaluation adapter base.
+
 ### Added
 - Rust evaluation parity now includes shared fixture-adapter behavior across six
   datasets and raw-row normalization for CLINC150, Banking77, MASSIVE, and

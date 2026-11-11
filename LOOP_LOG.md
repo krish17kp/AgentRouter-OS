@@ -1986,8 +1986,24 @@ commands, description, and deterministic sample. One differential test compares
 the full Rust result with Python; the parity matrix marks the module Parity.
 Rust workspace/Clippy/format/Ruff and the full Python suite pass (1,768
 passed/6 skipped; 92.09% line, 87.04% branch, 90.94% combined coverage).
-TASK-027 cross-platform Rust workspace and compatibility pass; broader CI is
-finishing. TASK-028 awaits push and CI.
+TASK-028 was pushed as `5767ddc`; Rust migration CI, mutation, security, and
+website pass. Broad Python CI is still running.
 
 Next: commit/push TASK-028, inspect platform workflows, fix failures, and
 continue remaining adapter and public module parity.
+
+## 2026-11-11 — TASK-029: Rust TwinRouterBench adapter parity
+
+Ported TwinRouterBench's dynamic-track `SKIPPED_EXTERNAL` status and exact
+reason/commands to the Rust evaluation crate. Its static fixture contract is
+covered by the shared adapter-base differential test. Focused differential
+tests (7 cases), Rust workspace tests, Clippy, format, Ruff, and diff checks
+pass locally. The full Python suite passes: 1,769 passed/6 skipped and
+92.09% line, 87.04% branch, 90.94% combined coverage. TASK-028 hosted Rust
+migration, mutation, security, and website workflows pass; general Python CI
+is still running, with the unchanged frozen context-band release gate as the
+only known failure.
+
+Next: commit/push TASK-029, inspect its cross-platform CI, repair failures,
+and continue the public-module parity matrix. Do not merge/tag while the frozen
+release gate fails.

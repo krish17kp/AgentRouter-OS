@@ -116,3 +116,7 @@ path = "src/bin/evaluation_swebench_from_json.rs"
 [[bin]]
 name = "evaluation_llmrouterbench_from_json"
 path = "src/bin/evaluation_llmrouterbench_from_json.rs"
+
+[[bin]]
+name = "evaluation_twinrouterbench_status_from_json"
+path = "src/bin/evaluation_twinrouterbench_status_from_json.rs"

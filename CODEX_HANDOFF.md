@@ -3,17 +3,17 @@
 ## Current checkpoint — 2026-11-11
 
 PRs #27–#33 and #13 are merged into `release/agentrouter-v0.5-rc1`; RC head is
-`4005a78` and PR #16 remains open to `main`. TASK-027 Rust workspace and
-Python/Rust compatibility pass Linux/Windows/macOS; security and website pass.
-Mutation and broad Python checks are finishing. Frozen context-band accuracy
+`5767ddc` and PR #16 remains open to `main`. TASK-028 Rust workspace and
+Python/Rust compatibility pass Linux; Windows/macOS and broad Python checks
+are still running. Security and website pass. Frozen context-band accuracy
 0.6667 against 0.90 remains the promotion blocker.
 
-Current local task completes LLMRouterBench adapter parity, covering fixture
-loading, mapping requirements, offline full-run instructions, real-mode skip,
-description, sample, checksum, and the full serialized contract. Its focused
-differential test, Rust workspace, Clippy, format, Ruff, and full Python suite
-pass: 1,768 passed, 6 skipped; 92.09% line, 87.04% branch, and 90.94% combined
-coverage. Remaining adapter transformations, remote runs, evaluation
+Current local task completes TwinRouterBench's offline dynamic-track status
+contract, alongside static fixture behavior from the shared adapter base.
+Focused differential tests, Rust workspace, Clippy, format, Ruff, and the full
+Python suite pass: 1,769 passed, 6 skipped; 92.09% line, 87.04% branch, and
+90.94% combined coverage. Remaining
+adapter transformations, remote runs, evaluation
 runner/CLI/annotation, and many public modules are inventoried in
 `docs/RUST_PARITY_MATRIX.md`. Human annotation, live OpenAI validation, and
 production credentials are recorded under **Needs Krish** in
