@@ -16,7 +16,7 @@ release authority until the full set is complete.
 | `agentrouter/__init__.py` | `—` | Not ported |
 | `agentrouter/__main__.py` | `—` | Not ported |
 | `agentrouter/annotation/__init__.py` | `—` | Not ported |
-| `agentrouter/annotation/adjudicate.py` | `—` | Not ported |
+| `agentrouter/annotation/adjudicate.py` | `agentrouter-evaluation::{annotation_needs_adjudication,resolve_annotation}` | Parity |
 | `agentrouter/annotation/candidates.py` | `—` | Not ported |
 | `agentrouter/annotation/cli.py` | `—` | Not ported |
 | `agentrouter/annotation/compare.py` | `—` | Not ported |

@@ -124,3 +124,7 @@ path = "src/bin/evaluation_twinrouterbench_status_from_json.rs"
 [[bin]]
 name = "evaluation_environment_from_json"
 path = "src/bin/evaluation_environment_from_json.rs"
+
+[[bin]]
+name = "evaluation_adjudicate_from_json"
+path = "src/bin/evaluation_adjudicate_from_json.rs"

@@ -2535,6 +2535,175 @@ pub fn environment_snapshot(
     })
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct AnnotationInputLabel {
+    pub annotator: String,
+    #[serde(default)]
+    pub band: Option<ContextBand>,
+    #[serde(default)]
+    pub abstain: bool,
+    pub rationale: String,
+    pub confidence: f64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct AnnotationInputItem {
+    pub candidate_id: String,
+    pub prompt: String,
+    pub category: String,
+    #[serde(default)]
+    pub labels: Vec<AnnotationInputLabel>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct AnnotationAdjudication {
+    pub adjudicator: String,
+    #[serde(default)]
+    pub band: Option<ContextBand>,
+    pub abstain: bool,
+    pub rationale: String,
+    #[serde(default = "default_adjudication_confidence")]
+    pub confidence: f64,
+}
+
+fn default_adjudication_confidence() -> f64 {
+    0.6
+}
+
+/// Resolve collected human labels without inventing an answer. A conflicting
+/// item remains `None` until an explicit human adjudication is supplied.
+pub fn resolve_annotation(
+    item: &AnnotationInputItem,
+    label_source: &str,
+    adjudication: Option<&AnnotationAdjudication>,
+) -> Option<serde_json::Value> {
+    let unanimous_abstention = !item.labels.is_empty() && item.labels.iter().all(|l| l.abstain);
+    let needs_adjudication = annotation_needs_adjudication(item);
+    let annotators: Vec<_> = item
+        .labels
+        .iter()
+        .map(|label| label.annotator.clone())
+        .collect();
+
+    if !needs_adjudication {
+        if unanimous_abstention {
+            let confidence = round_half_even(
+                item.labels
+                    .iter()
+                    .map(|label| label.confidence)
+                    .sum::<f64>()
+                    / item.labels.len() as f64,
+                4,
+            );
+            let rationale = item
+                .labels
+                .iter()
+                .map(|label| label.rationale.as_str())
+                .collect::<Vec<_>>()
+                .join("; ");
+            return Some(annotation_result(
+                item,
+                label_source,
+                annotators,
+                AnnotationOutcome {
+                    band: None,
+                    abstained: true,
+                    adjudicated_by: None,
+                    rationale,
+                    confidence,
+                },
+            ));
+        }
+        let matching: Vec<_> = item.labels.iter().filter(|label| !label.abstain).collect();
+        let confidence = round_half_even(
+            matching.iter().map(|label| label.confidence).sum::<f64>() / matching.len() as f64,
+            4,
+        );
+        let rationale = matching
+            .iter()
+            .map(|label| label.rationale.as_str())
+            .collect::<Vec<_>>()
+            .join("; ");
+        return Some(annotation_result(
+            item,
+            label_source,
+            annotators,
+            AnnotationOutcome {
+                band: matching.first().and_then(|label| label.band),
+                abstained: false,
+                adjudicated_by: None,
+                rationale,
+                confidence,
+            },
+        ));
+    }
+
+    let decision = adjudication?;
+    Some(annotation_result(
+        item,
+        label_source,
+        annotators,
+        AnnotationOutcome {
+            band: if decision.abstain {
+                None
+            } else {
+                decision.band
+            },
+            abstained: decision.abstain,
+            adjudicated_by: Some(decision.adjudicator.clone()),
+            rationale: decision.rationale.clone(),
+            confidence: round_half_even(decision.confidence, 4),
+        },
+    ))
+}
+
+pub fn annotation_needs_adjudication(item: &AnnotationInputItem) -> bool {
+    if item.labels.len() < 2 {
+        return true;
+    }
+    if item.labels.iter().all(|label| label.abstain) {
+        return false;
+    }
+    let has_abstention = item.labels.iter().any(|label| label.abstain);
+    let mut bands = item
+        .labels
+        .iter()
+        .filter(|label| !label.abstain)
+        .filter_map(|label| label.band);
+    let first = bands.next();
+    has_abstention || first.is_none() || bands.any(|band| Some(band) != first)
+}
+
+struct AnnotationOutcome {
+    band: Option<ContextBand>,
+    abstained: bool,
+    adjudicated_by: Option<String>,
+    rationale: String,
+    confidence: f64,
+}
+
+fn annotation_result(
+    item: &AnnotationInputItem,
+    label_source: &str,
+    annotators: Vec<String>,
+    outcome: AnnotationOutcome,
+) -> serde_json::Value {
+    serde_json::json!({
+        "id": item.candidate_id,
+        "prompt": item.prompt,
+        "category": item.category,
+        "band": outcome.band,
+        "abstained": outcome.abstained,
+        "label_source": label_source,
+        "annotators": annotators,
+        "adjudicated_by": outcome.adjudicated_by,
+        "rationale": outcome.rationale,
+        "confidence": outcome.confidence,
+        "split": null,
+        "review_status": "pending_human_review",
+    })
+}
+
 #[derive(Debug, Clone)]
 struct Pair {
     acceptable: Vec<String>,

@@ -2030,3 +2030,15 @@ still running for the RC branch.
 
 Next: push TASK-031, inspect/repair cross-platform CI for TASK-029–031, then
 continue the parity inventory. Release gates remain unchanged.
+
+## 2026-11-11 — TASK-032: Rust human annotation adjudication
+
+Ported the human-only annotation merge rules. Agreement and unanimous
+abstention resolve from annotator labels; conflicts stay unresolved until an
+explicit adjudicator decision, including explicit adjudicator abstention.
+Seven Python/Rust differential cases pass, along with workspace tests, Clippy,
+format, Ruff, and diff checks. The human label/adjudication round remains a
+release blocker and is not replaced by this code.
+
+Next: push TASK-032, inspect cross-platform CI, and continue the remaining
+annotation and public-module parity work.

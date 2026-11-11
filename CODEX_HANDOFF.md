@@ -3,7 +3,7 @@
 ## Current checkpoint — 2026-11-11
 
 PRs #27–#33 and #13 are merged into `release/agentrouter-v0.5-rc1`; RC head is
-`3ad61df` and PR #16 remains open to `main`. TASK-028 Rust workspace and
+`66c2fcf` and PR #16 remains open to `main`. TASK-028 Rust workspace and
 Python/Rust compatibility pass Linux; Windows/macOS and broad Python checks
 are still running. Security and website pass. Frozen context-band accuracy
 0.6667 against 0.90 remains the promotion blocker.

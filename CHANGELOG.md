@@ -6,6 +6,8 @@ All notable changes to AgentRouter OS. Format loosely follows
 ## [Unreleased]
 
 ### Changed
+- Ported the human annotation merge/adjudication rules to Rust, preserving
+  unresolved conflicts and explicit abstention without generating labels.
 - Completed Rust evaluation-schema parity for serialized cases, normalized
   hashes, checksum copies, and invalid-input rejection.
 - Completed Rust parity for evaluation provenance snapshots alongside the
