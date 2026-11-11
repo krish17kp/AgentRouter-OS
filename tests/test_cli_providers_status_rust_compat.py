@@ -223,7 +223,10 @@ def test_generated_catalog_provider_name_cannot_inject_terminal_control(tmp_path
     assert "\x1b" not in python.output + rust.stdout + rust.stderr
 
 
-@pytest.mark.skipif(os.name == "nt", reason="raw-byte filenames are Unix-specific")
+@pytest.mark.skipif(
+    os.name == "nt" or sys.platform == "darwin",
+    reason="Windows and macOS filesystems do not support invalid UTF-8 path bytes",
+)
 def test_generated_catalog_invalid_utf8_filename_fails_closed(tmp_path, monkeypatch):
     home = tmp_path / "agentrouter"
     (home / "registry").mkdir(parents=True)
