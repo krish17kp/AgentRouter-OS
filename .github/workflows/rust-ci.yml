@@ -1,0 +1,63 @@
+# Rust is a separate migration gate. Python remains the release authority until
+# Rust reaches full parity; a passing Rust job never overrides the product gates.
+name: Rust migration CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rust-workspace:
+    name: Rust workspace (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Build workspace
+        run: cargo build --workspace --locked
+      - name: Test workspace
+        run: cargo test --workspace --locked
+      - name: Clippy warnings are errors
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+
+  rust-msrv:
+    name: Declared Rust 1.75 minimum
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.75.0
+      - name: Build and test minimum supported toolchain
+        run: cargo test --workspace --locked
+
+  python-rust-parity:
+    name: Python/Rust compatibility (${{ matrix.os }}, non-skipping)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Python reference + tests
+        run: python -m pip install -e ".[dev]"
+      - name: Assert compatibility against the real Rust binary
+        run: |
+          cargo build --workspace --locked
+          python -m pytest -q -rs tests/test_rust_compat.py tests/test_classifier_rust_compat.py tests/test_cli_route_rust_compat.py tests/test_cli_decision_rust_compat.py tests/test_cli_init_rust_compat.py tests/test_cli_registry_rust_compat.py tests/test_cli_providers_status_rust_compat.py tests/test_controls_rust_compat.py tests/test_hosts_rust_compat.py tests/test_routing_rust_compat.py tests/test_rust_routing_matrix.py tests/test_store_rust_compat.py

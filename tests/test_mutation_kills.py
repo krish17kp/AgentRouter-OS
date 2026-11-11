@@ -506,6 +506,19 @@ def test_execution_route_block_missing_model_returns_none():
     assert execution_route_block(None, {}) is None
 
 
+def test_execution_route_block_preserves_unavailable_target(monkeypatch):
+    # Route presentation must retain the chosen target and remediation even
+    # when no execution host is currently usable.
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    model = _seed_model(execution_targets=[_target(host="openai-api", host_model_id="hmi")])
+    block = execution_route_block({"model": model.key}, {model.key: model})
+    assert block is not None
+    assert block["host"] == "openai-api"
+    assert block["host_model_id"] == "hmi"
+    assert block["availability"] == UNAVAILABLE
+    assert block["host_state"] == hosts_mod.MISSING
+
+
 def test_execution_route_block_payload_keys_and_values(monkeypatch, tmp_path):
     # kills execution_route_block 28/29,34/35,41/42,45/46,47-52 (dict key/value text).
     # Hermetic: no host config/credentials and no stray key, so the state is the
@@ -1041,9 +1054,11 @@ def _prov(supports_execution=True, exec_command=("true",)):
 
 
 def _payload(**over):
+    from agentrouter.classifier import classify
+
     p = {
         "gates": {"auto_execute_allowed": True, "approval_level": "auto"},
-        "classification": {"risk": "low"},
+        "classification": classify("write a short haiku").model_dump(mode="json"),
         "recommendation": {"model": "prov/m", "provider": "prov"},
         "prompt": "the-prompt",
         "execution_route": None,
@@ -1088,7 +1103,7 @@ def test_execute_high_risk_blocked_messages(monkeypatch, tmp_path, capfd):
     # kills 31/33/34 (blocked msg), 35-38 (Why echo), 45-55 (Why/Next text + streams).
     payload = _payload(
         gates={"auto_execute_allowed": False, "approval_level": "human-approval-required"},
-        classification={"risk": "high"},
+        classification=cli_mod.classify("rotate production credentials").model_dump(mode="json"),
     )
     code = _run_execute(monkeypatch, tmp_path, payload, yes=True)
     assert code == 2  # high risk provably blocked even with --yes
@@ -1196,7 +1211,13 @@ def test_execute_dispatches_to_host(monkeypatch, tmp_path, capfd):
     # prompt and yes flag so an available host actually runs.
     monkeypatch.setattr(hosts_mod.shutil, "which", lambda c: f"/usr/bin/{c}")
     model = _via_host_model()
-    er = {"command_preview": "codex hm", "host_model_id": "hm"}
+    er = {
+        "command_preview": "codex hm",
+        "host": "codex-cli",
+        "host_model_id": "hm",
+        "model_id": model.model_id,
+        "vendor": model.vendor,
+    }
     payload = _payload(
         recommendation={"model": model.key, "provider": "prov"}, execution_route=er, prompt="HMARK"
     )
@@ -1221,7 +1242,13 @@ def test_execute_legacy_opt_in_requires_all_three(monkeypatch, tmp_path, capfd):
     # (supports_execution False) must not shadow the host-dispatch path.
     monkeypatch.setattr(hosts_mod.shutil, "which", lambda c: f"/usr/bin/{c}")
     model = _via_host_model()
-    er = {"command_preview": "codex hm", "host_model_id": "hm"}
+    er = {
+        "command_preview": "codex hm",
+        "host": "codex-cli",
+        "host_model_id": "hm",
+        "model_id": model.model_id,
+        "vendor": model.vendor,
+    }
     providers = {"prov": _prov(supports_execution=False, exec_command=["x"])}
     payload = _payload(
         recommendation={"model": model.key, "provider": "prov"}, execution_route=er, prompt="LMARK"

@@ -30,6 +30,7 @@ MUTANT_PATTERNS = (
     "agentrouter.server.limits.*",
     "agentrouter.cli.x__execute__mutmut_*",
     "agentrouter.cli.x__execute_via_host__mutmut_*",
+    "agentrouter.openai_adapter.*",
 )
 GROUPS = {
     "safety_policy_execution": {
@@ -40,6 +41,7 @@ GROUPS = {
             "agentrouter.server.limits.*",
             "agentrouter.cli.x__execute__mutmut_*",
             "agentrouter.cli.x__execute_via_host__mutmut_*",
+            "agentrouter.openai_adapter.*",
         ),
         "threshold": 0.95,
     },
