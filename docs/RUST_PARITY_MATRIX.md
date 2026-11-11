@@ -37,7 +37,7 @@ release authority until the full set is complete.
 | `agentrouter/diagnostics.py` | `agentrouter-cli::diagnostics` | Partial |
 | `agentrouter/engine.py` | `agentrouter-routing` | Parity |
 | `agentrouter/evaluate.py` | `—` | Not ported |
-| `agentrouter/evaluation/__init__.py` | `—` | Not ported |
+| `agentrouter/evaluation/__init__.py` | `agentrouter-evaluation::evaluation_api` | Parity |
 | `agentrouter/evaluation/adapters/__init__.py` | `—` | Not ported |
 | `agentrouter/evaluation/adapters/agentrouter_gold.py` | `agentrouter-evaluation::AgentRouterGoldAdapter` | Parity |
 | `agentrouter/evaluation/adapters/banking77.py` | `agentrouter-evaluation::normalize_banking77_rows` | Partial |

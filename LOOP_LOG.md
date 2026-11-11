@@ -2184,3 +2184,8 @@ cover exact release report output, caller-supplied predictions, Unicode and
 long-string `SequenceMatcher` behavior, and leak findings. Local focused tests
 and evaluation crate Clippy pass. The frozen 0.6667 score and 0.90 threshold
 remain unchanged; this work does not clear release promotion.
+# TASK-045 — Rust evaluation package facade
+
+Added the Rust `evaluation_api` module to match the Python evaluation package's
+three declared public exports, with a differential contract test. Focused
+validation and hosted matrix checks follow this push.

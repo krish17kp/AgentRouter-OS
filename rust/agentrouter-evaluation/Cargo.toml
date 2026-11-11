@@ -174,3 +174,7 @@ path = "src/bin/evaluation_context_leaks_from_json.rs"
 [[bin]]
 name = "evaluation_context_score_from_json"
 path = "src/bin/evaluation_context_score_from_json.rs"
+
+[[bin]]
+name = "evaluation_public_api_from_json"
+path = "src/bin/evaluation_public_api_from_json.rs"
