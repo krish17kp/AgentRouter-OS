@@ -1802,3 +1802,17 @@ writer tests pass; full Python suite 1,738 passed / 6 skipped, with 91.12% line,
 85.57% branch, and 89.86% combined coverage. Full Rust workspace, Clippy,
 formatting, Ruff, and Python formatting pass. Cross-platform CI for the newline
 fix is pending after push.
+
+## Iteration 47 — 2026-11-11 — Rust performance evaluator summary
+
+Ported the stable performance score contract to Rust: median elapsed-time
+conversion, ties-to-even millisecond rounding, classify/route thresholds,
+linear decay, sample count, and output metadata. Runtime timing remains in
+Python because measurements are machine-dependent; four differential fixtures
+cover empty, below-threshold, and degraded cases.
+
+Verification: 22 evaluation differential tests, full Rust workspace tests,
+Clippy, formatting, Ruff, and Python formatting pass. Full Python suite 1,742
+passed / 6 skipped; 91.15% line, 85.61% branch, and 89.89% combined coverage.
+Cross-platform CI for the previous platform/newline slice is still running;
+this performance slice needs CI after push.

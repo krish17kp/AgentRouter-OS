@@ -53,7 +53,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/context_bands.py` | `—` | Not ported |
 | `agentrouter/evaluation/evaluators/__init__.py` | `—` | Not ported |
 | `agentrouter/evaluation/evaluators/feedback.py` | `agentrouter-evaluation::evaluate_feedback` | Parity |
-| `agentrouter/evaluation/evaluators/performance.py` | `—` | Not ported |
+| `agentrouter/evaluation/evaluators/performance.py` | `agentrouter-evaluation::summarize_performance` | Partial |
 | `agentrouter/evaluation/evaluators/platform.py` | `agentrouter-evaluation::evaluate_platform` | Partial |
 | `agentrouter/evaluation/evaluators/provider.py` | `agentrouter-evaluation::evaluate_provider` | Partial |
 | `agentrouter/evaluation/evaluators/routing.py` | `agentrouter-evaluation::evaluate_routing` | Partial |
@@ -107,13 +107,16 @@ release authority until the full set is complete.
 - Classification-only grading and gate calculation have differential coverage;
   Rust does not invoke the classifier or implement the `measure_all` evaluators.
 - The safety evaluator now classifies and gates cases in Rust with differential
-  coverage; the other five evaluation evaluators remain unported.
+  coverage. Feedback, provider, routing, platform, and performance each have
+  partial or complete Rust scoring, while runtime orchestration remains open.
 - Provider metadata scoring is ported over caller-supplied model records; Rust
   does not load the packaged seed registry for this evaluator yet.
 - The feedback/storage evaluator now uses the Rust SQLite store in a unique
   temporary home and compares the same decision, feedback, and aggregation
   checks. The platform evaluator matches scoring for a caller-supplied CLI
   command/group manifest; runtime Typer command discovery remains Python-only.
+- Performance summary scoring matches from supplied elapsed-time samples;
+  Rust does not yet measure the classifier and router pipeline itself.
 - Routing evaluation now scores caller-supplied model catalogs against gold
   constraints or the declared distinct-fallback proxy. Loading seed models and
   custom classifier injection remain Python-only.

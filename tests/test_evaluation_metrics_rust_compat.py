@@ -10,6 +10,9 @@ import pytest
 
 from agentrouter.evaluation.evaluators import load_seed_models
 from agentrouter.evaluation.evaluators.feedback import evaluate_feedback as evaluate_python_feedback
+from agentrouter.evaluation.evaluators.performance import (
+    _summarize_samples as summarize_python_performance,
+)
 from agentrouter.evaluation.evaluators.platform import evaluate_platform as evaluate_python_platform
 from agentrouter.evaluation.evaluators.provider import evaluate_provider as evaluate_python_provider
 from agentrouter.evaluation.evaluators.routing import evaluate_routing as evaluate_python_routing
@@ -807,6 +810,43 @@ def test_rust_platform_evaluator_matches_python_cli_manifest():
             "agentrouter-evaluation",
         ],
         input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+        check=True,
+    )
+    assert json.loads(process.stdout) == expected
+
+
+@pytest.mark.parametrize(
+    ("classify_seconds", "route_seconds"),
+    [
+        ([], []),
+        ([0.01, 0.04, 0.03], [0.04, 0.08, 0.06]),
+        ([0.06, 0.08], [0.15, 0.25]),
+        ([0.11, 0.20, 0.35], [0.10, 0.20, 0.50]),
+    ],
+)
+def test_rust_performance_score_matches_python(classify_seconds, route_seconds):
+    expected = summarize_python_performance(classify_seconds, route_seconds)
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_performance_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps(
+            {
+                "classify_seconds": classify_seconds,
+                "route_seconds": route_seconds,
+            }
+        ),
         capture_output=True,
         text=True,
         encoding="utf-8",

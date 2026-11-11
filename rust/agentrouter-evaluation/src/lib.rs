@@ -543,6 +543,53 @@ pub fn evaluate_platform(commands: &[String], groups: &[String]) -> serde_json::
     })
 }
 
+/// Summarize elapsed seconds using the performance evaluator's stable scoring
+/// contract. Measuring classify/route timings remains the runtime adapter's
+/// responsibility because results are machine-dependent.
+pub fn summarize_performance(classify_seconds: &[f64], route_seconds: &[f64]) -> serde_json::Value {
+    use serde_json::json;
+
+    const CLASSIFY_THRESHOLD_MS: f64 = 50.0;
+    const ROUTE_THRESHOLD_MS: f64 = 100.0;
+    let classify_median_ms = median_milliseconds(classify_seconds);
+    let route_median_ms = median_milliseconds(route_seconds);
+    let score = degrade(classify_median_ms, CLASSIFY_THRESHOLD_MS)
+        .min(degrade(route_median_ms, ROUTE_THRESHOLD_MS));
+    json!({
+        "score": round_to(score, 4),
+        "detail": {
+            "n_samples": classify_seconds.len(),
+            "classify_median_ms": classify_median_ms,
+            "route_median_ms": route_median_ms,
+            "classify_threshold_ms": CLASSIFY_THRESHOLD_MS,
+            "route_threshold_ms": ROUTE_THRESHOLD_MS,
+            "note": "smoke perf check on this machine; not a benchmark",
+        }
+    })
+}
+
+fn median_milliseconds(samples_seconds: &[f64]) -> f64 {
+    if samples_seconds.is_empty() {
+        return 0.0;
+    }
+    let mut ordered = samples_seconds.to_vec();
+    ordered.sort_by(f64::total_cmp);
+    let median = if ordered.len().is_multiple_of(2) {
+        (ordered[ordered.len() / 2 - 1] + ordered[ordered.len() / 2]) / 2.0
+    } else {
+        ordered[ordered.len() / 2]
+    };
+    round_to(median * 1000.0, 3)
+}
+
+fn degrade(median_ms: f64, threshold_ms: f64) -> f64 {
+    if median_ms <= threshold_ms {
+        1.0
+    } else {
+        (1.0 - (median_ms - threshold_ms) / threshold_ms).max(0.0)
+    }
+}
+
 fn routing_constraints(
     model: &agentrouter_registry::ModelEntry,
     expectation: &RoutingExpectation,
