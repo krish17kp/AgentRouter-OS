@@ -31,6 +31,10 @@ MUTANT_PATTERNS = (
     "agentrouter.cli.x__execute__mutmut_*",
     "agentrouter.cli.x__execute_via_host__mutmut_*",
     "agentrouter.openai_adapter.*",
+    "agentrouter.plugins.x__safe_relative__mutmut_*",
+    "agentrouter.plugins.x__is_link_or_reparse__mutmut_*",
+    "agentrouter.plugins.x__entry_matches__mutmut_*",
+    "agentrouter.plugins.x__remove_owned_empty_directory__mutmut_*",
 )
 GROUPS = {
     "safety_policy_execution": {
@@ -42,6 +46,10 @@ GROUPS = {
             "agentrouter.cli.x__execute__mutmut_*",
             "agentrouter.cli.x__execute_via_host__mutmut_*",
             "agentrouter.openai_adapter.*",
+            "agentrouter.plugins.x__safe_relative__mutmut_*",
+            "agentrouter.plugins.x__is_link_or_reparse__mutmut_*",
+            "agentrouter.plugins.x__entry_matches__mutmut_*",
+            "agentrouter.plugins.x__remove_owned_empty_directory__mutmut_*",
         ),
         "threshold": 0.95,
     },

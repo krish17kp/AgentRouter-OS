@@ -35,6 +35,12 @@ def _complete_records(mutants: Path, *, survivor: str | None = None) -> None:
         "agentrouter/openai_adapter.py": {
             "agentrouter.openai_adapter.x_run_text_response__mutmut_1": 1,
         },
+        "agentrouter/plugins.py": {
+            "agentrouter.plugins.x__safe_relative__mutmut_1": 1,
+            "agentrouter.plugins.x__is_link_or_reparse__mutmut_1": 1,
+            "agentrouter.plugins.x__entry_matches__mutmut_1": 1,
+            "agentrouter.plugins.x__remove_owned_empty_directory__mutmut_1": 1,
+        },
     }
     if survivor:
         for result in records.values():

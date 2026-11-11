@@ -247,3 +247,39 @@ statements, not tuning advice, and none of them has been tested at scale.
 
 Anything else you may want here — backup rotation, failover, capacity planning —
 would be invention. It is deliberately absent.
+
+---
+
+## 13. A plugin will not install, or looks wrong — **Verified**
+
+```bash
+agentrouter plugin doctor          # state + the exact safe fix, per destination
+agentrouter plugin doctor --json   # same, for a script
+```
+
+Exit `0` installed and unmodified, `1` blocked, `2` needs attention.
+
+| What it says | What happened | What to do |
+|---|---|---|
+| not installed | nothing is there yet | `agentrouter plugin install <name>` |
+| installed and unmodified | healthy | nothing |
+| an identical copy is already here but is not recorded as ours | someone installed the same file by hand | `--adopt-identical` — byte-for-byte identical, so adopting changes nothing on disk |
+| a different file is at this path — either your edit of ours, or your own | AgentRouter cannot tell those apart, so it assumes yours | left alone. `--force` installs over it and backs the original up to `<file>.agentrouter-bak` |
+| the destination is not a plain file | a symlink, reparse point or extra hard link is in the way | inspect it yourself and move it aside; AgentRouter will not write through it |
+| a previous install or uninstall did not finish | a process was killed part way | re-run the install; it recovers |
+| the ownership record is unusable | the state file is corrupt | AgentRouter will not delete files it cannot prove it owns. Remove the state file only if you accept managing those files by hand |
+
+**Uninstall left files behind.** That is the designed behaviour, not a bug. It
+removes only files it can prove it installed and that are unchanged. An edited
+file, a file that was never ours, or any file when the ownership record is
+missing, is preserved and reported.
+
+**A full disk** now reports "check free space and that the directory is
+writable" rather than a traceback.
+
+*Verified by* `tests/test_plugins_doctor.py`, `tests/test_plugins_adversarial.py`
+and `tests/test_plugins_faults.py`.
+
+**Windows caveat:** reparse-point and junction handling is a different code path
+from the POSIX one and is **not** covered by these tests. See
+`KNOWN_LIMITATIONS.md`.

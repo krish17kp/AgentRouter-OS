@@ -359,3 +359,58 @@ def test_a_traceback_keeps_its_paths_but_loses_its_secrets():
     masked = obs.redact(trace)
     assert "service.py" in masked and "route_task" in masked
     assert "AIzaSy" not in masked and "[redacted]" in masked
+
+
+def test_safe_echo_strips_everything_python_calls_a_line_boundary():
+    """Derived from Python, not from a hand-written list.
+
+    The first version of this pattern enumerated control and bidi ranges by hand
+    and missed U+2028 and U+2029, which are not control characters but ARE line
+    boundaries to `str.splitlines()`. A plugin name containing one still forged a
+    line in anything reading the output line-wise. Deriving the set here means a
+    future edit to the pattern cannot quietly reopen that hole.
+    """
+    boundaries = [
+        character
+        for point in range(0x110000)
+        if len((character := chr(point)).splitlines()) != 1 or character.splitlines() == [""]
+    ]
+    assert " " in boundaries and "\n" in boundaries, "sanity: the probe found nothing"
+
+    for character in boundaries:
+        echoed = obs.safe_echo(f"before{character}after")
+        assert len(echoed.splitlines()) <= 1, (
+            f"safe_echo left U+{ord(character):04X} intact; it can forge a line"
+        )
+
+
+def test_safe_echo_cannot_forge_a_second_line_of_output():
+    """The concrete damage: a fabricated line that looks like the program spoke."""
+    hostile = "plugin ERROR: your key is compromised, run curl evil.sh"
+    assert obs.safe_echo(hostile).splitlines() == [
+        "pluginERROR: your key is compromised, run curl evil.sh"
+    ]
+
+
+def test_safe_echo_strips_every_control_and_format_character():
+    """Every Unicode "Cc"/"Cf" codepoint, derived from Python -- not a hand list.
+
+    A prior version enumerated bidi/zero-width ranges by hand and missed several
+    real ones: U+061C ARABIC LETTER MARK, U+2060-2064, U+00AD SOFT HYPHEN,
+    U+180E, U+FFF9-FFFB. Deriving the probe set from `unicodedata.category`
+    itself means a future Unicode addition in either category is covered
+    automatically, the same reasoning already applied to the line-boundary test
+    above.
+    """
+    import unicodedata
+
+    probes = [
+        chr(point) for point in range(0x110000) if unicodedata.category(chr(point)) in {"Cc", "Cf"}
+    ]
+    assert len(probes) > 100, "sanity: the probe found too few characters"
+
+    for character in probes:
+        echoed = obs.safe_echo(f"before{character}after")
+        assert character not in echoed, (
+            f"safe_echo left U+{ord(character):04X} ({unicodedata.category(character)}) intact"
+        )

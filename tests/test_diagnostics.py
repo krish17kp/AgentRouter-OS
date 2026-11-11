@@ -10,6 +10,7 @@ Two properties matter more than the individual checks:
 
 from __future__ import annotations
 
+import builtins
 import json
 import os
 import stat
@@ -242,3 +243,145 @@ def test_an_unwritable_home_is_reported_with_the_mount_hint(home):
         assert "findmnt" in (check.remedy or "")
     finally:
         os.chmod(home, mode)
+
+
+def test_home_and_database_missing_checks_are_actionable(tmp_path):
+    assert diagnostics.check_home(tmp_path / "missing").status == diagnostics.FAIL
+    check = diagnostics.check_database(tmp_path)
+    assert check.status == diagnostics.WARN
+    assert "no decision log" in check.summary
+
+
+def test_database_non_wal_and_bad_integrity_are_reported(tmp_path, monkeypatch):
+    from agentrouter import store
+
+    db_path = tmp_path / "agentrouter.db"
+    db_path.touch()
+
+    class FakeConnection:
+        def __init__(self, rows):
+            self.rows = iter(rows)
+            self.closed = False
+
+        def execute(self, _query):
+            return self
+
+        def fetchone(self):
+            return next(self.rows)
+
+        def close(self):
+            self.closed = True
+
+    conn = FakeConnection([(2,), ("delete",), ("ok",)])
+    monkeypatch.setattr(store, "connect", lambda _home: conn)
+    assert diagnostics.check_database(tmp_path).status == diagnostics.WARN
+    assert conn.closed
+
+    conn = FakeConnection([(0,), ("wal",), ("malformed page",)])
+    monkeypatch.setattr(store, "connect", lambda _home: conn)
+    check = diagnostics.check_database(tmp_path)
+    assert check.status == diagnostics.FAIL
+    assert "malformed page" in check.summary
+
+
+def test_catalog_diagnostics_report_fresh_stale_and_corrupt(home, monkeypatch):
+    from agentrouter import catalog_ops
+
+    reg = home / "registry"
+    check = diagnostics.check_catalogs(home)
+    assert check.status == diagnostics.OK
+    assert "none refreshed" in check.summary
+
+    fresh = reg / "models.fresh.generated.yaml"
+    fresh.write_text("models:\n  - last_updated: '2026-11-11'\n", encoding="utf-8")
+    assert diagnostics.check_catalogs(home).status == diagnostics.OK
+
+    monkeypatch.setattr(
+        catalog_ops, "read_status", lambda _path: type("Status", (), {"stale": True})()
+    )
+    check = diagnostics.check_catalogs(home)
+    assert check.status == diagnostics.WARN
+    assert "stale catalog" in check.summary
+
+    def broken(_path):
+        raise catalog_ops.CatalogError("bad yaml")
+
+    monkeypatch.setattr(catalog_ops, "read_status", broken)
+    check = diagnostics.check_catalogs(home)
+    assert check.status == diagnostics.FAIL
+    assert "unreadable catalog" in check.summary
+
+
+def test_host_check_reports_manual_fallback_and_ready_host(monkeypatch):
+    from agentrouter import hosts
+
+    monkeypatch.setattr(hosts, "known_hosts", lambda: ["manual", "openai-api"])
+    monkeypatch.setattr(
+        hosts,
+        "detect_host",
+        lambda host: type(
+            "Status",
+            (),
+            {"availability": hosts.UNAVAILABLE, "remedy": "configure credentials"},
+        )(),
+    )
+    check = diagnostics.check_hosts()
+    assert check.status == diagnostics.WARN
+    assert "configure credentials" in check.remedy
+
+    monkeypatch.setattr(
+        hosts,
+        "detect_host",
+        lambda host: type(
+            "Status",
+            (),
+            {
+                "availability": hosts.AVAILABLE if host == "openai-api" else hosts.UNAVAILABLE,
+                "remedy": None,
+            },
+        )(),
+    )
+    assert diagnostics.check_hosts().summary == "ready: openai-api"
+
+
+def test_plugin_diagnostic_states_and_empty_severity(monkeypatch):
+    from agentrouter import plugins
+
+    monkeypatch.setattr(plugins, "diagnose_all", lambda: [])
+    assert diagnostics.check_plugins().status == diagnostics.OK
+
+    monkeypatch.setattr(
+        plugins,
+        "diagnose_all",
+        lambda: [{"status": plugins.DIAG_BLOCKED, "remedy": None}],
+    )
+    blocked = diagnostics.check_plugins()
+    assert blocked.status == diagnostics.FAIL
+    assert blocked.remedy == "run: agentrouter plugin doctor"
+
+    monkeypatch.setattr(
+        plugins,
+        "diagnose_all",
+        lambda: [{"status": plugins.DIAG_ATTENTION, "remedy": "inspect manifest"}],
+    )
+    attention = diagnostics.check_plugins()
+    assert attention.status == diagnostics.WARN
+    assert attention.remedy == "inspect manifest"
+    assert diagnostics.worst([]) == diagnostics.OK
+
+
+def test_old_python_and_missing_server_extra_are_reported(monkeypatch):
+    monkeypatch.setattr(diagnostics.sys, "version_info", (3, 9, 9))
+    assert diagnostics.check_python().status == diagnostics.FAIL
+
+    original_import = builtins.__import__
+
+    def without_fastapi(name, *args, **kwargs):
+        if name == "fastapi":
+            raise ImportError("simulated optional dependency absence")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", without_fastapi)
+    check = diagnostics.check_server_extra()
+    assert check.status == diagnostics.WARN
+    assert "not installed" in check.summary

@@ -1,15 +1,19 @@
 # Product Acceptance Evidence
 
-## Current checkpoint — 2026-11-10
+## Current checkpoint — 2026-11-11
 
-Product acceptance remains **not granted**. PR #25 is open and unmerged.
-Pushed parent `6ee8d3e` passed the complete GitHub matrix, including mutation
-(0.9837 overall; 0.9844 safety/policy/execution; zero unreviewed survivors).
-The current Rust forced-init/provider-status slices pass local parity but retain a
-path-based SQLite initialization race and awaits its own remote checks. The
-context-band release gate remains 0.6667 < 0.90, Rust R4 is partial, and
-R5–R13 remain outstanding. The table below is historical.
-The current Win32 file-handle repair awaits Windows CI.
+Product acceptance remains **not granted**. RC `3fcfd05` includes PRs #27–#29,
+and the macOS Python/Rust CI changes have passed their PR checks. PR #13's local
+plugin mutation run passes at 0.9693 overall and 0.9663 safety/policy/execution,
+with zero unreviewed survivors; commit `984db4b` passed the currently reported
+cross-platform checks.
+
+The latest complete Python run passed 1,650 tests with 6 skips and measured
+90.96% line / 85.09% branch coverage, meeting the unchanged 90% / 85% gates.
+The context-band gate remains 0.6667 < 0.90 and requires real independent human
+labels and adjudication. Rust R4 is partial and R5–R13 remain outstanding. The
+website is in the RC; no production deployment or paid OpenAI request occurred.
+The table below is historical.
 
 ## Historical assessment
 

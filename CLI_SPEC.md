@@ -244,16 +244,30 @@ Install AgentRouter's host integrations from bundled package data.
 agentrouter plugin list
 agentrouter plugin install <name> [--dry-run] [--force]
 agentrouter plugin uninstall <name>
-agentrouter plugin doctor
+agentrouter plugin doctor [--json]
 ```
 - Plugins: `claude-code` (skill → `~/.claude/skills/agentrouter/SKILL.md`),
   `codex` (`~/.codex/AGENTS.md`).
 - **Idempotent** (identical dest is skipped), **reversible** (a differing user file is
   backed up to `<file>.agentrouter-bak` and restored on uninstall), **safe** (never
   overwrites a differing user file without `--force`).
-- `--dry-run` / `doctor` print the exact files and actions without changing anything.
+- `--dry-run` prints the exact files and actions without changing anything.
+- `doctor` **diagnoses** rather than describes: for every destination it reports
+  the state and the exact safe fix. Exit `0` installed and unmodified, `1` blocked
+  (a destination AgentRouter refuses to write through, or an unreadable ownership
+  record), `2` needs attention. `--json` for scripts.
+  - It distinguishes an **identical** pre-existing copy (byte-for-byte ours, safe
+    to adopt with `--adopt-identical`) from a **different** file at that path,
+    which is never assumed to be ours.
+  - A blocked destination is never given a "delete it" remedy; the judgement is
+    left to whoever can see what the link points at.
+  - It never prints file contents — the output is meant to be pasteable into a
+    support request.
+- Plugin state also appears in unified `agentrouter doctor` as `plugins.state`.
 - Set `AGENTROUTER_PLUGIN_ROOT` to install under a custom base (used by tests).
 - Unknown plugin → exit `2`.
+- Safety guarantees, and the Windows behaviour that is **not** guaranteed, are in
+  `SECURITY.md` and `KNOWN_LIMITATIONS.md`.
 
 ---
 

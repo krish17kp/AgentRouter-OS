@@ -1,18 +1,16 @@
 # Quality Dashboard — AgentRouter OS
 
-## Current checkpoint — 2026-11-10
+## Current checkpoint — 2026-11-11
 
-PR #25 (`task/rust-r1-workspace`) is in progress. Pushed parent `6ee8d3e`
-passed GitHub Python/Windows, Rust Linux/Windows/MSRV, Security, and mutation.
-Mutation scored 0.9837 overall, 0.9844 safety/policy/execution, 0.9815
-routing, with zero unreviewed survivors. The current Rust forced-init
-slice passes 10 focused parity cases and Rust 1.75 workspace tests; full
-Python regression passed 1,366 tests with 3 skips. Its SQLite path-based open remains a documented
-R4 blocker. Release evaluation remains 6/7, with context-band accuracy
-0.6667 < 0.90. Full Rust CLI/HTTP/MCP parity and R5–R13 remain outstanding.
-First forced-init push `32eee6f` passed Ubuntu Rust parity but failed Windows
-compilation on a capability-metadata link-count method; a file-handle repair
-awaits remote recheck. Historical measurements follow.
+RC `3fcfd05` includes the website redesign, macOS Python/Rust CI, and routing
+benchmark/coverage evidence. PR #13 plugin mutation campaign is green locally
+(1,629 selected mutants; 0.9693 overall, 0.9663 safety/policy/execution,
+0.9815 routing; zero unreviewed survivors); head `984db4b` has passed the
+currently reported cross-platform CI checks. The latest full Python run passed
+1,650 tests with 6 skips and measured 90.96% line / 85.09% branch coverage,
+meeting the unchanged 90%/85% thresholds. Rust workspace tests, formatting, and
+Clippy pass locally. Context-band accuracy remains 0.6667 < 0.90; Rust R4 and
+R5–R13 remain incomplete. This project is not release-ready.
 
 ## Historical dashboard
 

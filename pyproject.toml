@@ -108,6 +108,7 @@ only_mutate = [
     "agentrouter/server/limits.py",
     "agentrouter/cli.py",
     "agentrouter/openai_adapter.py",
+    "agentrouter/plugins.py",
 ]
 pytest_add_cli_args = ["--disable-warnings"]
 pytest_add_cli_args_test_selection = [
@@ -123,6 +124,7 @@ pytest_add_cli_args_test_selection = [
     "tests/test_property.py",
     "tests/test_taxonomy.py",
     "tests/test_setup.py",
+    "tests/test_plugins.py",
     "tests/test_mutation_kills.py",
 ]
 timeout_multiplier = 8.0
