@@ -389,6 +389,163 @@ pub fn evaluate_feedback() -> Result<serde_json::Value, Box<dyn std::error::Erro
     Ok(json!({"score": score, "detail": {"checks": checks}}))
 }
 
+/// Score router top-1 results against gold constraints or the declared
+/// recommendation/distinct-fallback proxy from `evaluation.evaluators.routing`.
+pub fn evaluate_routing(
+    cases: &[EvaluationCase],
+    models: &[agentrouter_registry::ModelEntry],
+) -> serde_json::Value {
+    use agentrouter_classifier::{classify, ClassifyOptions};
+    use agentrouter_routing::{route, Weights};
+    use serde_json::{json, Value};
+
+    let mut gold_count = 0usize;
+    let mut proxy_count = 0usize;
+    let mut passed = 0usize;
+    let mut with_recommendation = 0usize;
+    let mut failures = Vec::new();
+
+    for case in cases {
+        let classification = classify(&case.task, &ClassifyOptions::default());
+        let result = route(models, &classification, Weights::default(), None);
+        let recommendation = result.recommendation.map(|row| row.model);
+        let fallback = result.fallback.map(|row| row.model);
+        if recommendation.is_some() {
+            with_recommendation += 1;
+        }
+
+        let (ok, reason) = if let Some(expectation) = &case.routing {
+            gold_count += 1;
+            match recommendation.as_deref() {
+                None => (false, Some("no recommendation".to_owned())),
+                Some(key) => {
+                    let model = models.iter().find(|model| model.key() == key);
+                    let Some(model) = model else {
+                        failures.push(json!({
+                            "id": case.id,
+                            "reason": "recommendation missing from registry",
+                            "recommendation": key,
+                        }));
+                        continue;
+                    };
+                    routing_constraints(model, expectation)
+                }
+            }
+        } else {
+            proxy_count += 1;
+            let sane = recommendation.is_some() && fallback.is_some() && recommendation != fallback;
+            (
+                sane,
+                (!sane).then(|| "recommendation missing or fallback not distinct".to_owned()),
+            )
+        };
+
+        if ok {
+            passed += 1;
+        } else {
+            failures.push(json!({
+                "id": case.id,
+                "reason": reason,
+                "recommendation": recommendation,
+            }));
+        }
+    }
+
+    let count = cases.len();
+    let score = if count == 0 {
+        0.0
+    } else {
+        round_to(passed as f64 / count as f64, 4)
+    };
+    let coverage = if count == 0 {
+        0.0
+    } else {
+        round_to(with_recommendation as f64 / count as f64, 4)
+    };
+    let measurement = if gold_count > 0 && proxy_count == 0 {
+        "gold"
+    } else if gold_count == 0 {
+        "proxy"
+    } else {
+        "mixed"
+    };
+    json!({
+        "score": score,
+        "detail": {
+            "n_cases": count,
+            "n_gold": gold_count,
+            "n_proxy": proxy_count,
+            "measurement": measurement,
+            "top1": score,
+            "recommendation_coverage": coverage,
+            "proxy_note": "proxy cases scored on: recommendation non-None AND distinct fallback; NOT verified against a gold routing target",
+            "failures": failures.into_iter().take(20).collect::<Vec<Value>>(),
+        }
+    })
+}
+
+fn routing_constraints(
+    model: &agentrouter_registry::ModelEntry,
+    expectation: &RoutingExpectation,
+) -> (bool, Option<String>) {
+    use serde_json::Value;
+
+    for (dimension, floor) in &expectation.minimum_ability {
+        let ability = match dimension.as_str() {
+            "coding" => model.ability.coding,
+            "reasoning" => model.ability.reasoning,
+            "writing" => model.ability.writing,
+            _ => 0,
+        };
+        if i64::from(ability) < *floor {
+            return (
+                false,
+                Some(format!("ability.{dimension} {ability} < {floor}")),
+            );
+        }
+    }
+    if !expectation.acceptable_pricing_tiers.is_empty()
+        && !expectation
+            .acceptable_pricing_tiers
+            .contains(&model.pricing_tier)
+    {
+        let tier = serde_json::to_value(model.pricing_tier)
+            .unwrap_or(Value::Null)
+            .as_str()
+            .unwrap_or_default()
+            .to_owned();
+        return (false, Some(format!("pricing_tier {tier} not acceptable")));
+    }
+    if !expectation.permitted_providers.is_empty()
+        && !expectation.permitted_providers.contains(&model.provider)
+    {
+        return (
+            false,
+            Some(format!("provider {} not permitted", model.provider)),
+        );
+    }
+    if expectation.forbidden_models.contains(&model.model_id) {
+        return (
+            false,
+            Some(format!("model {} is forbidden", model.model_id)),
+        );
+    }
+    if expectation
+        .min_context_tokens
+        .is_some_and(|minimum| minimum != 0 && i64::from(model.context_window) < minimum)
+    {
+        return (
+            false,
+            Some(format!(
+                "context_window {} < {}",
+                model.context_window,
+                expectation.min_context_tokens.unwrap_or_default()
+            )),
+        );
+    }
+    (true, None)
+}
+
 fn round_to(value: f64, decimal_places: i32) -> f64 {
     let scale = 10_f64.powi(decimal_places);
     (value * scale).round_ties_even() / scale

@@ -56,7 +56,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/evaluators/performance.py` | `—` | Not ported |
 | `agentrouter/evaluation/evaluators/platform.py` | `—` | Not ported |
 | `agentrouter/evaluation/evaluators/provider.py` | `agentrouter-evaluation::evaluate_provider` | Partial |
-| `agentrouter/evaluation/evaluators/routing.py` | `—` | Not ported |
+| `agentrouter/evaluation/evaluators/routing.py` | `agentrouter-evaluation::evaluate_routing` | Partial |
 | `agentrouter/evaluation/evaluators/safety.py` | `agentrouter-evaluation::evaluate_safety` | Partial |
 | `agentrouter/evaluation/grading.py` | `agentrouter-evaluation::grade_classification` | Partial |
 | `agentrouter/evaluation/metrics.py` | `agentrouter-evaluation::classification_metrics` | Parity |
@@ -114,5 +114,8 @@ release authority until the full set is complete.
 - The feedback/storage evaluator now uses the Rust SQLite store in a unique
   temporary home and compares the same decision, feedback, and aggregation
   checks. The platform, routing, and performance evaluators remain unported.
+- Routing evaluation now scores caller-supplied model catalogs against gold
+  constraints or the declared distinct-fallback proxy. Loading seed models and
+  custom classifier injection remain Python-only.
 - This table is a release checklist, not a replacement for CI evidence. Add a
   differential suite before moving any row to **Parity**.

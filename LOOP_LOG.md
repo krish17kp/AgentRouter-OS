@@ -1758,3 +1758,17 @@ Verification: full Python suite 1,735 passed / 6 skipped; 91.08% line, 85.42%
 branch, and 89.79% combined coverage. Full Rust workspace tests, Clippy,
 formatting, Ruff, and all 15 evaluation differential tests pass. Cross-platform
 CI for the complete provider/feedback slice remains pending after push.
+
+## Iteration 44 — 2026-11-11 — Rust routing evaluation scorer
+
+Added a Rust routing evaluator that runs the existing Rust classifier and router
+on each case, then checks gold ability/provider/pricing/model/context constraints
+or the explicit proxy requiring both a recommendation and distinct fallback.
+It reports gold/proxy/mixed counts, top-1 score, recommendation coverage, and the
+same capped failure contract. Its differential fixture includes passing gold,
+failed gold, and proxy cases over the packaged model catalog.
+
+Verification: full Python suite 1,736 passed / 6 skipped; 91.10% line, 85.52%
+branch, and 89.83% combined coverage. Full Rust workspace, Clippy, formatting,
+Ruff, and all 16 evaluation differential tests pass. Cross-platform CI for this
+routing scorer is pending after push.

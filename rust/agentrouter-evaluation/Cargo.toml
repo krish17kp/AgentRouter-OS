@@ -55,3 +55,7 @@ path = "src/bin/evaluation_provider_from_json.rs"
 [[bin]]
 name = "evaluation_feedback_from_json"
 path = "src/bin/evaluation_feedback_from_json.rs"
+
+[[bin]]
+name = "evaluation_routing_from_json"
+path = "src/bin/evaluation_routing_from_json.rs"

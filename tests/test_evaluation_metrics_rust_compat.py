@@ -11,6 +11,7 @@ import pytest
 from agentrouter.evaluation.evaluators import load_seed_models
 from agentrouter.evaluation.evaluators.feedback import evaluate_feedback as evaluate_python_feedback
 from agentrouter.evaluation.evaluators.provider import evaluate_provider as evaluate_python_provider
+from agentrouter.evaluation.evaluators.routing import evaluate_routing as evaluate_python_routing
 from agentrouter.evaluation.evaluators.safety import evaluate_safety as evaluate_python_safety
 from agentrouter.evaluation.grading import grade
 from agentrouter.evaluation.metrics import classification_metrics
@@ -629,6 +630,53 @@ def test_rust_feedback_storage_evaluator_matches_python():
             "-p",
             "agentrouter-evaluation",
         ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+        check=True,
+    )
+    assert json.loads(process.stdout) == expected
+
+
+def test_rust_routing_evaluator_matches_python_gold_and_proxy_cases():
+    models = load_seed_models()
+    cases = [
+        EvaluationCase(
+            id="gold-pass",
+            dataset="rust-routing-eval",
+            task="Refactor the payment module and add unit tests",
+            routing=RoutingExpectation(minimum_ability={"coding": 0}),
+        ),
+        EvaluationCase(
+            id="gold-fail",
+            dataset="rust-routing-eval",
+            task="Refactor the payment module and add unit tests",
+            routing=RoutingExpectation(minimum_ability={"coding": 11}),
+        ),
+        EvaluationCase(
+            id="proxy-case",
+            dataset="rust-routing-eval",
+            task="Summarize the public launch announcement",
+        ),
+    ]
+    expected = evaluate_python_routing(cases, models)
+    payload = {
+        "cases": [case.model_dump(mode="json") for case in cases],
+        "models": [model.model_dump(mode="json") for model in models],
+    }
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_routing_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps(payload),
         capture_output=True,
         text=True,
         encoding="utf-8",
