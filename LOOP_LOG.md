@@ -2218,3 +2218,8 @@ Added Pydantic-compatible JSON coercions for annotation schema booleans and
 manifest `schema_version`, including numeric strings and 0/1 values. The
 focused schema suite now has 23 passing cases; evaluation-crate Clippy passes.
 Remaining annotation schema coercions still need a full audit.
+# TASK-051 — Empty package initializer parity
+
+Verified that the evaluation-adapters and server package initializers have no
+public runtime exports. Added Rust package markers and a differential test for
+the empty export contract. Their implementation modules remain unported.

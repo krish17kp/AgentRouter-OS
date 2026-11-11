@@ -38,7 +38,7 @@ release authority until the full set is complete.
 | `agentrouter/engine.py` | `agentrouter-routing` | Parity |
 | `agentrouter/evaluate.py` | `—` | Not ported |
 | `agentrouter/evaluation/__init__.py` | `agentrouter-evaluation::evaluation_api` | Parity |
-| `agentrouter/evaluation/adapters/__init__.py` | `—` | Not ported |
+| `agentrouter/evaluation/adapters/__init__.py` | `agentrouter-evaluation::package_markers::ADAPTERS_PUBLIC_EXPORTS` | Parity |
 | `agentrouter/evaluation/adapters/agentrouter_gold.py` | `agentrouter-evaluation::AgentRouterGoldAdapter` | Parity |
 | `agentrouter/evaluation/adapters/banking77.py` | `agentrouter-evaluation::normalize_banking77_rows` | Partial |
 | `agentrouter/evaluation/adapters/clinc150.py` | `agentrouter-evaluation::normalize_clinc150_rows` | Partial |
@@ -82,7 +82,7 @@ release authority until the full set is complete.
 | `agentrouter/safety.py` | `agentrouter-policy` | Parity |
 | `agentrouter/schema.py` | `agentrouter-core + agentrouter-registry` | Partial |
 | `agentrouter/sdk.py` | `—` | Not ported |
-| `agentrouter/server/__init__.py` | `—` | Not ported |
+| `agentrouter/server/__init__.py` | `agentrouter-evaluation::package_markers::SERVER_PUBLIC_EXPORTS` | Parity |
 | `agentrouter/server/app.py` | `—` | Not ported |
 | `agentrouter/server/limits.py` | `—` | Not ported |
 | `agentrouter/server/schemas.py` | `—` | Not ported |

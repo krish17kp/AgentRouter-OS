@@ -16,6 +16,7 @@ pub mod annotation_store;
 pub mod context_bands;
 pub mod evaluation_api;
 pub mod evaluators_api;
+pub mod package_markers;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;

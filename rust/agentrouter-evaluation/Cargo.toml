@@ -187,3 +187,7 @@ path = "src/bin/evaluation_annotation_public_api_from_json.rs"
 [[bin]]
 name = "evaluation_evaluators_api_from_json"
 path = "src/bin/evaluation_evaluators_api_from_json.rs"
+
+[[bin]]
+name = "evaluation_package_markers_from_json"
+path = "src/bin/evaluation_package_markers_from_json.rs"
