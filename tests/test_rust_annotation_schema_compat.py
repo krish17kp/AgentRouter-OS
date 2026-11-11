@@ -157,6 +157,9 @@ def test_rust_annotation_schema_rejects_invalid_models(model, value):
         "2026-11-11",
         "2026-11-11T12:30:00.123456789Z",
         "2026-11-11T12:30:00.5Z",
+        "1.0e3",
+        "+1",
+        "-62135596800",
         "2026-11-11t12:30:00",
         "2026-11-11_12:30",
         "2026-11-11_12:30:00",
@@ -171,6 +174,10 @@ def test_rust_annotation_schema_rejects_invalid_models(model, value):
         "2026-11-11T12:30:00,25+05:30",
         0,
         1.5,
+        20000000001,
+        1700000000.1234567,
+        1.0000015,
+        -0.0000005,
         "0",
         None,
     ],
@@ -191,7 +198,17 @@ def test_rust_annotation_datetime_matches_python_parse_and_serialization(timesta
 
 @pytest.mark.parametrize(
     "timestamp",
-    ["not-a-date", "20261111T123000", "2026-11-11X12:30", "2026-W46-3T12:30:00"],
+    [
+        "not-a-date",
+        "20261111T123000",
+        "2026-11-11X12:30",
+        "2026-W46-3T12:30:00",
+        "1e3",
+        "2026-11-11T12:30:60",
+        "2026-11-11T12:30:60.5Z",
+        "1_0",
+        " 1 ",
+    ],
 )
 def test_rust_annotation_datetime_rejects_invalid_value_like_python(timestamp):
     invalid = {

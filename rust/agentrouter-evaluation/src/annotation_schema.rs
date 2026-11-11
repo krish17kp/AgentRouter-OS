@@ -342,7 +342,22 @@ mod optional_datetime {
             where
                 E: de::Error,
             {
-                if let Ok(timestamp) = value.parse::<f64>() {
+                // Pydantic accepts signed integer and decimal timestamp
+                // strings, but rejects integer-only exponent notation and
+                // surrounding whitespace.
+                let numeric = if value.contains('.') {
+                    value.parse::<f64>().ok()
+                } else {
+                    let digits = value
+                        .strip_prefix('-')
+                        .or_else(|| value.strip_prefix('+'))
+                        .unwrap_or(value)
+                        .as_bytes();
+                    (!digits.is_empty() && digits.iter().all(u8::is_ascii_digit))
+                        .then(|| value.parse::<f64>().ok())
+                        .flatten()
+                };
+                if let Some(timestamp) = numeric {
                     return normalize_timestamp(timestamp).map(Some).map_err(E::custom);
                 }
                 normalize_iso(value).map(Some).map_err(E::custom)
@@ -394,14 +409,19 @@ mod optional_datetime {
         } else {
             timestamp
         };
-        let whole = seconds.floor();
-        let nanos = ((seconds - whole) * 1_000_000_000.0).round() as u32;
-        let timestamp = DateTime::<Utc>::from_timestamp(whole as i64, nanos)
+        let mut whole = seconds.floor();
+        let mut micros = ((seconds - whole) * 1_000_000.0).round_ties_even() as i64;
+        if micros == 1_000_000 {
+            whole += 1.0;
+            micros = 0;
+        }
+        let timestamp = DateTime::<Utc>::from_timestamp(whole as i64, micros as u32 * 1_000)
             .ok_or_else(|| "datetime timestamp is out of range".to_owned())?;
         Ok(format_aware(timestamp.fixed_offset()))
     }
 
     fn normalize_iso(value: &str) -> Result<String, String> {
+        reject_leap_second(value, value)?;
         if let Ok(parsed) = DateTime::<FixedOffset>::parse_from_rfc3339(value) {
             return Ok(format_aware(parsed));
         }
@@ -457,6 +477,7 @@ mod optional_datetime {
                 }
             }
         }
+        reject_leap_second(&iso, value)?;
         if let Ok(parsed) = DateTime::<FixedOffset>::parse_from_rfc3339(&iso) {
             return Ok(format_aware(parsed));
         }
@@ -469,6 +490,21 @@ mod optional_datetime {
             ));
         }
         Err(format!("invalid datetime {value:?}"))
+    }
+
+    fn reject_leap_second(value: &str, original: &str) -> Result<(), String> {
+        let Some(time_start) = value.find('T').map(|position| position + 1) else {
+            return Ok(());
+        };
+        let time = &value[time_start..];
+        let bytes = time.as_bytes();
+        if bytes.get(2) == Some(&b':') && bytes.get(5) == Some(&b':') {
+            let seconds = time.get(6..8).and_then(|digits| digits.parse::<u8>().ok());
+            if matches!(seconds, Some(60..)) {
+                return Err(format!("invalid datetime {original:?}"));
+            }
+        }
+        Ok(())
     }
 
     fn format_naive(value: NaiveDateTime) -> String {

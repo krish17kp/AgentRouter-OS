@@ -33,6 +33,8 @@ All notable changes to AgentRouter OS. Format loosely follows
   separator, including omitted seconds, fractions, and timezone offsets.
 - Match Pydantic integer coercion for underscore-separated and integral decimal
   strings in Rust annotation manifests.
+- Match Python annotation datetime handling for rejected leap seconds, signed
+  numeric timestamp strings, exponent forms, and microsecond rounding.
 - Added Rust types and validation for the human annotation artifact schemas;
   supported datetime forms now normalize to Python-compatible ISO JSON while
   full scalar coercion and `fromisoformat` edge coverage remain open.

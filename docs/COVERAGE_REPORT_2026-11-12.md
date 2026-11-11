@@ -12,7 +12,7 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 1,928 passed, 6 skipped |
+| Python regression | 1,940 passed, 6 skipped |
 | Line coverage | 92.34% (6,617 / 7,166 statements) |
 | Branch coverage | 87.37% (1,840 / 2,106 branch outcomes) |
 | Combined coverage reported by pytest-cov | 91.21% |
@@ -26,7 +26,9 @@ evaluation adapter and annotation differential checks; Python/Rust parity for
 the evaluation scorecard, registered-fixture runner, context bands, report
 artifacts, and annotation schema. The schema checks include Pydantic-compatible
 boolean and integer coercion, underscore-separated and integral-decimal
-integer strings, underscore datetime separators, and invalid-input rejection.
+integer strings, underscore datetime separators, numeric Unix timestamp
+rounding, leap-second rejection, and invalid-input rejection. An additional
+40-value Python/Rust timestamp corpus has no output or acceptance mismatch.
 The candidate package version is `0.5.0rc1`. The six skips are
 environment-dependent; CI is responsible for Windows and macOS confirmation.
 Coverage does not replace mutation, security, parity, or release-evaluation
