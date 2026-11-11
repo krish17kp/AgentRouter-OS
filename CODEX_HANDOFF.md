@@ -3,7 +3,7 @@
 ## Current checkpoint — 2026-11-11
 
 Active RC branch `release/agentrouter-v0.5-rc1`; latest pushed head is
-`8a4286a` (TASK-040 annotation comparison); TASK-041 graph-shape parity is
+`75d4690` (TASK-041 graph-shape handling); TASK-042 graph-cache parity is
 locally complete and awaiting push/hosted CI. PR #16 is the sole open PR. TASK-038 Windows CRLF parity was
 fixed after hosted Windows tests caught the mismatch; cross-platform CI is
 running on the fix. TASK-039 (candidate generation) and TASK-040 (rules,
@@ -11,7 +11,7 @@ learned and hybrid comparison with CPython-seeded bootstrap intervals) have
 focused parity evidence. Full Python regression is 1,868 passed/6 skipped;
 coverage is 92.15% line, 87.22% branch, 91.03% combined. Rust workspace,
 Clippy, Ruff, and formatting pass locally. Do not merge PR #16 while the frozen
-context-band score is 0.6667 < 0.90. Graph signal LRU cache parity remains open. Human annotation, bounded OpenAI live
+context-band score is 0.6667 < 0.90. Graph contextual Unicode lowercase edge parity remains open. Human annotation, bounded OpenAI live
 validation, and deployment credentials are under **Needs Krish** in
 `PRODUCTION_STATUS.md`. Continue with the next module and hosted-check review;
 `AGENT_HANDOFF.md` remains authoritative.

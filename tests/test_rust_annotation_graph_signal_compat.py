@@ -149,3 +149,79 @@ def test_rust_graph_signal_matches_python_mapping_node_iteration(tmp_path):
     graph = tmp_path / "mapping-nodes.json"
     graph.write_text(json.dumps({"nodes": {"bad": "ignored key"}}), encoding="utf-8")
     _assert_parity("inspect classifier", graph)
+
+
+def test_rust_graph_signal_matches_four_entry_python_lru_cache(tmp_path):
+    paths = [tmp_path / f"cache-{index}.json" for index in range(5)]
+    sequence = [
+        {
+            "prompt": "inspect alpha",
+            "graph_path": str(paths[0]),
+            "write_graph": {"nodes": [{"id": "alpha"}]},
+        },
+        {
+            "prompt": "inspect alpha",
+            "graph_path": str(paths[0]),
+            "write_graph": {"nodes": [{"id": "zeta"}]},
+        },
+    ]
+    sequence.extend(
+        {
+            "prompt": f"inspect node{index}",
+            "graph_path": str(paths[index]),
+            "write_graph": {"nodes": [{"id": f"node{index}"}]},
+        }
+        for index in range(1, 5)
+    )
+    sequence.extend(
+        [
+            {
+                "prompt": "inspect alpha",
+                "graph_path": str(paths[0]),
+                "write_graph": {"nodes": [{"id": "zeta"}]},
+            },
+            {"prompt": "inspect missing", "graph_path": str(tmp_path / "missing-cache.json")},
+            {
+                "prompt": "inspect missing",
+                "graph_path": str(tmp_path / "missing-cache.json"),
+                "write_graph": {"nodes": [{"id": "missing"}]},
+            },
+        ]
+    )
+
+    expected = []
+    for entry in sequence:
+        if "write_graph" in entry:
+            Path(entry["graph_path"]).write_text(json.dumps(entry["write_graph"]), encoding="utf-8")
+        signal = impact_for(entry["prompt"], entry["graph_path"])
+        expected.append(
+            {
+                "available": signal.available,
+                "matched_nodes": signal.matched_nodes,
+                "dependency_reach": signal.dependency_reach,
+                "feature": signal.feature,
+            }
+        )
+
+    Path(sequence[-1]["graph_path"]).unlink()
+
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_annotation_graph_signal_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps({"sequence": sequence}),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=ROOT,
+        timeout=120,
+        check=True,
+    )
+    assert json.loads(process.stdout) == expected

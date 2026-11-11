@@ -10,6 +10,7 @@ All notable changes to AgentRouter OS. Format loosely follows
   context-band comparison to Rust with Python differential coverage.
 - Match Python text-file newline behavior on Windows for annotation artifacts.
 - Match Python error and fallback behavior for malformed optional graph shapes.
+- Port the annotation graph loader's bounded four-entry LRU cache semantics.
 - Added Rust types and validation for the human annotation artifact schemas;
   supported datetime forms now normalize to Python-compatible ISO JSON while
   full scalar coercion and `fromisoformat` edge coverage remain open.

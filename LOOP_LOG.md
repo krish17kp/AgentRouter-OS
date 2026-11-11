@@ -2154,3 +2154,15 @@ cases, full Python 1,875/6 (92.15% line, 87.22% branch, 91.03% combined), full
 Rust workspace/Clippy/format, Ruff, and diff checks pass. Python's four-entry
 LRU cache remains a known parity gap; the matrix remains Partial for this module.
 Cross-platform CI will run after push.
+
+## 2026-11-11 — TASK-042: Rust annotation graph cache parity
+
+Added a four-entry LRU graph cache matching Python `functools.lru_cache`.
+Hits refresh recency; missing, unreadable, and invalid-JSON fallbacks are cached;
+malformed-shape exceptions are not; and the least-recently-used path is evicted.
+A same-process differential verifies stale hits, eviction after five paths, and
+negative caching. Twelve graph compatibility cases pass. Full Python regression
+is 1,876 passed/6 skipped (92.15% line, 87.22% branch, 91.03% combined); full
+Rust workspace/Clippy/format, Ruff, and diff checks pass locally. The module is
+still Partial for contextual Unicode lowercase differences in graph edge IDs.
+Cross-platform CI starts after push.

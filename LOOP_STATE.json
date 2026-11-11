@@ -1,12 +1,12 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-11",
-  "current_phase": "IN_PROGRESS: TASK-041 graph shape behavior passes 11 focused differentials and full local Python/Rust quality checks. Push and inspect cross-platform checks; continue the Rust parity inventory, including the remaining graph cache behavior.",
+  "current_phase": "IN_PROGRESS: TASK-042 graph cache parity is locally complete with same-process LRU, negative-cache, and eviction differential coverage. Full suite 1,876/6 and full Rust workspace/Clippy/Ruff/format pass. TASK-041 cross-platform CI is green. Commit/push TASK-042; preserve PR #16 release-gate failure and continue parity.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
     "main": "PR #16 is the sole open PR against main. Cross-platform Python/Rust, security, site, API, build and mutation checks pass; enforce-release-gate fails honestly at context-band 0.6667 < 0.90. No gate bypass.",
-    "release/agentrouter-v0.5-rc1": "RC at 8a4286a. TASK-040 annotation compare Rust workspace and Python/Rust compatibility pass Linux/Windows/macOS. TASK-041 graph malformed-shape handling is local pending push; full suite 1,875/6 and full Rust workspace/Clippy/format/Ruff pass. PR #16 remains blocked by the unchanged 0.6667 < 0.90 context gate.",
+    "release/agentrouter-v0.5-rc1": "RC at 75d4690. TASK-041 graph-shape behavior and Rust/Python workspace checks pass Linux/Windows/macOS. TASK-042 four-entry LRU cache and 12 graph differentials are local; full Python 1,876/6 and full local quality gates pass. PR #16 ordinary CI, security, mutation, website and platform checks pass; only enforce-release-gate fails on frozen context score 0.6667 < 0.90, and live-smoke is skipped without credentials.",
     "task/rust-r1-workspace": "PR #25 open against RC; 6ee8d3e passed complete GitHub CI; 32eee6f forced-init push failed Windows compile, file-handle repair awaits remote recheck; SQLite path-race blocker remains; Rust R4 partial and OpenAI execution hardening",
     "task/repo-cleanup-architecture-ponytail": "MERGED to RC (PR #14, merge commit 1ae3155); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/dynamic-skill-discovery": "MERGED to RC (PR #15, merge commit 62d5289); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
@@ -29,9 +29,9 @@
   "repo_sha_at_takeover": "602321af91ff298c0d5b59d6d36c24f845557fc1",
   "canonical_release_ready": false,
   "in_progress": [
-    "2026-11-11 TASK-035 schema remains Partial for Pydantic scalar coercion and complete datetime grammar; 14 focused cases. Cross-platform checks passed through dca1300.",
-    "2026-11-11 TASK-036 graph signal remains Partial for Python four-entry LRU cache semantics. TASK-041 now matches malformed root and iterable shape behavior with 11 differential cases.",
-    "2026-11-11 TASK-041 local implementation and full regression/quality checks pass. Commit/push and inspect hosted cross-platform checks; then continue to next incomplete parity module."
+    "2026-11-11 TASK-035 annotation schema remains Partial for Pydantic scalar coercion, full fromisoformat edge grammar, and Unicode casing; 14 focused cases.",
+    "2026-11-11 TASK-036 annotation graph signal remains Partial for contextual Unicode lowercase behavior in edge identifiers; TASK-041 shape and TASK-042 LRU cache parity have focused evidence.",
+    "2026-11-11 TASK-042 is locally verified: 12 graph differential cases, full Python 1,876/6, full Rust workspace/Clippy/format/Ruff. Commit/push and inspect hosted CI."
   ],
   "completed_iter25": [
     "TASK-015 trusted catalogs MERGED to RC (PR #6 -> merge commit 8661629; task branch deleted local+remote). Closes TASK-013's deferred scope: file-level provenance block (provider, source_url, fetched_at UTC, count, tool_version, cli_args) ignored by the registry loader; atomic refresh via tempfile.mkstemp + os.replace; candidate-deprecation reporting on refresh (report-only, never auto-deletes); rollback with non-destructive backup rotation + new `providers restore`; new `providers doctor` that schema-validates every generated catalog and exits 3 only on real corruption (not staleness).",
@@ -124,7 +124,7 @@
     "historical task records remain under loop/tasks and loop/reports",
     "historical TASK-004 0.945 result is retained as in-sample evidence but no longer treated as canonical held-out readiness"
   ],
-  "next_action": "Commit/push TASK-041 with refreshed coverage and handoff evidence; inspect all CI and PR #16 checks, then implement the next Rust parity gap, including remaining graph cache and annotation CLI.",
+  "next_action": "Commit/push TASK-042 and refreshed coverage/handoffs; inspect CI for TASK-041/TASK-042. Continue the Unicode casing gap and remaining public module parity while review/release blockers remain explicit.",
   "completed_iter26": [
     "TASK-016 verified execution-host states MERGED to RC (PR #7 -> merge commit 5847c22; task branch deleted local+remote). hosts.py gained a readiness state vocabulary (missing/installed/configured/authenticated/authorized/degraded/unknown) plus a per-host remedy; `availability` keeps its exact prior meaning and is now derived from state. hosts list/doctor/show, the setup wizard and the execute refusal all report state + fix; hosts doctor ends with the cheapest concrete fix and exits non-zero only when no real host is ready. REST/MCP gained additive state/remedy and host_state/host_remedy keys. docs: new USER_GUIDE section 8 with the state table and the honesty note on `authorized`.",
     "BUG FIXED: host detection tested the API-key env var for truthiness, so a set-but-blank key (OPENAI_API_KEY='   ') reported available and `execute` would target a host that cannot authenticate. Now degraded/unavailable with a fix-it message, pinned by a parametrised test.",
@@ -240,5 +240,8 @@
   ],
   "completed_iter51": [
     "Aligned Rust optional graph signal behavior with Python for malformed JSON roots, truthy scalar collections, iterable mappings/strings, and missing/unreadable/invalid-JSON fallback. Eleven graph differential tests pass. Full Python suite 1,875 passed/6 skipped; 92.15% line, 87.22% branch, 91.03% combined. Full Rust workspace, Clippy, format, Ruff, and diff checks pass locally. The Python four-entry LRU cache remains incomplete, so the module stays Partial."
+  ],
+  "completed_iter52": [
+    "Ported Python functools.lru_cache(maxsize=4) semantics to the Rust annotation graph loader. Same-process differential covers cached graph hits, stale file content, eviction after more than four paths, and negative caching of missing files. Twelve graph compatibility tests pass. Full Python suite 1,876 passed/6 skipped; coverage 92.15% line, 87.22% branch, 91.03% combined. Full Rust workspace/Clippy/format/Ruff pass. Graph module remains Partial for contextual Unicode lowercase behavior in edge IDs."
   ]
 }

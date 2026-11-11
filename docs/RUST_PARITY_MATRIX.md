@@ -102,6 +102,10 @@ release authority until the full set is complete.
 - Context-band model inference is ported but remains disabled in the default
   classifier. The frozen evaluation gate still controls whether learned routing
   can be enabled.
+- The optional repository graph signal now matches Python's four-entry LRU
+  cache, including cached text-only fallbacks and eviction; Unicode contextual
+  lowercase behavior for non-ASCII graph edge identifiers remains under parity
+  review.
 - Context-band annotation comparison matches rules, learned and hybrid
   prediction reports, including macro-F1, per-band recall, deterministic
   CPython-seeded bootstrap confidence intervals, ECE, abstention and fallback
