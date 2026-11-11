@@ -100,7 +100,7 @@ def _safe_relative(value: str, label: str) -> Path:
         or part in {".", ".."}
         or part[-1:] in {" ", "."}
         or any(ord(char) < 32 or char in '<>:"|?*' for char in part)
-        or part.split(".", 1)[0].upper() in _WINDOWS_RESERVED
+        or part.split(".", 1)[0].rstrip(" .").upper() in _WINDOWS_RESERVED
         for part in raw_parts
     )
     if (

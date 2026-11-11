@@ -1,6 +1,7 @@
 """Phase P8 — plugin/skill installer (reversible, idempotent, safe)."""
 
 import os
+import stat
 from pathlib import Path
 
 import pytest
@@ -563,8 +564,15 @@ def test_final_directory_path_swap_is_never_deleted(plug_root, monkeypatch):
         "..\\escape.md",
         "/tmp/escape.md",
         "C:\\escape.md",
+        "",
+        "a\x00b",
+        "a//b",
         "CON",
+        "NUL.txt",
+        "NUL.txt.md",
+        "NUL .txt",
         "file:stream",
+        "trailing.",
         "trailing. ",
     ],
 )
@@ -713,3 +721,229 @@ def test_cli_uninstall_reports_partial_results_before_error(plug_root, monkeypat
     assert "removed" in result.output
     assert "first" in result.output
     assert "simulated late failure" in result.output
+
+
+@pytest.mark.parametrize(
+    ("value", "expected_parts"),
+    [
+        ("directory with spaces/file.md", ("directory with spaces", "file.md")),
+        ("a\\b c\\file.md", ("a", "b c", "file.md")),
+        ("name with spaces.md", ("name with spaces.md",)),
+        ("NUL\u2003.txt", ("NUL\u2003.txt",)),
+    ],
+)
+def test_safe_relative_preserves_whitespace_inside_path_components(value, expected_parts):
+    assert plugins._safe_relative(value, "plugin destination").parts == expected_parts
+
+
+def test_entry_matches_requires_the_exact_installed_identity_and_digest(plug_root):
+    p = plugins.get_plugin("claude-code")
+    plugins.install(p)
+    dest = _dest(p, plug_root)
+    raw, info = plugins._read_verified(dest, "test managed file")
+    entry = {
+        "installed_sha256": plugins._sha256(raw),
+        "installed_identity": plugins._identity_json(info),
+    }
+
+    assert plugins._entry_matches(dest, entry) is True
+    assert plugins._entry_matches(dest, {**entry, "installed_sha256": "wrong"}) is False
+    assert plugins._entry_matches(dest, {**entry, "installed_identity": [-1, -1]}) is False
+    assert plugins._entry_matches(dest.with_name("missing"), entry) is False
+
+
+def test_entry_matches_fails_closed_when_file_verification_raises(plug_root, monkeypatch):
+    p = plugins.get_plugin("claude-code")
+    plugins.install(p)
+    dest = _dest(p, plug_root)
+
+    def fail_verification(*_args, **_kwargs):
+        raise plugins.PluginError("unreadable")
+
+    monkeypatch.setattr(plugins, "_read_verified", fail_verification)
+    assert plugins._entry_matches(dest, {}) is False
+
+
+def test_link_check_reports_the_path_when_symlink_inspection_fails(tmp_path, monkeypatch):
+    target = tmp_path / "target"
+
+    def fail_is_symlink(_self):
+        raise PermissionError("denied")
+
+    monkeypatch.setattr(Path, "is_symlink", fail_is_symlink)
+    with pytest.raises(plugins.PluginError, match=str(target)):
+        plugins._is_link_or_reparse(target)
+
+
+def test_link_check_detects_junction_even_when_it_is_not_a_symlink(tmp_path, monkeypatch):
+    plain = tmp_path / "plain"
+    plain.write_text("x", encoding="utf-8")
+    monkeypatch.setattr(os.path, "isjunction", lambda _path: True, raising=False)
+    assert plugins._is_link_or_reparse(plain) is True
+
+
+def test_link_check_detects_windows_reparse_point_attribute(tmp_path, monkeypatch):
+    plain = tmp_path / "plain"
+    plain.write_text("x", encoding="utf-8")
+    original_lstat = Path.lstat
+    genuine = original_lstat(plain)
+
+    class ReparseStat:
+        st_mode = genuine.st_mode
+        st_file_attributes = 0x400
+
+    monkeypatch.setattr(os.path, "isjunction", lambda _path: False, raising=False)
+    monkeypatch.setattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400, raising=False)
+    monkeypatch.setattr(
+        Path,
+        "lstat",
+        lambda self: ReparseStat() if self == plain else original_lstat(self),
+    )
+    assert plugins._is_link_or_reparse(plain) is True
+
+
+def test_link_check_reports_lstat_errors_and_treats_only_missing_as_absent(tmp_path, monkeypatch):
+    path = tmp_path / "inaccessible"
+    original_is_symlink = Path.is_symlink
+    monkeypatch.setattr(
+        Path,
+        "is_symlink",
+        lambda self: False if self == path else original_is_symlink(self),
+    )
+
+    def fail_lstat(self):
+        if self == path:
+            raise PermissionError("denied")
+        return Path.lstat(self)
+
+    monkeypatch.setattr(Path, "lstat", fail_lstat)
+    with pytest.raises(plugins.PluginError, match=str(path)):
+        plugins._is_link_or_reparse(path)
+
+
+def test_link_check_handles_platforms_without_isjunction(tmp_path, monkeypatch):
+    path = tmp_path / "plain"
+    path.write_text("x", encoding="utf-8")
+    monkeypatch.delattr(os.path, "isjunction", raising=False)
+    assert plugins._is_link_or_reparse(path) is False
+
+
+def test_owned_directory_removal_returns_exact_decision_and_preserves_contents(tmp_path):
+    missing = tmp_path / "missing"
+    assert plugins._remove_owned_empty_directory(tmp_path, missing, [0, 0]) == "absent"
+
+    changed = tmp_path / "changed"
+    changed.mkdir()
+    assert plugins._remove_owned_empty_directory(tmp_path, changed, [0, 0]) == (
+        "preserved (directory identity changed)"
+    )
+    assert changed.is_dir()
+
+    nonempty = tmp_path / "nonempty"
+    nonempty.mkdir()
+    identity = plugins._identity_json(nonempty.lstat())
+    child = nonempty / "user-data"
+    child.write_text("keep", encoding="utf-8")
+    assert plugins._remove_owned_empty_directory(tmp_path, nonempty, identity) == (
+        "preserved (not empty)"
+    )
+    assert child.read_text(encoding="utf-8") == "keep"
+
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    empty_identity = plugins._identity_json(empty.lstat())
+    assert plugins._remove_owned_empty_directory(tmp_path, empty, empty_identity) == (
+        "removed (empty directory)"
+    )
+    assert not empty.exists()
+
+
+def test_owned_directory_restores_content_arriving_after_the_empty_check(tmp_path, monkeypatch):
+    directory = tmp_path / "owned"
+    directory.mkdir()
+    identity = plugins._identity_json(directory.lstat())
+    real_rename = os.rename
+
+    def add_content_after_staging(source, destination, *args, **kwargs):
+        real_rename(source, destination, *args, **kwargs)
+        if Path(source) == directory:
+            (Path(destination) / "arrived-late").write_text("keep", encoding="utf-8")
+
+    monkeypatch.setattr(plugins.os, "rename", add_content_after_staging)
+    assert plugins._remove_owned_empty_directory(tmp_path, directory, identity) == (
+        "preserved (directory changed concurrently)"
+    )
+    assert (directory / "arrived-late").read_text(encoding="utf-8") == "keep"
+
+
+def test_owned_directory_errors_keep_the_specific_path_label(tmp_path):
+    file_path = tmp_path / "not-a-directory"
+    file_path.write_text("keep", encoding="utf-8")
+    with pytest.raises(
+        plugins.PluginError,
+        match="^managed plugin directory is not a safe directory:",
+    ):
+        plugins._remove_owned_empty_directory(tmp_path, file_path, [0, 0])
+    assert file_path.read_text(encoding="utf-8") == "keep"
+
+
+def test_owned_directory_detects_a_symlink_swapped_in_after_staging(tmp_path, monkeypatch):
+    directory = tmp_path / "owned"
+    directory.mkdir()
+    identity = plugins._identity_json(directory.lstat())
+    target = tmp_path / "target"
+    target.mkdir()
+    real_rename = os.rename
+
+    def swap_for_link(source, destination, *args, **kwargs):
+        real_rename(source, destination, *args, **kwargs)
+        if Path(source) == directory:
+            displaced = Path(destination).with_name("displaced-original")
+            real_rename(destination, displaced)
+            Path(destination).symlink_to(target, target_is_directory=True)
+
+    monkeypatch.setattr(plugins.os, "rename", swap_for_link)
+    with pytest.raises(
+        plugins.PluginError,
+        match="^staged managed plugin directory is not a safe directory:",
+    ):
+        plugins._remove_owned_empty_directory(tmp_path, directory, identity)
+
+    assert target.is_dir()
+    assert (directory.parent / "displaced-original").is_dir()
+
+
+def test_owned_directory_restores_after_handle_removal_failure(tmp_path, monkeypatch):
+    directory = tmp_path / "owned"
+    directory.mkdir()
+    identity = plugins._identity_json(directory.lstat())
+
+    def fail_remove(_staged, _identity):
+        raise OSError("simulated handle removal failure")
+
+    monkeypatch.setattr(plugins, "_remove_directory_by_handle", fail_remove)
+    with pytest.raises(plugins.PluginError, match="simulated handle removal failure"):
+        plugins._remove_owned_empty_directory(tmp_path, directory, identity)
+
+    assert directory.is_dir()
+    assert list(tmp_path.glob(".owned.agentrouter-remove-*")) == []
+
+
+def test_owned_directory_recovery_preserves_a_concurrently_recreated_path(tmp_path, monkeypatch):
+    directory = tmp_path / "owned"
+    directory.mkdir()
+    identity = plugins._identity_json(directory.lstat())
+    replacement = tmp_path / "replacement"
+    replacement.mkdir()
+    replacement_identity = plugins._identity_json(replacement.lstat())
+
+    def fail_and_recreate(_staged, _identity):
+        os.rename(replacement, directory)
+        raise OSError("original remove failure")
+
+    monkeypatch.setattr(plugins, "_remove_directory_by_handle", fail_and_recreate)
+    with pytest.raises(plugins.PluginError, match="original remove failure"):
+        plugins._remove_owned_empty_directory(tmp_path, directory, identity)
+
+    assert directory.is_dir()
+    assert plugins._identity_json(directory.lstat()) == replacement_identity
