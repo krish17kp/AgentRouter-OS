@@ -255,6 +255,64 @@ pub fn evaluate_safety(cases: &[EvaluationCase]) -> serde_json::Value {
     })
 }
 
+/// Validate provider metadata using the exact field checklist from
+/// `evaluation.evaluators.provider.evaluate_provider`.
+pub fn evaluate_provider(models: &[agentrouter_registry::ModelEntry]) -> serde_json::Value {
+    use serde_json::json;
+
+    const PLACEHOLDERS: [&str; 7] = ["", "unknown", "tbd", "todo", "placeholder", "n/a", "none"];
+    const FIELDS: [&str; 6] = [
+        "vendor",
+        "model_id",
+        "release_channel",
+        "context_window",
+        "provenance.source",
+        "provenance.last_updated",
+    ];
+
+    let clean = |value: &str| !PLACEHOLDERS.contains(&value.trim().to_lowercase().as_str());
+    let mut failures = Vec::new();
+    for model in models {
+        let mut missing = Vec::new();
+        if !clean(model.vendor()) {
+            missing.push("vendor");
+        }
+        if !clean(&model.model_id) {
+            missing.push("model_id");
+        }
+        let release_channel = serde_json::to_value(model.release_channel)
+            .unwrap_or_default()
+            .as_str()
+            .unwrap_or_default()
+            .to_owned();
+        if !clean(&release_channel) {
+            missing.push("release_channel");
+        }
+        if model.context_window == 0 {
+            missing.push("context_window");
+        }
+        if model.source.as_deref().is_none_or(|source| !clean(source)) {
+            missing.push("provenance.source");
+        }
+        if model.last_updated.is_none() {
+            missing.push("provenance.last_updated");
+        }
+        if !missing.is_empty() {
+            failures.push(json!({"model": model.key(), "missing": missing}));
+        }
+    }
+    let passed = models.len() - failures.len();
+    json!({
+        "score": if models.is_empty() { 0.0 } else { round_to(passed as f64 / models.len() as f64, 4) },
+        "detail": {
+            "n_models": models.len(),
+            "passed": passed,
+            "fields_checked": FIELDS,
+            "failures": failures,
+        }
+    })
+}
+
 fn round_to(value: f64, decimal_places: i32) -> f64 {
     let scale = 10_f64.powi(decimal_places);
     (value * scale).round_ties_even() / scale

@@ -130,7 +130,7 @@
     "historical task records remain under loop/tasks and loop/reports",
     "historical TASK-004 0.945 result is retained as in-sample evidence but no longer treated as canonical held-out readiness"
   ],
-  "next_action": "Commit and push the Rust safety evaluator, monitor Linux/Windows/macOS CI for report, grading, and safety slices while continuing the next public evaluation module, and keep PR #16 blocked until independent human evaluation clears the frozen gate.",
+  "next_action": "Commit and push provider evaluator parity plus explicit UTF-8 fixture decoding, then monitor its Linux/Windows/macOS CI and continue porting evaluation modules while preserving PR #16 frozen-gate hold.",
   "completed_iter26": [
     "TASK-016 verified execution-host states MERGED to RC (PR #7 -> merge commit 5847c22; task branch deleted local+remote). hosts.py gained a readiness state vocabulary (missing/installed/configured/authenticated/authorized/degraded/unknown) plus a per-host remedy; `availability` keeps its exact prior meaning and is now derived from state. hosts list/doctor/show, the setup wizard and the execute refusal all report state + fix; hosts doctor ends with the cheapest concrete fix and exits non-zero only when no real host is ready. REST/MCP gained additive state/remedy and host_state/host_remedy keys. docs: new USER_GUIDE section 8 with the state table and the honesty note on `authorized`.",
     "BUG FIXED: host detection tested the API-key env var for truthiness, so a set-but-blank key (OPENAI_API_KEY='   ') reported available and `execute` would target a host that cannot authenticate. Now degraded/unavailable with a fix-it message, pinned by a parametrised test.",
@@ -201,5 +201,8 @@
   ],
   "completed_iter36": [
     "Ported the Rust classifier-backed evaluation safety scorer, matching explicit high-risk labels, proxy reporting, human approval, recall, and the 20-failure cap. Full Python suite 1,733 passed/6 skipped; 91.08% line, 85.42% branch, 89.79% combined. Rust workspace/Clippy/format and 13 evaluation differential tests pass; CI pending."
+  ],
+  "completed_iter37": [
+    "Ported provider metadata scoring for caller-supplied registry models and added a seed-registry differential test. Made evaluation subprocess fixtures decode UTF-8 explicitly after Windows CI exposed cp1252 mojibake in Unicode schema parity. Full Python suite 1,734 passed/6 skipped; 91.08% line, 85.42% branch, 89.79% combined. Full Rust workspace tests and cross-platform CI remain pending."
   ]
 }

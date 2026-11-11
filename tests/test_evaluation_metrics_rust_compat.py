@@ -8,6 +8,8 @@ import subprocess
 
 import pytest
 
+from agentrouter.evaluation.evaluators import load_seed_models
+from agentrouter.evaluation.evaluators.provider import evaluate_provider as evaluate_python_provider
 from agentrouter.evaluation.evaluators.safety import evaluate_safety as evaluate_python_safety
 from agentrouter.evaluation.grading import grade
 from agentrouter.evaluation.metrics import classification_metrics
@@ -169,6 +171,7 @@ def test_rust_metrics_match_python_for_ambiguous_and_empty_labels():
         input=json.dumps({"cases": rust_cases}),
         capture_output=True,
         text=True,
+        encoding="utf-8",
         timeout=120,
         check=True,
     )
@@ -247,6 +250,7 @@ def test_rust_dataset_quality_matches_python_aggregation():
         input=json.dumps({"cases": rust_cases}),
         capture_output=True,
         text=True,
+        encoding="utf-8",
         timeout=120,
         check=True,
     )
@@ -279,6 +283,7 @@ def test_rust_deterministic_sampling_matches_python(items, limit, seed):
         input=json.dumps({"items": items, "limit": limit, "seed": seed}),
         capture_output=True,
         text=True,
+        encoding="utf-8",
         timeout=120,
         check=True,
     )
@@ -351,6 +356,7 @@ def test_rust_evaluation_schema_and_hash_match_python():
         input=json.dumps({"cases": input_cases}),
         capture_output=True,
         text=True,
+        encoding="utf-8",
         timeout=120,
         check=True,
     )
@@ -373,6 +379,7 @@ def test_rust_evaluation_schema_and_hash_match_python():
         input=json.dumps({"cases": [invalid.model_dump(mode="json")]}),
         capture_output=True,
         text=True,
+        encoding="utf-8",
         timeout=120,
         check=False,
     )
@@ -407,6 +414,7 @@ def test_rust_evaluation_registry_and_profiles_match_python():
         input=json.dumps({"profiles": list(PROFILES), "names": names}),
         capture_output=True,
         text=True,
+        encoding="utf-8",
         timeout=120,
         check=True,
     )
@@ -466,6 +474,7 @@ def test_rust_evaluation_markdown_matches_python():
         input=json.dumps(result),
         capture_output=True,
         text=True,
+        encoding="utf-8",
         timeout=120,
         check=True,
     )
@@ -526,6 +535,7 @@ def test_rust_classification_grade_matches_python():
             input=json.dumps(payload),
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=120,
             check=True,
         )
@@ -574,6 +584,31 @@ def test_rust_safety_evaluator_matches_python():
         input=json.dumps([case.model_dump(mode="json") for case in cases]),
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        timeout=120,
+        check=True,
+    )
+    assert json.loads(process.stdout) == expected
+
+
+def test_rust_provider_evaluator_matches_python_seed_registry():
+    models = load_seed_models()
+    expected = evaluate_python_provider(models)
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_provider_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps([model.model_dump(mode="json") for model in models]),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
         timeout=120,
         check=True,
     )

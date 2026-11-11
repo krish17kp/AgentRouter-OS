@@ -1730,3 +1730,18 @@ Verification: full Python regression 1,733 passed / 6 skipped; 91.08% line,
 85.42% branch, and 89.79% combined coverage. The full Rust workspace, Clippy,
 format, focused evaluation differential tests, Ruff, and Python formatting pass.
 Cross-platform CI for this safety evaluator remains pending.
+
+## Iteration 42 — 2026-11-11 — Rust provider metadata evaluator and Windows UTF-8 fix
+
+Added Rust provider metadata scoring over the shared registry model contract:
+vendor, model id, release channel, positive context window, provenance source,
+and last-updated presence. The differential test runs against every packaged
+seed model. The Windows full-suite run also exposed that schema parity tests
+decoded Rust's UTF-8 stdout using the console code page; all subprocess probes
+in the evaluation compatibility file now declare UTF-8 explicitly.
+
+Verification: full Python suite 1,734 passed / 6 skipped; 91.08% line, 85.42%
+branch, and 89.79% combined coverage. Provider, safety, grading, report,
+registry, schema, sampling, metrics, and provenance compatibility tests pass
+locally. Rust workspace Clippy, formatting, and focused evaluation tests pass;
+the full Rust workspace test and cross-platform CI are pending after push.

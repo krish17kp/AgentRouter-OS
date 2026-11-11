@@ -9,6 +9,7 @@ license.workspace = true
 agentrouter-routing = { path = "../agentrouter-routing" }
 agentrouter-core = { path = "../agentrouter-core" }
 agentrouter-classifier = { path = "../agentrouter-classifier" }
+agentrouter-registry = { path = "../agentrouter-registry" }
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = { version = "1.0.128", features = ["preserve_order"] }
 sha2 = "=0.10.9"
@@ -45,3 +46,7 @@ path = "src/bin/evaluation_grade_from_json.rs"
 [[bin]]
 name = "evaluation_safety_from_json"
 path = "src/bin/evaluation_safety_from_json.rs"
+
+[[bin]]
+name = "evaluation_provider_from_json"
+path = "src/bin/evaluation_provider_from_json.rs"

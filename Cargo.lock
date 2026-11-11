@@ -54,6 +54,7 @@ version = "0.1.0"
 dependencies = [
  "agentrouter-classifier",
  "agentrouter-core",
+ "agentrouter-registry",
  "agentrouter-routing",
  "serde",
  "serde_json",

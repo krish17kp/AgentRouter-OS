@@ -55,7 +55,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/evaluators/feedback.py` | `—` | Not ported |
 | `agentrouter/evaluation/evaluators/performance.py` | `—` | Not ported |
 | `agentrouter/evaluation/evaluators/platform.py` | `—` | Not ported |
-| `agentrouter/evaluation/evaluators/provider.py` | `—` | Not ported |
+| `agentrouter/evaluation/evaluators/provider.py` | `agentrouter-evaluation::evaluate_provider` | Partial |
 | `agentrouter/evaluation/evaluators/routing.py` | `—` | Not ported |
 | `agentrouter/evaluation/evaluators/safety.py` | `agentrouter-evaluation::evaluate_safety` | Partial |
 | `agentrouter/evaluation/grading.py` | `agentrouter-evaluation::grade_classification` | Partial |
@@ -109,5 +109,7 @@ release authority until the full set is complete.
   Rust does not invoke the classifier or implement the `measure_all` evaluators.
 - The safety evaluator now classifies and gates cases in Rust with differential
   coverage; the other five evaluation evaluators remain unported.
+- Provider metadata scoring is ported over caller-supplied model records; Rust
+  does not load the packaged seed registry for this evaluator yet.
 - This table is a release checklist, not a replacement for CI evidence. Add a
   differential suite before moving any row to **Parity**.
