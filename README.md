@@ -174,7 +174,21 @@ agentrouter execute d_00001          # shows what would run, asks for --yes
 agentrouter execute d_00001 --yes    # actually runs it
 ```
 
-Disabled everywhere by default. To opt a provider in, set `supports_execution: true` and an `exec_command` in `providers.yaml`. **Hard gate:** any decision with `risk=high` or non-auto approval is always blocked from auto-execution — the command tells you to run the prompt yourself.
+Disabled everywhere by default. For a legacy CLI provider, opt in with
+`supports_execution: true` and an `exec_command` in `providers.yaml`.
+**Hard gate:** any decision with `risk=high` or non-auto approval is always
+blocked from auto-execution — the command tells you to run the prompt yourself.
+
+For **OpenAI API text execution**, set `supports_execution: true` for the `openai`
+provider in your local `registry/providers.yaml`, export `OPENAI_API_KEY`, then
+route a text-only task to an OpenAI model and run its decision with `execute
+<decision-id> --yes`. `--dry-run` shows the selected host and sends nothing.
+This path rejects tasks that need external tools, rechecks the recorded model
+and host before sending, and caps the output at 4,096 tokens. It makes one
+request with a 60-second timeout, never retries a possibly billable call, and
+sets `store: false` in the [Responses API](https://developers.openai.com/api/reference/resources/responses/methods/create)
+request. The API key and prompt are never printed by the adapter. Live API
+execution needs your key and may incur provider charges; no live call runs in CI.
 
 ### See telemetry and history
 

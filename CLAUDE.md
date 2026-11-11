@@ -24,6 +24,12 @@ large, so read it on demand rather than importing it wholesale.
   `TASK_012_OWNER_ACTIONS.md`; **no AI may act as an annotator or adjudicator**,
   and the frozen holdout must not be tuned against.
 - Never print secret values or open credential files.
+- The Python implementation in `agentrouter/` is the current shipping system and
+  the sole release-gate authority. A Rust-native port is an approved long-term
+  target (see `ARCHITECTURE_DECISIONS.md` AD-7 and `RUST_MIGRATION_PLAN.md`),
+  staged module-by-module behind the existing CLI/HTTP/MCP/registry/store
+  contracts — it never lowers a gate, deletes Python code early, or skips the
+  same review this file already requires.
 
 ## Environment
 
@@ -37,6 +43,9 @@ large, so read it on demand rather than importing it wholesale.
 ## Codebase navigation — graph first
 
 Graphify is the navigation layer; executable evidence is the truth layer.
+**As of 2026-10-13, Graphify was verified absent on this machine** (`~/.local/bin`,
+`~/.venvs` have no `graphify`) despite an earlier handoff claiming it installed —
+re-verify before relying on any `graphify` command below.
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"

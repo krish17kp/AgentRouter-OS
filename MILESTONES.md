@@ -4,6 +4,12 @@
 > tasks, outputs, a validation checklist, completion criteria, dependencies, and
 > risks. Milestones map **1:1** to [ROADMAP.md](ROADMAP.md) phases. Tier labels
 > match the shared set: **MVP → Capstone demo → Advanced → Production-future.**
+>
+> **Implementation status:** all milestones below are against the **Python
+> implementation**, the current shipping system and sole release-gate
+> authority. The Rust-native port is a separate, approved track — see
+> [RUST_MIGRATION_PLAN.md](RUST_MIGRATION_PLAN.md) for its own module-by-module
+> milestones, acceptance tests, and rollback criteria.
 
 ---
 

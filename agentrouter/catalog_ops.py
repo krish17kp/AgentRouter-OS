@@ -27,12 +27,12 @@ import re
 import shutil
 import time
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 import yaml
 
-from .registry import STALE_AFTER_DAYS
+from .registry import STALE_AFTER_DAYS, _read_text_nofollow, _safe_load_yaml
 
 GENERATED_GLOB = "models.*.generated.yaml"
 
@@ -57,7 +57,10 @@ def _sanitize(value: str) -> str:
 
 def _provider_of(path: Path) -> str:
     # models.<provider>.generated.yaml -> <provider>
-    return path.name[len("models.") : -len(".generated.yaml")]
+    provider = path.name[len("models.") : -len(".generated.yaml")]
+    if not _PROVIDER_ID_RE.fullmatch(provider):
+        raise CatalogError("invalid generated catalog provider id")
+    return provider
 
 
 def _load_raw(path: Path) -> dict:
@@ -68,13 +71,13 @@ def _load_raw(path: Path) -> dict:
     UnicodeDecodeError; every failure mode becomes one typed, catchable error.
     """
     try:
-        text = path.read_text(encoding="utf-8")
+        text = _read_text_nofollow(path)
     except UnicodeDecodeError as e:
         raise CatalogError(f"{path}: not valid UTF-8: {e}") from e
     except OSError as e:
         raise CatalogError(f"{path}: cannot read file: {e}") from e
     try:
-        raw = yaml.safe_load(text)
+        raw = _safe_load_yaml(text)
     except yaml.YAMLError as e:
         raise CatalogError(f"{path}: invalid YAML: {e}") from e
     if raw is None:
@@ -127,18 +130,37 @@ def deprecations(previous_ids: set[str], current_ids: set[str]) -> list[str]:
 
 
 def _newest_last_updated(models: list) -> date | None:
+    def parse_iso_date(value: str) -> date | None:
+        formats = (
+            (r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value, "%Y-%m-%d"),
+            (r"[0-9]{8}", value, "%Y%m%d"),
+            (r"[0-9]{4}-W[0-9]{2}-[1-7]", value, "%G-W%V-%u"),
+            (r"[0-9]{4}W[0-9]{2}[1-7]", value, "%GW%V%u"),
+            (r"[0-9]{4}-W[0-9]{2}", value + "-1", "%G-W%V-%u"),
+            (r"[0-9]{4}W[0-9]{2}", value + "1", "%GW%V%u"),
+        )
+        for pattern, candidate, fmt in formats:
+            if not re.fullmatch(pattern, value):
+                continue
+            try:
+                return datetime.strptime(candidate, fmt).date()
+            except ValueError:
+                return None
+        return None
+
     dates: list[date] = []
     for m in models:
         if not isinstance(m, dict):
             continue
         raw = m.get("last_updated")
+        if isinstance(raw, datetime):
+            continue
         if isinstance(raw, date):
             dates.append(raw)
         elif isinstance(raw, str) and raw:
-            try:
-                dates.append(date.fromisoformat(raw))
-            except ValueError:
-                continue
+            parsed = parse_iso_date(raw)
+            if parsed is not None:
+                dates.append(parsed)
     return max(dates) if dates else None
 
 
@@ -149,6 +171,7 @@ def read_status(path: Path, *, today: date | None = None) -> CatalogStatus:
     status``/``doctor``) turn that into a clean per-file message, never a crash.
     """
     today = today or date.today()
+    provider = _provider_of(path)
     raw = _load_raw(path)
     models = raw.get("models")
     models = models if isinstance(models, list) else []
@@ -158,7 +181,7 @@ def read_status(path: Path, *, today: date | None = None) -> CatalogStatus:
     prov = raw.get("provenance") if isinstance(raw.get("provenance"), dict) else {}
     source_url = prov.get("source_url")
     return CatalogStatus(
-        provider=_provider_of(path),
+        provider=provider,
         path=path,
         count=len(models),
         newest=newest,

@@ -8,6 +8,7 @@ compatible: an empty ``RouteControls`` keeps every model (current default).
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 from . import hosts, taxonomy
@@ -65,6 +66,8 @@ def apply_controls(
     ``{"model": key, "reason": str}`` so the caller can fold it into the
     excluded-models display. Never mutates the input list.
     """
+    if c.max_price is not None and (not math.isfinite(c.max_price) or c.max_price < 0):
+        raise ValueError("max_price must be finite and non-negative")
     if not c.active:
         return list(models), []
 

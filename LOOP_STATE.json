@@ -1,12 +1,13 @@
 {
   "loop_version": 2,
-  "last_updated": "2026-09-10",
-  "current_phase": "Release-gate prep (Track A) + TASK-019 resume (Track B) COMPLETE. Track A: TASK-012 annotation tooling verified working end-to-end; one real pre-existing blinding defect found and fixed (PR #18, merged) -- packs now genuinely blind. Track B: TASK-019 (PR #13) merged forward onto current RC (two merges, RC advanced mid-session), independent security review closed (3 MEDIUM + 2 LOW, all fixed), mutation gate PASS 0.9688/0 unreviewed survivors, full CI green. PR #13 marked ready for review, NOT merged (owner decision). PR #16 (RC->main) still open, blocked only on context_band_accuracy (0.6667<0.90), re-confirmed unchanged after every RC advance this session.",
-  "current_objective": "PR #13 and PR #16 both await owner decisions (merge PR #13; run the two-human annotation round for PR #16). No further engineering action is needed on either unless the owner surfaces a new defect. Four fully-merged remote branches (task/repo-cleanup-architecture-ponytail, task/dynamic-skill-discovery, task/consolidation-handoff-docs, task/TASK-012-pack-blinding-fix) need owner-side deletion on GitHub; pre_tool_guard blocks it here by design.",
+  "last_updated": "2026-11-10",
+  "current_phase": "IN_PROGRESS: PR #25 task/rust-r1-workspace. Pushed parent 6ee8d3e passed full GitHub CI. First forced-init push 32eee6f failed Windows Rust compilation on capability metadata link count; local standard-file-handle repair awaits remote recheck. Ten focused init cases and full Python regression (1366 passed/3 skipped) pass. SQLite path-based open remains a concurrent path-swap production blocker. Python remains shipping; Rust R4 partial. Context-band gate 0.6667 < 0.90 requires real human labels.",
+  "current_objective": "Inspect and repair PR #25 CI, continue contract-compatible Rust CLI/HTTP/MCP migration and routing evaluation without weakening release gates, then validate production readiness. Preserve inherited untracked website/ and do not fabricate context-band labels.",
   "status": "IN_PROGRESS",
   "branch_topology": {
     "main": "stable, untouched (602321a) -- never merge without owner approval; PR #16 open against it, blocked on context_band_accuracy",
-    "release/agentrouter-v0.5-rc1": "RC @ 64ae5f8 (PR #14+#15+#17+#18 merged across two sessions); NOT RELEASE READY (context_band 0.6667 < 0.90, unchanged) -- this is the ONLY failing gate per the real enforce-release-gate run on PR #16, re-confirmed after every RC advance",
+    "release/agentrouter-v0.5-rc1": "Remote RC @ 5ce3234 on 2026-11-09; NOT RELEASE READY (context-band 0.6667 < 0.90). PR #25 is open against it; this task branch has not been merged.",
+    "task/rust-r1-workspace": "PR #25 open against RC; 6ee8d3e passed complete GitHub CI; 32eee6f forced-init push failed Windows compile, file-handle repair awaits remote recheck; SQLite path-race blocker remains; Rust R4 partial and OpenAI execution hardening",
     "task/repo-cleanup-architecture-ponytail": "MERGED to RC (PR #14, merge commit 1ae3155); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/dynamic-skill-discovery": "MERGED to RC (PR #15, merge commit 62d5289); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/consolidation-handoff-docs": "MERGED to RC (PR #17, merge commit 73a1875); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
@@ -28,6 +29,7 @@
   "repo_sha_at_takeover": "602321af91ff298c0d5b59d6d36c24f845557fc1",
   "canonical_release_ready": false,
   "in_progress": [
+    "2026-11-10: PR #25 branch task/rust-r1-workspace. Pushed parent eda4c7a passed complete GitHub CI/Rust/Security/mutation (0.9837 overall, 0.9844 safety/policy/execution, 0 unreviewed survivors). New Rust registry-list/model-validation probe passes 19 focused parity cases, Rust 1.75 workspace/Clippy/format, and full Python regression (1357 passed/3 skipped). R4 partial, R5-R13 pending, context-band 0.6667<0.90.",
     "Phase 3 local engineering via the full graph-aware loop. Done+merged: TASK-013 catalog freshness status + rollback (PR #4), TASK-014 CI release-gate report/enforce split (PR #5). Next: TASK-015 trusted catalogs (file-level provenance block, deprecation reconciliation, atomic refresh, rollback hardening, provider doctor/status), then verified execution-host states, provider diagnostics/onboarding, benchmark routing infra, customer docs, observability/runbooks, API/SDK compat+load testing. External: the human annotation round (TASK-012 tooling shipped) needs two real annotators + adjudicator per TASK_012_OWNER_ACTIONS.md.",
     "ENV BLOCKER RESOLVED 2026-08-08: local pytest now runs cleanly on this machine (595 passed, 3 skipped in 18.4s; ruff clean; bandit 0). CI remains an independent cross-platform authority (3.10-3.13 + Windows) but is no longer the only usable regression signal."
   ],
@@ -81,22 +83,25 @@
     "mutation_harness_focused": "8 passed",
     "typescript": "typecheck clean; 18/18 tests with the live app, 0 skipped; a skipped live suite fails CI under AGENTROUTER_REQUIRE_LIVE=1",
     "hooks": "33 passed",
-    "evaluation": "98.23/100; 6/7 gates pass; canonical release readiness NO",
+    "evaluation": "2026-11-09: grade 98.23/100, 6/7 release gates; context_band_accuracy 0.6667 < 0.90.",
     "context_holdout": "SHIPPED rules-active accuracy 0.6667, macro-F1 0.6792 (recall S/M/L 0.733/0.600/0.667). Learned-only 0.6889/0.6613 and hybrid 0.6444/0.6188 measured once; none reach 0.90; learned not significantly better and lower macro-F1. Proven dataset ceiling with 24 dev cases.",
     "mutation": "FIRST REAL LINUX SCORE (2026-07-31, run on release/agentrouter-v0.5-rc1): overall 0.6054 (denom 745); safety_policy_execution 0.5701 vs 0.95 target; routing_engine 0.6512 vs 0.85; 294 unreviewed survivors (engine 113, hosts 72, cli 70, controls 25, server.limits 13, safety 1). Tool ran cleanly (no crash) — the FAIL is a real test-quality gap, not a harness failure. Allowlisting cannot fix it (survivors stay in the denominator); reaching gates needs ~225 new mutation-killing tests, verifiable only via ~40-min Linux CI cycles (mutmut cannot run on the Win/py3.13 dev box). Tracked as TASK-010b (multi-session).",
     "ci_status_fa0a203": "CI: test 3.10/3.11/3.12/3.13 + test-windows + build-smoke GREEN; release-gate RED by design (context_band 0.6667<0.90) — the ONLY red. Security GREEN. Critical Mutation Testing GREEN (TASK-010b closed).",
-    "mutation_final": "PASS at d81ad94: overall 0.986; safety_policy_execution 0.9879 (>=0.95); routing_engine 0.9815 (>=0.85); 0 unreviewed survivors; all five gates PASS",
+    "mutation_final": "2026-11-09: mutmut 3.6.0, 1405 selected mutants; overall 0.9836, safety/policy/execution 0.9843, routing engine 0.9815, zero unreviewed survivors after equivalent-mutant review.",
     "bandit": "0 issues (fixed B311 nosec in evaluation/context_bands.py bootstrap resampling)",
     "graphify": "official graphifyy v0.9.30 via uv tool; post-impl graph 2309 nodes / 4319 edges / 239 communities; context_model.py leaf module, no cycle",
-    "python_full": "936 passed, 3 skipped; branch coverage 85.42% (gate 80%)",
+    "python_full": "2026-11-09: 1300 passed, 3 skipped, 1 Starlette deprecation warning (Python 3.12 local).",
     "clean_wheel": "context_band_model_v1.json packaged; loads + predicts from fresh pip install; shipped _USE_LEARNED_BAND=False confirmed in installed wheel",
     "contract": "9 operations; agentrouter contract check exit 0, 0 breaking / 0 risky / 0 additive; byte-identical when exported from a clean wheel install in an unrelated directory; CI also checks against the PR base contract so deleting the branch copy cannot turn a breaking change green",
-    "graph": "graphifyy 0.9.47; 3623 nodes / 7084 edges / 309 communities from RC d81ad94; graphify-out/ is gitignored and local-only"
+    "graph": "graphifyy 0.9.47; 3623 nodes / 7084 edges / 309 communities from RC d81ad94; graphify-out/ is gitignored and local-only",
+    "ci_status_3281c41": "All GitHub workflows passed on 3281c41: CI Python 3.10-3.13 plus Windows/build/API/report, Security, Rust Linux/Windows parity/MSRV, and Critical Mutation Testing. A subsequent route-persistence probe has not yet run in CI.",
+    "ci_status_0ac4335": "PR workflows Security, Rust, Mutation failed before creating jobs; GitHub run pages show internal server errors, no code verdict. Prior 3281c41 all green; local route-persistence/init probes pass."
   },
   "release_blockers": [
-    "context_band_accuracy 0.6667 is below the unchanged 0.90 frozen-holdout gate. Decision A tested a dev-only learned model + hybrid: PROVEN CEILING — none reach 0.90, learned not significantly better than rules (overlapping CIs) and has lower macro-F1. Closing to 0.90 honestly needs a larger human-labeled dev set or real-file context signals, NOT more hand-rules or holdout tuning. Shipped rules-active.",
-    "real Linux mutmut score and survivor review await GitHub Actions",
-    "final full local matrix and release-branch GitHub checks are pending"
+    "Frozen context-band accuracy 0.6667 remains below unchanged 0.90. Independent human annotation and adjudication under TASK_012_OWNER_ACTIONS.md remain required; AI labels cannot substitute.",
+    "Rust R4 CLI remains partial; full Rust CLI/HTTP/MCP/execution, R5-R13, staging, rollback and Rust-only validation are outstanding.",
+    "Current 0ac4335 pull-request workflows failed before job creation due GitHub internal server errors; fresh CI must run on next commit and pass.",
+    "Paid live OpenAI execution, provider credentials, production deployment and release actions need owner-provided inputs or authorization."
   ],
   "external_or_owner_blocked": [
     "live provider catalog/access verification requires credentials and opt-in network use",
