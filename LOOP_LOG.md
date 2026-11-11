@@ -1933,3 +1933,17 @@ compatibility CI passes; broader CI/mutation checks are still running.
 
 Next: commit and push TASK-024 to the authorized RC, inspect all checks, repair
 failures, then continue with other adapter transformations and public modules.
+
+
+## 2026-11-11 — TASK-025: Rust MASSIVE locale normalization parity
+
+Ported the MASSIVE real-row transform over locale batches, preserving requested
+language order, locale-specific IDs/provenance, lowercased and normalized task
+deduplication, missing versus explicit null values, and unknown row fields.
+Differential checks cover en/hi/fr, reordered/subset selection, and unsupported
+languages. Fourteen focused adapter cases and Rust workspace/Clippy/format/Ruff
+pass. Full suite: 1,765 passed/6 skipped; 91.75% line, 86.61% branch, 90.58%
+combined coverage. TASK-024 cross-platform CI passed; TASK-025 awaits push and CI.
+
+Next: commit/push TASK-025, inspect all platform CI, repair failures, and
+continue the next unfinished adapter and remaining Rust modules.

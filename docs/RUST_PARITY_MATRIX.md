@@ -44,7 +44,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/adapters/clinc150.py` | `agentrouter-evaluation::normalize_clinc150_rows` | Partial |
 | `agentrouter/evaluation/adapters/llmrouterbench.py` | `—` | Not ported |
 | `agentrouter/evaluation/adapters/longbench_v2.py` | `—` | Not ported |
-| `agentrouter/evaluation/adapters/massive.py` | `—` | Not ported |
+| `agentrouter/evaluation/adapters/massive.py` | `agentrouter-evaluation::normalize_massive_rows` | Partial |
 | `agentrouter/evaluation/adapters/swebench.py` | `—` | Not ported |
 | `agentrouter/evaluation/adapters/twinrouterbench.py` | `—` | Not ported |
 | `agentrouter/evaluation/base.py` | `agentrouter-evaluation::{load_adapter_fixture,adapter_availability,sample_adapter_cases,adapter_checksum,describe_adapter}` | Partial |

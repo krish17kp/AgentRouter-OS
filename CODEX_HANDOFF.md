@@ -3,21 +3,23 @@
 ## Current checkpoint — 2026-11-11
 
 PRs #27–#33 and #13 are merged into `release/agentrouter-v0.5-rc1`; RC head is
-`19392f8` and PR #16 remains the sole open PR to `main`. TASK-022 and TASK-023
-are pushed. Rust workspace and adapter compatibility checks pass across Linux,
-Windows, and macOS, along with security, website, and mutation checks at the
-prior slice. The unchanged promotion gate remains red: frozen context-band
-accuracy is 0.6667 against 0.90. Python remains the shipping authority.
+`d9b2622` and PR #16 remains open to `main`. TASK-024 Rust workspace and
+adapter compatibility pass Linux/Windows/macOS, with security, website, and
+mutation checks passing. The unchanged promotion gate remains red: frozen
+context-band accuracy is 0.6667 against 0.90. Python remains the shipping
+authority.
 
-Current local task TASK-024 ports Banking77 real-row normalization into Rust,
-including deduplication, intent tagging, low-risk classification, provenance,
-and checksums. Ten focused Banking77/CLINC150/shared-base tests, Rust workspace,
-Clippy, formatting, Ruff, and the full Python suite pass: 1,761 passed, 6
-skipped; 91.52% line, 86.23% branch, and 90.31% combined coverage. Remote data
-fetching, evaluation runner/CLI/annotation, and many public modules remain
-incomplete in `docs/RUST_PARITY_MATRIX.md`. Owner-dependent human annotation,
-live OpenAI validation, and production credentials are recorded under **Needs
-Krish** in `PRODUCTION_STATUS.md`. `AGENT_HANDOFF.md` is authoritative.
+Current local task TASK-025 ports MASSIVE locale normalization for en/hi/fr,
+including deduplication, locale order, metadata, missing/null values, and
+checksums. Fourteen focused adapter checks, Rust workspace, Clippy, format,
+Ruff, and full Python regression pass: 1,765 passed, 6 skipped; 91.75% line,
+86.61% branch, and 90.58% combined coverage. Remote data fetching, other
+adapter transformations, evaluation runner/CLI/annotation, and many public
+modules remain incomplete in `docs/RUST_PARITY_MATRIX.md`. Owner-dependent
+human annotation, live OpenAI validation, and production credentials remain
+under **Needs Krish** in `PRODUCTION_STATUS.md`. `AGENT_HANDOFF.md` is
+
+authoritative.
 
 ## Historical narrative
 

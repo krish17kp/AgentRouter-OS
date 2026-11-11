@@ -1811,6 +1811,91 @@ pub fn normalize_banking77_rows(
 }
 
 #[derive(Debug, Deserialize)]
+pub struct MassiveRawRow {
+    pub utt: String,
+    #[serde(default = "empty_json_string")]
+    pub scenario: serde_json::Value,
+    #[serde(default = "empty_json_string")]
+    pub intent: serde_json::Value,
+}
+
+fn empty_json_string() -> serde_json::Value {
+    serde_json::Value::String(String::new())
+}
+
+/// Normalize MASSIVE rows for selected short language codes. Each locale batch
+/// corresponds to one `_hf_load(split="test")` result from Python.
+pub fn normalize_massive_rows(
+    languages: Option<&[String]>,
+    datasets: &BTreeMap<String, Vec<MassiveRawRow>>,
+) -> Result<Vec<EvaluationCase>, String> {
+    let requested = languages
+        .map(<[String]>::to_vec)
+        .unwrap_or_else(|| vec!["en".into(), "hi".into(), "fr".into()]);
+    let mut out = Vec::new();
+    let mut seen = BTreeSet::new();
+    let mut hashes = BTreeSet::new();
+    for lang in requested {
+        let locale = match lang.as_str() {
+            "en" => "en-US",
+            "hi" => "hi-IN",
+            "fr" => "fr-FR",
+            _ => return Err(format!("massive: no HF locale mapping for '{lang}'")),
+        };
+        let rows = datasets
+            .get(locale)
+            .ok_or_else(|| format!("massive: missing row batch for locale '{locale}'"))?;
+        for (index, row) in rows.iter().enumerate() {
+            let task = row.utt.trim().to_string();
+            if task.is_empty() {
+                return Err("massive: task must be non-empty".to_string());
+            }
+            let dedup_key = format!("{lang}:{}", task.to_lowercase());
+            if !seen.insert(dedup_key) {
+                continue;
+            }
+            let scenario = python_string(&row.scenario);
+            let intent = python_string(&row.intent);
+            let case = EvaluationCase {
+                id: format!("massive-{lang}-{index}"),
+                dataset: "massive".to_string(),
+                task,
+                dataset_version: Some("1.1".to_string()),
+                source: Some("https://huggingface.co/datasets/AmazonScience/massive".to_string()),
+                source_split: Some("test".to_string()),
+                language: lang.clone(),
+                domain: Some(scenario),
+                tags: vec![format!("intent:{intent}")],
+                paraphrase_group: None,
+                expected: ExpectedClassification {
+                    task_types: vec![TaskType::General],
+                    ..ExpectedClassification::default()
+                },
+                routing: None,
+                safety: None,
+                context_tokens: None,
+                cost_metadata: BTreeMap::new(),
+                model_outcomes: BTreeMap::new(),
+                provenance: Provenance {
+                    method: AnnotationMethod::Heuristic,
+                    reviewer: None,
+                    source_license: Some("CC BY 4.0".to_string()),
+                    source_record_id: Some(format!("{locale}:{index}")),
+                    retrieved: None,
+                },
+                review_status: ReviewStatus::Pending,
+                checksum: None,
+                notes: Some(format!("massive_locale={locale}")),
+            };
+            if hashes.insert(case.task_hash()) {
+                out.push(case.with_checksum());
+            }
+        }
+    }
+    Ok(out)
+}
+
+#[derive(Debug, Deserialize)]
 struct AgentRouterGoldDocument {
     #[serde(default = "default_gold_version")]
     version: u64,
