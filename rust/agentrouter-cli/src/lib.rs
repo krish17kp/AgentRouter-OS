@@ -21,6 +21,8 @@ use agentrouter_registry::ModelEntry;
 use agentrouter_routing::RouteResult;
 use serde_json::{json, Value};
 
+pub mod dashboard;
+
 /// Mirrors `safety._CHECKLISTS` + `safety.gates_for`.
 pub fn gates_for(cls: &Classification) -> Value {
     let checklist: Vec<&'static str> = match cls.risk {

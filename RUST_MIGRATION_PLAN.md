@@ -382,6 +382,15 @@ does not close later or leaf swaps;
 handle-safe database initialization and the complete public CLI remain R4
 work. This probe is not a production replacement for Python.
 
+R4 follow-up (2026-11-11): added `agentrouter-cli::dashboard` with the
+read-only loopback HTTP surface and HTML renderer corresponding to
+`agentrouter/dashboard.py`. Rust tests cover empty and populated views,
+HTML escaping, and absence of interactive controls. The cross-language storage
+compatibility test now seeds accepted and rejected feedback and caught a Rust
+`acceptance_rate` scale mismatch; the Rust aggregate now matches Python's
+0–1 ratio. The module is ported, but wiring it into a unified user-facing Rust
+CLI remains part of the outstanding full CLI migration.
+
 R6 and R7 are deliberately placed after the interface milestones (R4–R5) and
 before the deep-hardening ones (R8–R10): nothing in orchestration or graph
 work depends on provider execution existing, but provider execution

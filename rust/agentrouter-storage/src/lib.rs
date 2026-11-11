@@ -221,7 +221,7 @@ pub fn aggregate_stats(
             "count": fb_total,
             "avg_rating": fb_avg.map(|a| (a * 100.0).round() / 100.0),
             "acceptance_rate": if fb_total > 0 {
-                Some(((fb_accepted as f64 / fb_total as f64) * 100.0).round() / 100.0)
+                Some((fb_accepted as f64 / fb_total as f64 * 100.0).round() / 100.0)
             } else {
                 None
             },

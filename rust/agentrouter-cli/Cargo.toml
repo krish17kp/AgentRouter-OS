@@ -43,3 +43,7 @@ path = "src/bin/registry_cli.rs"
 [[bin]]
 name = "providers_status_cli"
 path = "src/bin/providers_status_cli.rs"
+
+[[bin]]
+name = "dashboard_cli"
+path = "src/bin/dashboard_cli.rs"
