@@ -392,6 +392,13 @@ and rejected feedback and caught a Rust
 0–1 ratio. The module is ported, but wiring it into a unified user-facing Rust
 CLI remains part of the outstanding full CLI migration.
 
+R4 follow-up (2026-11-11, observability slice): added Rust `redact`, recursive
+JSON redaction, and Unicode-safe `safe_echo` helpers with a Python/Rust
+differential fixture matrix for all 16 supported credential formats, ordinary
+diagnostics, path preservation, and line/control characters. This is a partial
+port only; request-ID context, structured logging, API-error traceback policy,
+and optional OTel spans remain outstanding.
+
 R6 and R7 are deliberately placed after the interface milestones (R4–R5) and
 before the deep-hardening ones (R8–R10): nothing in orchestration or graph
 work depends on provider execution existing, but provider execution

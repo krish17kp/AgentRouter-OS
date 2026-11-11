@@ -24,6 +24,7 @@ Updated: 2026-11-11
 - [x] macOS CI is merged for Python 3.12 and Rust workspace/parity; all checks on PR #28 passed.
 - [ ] Rust R4 full CLI parity and race-safe SQLite initialization.
 - [ ] Rust dashboard renderer/loopback server and Rust/Python feedback-stat parity are implemented locally on `task/rust-dashboard-parity`; workspace and focused compatibility tests pass. Its command remains a migration probe until the unified Rust CLI lands.
+- [ ] Rust observability redaction/safe-echo helpers now pass a Python/Rust differential fixture; structured logging, request context, traceback handling, and OTel integration remain unported.
 - [ ] Rust R5-R13 milestones and cross-platform parity.
 - [x] Website product-truth fixes, font hierarchy/motion redesign, unused shadcn CLI removal, server limits/API tests, and website lint/build CI merged via PR #27. npm build/lint and production dependency audit passed; full npm audit still reports moderate dev-tool advisories.
 - [x] Benchmark evidence merged via PR #29: 12/12 routing gold scenarios and 15 focused tests; live latency/cost are explicitly not claimed.

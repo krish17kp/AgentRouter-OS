@@ -26,10 +26,12 @@ dependencies = [
  "cap-std",
  "chrono",
  "fs_at",
+ "regex",
  "rusqlite",
  "serde",
  "serde_json",
  "serde_yaml",
+ "unicode-general-category",
  "windows-sys 0.59.0",
 ]
 
