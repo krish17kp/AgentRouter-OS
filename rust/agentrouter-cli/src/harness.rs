@@ -43,7 +43,16 @@ pub fn detect_harness_from(env: &HashMap<String, String>) -> HarnessInfo {
 
 /// Detect from this process's environment. Never raises or performs I/O.
 pub fn detect_harness() -> HarnessInfo {
-    detect_harness_from(&std::env::vars().collect())
+    let env = std::env::vars_os()
+        .filter_map(|(key, value)| {
+            let key = key.into_string().ok()?;
+            let value = value
+                .into_string()
+                .unwrap_or_else(|_| "\u{fffd}".to_owned());
+            Some((key, value))
+        })
+        .collect();
+    detect_harness_from(&env)
 }
 
 #[cfg(test)]
