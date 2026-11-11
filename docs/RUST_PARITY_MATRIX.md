@@ -51,7 +51,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/cli.py` | `—` | Not ported |
 | `agentrouter/evaluation/comparison.py` | `agentrouter-evaluation::{compare_results,load_result,write_comparison}` | Parity |
 | `agentrouter/evaluation/context_bands.py` | `agentrouter-evaluation::context_bands` | Parity |
-| `agentrouter/evaluation/evaluators/__init__.py` | `—` | Not ported |
+| `agentrouter/evaluation/evaluators/__init__.py` | `agentrouter-evaluation::evaluators_api` | Partial |
 | `agentrouter/evaluation/evaluators/feedback.py` | `agentrouter-evaluation::evaluate_feedback` | Parity |
 | `agentrouter/evaluation/evaluators/performance.py` | `agentrouter-evaluation::{evaluate_performance,summarize_performance}` | Partial |
 | `agentrouter/evaluation/evaluators/platform.py` | `agentrouter-evaluation::evaluate_platform` | Partial |

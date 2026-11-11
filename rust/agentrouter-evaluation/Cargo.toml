@@ -18,6 +18,7 @@ regex = "=1.13.1"
 serde_yaml = { package = "noyalib-serde-yaml", version = "=0.0.60" }
 sha2 = "=0.10.9"
 unicode-general-category = "=0.6.0"
+tempfile = "=3.13.0"
 
 [[bin]]
 name = "evaluation_metrics_from_json"
@@ -182,3 +183,7 @@ path = "src/bin/evaluation_public_api_from_json.rs"
 [[bin]]
 name = "evaluation_annotation_public_api_from_json"
 path = "src/bin/evaluation_annotation_public_api_from_json.rs"
+
+[[bin]]
+name = "evaluation_evaluators_api_from_json"
+path = "src/bin/evaluation_evaluators_api_from_json.rs"

@@ -2194,3 +2194,9 @@ validation and hosted matrix checks follow this push.
 Exposed the Python annotation package's schema version, category list, and
 split list through the Rust `annotation_api` module with a value and ordering
 differential test. Focused validation and hosted CI are pending.
+# TASK-047 — Rust evaluator package facade
+
+Added a Rust facade with all seven Python evaluator exports and loads the
+embedded, validated seed model catalog through the existing registry loader.
+The module remains Partial because runtime discovery in several evaluator
+functions is unported. Focused tests and hosted CI are pending.
