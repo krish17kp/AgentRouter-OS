@@ -61,6 +61,7 @@ def test_redaction_and_safe_echo_match_python_contract():
         input=json.dumps(payload),
         capture_output=True,
         text=True,
+        encoding="utf-8",
         timeout=120,
         check=True,
     )
