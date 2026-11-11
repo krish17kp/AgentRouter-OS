@@ -63,6 +63,7 @@ def test_rust_measure_all_scorecard_matches_python_dimensions():
     assert actual["grade_over_100"] == expected["grade_over_100"]
     assert actual["achieved_points"] == expected["achieved_points"]
     assert actual["dimensions"]["performance"]["detail"]["n_samples"] == 8
-    assert actual["dimensions"]["performance"]["score"] == expected["dimensions"][
-        "performance"
-    ]["score"]
+    assert (
+        actual["dimensions"]["performance"]["score"]
+        == expected["dimensions"]["performance"]["score"]
+    )
