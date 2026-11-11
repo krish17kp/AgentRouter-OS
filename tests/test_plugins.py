@@ -1,6 +1,7 @@
 """Phase P8 — plugin/skill installer (reversible, idempotent, safe)."""
 
 import os
+import re
 import stat
 from pathlib import Path
 
@@ -771,7 +772,7 @@ def test_link_check_reports_the_path_when_symlink_inspection_fails(tmp_path, mon
         raise PermissionError("denied")
 
     monkeypatch.setattr(Path, "is_symlink", fail_is_symlink)
-    with pytest.raises(plugins.PluginError, match=str(target)):
+    with pytest.raises(plugins.PluginError, match=re.escape(str(target))):
         plugins._is_link_or_reparse(target)
 
 
@@ -817,7 +818,7 @@ def test_link_check_reports_lstat_errors_and_treats_only_missing_as_absent(tmp_p
         return Path.lstat(self)
 
     monkeypatch.setattr(Path, "lstat", fail_lstat)
-    with pytest.raises(plugins.PluginError, match=str(path)):
+    with pytest.raises(plugins.PluginError, match=re.escape(str(path))):
         plugins._is_link_or_reparse(path)
 
 
