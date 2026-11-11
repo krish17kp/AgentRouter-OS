@@ -17,6 +17,7 @@ import uuid
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, Security
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -42,6 +43,7 @@ from .schemas import (
 )
 
 API_KEY_ENV = "AGENTROUTER_API_KEY"
+CORS_ORIGINS_ENV = "AGENTROUTER_CORS_ORIGINS"
 REQUEST_ID_HEADER = "X-Request-ID"
 
 
@@ -60,6 +62,20 @@ def _api_key_ok(provided: str | None, expected: str | None) -> bool:
     if not expected:
         return True
     return provided is not None and hmac.compare_digest(provided, expected)
+
+
+def _cors_origins() -> list[str]:
+    """Return the explicit browser origins allowed to call this local API.
+
+    The API remains same-origin-only by default. A browser UI is an opt-in
+    integration, so an operator must list each permitted origin rather than
+    accidentally exposing the local router to every page open in the browser.
+    """
+    return [
+        origin
+        for value in os.environ.get(CORS_ORIGINS_ENV, "").split(",")
+        if (origin := value.strip().rstrip("/")) and origin != "*"
+    ]
 
 
 # Declared as a security scheme (not a bare Header) so the exported OpenAPI
@@ -82,6 +98,17 @@ def create_app() -> FastAPI:
         "execution: dry-run only.",
         responses={"4XX": {"model": ErrorResponse}, "5XX": {"model": ErrorResponse}},
     )
+
+    cors_origins = _cors_origins()
+    if cors_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=cors_origins,
+            allow_credentials=False,
+            allow_methods=["GET", "POST"],
+            allow_headers=["Content-Type", "Idempotency-Key", REQUEST_ID_HEADER],
+            expose_headers=[REQUEST_ID_HEADER],
+        )
 
     # Per-app in-memory stores (fresh per create_app() -> test isolation).
     rate_limiter = limits.RateLimiter()

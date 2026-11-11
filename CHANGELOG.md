@@ -14,6 +14,14 @@ All notable changes to AgentRouter OS. Format loosely follows
   never prints file contents. Plugin state also appears in unified
   `agentrouter doctor` as `plugins.state`, delegating to the plugin module rather
   than re-deriving its ownership rules.
+- Rust migration probes for routing, registry validation, provider status, SQLite decision storage, and forced initialization. Python remains the shipping implementation until full contract parity and all release gates pass.
+- Dated routing benchmark report: 12/12 committed gold scenarios and 15 focused benchmark/invariant tests pass; live latency and cost remain unmeasured.
+- macOS Python and Rust CI coverage now passes the configured platform jobs.
+
+### Fixed
+- Evaluation `prepare --all` tests now use an offline mock and cannot download Hugging Face datasets during CI.
+- Duplicate YAML keys are rejected by the Python registry loader, matching Rust fail-closed behavior.
+- Website routing labels stay tied to the selected model across sorting; fallback provider text now reflects the actual pair.
 - **Local REST API** (`agentrouter server`, `[server]` extra): classify/route/
   explain plus a dry-run-only execute preview. No remote execution.
 - **MCP server** (`agentrouter mcp`, `[mcp]` extra): read-only route/classify/

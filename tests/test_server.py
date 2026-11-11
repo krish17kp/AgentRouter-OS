@@ -192,6 +192,59 @@ def test_health_open_even_with_key(auth_client):
     assert auth_client.get("/health").status_code == 200
 
 
+def test_cors_is_disabled_without_an_explicit_origin(client):
+    r = client.options(
+        "/v1/route",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+    assert "access-control-allow-origin" not in r.headers
+
+
+def test_cors_rejects_a_wildcard_allowlist(home, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_CORS_ORIGINS", "*")
+    r = TestClient(create_app()).options(
+        "/v1/route",
+        headers={
+            "Origin": "https://untrusted.example",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+    assert "access-control-allow-origin" not in r.headers
+
+
+def test_cors_allows_only_configured_browser_origins(home, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_CORS_ORIGINS", "http://localhost:5173")
+    client = TestClient(create_app())
+
+    allowed = client.options(
+        "/v1/route",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+    assert allowed.status_code == 200
+    assert allowed.headers["access-control-allow-origin"] == "http://localhost:5173"
+
+    # `Access-Control-Expose-Headers` belongs on an actual response, not the
+    # browser's preflight response.
+    actual = client.get("/health", headers={"Origin": "http://localhost:5173"})
+    assert "X-Request-ID" in actual.headers["access-control-expose-headers"]
+
+    denied = client.options(
+        "/v1/route",
+        headers={
+            "Origin": "https://untrusted.example",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+    assert denied.status_code == 400
+    assert "access-control-allow-origin" not in denied.headers
+
+
 # --- unexpected failures: typed to the client, diagnosable to the operator ----
 #
 # TASK-018A review: an unhandled exception was answered by Starlette's outermost
