@@ -89,7 +89,7 @@ release authority until the full set is complete.
 | `agentrouter/server/service.py` | `—` | Not ported |
 | `agentrouter/store.py` | `agentrouter-storage` | Partial |
 | `agentrouter/taxonomy.py` | `agentrouter-policy::taxonomy` | Parity |
-| `agentrouter/usage.py` | `agentrouter-usage` | Partial |
+| `agentrouter/usage.py` | `agentrouter-usage::{check_usage,apply_live_verification}` | Partial |
 
 ## Release interpretation
 

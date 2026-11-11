@@ -112,6 +112,23 @@ def test_route_payload_matches_between_python_and_rust(seeded_home, task):
     assert rust_payload == python_payload, f"mismatch for task: {task!r}"
 
 
+def test_rust_route_verify_live_matches_python_without_registered_adapters(
+    seeded_home, monkeypatch
+):
+    monkeypatch.setenv("AGENTROUTER_HOME", str(seeded_home))
+    task = "Summarize this document"
+    python = CliRunner().invoke(app, ["route", task, "--json", "--no-log", "--verify-live"])
+    assert python.exit_code == 0, python.output
+    expected = json.loads(python.stdout)
+    expected.pop("decision_id")
+    expected.pop("task")
+
+    rust = _rust_route_payload(seeded_home, task, "--verify-live")
+
+    assert rust == expected
+    assert rust["usage_check"]["state"] == "unsupported"
+
+
 def test_rust_route_persists_python_readable_decision(seeded_home):
     task = "Summarize this document"
     result = subprocess.run(

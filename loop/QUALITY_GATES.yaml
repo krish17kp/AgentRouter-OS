@@ -7,7 +7,7 @@ testing:
   mandatory_tests_pass:
     required: true
     current: pass_local
-    last_full_baseline_passed: 1701
+    last_full_baseline_passed: 1711
   unexplained_failures:
     required: 0
     current: 0
@@ -93,9 +93,9 @@ packaging:
 
 platforms:
   windows_local_green: pending
-  github_linux_green: pass_on_previous_pushed_rc_pending_current_change
-  github_windows_green: pass_on_previous_pushed_rc_pending_current_change
-  github_macos_green: pass_on_previous_pushed_rc_pending_current_change
+  github_linux_green: pass_commit_07eb511_pending_usage_slice
+  github_windows_green: pass_commit_07eb511_pending_usage_slice
+  github_macos_green: pass_commit_07eb511_pending_usage_slice
 
 open:
   - id: context_band_generalization

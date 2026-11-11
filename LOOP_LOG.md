@@ -1541,3 +1541,28 @@ cargo-audit, wheel/sdist build, and clean-wheel install/CLI/bundle smoke pass.
 The seven-gate evaluation is 6/7 with context-band accuracy 0.6667 < 0.90, so
 release-ready remains NO. Cross-platform CI for this local slice is pending
 push. Python remains the shipping authority and the parity matrix stays partial.
+
+## Iteration 31 — 2026-11-11 — Rust quota-aware reranking
+
+Extended `agentrouter-usage` to mirror Python's `apply_live_verification`.
+Unsupported, available, and error statuses preserve the selected model. Only a
+verified exhausted status removes the current top model, reranks once, prepends
+the quota exclusion, retains existing eligibility exclusions without
+duplication, and appends the same explanation to the weight-shift trail. A
+route without a recommendation remains unchanged and has no usage annotation.
+
+Added a deterministic `apply_usage_status` seam and `usage_route_from_json`
+fixture probe. The Rust route command now exposes this behind `--verify-live`;
+no provider adapter is registered in production. Nine Python/Rust differential
+cases compare serialized routes across quota states, no-pick behavior, and
+Python-compatible sanitation for Unicode control, separator, format, and
+private-use characters. One separate CLI contract case checks the exposed
+`--verify-live` option. Eight Rust unit tests cover the helper and existing
+adapter timeout, panic, invalid state, status, and registration.
+
+Verification: full Python regression 1,711 passed / 6 skipped; 90.9916% line,
+85.1852% branch, 89.6719% combined. Rust workspace tests, Clippy, and formatting
+pass; Ruff and Python formatting pass. The quota rerank slice has not yet run
+through cross-platform CI. The previously pushed bundle commit `07eb511` passed
+the Linux/Windows/macOS Python/Rust matrix, security, mutation, API, package,
+and site jobs. PR #16 remains held by context-band accuracy 0.6667 < 0.90.

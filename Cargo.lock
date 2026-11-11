@@ -23,6 +23,7 @@ dependencies = [
  "agentrouter-registry",
  "agentrouter-routing",
  "agentrouter-storage",
+ "agentrouter-usage",
  "cap-std",
  "chrono",
  "fs_at",
@@ -109,8 +110,14 @@ dependencies = [
 name = "agentrouter-usage"
 version = "0.1.0"
 dependencies = [
+ "agentrouter-core",
+ "agentrouter-policy",
+ "agentrouter-registry",
+ "agentrouter-routing",
+ "noyalib-serde-yaml",
  "serde",
  "serde_json",
+ "unicode-general-category",
 ]
 
 [[package]]

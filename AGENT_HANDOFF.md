@@ -2,19 +2,21 @@
 
 ## Current checkpoint — 2026-11-11
 
-- Active branch: `release/agentrouter-v0.5-rc1`, pushed through `2ff36f7`.
+- Active branch: `release/agentrouter-v0.5-rc1`, pushed through `07eb511`.
   Open PR: #16 to `main`; current Python/Rust OS matrix checks pass, but
   `enforce-release-gate` fails because frozen context-band accuracy is 0.6667
   against 0.90. Do not merge or tag while this gate fails.
-- Current local slice: Rust R4 doctor bundle plus Python/Rust environment-value
-  privacy hardening. The default bundle is allowlisted, bounded and redacted;
-  including SQLite is opt-in, uses online backup and warns that task text is
-  included. All environment values except the resolved home path are withheld.
-- Local evidence: full Python suite 1,701 passed, 6 skipped; 90.99% line and
-  85.19% branch coverage. Focused bundle/doctor compatibility tests pass; Rust
-  workspace tests, formatting, Clippy, and Ruff pass. Security audit, package
-  build, cargo audit, and evaluation reruns are still collecting. Current local
-  changes need commit/push and fresh cross-platform CI.
+- Current local slice: Rust quota-aware reranking exposed through
+  `route_cli --verify-live`. Unsupported/available/error states preserve the
+  recommendation; verified exhaustion reranks once. Unicode sanitation now
+  matches Python `str.isprintable()`. Production adapters remain disabled.
+- That bundle/privacy slice is committed as `07eb511`; Linux/Windows/macOS
+  Python/Rust, security, mutation, package, API and site checks pass. PR #16's
+  promotion gate remains red because the frozen evaluation is 0.6667 < 0.90.
+- Local evidence: full Python suite 1,711 passed, 6 skipped; 90.99% line and
+  85.19% branch coverage. Eight Rust usage unit tests, ten Python/Rust
+  differential cases, the full Rust workspace, Clippy, formatting, and Ruff
+  pass. Changes need commit/push and fresh cross-platform CI.
 - Python remains the shipping implementation. The 77-module matrix is
   incomplete; Rust CLI/HTTP/MCP, plugins/skills, evaluation/annotation, and
   R5–R13 remain. Human annotation, OpenAI live validation, and production

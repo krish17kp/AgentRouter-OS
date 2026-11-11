@@ -6,7 +6,7 @@
 //! `tests/test_cli_route_rust_compat.py` can diff Rust output against
 //! Python's `agentrouter route` CLI for the same registries and task.
 //!
-//! Usage: route_cli <home> <task> [prefer] [--save] [route controls]
+//! Usage: route_cli <home> <task> [prefer] [--save] [--verify-live] [route controls]
 //! `--save` persists the Rust decision into the existing SQLite log and emits
 //! the Python CLI's `{decision_id, task, ...payload}` JSON envelope.
 
@@ -16,14 +16,18 @@ use agentrouter_classifier::{classify, ClassifyOptions};
 use agentrouter_policy::controls::RouteControls;
 use agentrouter_registry::{load_all_models, load_providers};
 
-fn parse_options(extra: Vec<String>) -> Result<(bool, Option<String>, RouteControls), String> {
+fn parse_options(
+    extra: Vec<String>,
+) -> Result<(bool, bool, Option<String>, RouteControls), String> {
     let mut args = extra.into_iter();
     let mut save = false;
+    let mut verify_live = false;
     let mut prefer = None;
     let mut controls = RouteControls::default();
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--save" => save = true,
+            "--verify-live" => verify_live = true,
             "--vendor" => controls
                 .vendor
                 .push(args.next().ok_or("--vendor needs a value")?),
@@ -67,7 +71,7 @@ fn parse_options(extra: Vec<String>) -> Result<(bool, Option<String>, RouteContr
             return Err(format!("unknown routing preference {name}"));
         }
     }
-    Ok((save, prefer, controls))
+    Ok((save, verify_live, prefer, controls))
 }
 
 fn main() {
@@ -79,7 +83,8 @@ fn main() {
     let task = args
         .next()
         .expect("usage: route_cli <home> <task> [prefer]");
-    let (save, prefer, controls) = parse_options(args.collect()).expect("valid route options");
+    let (save, verify_live, prefer, controls) =
+        parse_options(args.collect()).expect("valid route options");
 
     let reg_dir = home.join("registry");
     let providers = load_providers(&reg_dir.join("providers.yaml")).expect("load providers");
@@ -102,9 +107,12 @@ fn main() {
         &models,
         &cls,
         weights,
-        prefer.as_deref(),
-        note,
-        &controls,
+        agentrouter_cli::RouteOptions {
+            prefer: prefer.as_deref(),
+            weight_shift_note: note,
+            controls: &controls,
+            verify_live,
+        },
     );
     if save {
         let decision_id = agentrouter_storage::save_decision(&conn, &task, &payload)

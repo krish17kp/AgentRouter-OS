@@ -348,6 +348,13 @@ pub fn execution_route_block(
 /// Full `route --json` orchestration: classify, filter/score, assemble the
 /// same payload shape `cli.route()` builds (minus `decision_id`, added by
 /// the caller after optionally persisting it).
+pub struct RouteOptions<'a> {
+    pub prefer: Option<&'a str>,
+    pub weight_shift_note: Option<String>,
+    pub controls: &'a agentrouter_policy::controls::RouteControls,
+    pub verify_live: bool,
+}
+
 pub fn route_payload(
     task: &str,
     models: &[ModelEntry],
@@ -357,13 +364,21 @@ pub fn route_payload(
     weight_shift_note: Option<String>,
 ) -> Value {
     let result: RouteResult = agentrouter_routing::route(models, cls, base_weights, prefer);
-    let mut result_json = serde_json::to_value(&result).unwrap();
+    route_payload_from_result(task, models, cls, result, weight_shift_note, None)
+}
+
+fn route_payload_from_result(
+    task: &str,
+    models: &[ModelEntry],
+    cls: &Classification,
+    mut result: RouteResult,
+    weight_shift_note: Option<String>,
+    usage_check: Option<agentrouter_usage::UsageStatus>,
+) -> Value {
     if let Some(note) = weight_shift_note {
-        result_json["weight_shifts"]
-            .as_array_mut()
-            .unwrap()
-            .push(Value::String(note));
+        result.weight_shifts.push(note);
     }
+    let result_json = serde_json::to_value(&result).unwrap();
 
     let models_by_key: HashMap<String, &ModelEntry> = models.iter().map(|m| (m.key(), m)).collect();
     let rec = &result_json["recommendation"];
@@ -411,6 +426,9 @@ pub fn route_payload(
     payload["prompt"] = Value::String(prompt);
     payload["execution_route"] = exec_route;
     payload["fallback_execution_route"] = fb_route;
+    if let Some(usage_check) = usage_check {
+        payload["usage_check"] = serde_json::to_value(usage_check).unwrap();
+    }
     payload
 }
 
@@ -421,21 +439,36 @@ pub fn route_payload_with_controls(
     models: &[ModelEntry],
     cls: &Classification,
     base_weights: agentrouter_routing::Weights,
-    prefer: Option<&str>,
-    weight_shift_note: Option<String>,
-    controls: &agentrouter_policy::controls::RouteControls,
+    options: RouteOptions<'_>,
 ) -> Value {
-    let (kept, dropped) = agentrouter_policy::controls::apply_controls(models, controls);
-    let mut payload = route_payload(task, &kept, cls, base_weights, prefer, weight_shift_note);
-    if !dropped.is_empty() {
-        let mut excluded: Vec<Value> = dropped
+    let (kept, dropped) = agentrouter_policy::controls::apply_controls(models, options.controls);
+    let mut result = agentrouter_routing::route(&kept, cls, base_weights, options.prefer);
+    result.excluded.splice(
+        0..0,
+        dropped
             .into_iter()
-            .map(|item| json!({"model": item.model, "reason": item.reason}))
-            .collect();
-        excluded.extend(payload["excluded"].as_array().cloned().unwrap_or_default());
-        payload["excluded"] = json!(excluded);
+            .map(|item| agentrouter_routing::Excluded {
+                model: item.model,
+                reason: item.reason,
+            }),
+    );
+    if let Some(note) = options.weight_shift_note {
+        result.weight_shifts.push(note);
     }
-    payload
+    let (result, usage_check) = if options.verify_live {
+        let verified = agentrouter_usage::apply_live_verification(
+            &kept,
+            cls,
+            result,
+            base_weights,
+            options.prefer,
+            std::time::Duration::from_secs(5),
+        );
+        (verified.route, verified.usage_check)
+    } else {
+        (result, None)
+    };
+    route_payload_from_result(task, &kept, cls, result, None, usage_check)
 }
 
 /// `_home()`: `AGENTROUTER_HOME` env var, else `~/.agentrouter`.

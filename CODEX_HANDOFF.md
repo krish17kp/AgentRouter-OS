@@ -2,29 +2,34 @@
 
 ## Current checkpoint — 2026-11-11
 
-PR #30 dashboard, privacy, observability, and OpenAI transport helpers merged at `bd98b6b`; PR #31 harness/dependency hardening, PR #32 benchmark/coverage evidence, and PR #33 context-model parity are merged to RC through `2ff36f7`. PR #13 `TASK-019`
+PR #30 dashboard, privacy, observability, and OpenAI transport helpers merged at `bd98b6b`; PR #31 harness/dependency hardening, PR #32 benchmark/coverage evidence, PR #33 context-model parity, and the Rust diagnostic-bundle slice are merged to RC through `07eb511`. PR #13 `TASK-019`
 was merged into RC at `9958dd8` after its mutation, security, Python, Rust, and
 Linux/Windows/macOS checks passed. The plugin mutation campaign passed: 1,629 selected mutants,
 0.9693 overall, 0.9663 safety/policy/execution, 0.9815 routing, and zero
 unreviewed survivors. Exact-path and lifecycle tests cover Windows reserved
 aliases, link/reparse detection, ownership identity, and failure recovery.
 
-RC is `2ff36f7` after PR #27 website, PR #28 macOS CI, PR #29 routing
+RC is `07eb511` after PR #27 website, PR #28 macOS CI, PR #29 routing
 benchmark/coverage evidence, and PRs #30–#32 merged. PR #21 was closed as redundant because its
 change was already on RC. PR #16 remains blocked by context-band accuracy
 0.6667 < 0.90. Python remains the shipping authority.
 
-Latest full Python run: 1,701 passed, 6 skipped; 90.99% line and 85.19% branch
+Latest full Python run: 1,711 passed, 6 skipped; 90.99% line and 85.19% branch
 coverage, meeting unchanged 90%/85% gates. Rust workspace tests,
 formatting, and Clippy pass locally. R4 remains partial; full public CLI,
 HTTP/MCP, plugins, evaluation, and R5–R13 remain. Human annotation, paid OpenAI
 validation, and production/release credentials are listed in
 `PRODUCTION_STATUS.md` under **Needs Krish**. `AGENT_HANDOFF.md` is authoritative.
 
-Current local task: harden the Rust diagnostic bundle and Python counterpart so
-non-home environment settings are presence-only, add regression coverage, and
-verify the full suite. Changes are not yet committed or pushed; rerun cross-
-platform CI after pushing. Do not discard `loop/tasks/TASK-RUST-R4-DIAGNOSTIC-BUNDLE/`.
+The Rust diagnostic bundle/privacy slice was committed as `07eb511` and its
+Python/Rust CI, security, mutation, package and API checks passed on Linux,
+Windows and macOS; PR #16 enforcement remains red only on the frozen evaluation.
+Current local work ports Python's exhausted-quota one-step reranking to Rust,
+with a deterministic offline seam, JSON compatibility probe, eight Rust unit
+tests and ten Python/Rust differential cases, including Python-compatible
+Unicode sanitation. Full Python regression passes: 1,711 passed, 6 skipped;
+90.99% line and 85.19% branch. Fresh CI is pending. Do not discard either new
+task evidence directory.
 
 ## Historical narrative
 

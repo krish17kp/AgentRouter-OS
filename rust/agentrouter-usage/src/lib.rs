@@ -1,11 +1,6 @@
-//! Rust port of `agentrouter/usage.py`'s state machine —
-//! UNKNOWN/UNSUPPORTED/AVAILABLE/EXHAUSTED/ERROR quota intelligence.
-//! `apply_live_verification` (the re-ranking glue into `engine.route()`'s
-//! dict-shaped result) is deliberately NOT ported here: it is CLI/route
-//! presentation glue over dynamically-shaped dicts, not part of the state
-//! machine the port-plan's acceptance criterion names, and `agentrouter
-//! -routing`'s `RouteResult` is a typed struct rather than a dict, so the
-//! re-ranking call site belongs with the CLI/API port (R4/R5), not here.
+//! Rust port of `agentrouter/usage.py`'s quota state machine and one-step
+//! exhaustion reranking. The deterministic status seam and route result
+//! preserve the Python contract while allowing offline differential tests.
 //!
 //! No live adapter is registered in production in either language today
 //! (`agentrouter/usage.py`'s own `_LIVE_CHECKS` is empty — BACKLOG.yaml P2,
@@ -16,7 +11,11 @@ use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use serde::Serialize;
+use agentrouter_core::Classification;
+use agentrouter_registry::ModelEntry;
+use agentrouter_routing::{route, RouteResult, Weights};
+use serde::{Deserialize, Serialize};
+use unicode_general_category::{get_general_category, GeneralCategory};
 
 pub const UNKNOWN: &str = "unknown";
 pub const UNSUPPORTED: &str = "unsupported";
@@ -28,7 +27,7 @@ fn is_known_state(s: &str) -> bool {
     matches!(s, UNKNOWN | UNSUPPORTED | AVAILABLE | EXHAUSTED | ERROR)
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UsageStatus {
     pub provider: String,
     pub state: String,
@@ -37,6 +36,16 @@ pub struct UsageStatus {
     pub reset_at: Option<String>,
     pub checked_at: Option<f64>,
     pub source: String,
+}
+
+/// Route fields plus the live quota evidence, flattened to match Python's
+/// `apply_live_verification` dictionary contract.
+#[derive(Debug, Clone, Serialize)]
+pub struct UsageRouteResult {
+    #[serde(flatten)]
+    pub route: RouteResult,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub usage_check: Option<UsageStatus>,
 }
 
 impl UsageStatus {
@@ -53,12 +62,26 @@ impl UsageStatus {
     }
 }
 
-/// Strip control characters from adapter-supplied text, same defense as
-/// Python's `usage._sanitize` / `hosts._sanitize`.
+/// Replace non-printable characters in adapter text, matching Python's
+/// `str.isprintable()` behavior in `usage._sanitize` / `hosts._sanitize`.
+fn is_printable(character: char) -> bool {
+    match get_general_category(character) {
+        GeneralCategory::Control
+        | GeneralCategory::Format
+        | GeneralCategory::Surrogate
+        | GeneralCategory::PrivateUse
+        | GeneralCategory::Unassigned
+        | GeneralCategory::LineSeparator
+        | GeneralCategory::ParagraphSeparator => false,
+        GeneralCategory::SpaceSeparator => character == ' ',
+        _ => true,
+    }
+}
+
 fn sanitize(value: &str) -> String {
     value
         .chars()
-        .filter(|c| !c.is_control())
+        .map(|c| if is_printable(c) { c } else { '?' })
         .take(200)
         .collect()
 }
@@ -68,6 +91,24 @@ fn now_epoch_secs() -> f64 {
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs_f64()
+}
+
+fn normalize_adapter_status(status: UsageStatus) -> UsageStatus {
+    if !is_known_state(&status.state) {
+        return UsageStatus {
+            provider: status.provider,
+            state: ERROR.to_string(),
+            detail: "live check returned an unrecognized result".to_string(),
+            remaining: None,
+            reset_at: None,
+            checked_at: Some(now_epoch_secs()),
+            source: "live".to_string(),
+        };
+    }
+    UsageStatus {
+        detail: sanitize(&status.detail),
+        ..status
+    }
 }
 
 type LiveCheckFn = std::sync::Arc<dyn Fn(f64) -> UsageStatus + Send + Sync + 'static>;
@@ -143,34 +184,116 @@ pub fn check_usage(provider: &str, live: bool, timeout: Duration) -> UsageStatus
             checked_at: Some(now_epoch_secs()),
             source: "live".to_string(),
         },
-        Ok(Ok(status)) => {
-            if !is_known_state(&status.state) {
-                return UsageStatus {
-                    provider: provider.to_string(),
-                    state: ERROR.to_string(),
-                    detail: "live check returned an unrecognized result".to_string(),
-                    remaining: None,
-                    reset_at: None,
-                    checked_at: Some(now_epoch_secs()),
-                    source: "live".to_string(),
-                };
-            }
-            UsageStatus {
-                provider: status.provider,
-                state: status.state,
-                detail: sanitize(&status.detail),
-                remaining: status.remaining,
-                reset_at: status.reset_at,
-                checked_at: status.checked_at,
-                source: status.source,
-            }
-        }
+        Ok(Ok(status)) => normalize_adapter_status(status),
+    }
+}
+
+/// If the recommended provider is verified exhausted, rerank once without its
+/// top model. Mirrors `usage.apply_live_verification`; unverified and
+/// unsupported quota states never alter the route.
+pub fn apply_live_verification(
+    models: &[ModelEntry],
+    cls: &Classification,
+    result: RouteResult,
+    base_weights: Weights,
+    prefer: Option<&str>,
+    timeout: Duration,
+) -> UsageRouteResult {
+    let Some(recommended) = result.recommendation.as_ref() else {
+        return UsageRouteResult {
+            route: result,
+            usage_check: None,
+        };
+    };
+    let top_provider = recommended.provider.clone();
+    let status = check_usage(&top_provider, true, timeout);
+    apply_usage_status(models, cls, result, status, base_weights, prefer)
+}
+
+/// Apply an already collected live status to a route. This is also the
+/// deterministic seam used by offline contract tests; it makes no network
+/// calls and follows the same one-rerank policy as Python.
+pub fn apply_usage_status(
+    models: &[ModelEntry],
+    cls: &Classification,
+    result: RouteResult,
+    status: UsageStatus,
+    base_weights: Weights,
+    prefer: Option<&str>,
+) -> UsageRouteResult {
+    let Some(recommended) = result.recommendation.as_ref() else {
+        return UsageRouteResult {
+            route: result,
+            usage_check: None,
+        };
+    };
+    let status = normalize_adapter_status(status);
+    let top_key = recommended.model.clone();
+    if status.state != EXHAUSTED {
+        return UsageRouteResult {
+            route: result,
+            usage_check: Some(status),
+        };
+    }
+
+    let Some(top_model) = models.iter().find(|model| model.key() == top_key) else {
+        return UsageRouteResult {
+            route: result,
+            usage_check: Some(status),
+        };
+    };
+    let remaining = models
+        .iter()
+        .filter(|model| model.key() != top_key)
+        .cloned()
+        .collect::<Vec<_>>();
+    let mut retry = route(&remaining, cls, base_weights, prefer);
+    retry.excluded = vec![agentrouter_routing::Excluded {
+        model: top_key.clone(),
+        reason: format!("quota exhausted (live-verified): {}", status.detail),
+    }];
+    retry.excluded.extend(result.excluded.clone());
+    retry.weight_shifts = result.weight_shifts.clone();
+    retry.weight_shifts.push(format!(
+        "quota exhausted for {}; re-ranked excluding {}",
+        top_model.provider.as_str(),
+        top_key
+    ));
+    UsageRouteResult {
+        route: retry,
+        usage_check: Some(status),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use agentrouter_core::{ApprovalLevel, ContextBand, Level, OutputType, TaskType};
+    use agentrouter_routing::Weights;
+
+    fn model(provider: &str, model_id: &str) -> ModelEntry {
+        let yaml = format!(
+            "provider: {provider}\nmodel_id: {model_id}\ncontext_window: 100000\nmax_output_tokens: 8000\npricing_tier: medium\nlatency_tier: medium\nability: {{coding: 7, reasoning: 7, writing: 7}}\ntool_support: []\nvision_support: false\ndeprecation_status: active\n"
+        );
+        serde_yaml::from_str(&yaml).unwrap()
+    }
+
+    fn classification() -> Classification {
+        Classification {
+            task_type: TaskType::Coding,
+            complexity: Level::Medium,
+            risk: Level::Low,
+            context_tokens: 0,
+            context_band: ContextBand::Small,
+            output_type: OutputType::Code,
+            tool_needs: vec![],
+            approval_level: ApprovalLevel::Auto,
+            confidence: 1.0,
+            needs_clarification: false,
+            alternative_task_type: None,
+            ambiguity_reason: None,
+        }
+    }
 
     #[test]
     fn not_live_is_unknown() {
@@ -221,5 +344,92 @@ mod tests {
         let s = check_usage("panics", true, Duration::from_secs(5));
         unregister_live_check("panics");
         assert_eq!(s.state, ERROR);
+    }
+
+    #[test]
+    fn exhausted_recommendation_is_reranked_once_and_annotated() {
+        let models = vec![model("quota-openai", "first"), model("other", "second")];
+        let cls = classification();
+        let original = route(&models, &cls, Weights::default(), None);
+        let first = original.recommendation.as_ref().unwrap().model.clone();
+        register_live_check("quota-openai", |_timeout| {
+            let mut status = UsageStatus::new("quota-openai", EXHAUSTED, "no budget left");
+            status.remaining = Some(0.0);
+            status.source = "live".to_string();
+            status
+        });
+        let result = apply_live_verification(
+            &models,
+            &cls,
+            original.clone(),
+            Weights::default(),
+            None,
+            Duration::from_secs(1),
+        );
+        unregister_live_check("quota-openai");
+
+        assert_ne!(result.route.recommendation.as_ref().unwrap().model, first);
+        assert_eq!(result.usage_check.as_ref().unwrap().state, EXHAUSTED);
+        assert!(result.route.excluded[0].reason.contains("quota exhausted"));
+        assert!(result
+            .route
+            .weight_shifts
+            .last()
+            .unwrap()
+            .contains("quota exhausted"));
+        assert_eq!(original.recommendation.unwrap().model, first);
+    }
+
+    #[test]
+    fn unsupported_usage_preserves_recommendation_and_no_pick_has_no_usage_field() {
+        let models = vec![model("unsupported-provider", "first")];
+        let cls = classification();
+        let original = route(&models, &cls, Weights::default(), None);
+        let result = apply_live_verification(
+            &models,
+            &cls,
+            original.clone(),
+            Weights::default(),
+            None,
+            Duration::from_secs(1),
+        );
+        assert_eq!(
+            result.route.recommendation.unwrap().model,
+            original.recommendation.unwrap().model
+        );
+        assert_eq!(result.usage_check.unwrap().state, UNSUPPORTED);
+
+        let empty = route(&[], &cls, Weights::default(), None);
+        let result = apply_live_verification(
+            &[],
+            &cls,
+            empty,
+            Weights::default(),
+            None,
+            Duration::from_secs(1),
+        );
+        assert!(result.usage_check.is_none());
+        assert!(serde_json::to_value(result)
+            .unwrap()
+            .get("usage_check")
+            .is_none());
+    }
+
+    #[test]
+    fn unknown_adapter_state_fails_closed_without_reranking() {
+        let models = vec![model("provider", "model")];
+        let cls = classification();
+        let original = route(&models, &cls, Weights::default(), None);
+        let recommendation = original.recommendation.as_ref().unwrap().model.clone();
+        let result = apply_usage_status(
+            &models,
+            &cls,
+            original,
+            UsageStatus::new("provider", "future-state", "ignored"),
+            Weights::default(),
+            None,
+        );
+        assert_eq!(result.usage_check.unwrap().state, ERROR);
+        assert_eq!(result.route.recommendation.unwrap().model, recommendation);
     }
 }
