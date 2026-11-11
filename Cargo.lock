@@ -56,6 +56,7 @@ dependencies = [
  "agentrouter-core",
  "agentrouter-registry",
  "agentrouter-routing",
+ "agentrouter-storage",
  "serde",
  "serde_json",
  "sha2",

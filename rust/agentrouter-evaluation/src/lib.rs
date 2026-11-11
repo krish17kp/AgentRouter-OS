@@ -313,6 +313,82 @@ pub fn evaluate_provider(models: &[agentrouter_registry::ModelEntry]) -> serde_j
     })
 }
 
+/// Exercise the decision + feedback SQLite round-trip from
+/// `evaluation.evaluators.feedback` using an isolated temporary home.
+pub fn evaluate_feedback() -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+    use serde_json::{json, Map, Value};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let nonce = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
+    let home = std::env::temp_dir().join(format!(
+        "agentrouter-eval-feedback-{}-{nonce}",
+        std::process::id()
+    ));
+    std::fs::create_dir_all(&home)?;
+
+    let checks = (|| -> Result<Map<String, Value>, Box<dyn std::error::Error>> {
+        let conn = agentrouter_storage::connect(&home)?;
+        let payload = json!({
+            "classification": {"risk": "high"},
+            "recommendation": {"model": "anthropic/claude-opus-4-8", "score": 0.87},
+        });
+        let decision_id =
+            agentrouter_storage::save_decision(&conn, "deploy to production", &payload)?;
+        let loaded = agentrouter_storage::load_decision(&conn, &decision_id)?;
+        let mut checks = Map::new();
+        checks.insert(
+            "decision_saved".to_owned(),
+            json!(decision_id.starts_with("d_")),
+        );
+        checks.insert("decision_loaded".to_owned(), json!(loaded.is_some()));
+        checks.insert(
+            "task_roundtrip".to_owned(),
+            json!(
+                loaded
+                    .as_ref()
+                    .and_then(|value| value.get("task"))
+                    .and_then(Value::as_str)
+                    == Some("deploy to production")
+            ),
+        );
+        checks.insert(
+            "recommendation_roundtrip".to_owned(),
+            json!(
+                loaded
+                    .as_ref()
+                    .and_then(|value| value.pointer("/recommendation/model"))
+                    .and_then(Value::as_str)
+                    == Some("anthropic/claude-opus-4-8")
+            ),
+        );
+        let recorded = agentrouter_storage::record_feedback(&conn, &decision_id, 5, "great")?;
+        let stats = agentrouter_storage::aggregate_stats(&conn, None)?;
+        checks.insert(
+            "stats_decision_count".to_owned(),
+            json!(stats["decisions"] == 1),
+        );
+        checks.insert(
+            "stats_by_risk".to_owned(),
+            json!(stats["by_risk"]["high"] == 1),
+        );
+        checks.insert(
+            "stats_feedback_count".to_owned(),
+            json!(recorded && stats["feedback"]["count"] == 1),
+        );
+        drop(conn);
+        Ok(checks)
+    })();
+
+    let _ = std::fs::remove_dir_all(&home);
+    let checks = checks?;
+    let score = if checks.values().all(|check| check.as_bool() == Some(true)) {
+        1.0
+    } else {
+        0.0
+    };
+    Ok(json!({"score": score, "detail": {"checks": checks}}))
+}
+
 fn round_to(value: f64, decimal_places: i32) -> f64 {
     let scale = 10_f64.powi(decimal_places);
     (value * scale).round_ties_even() / scale

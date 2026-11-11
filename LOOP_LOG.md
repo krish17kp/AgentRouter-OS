@@ -1745,3 +1745,16 @@ branch, and 89.79% combined coverage. Provider, safety, grading, report,
 registry, schema, sampling, metrics, and provenance compatibility tests pass
 locally. Rust workspace Clippy, formatting, and focused evaluation tests pass;
 the full Rust workspace test and cross-platform CI are pending after push.
+
+## Iteration 43 — 2026-11-11 — Rust feedback-storage evaluator
+
+Ported the feedback evaluator to an isolated Rust SQLite home. The Rust probe
+creates a decision, loads its task and recommendation, records a valid feedback
+row, then checks decision/risk/feedback aggregates through the shipped storage
+crate. The unique temporary directory is cleaned after the connection closes;
+the differential test compares the complete score and check map with Python.
+
+Verification: full Python suite 1,735 passed / 6 skipped; 91.08% line, 85.42%
+branch, and 89.79% combined coverage. Full Rust workspace tests, Clippy,
+formatting, Ruff, and all 15 evaluation differential tests pass. Cross-platform
+CI for the complete provider/feedback slice remains pending after push.
