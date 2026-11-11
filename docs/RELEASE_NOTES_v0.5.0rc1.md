@@ -19,6 +19,7 @@ required independent human annotation and adjudication round is incomplete.
 - Website interface and product-truth updates.
 - Diagnostic bundle settings show presence only; configured values such as user identifiers and log paths are withheld in both Python and Rust.
 - Rust `route_cli --verify-live` mirrors Python's one-step rerank when a live quota check confirms the top model is exhausted; no live quota adapter is enabled by default.
+- Rust doctor `--verify-live` now uses the shared host detector and bounded usage state machine; it checks only authenticated hosts and reports `unsupported` until a provider adapter exists.
 
 ## Release gates still open
 

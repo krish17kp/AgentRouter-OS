@@ -328,36 +328,31 @@ fn check_server_extra() -> Check {
 }
 
 fn check_usage(host: &str) -> Check {
-    let env_name = match host {
-        "anthropic-api" => "ANTHROPIC_API_KEY",
-        "openai-api" => "OPENAI_API_KEY",
-        "gemini-api" => "GOOGLE_API_KEY",
-        "openrouter" => "OPENROUTER_API_KEY",
-        _ => {
-            return Check::new(
-                &format!("usage.{host}"),
-                OK,
-                "not authenticated; usage not checked",
-                None,
-            )
-        }
-    };
-    let authenticated = std::env::var(env_name).is_ok_and(|value| !value.trim().is_empty());
-    if authenticated {
-        Check::new(
-            &format!("usage.{host}"),
-            OK,
-            "unsupported: no live usage adapter is registered",
-            None,
-        )
-    } else {
-        Check::new(
-            &format!("usage.{host}"),
-            OK,
-            "not authenticated; usage not checked",
-            None,
-        )
+    let id = format!("usage.{host}");
+    let host_status = agentrouter_hosts::detect_host(host, None);
+    if host_status.availability != agentrouter_hosts::AVAILABLE {
+        return Check::new(&id, OK, "not authenticated; usage not checked", None);
     }
+
+    let provider = agentrouter_hosts::provider_for_api_host(host).unwrap_or(host);
+    let usage = agentrouter_usage::check_usage(provider, true, std::time::Duration::from_secs(5));
+    let (severity, remedy) = match usage.state.as_str() {
+        agentrouter_usage::EXHAUSTED => (
+            WARN,
+            Some("wait for the provider's quota to reset, or switch providers".into()),
+        ),
+        agentrouter_usage::ERROR => (
+            WARN,
+            Some("the live usage check failed; re-run, or run without --verify-live".into()),
+        ),
+        _ => (OK, None),
+    };
+    Check::new(
+        &id,
+        severity,
+        format!("{}: {}", usage.state, usage.detail),
+        remedy,
+    )
 }
 
 pub fn run_all(home: &Path) -> Vec<Check> {

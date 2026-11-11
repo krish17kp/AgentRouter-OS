@@ -25,8 +25,14 @@ def _init(home):
 
 def _doctor(home, *args, env=None):
     process_env = os.environ.copy()
-    process_env.pop("AGENTROUTER_API_KEY", None)
-    process_env.pop("OPENAI_API_KEY", None)
+    for key in (
+        "AGENTROUTER_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "OPENAI_API_KEY",
+        "GOOGLE_API_KEY",
+        "OPENROUTER_API_KEY",
+    ):
+        process_env.pop(key, None)
     if env:
         process_env.update(env)
     return subprocess.run(

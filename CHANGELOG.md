@@ -24,6 +24,7 @@ All notable changes to AgentRouter OS. Format loosely follows
 - Diagnostic bundles now withhold all configured environment values except the resolved home path in both the Python implementation and Rust probe; user identifiers and configuration values are no longer copied into shareable artifacts.
 - Added a release-mode Rust routing benchmark with the same synthetic fleet setup as the Python baseline; local paired results and limits are recorded in `docs/ROUTING_BENCHMARK_RESULTS_2026-11-11.md`.
 - Rust `route_cli --verify-live` now has quota-aware one-step reranking with offline Python/Rust differential coverage; production live provider adapters remain unregistered.
+- Rust doctor usage checks now reuse the shared host detector and bounded quota state machine instead of duplicating credential-variable checks; credentials and provider values remain withheld.
 - Upgrade bundled SQLite to the patched 3.54.1 release and replace the unmaintained YAML parser with a pure-Rust serde-compatible layer; the Rust minimum is now 1.89.
 
 ### Fixed

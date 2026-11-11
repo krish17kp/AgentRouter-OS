@@ -1,12 +1,12 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-11",
-  "current_phase": "IN_PROGRESS: Rust usage-aware reranking and --verify-live parity pass locally. Eight Rust unit tests and ten Python/Rust differential cases pass, including Python-compatible Unicode sanitation. Full Python regression: 1,711 passed/6 skipped; line 90.9916%, branch 85.1852%; workspace tests, Clippy, formatting, Ruff pass. Commit/push, inspect CI, then continue parity.",
+  "current_phase": "IN_PROGRESS: Rust doctor --verify-live now uses the shared host detector, provider mapping, and quota state machine. Nine diagnostics compatibility tests plus full Rust workspace, Clippy, format, Ruff and diff checks pass locally. Full Python suite after the latest test-harness change and fresh cross-platform CI remain next; continue Rust parity.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
     "main": "PR #16 is open against main; enforce-release-gate fails because frozen context-band accuracy 0.6667 is below 0.90. No tag or production release.",
-    "release/agentrouter-v0.5-rc1": "RC @ 07eb511. This commit passed Linux/Windows/macOS Python/Rust, security, mutation, package/API/site checks. Local quota-aware reranking changes pass local tests; fresh cross-platform CI is pending. PR #16 promotion enforcement fails only at frozen context-band 0.6667 < 0.90.",
+    "release/agentrouter-v0.5-rc1": "RC @ a423ac5. Python 3.10–3.13, Linux/Windows/macOS Python/Rust compatibility, security, mutation, package/API/site checks pass. PR #16 promotion enforcement fails only because frozen context-band accuracy is 0.6667 < 0.90. New Rust doctor quota-check changes are local and await CI.",
     "task/rust-r1-workspace": "PR #25 open against RC; 6ee8d3e passed complete GitHub CI; 32eee6f forced-init push failed Windows compile, file-handle repair awaits remote recheck; SQLite path-race blocker remains; Rust R4 partial and OpenAI execution hardening",
     "task/repo-cleanup-architecture-ponytail": "MERGED to RC (PR #14, merge commit 1ae3155); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/dynamic-skill-discovery": "MERGED to RC (PR #15, merge commit 62d5289); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
@@ -35,7 +35,9 @@
     "Phase 3 local engineering via the full graph-aware loop. Done+merged: TASK-013 catalog freshness status + rollback (PR #4), TASK-014 CI release-gate report/enforce split (PR #5). Next: TASK-015 trusted catalogs (file-level provenance block, deprecation reconciliation, atomic refresh, rollback hardening, provider doctor/status), then verified execution-host states, provider diagnostics/onboarding, benchmark routing infra, customer docs, observability/runbooks, API/SDK compat+load testing. External: the human annotation round (TASK-012 tooling shipped) needs two real annotators + adjudicator per TASK_012_OWNER_ACTIONS.md.",
     "ENV BLOCKER RESOLVED 2026-08-08: local pytest now runs cleanly on this machine (595 passed, 3 skipped in 18.4s; ruff clean; bandit 0). CI remains an independent cross-platform authority (3.10-3.13 + Windows) but is no longer the only usable regression signal.",
     "2026-11-11 Rust R4 diagnostic bundle parity slice: allowlisted Rust support bundle, opt-in SQLite online snapshot, bounded/redacted outputs, and Python/Rust environment-value withholding with regression tests. Full Python suite 1,701 passed/6 skipped; line 90.99%, branch 85.19%. Local Rust tests/format/Clippy, Ruff and focused tests pass. Cross-platform CI for this local change is pending push.",
-    "2026-11-11 Rust usage-aware reranking parity: ported one-step quota-exhaustion reroute and CLI --verify-live, deterministic status seam, offline JSON probe, and Python-compatible Unicode sanitation. Eight Rust unit tests and ten Python/Rust differential cases pass. Full suite 1,711/6; fresh cross-platform CI pending."
+    "2026-11-11 Rust usage-aware reranking parity: ported one-step quota-exhaustion reroute and CLI --verify-live, deterministic status seam, offline JSON probe, and Python-compatible Unicode sanitation. Eight Rust unit tests and ten Python/Rust differential cases pass. Full suite 1,711/6; fresh cross-platform CI pending.",
+    "2026-11-11 Rust diagnostics usage parity: removed duplicated environment-variable authentication checks; diagnostics now calls the shared hosts detector, provider mapping, and bounded usage state machine. Nine focused doctor compatibility tests pass; full Rust workspace/Clippy/format/Ruff pass. Cross-platform CI pending.",
+    "2026-11-11 Rust doctor usage parity: shared host detection, provider mapping, and bounded quota status replace duplicated env-key checks; focused nine-test diagnostics suite and full local Python/Rust checks pass. Fresh CI pending."
   ],
   "completed_iter25": [
     "TASK-015 trusted catalogs MERGED to RC (PR #6 -> merge commit 8661629; task branch deleted local+remote). Closes TASK-013's deferred scope: file-level provenance block (provider, source_url, fetched_at UTC, count, tool_version, cli_args) ignored by the registry loader; atomic refresh via tempfile.mkstemp + os.replace; candidate-deprecation reporting on refresh (report-only, never auto-deletes); rollback with non-destructive backup rotation + new `providers restore`; new `providers doctor` that schema-validates every generated catalog and exits 3 only on real corruption (not staleness).",
@@ -103,7 +105,8 @@
     "python_full_latest": "2026-11-11 Linux/Python 3.12.15: 1,711 passed, 6 skipped; line 90.9916% (6,515/7,160); branch 85.1852% (1,794/2,106); combined 89.6719%; 1 Starlette/httpx deprecation warning.",
     "evaluation_latest_2026_11_11": "Grade 98.23/100; 6/7 release gates pass; context_band_accuracy 0.6667 < 0.90 on the frozen 45-case holdout; release-ready NO.",
     "local_release_checks_2026_11_11": "Python full 1,711 passed/6 skipped; line 90.9916%, branch 85.1852%; Ruff/format, Rust workspace tests/format/Clippy pass. The quota-rerank slice awaits fresh cross-platform CI.",
-    "rust_usage_rerank": "Eight Rust unit tests and ten Python/Rust differential scenarios pass; full workspace, Clippy, formatting, Ruff and full Python suite pass locally. Fresh cross-platform CI pending."
+    "rust_usage_rerank": "Eight Rust unit tests and ten Python/Rust differential scenarios pass; full workspace, Clippy, formatting, Ruff and full Python suite pass locally. Fresh cross-platform CI pending.",
+    "rust_diagnostics_usage": "Nine focused Rust diagnostics compatibility tests pass, including opt-in usage and credential redaction. Full Rust workspace, Clippy, formatting, Ruff, diff checks, and full Python suite (1,711 passed/6 skipped) pass locally. Cross-platform CI pending."
   },
   "release_blockers": [
     "Frozen context-band accuracy 0.6667 remains below unchanged 0.90. Independent human annotation by two annotators plus adjudication under TASK_012_OWNER_ACTIONS.md is required; AI labels cannot substitute.",
@@ -176,5 +179,8 @@
   ],
   "completed_iter31": [
     "Implemented the Rust counterpart to Python usage.apply_live_verification in agentrouter-usage. Added an offline fixture JSON probe, a --verify-live route CLI option, exhausted-quota one-step reranking, exclusion/weight-shift parity, and Python-compatible Unicode sanitation. Nine full-result usage differential cases plus one CLI case pass; eight Rust unit tests pass. Full Python regression 1,711 passed/6 skipped; coverage 90.9916% line / 85.1852% branch / 89.6719% combined. Rust workspace tests, Clippy, formatting and Ruff pass. Fresh cross-platform CI remains pending."
+  ],
+  "completed_iter32": [
+    "Aligned Rust doctor --verify-live with Python's diagnostics flow: use agentrouter-hosts detection and provider mapping, then call bounded agentrouter-usage status. Removed duplicated credential-variable guesses. The test harness clears provider secrets between cases. Nine focused diagnostics compatibility tests pass; full Rust workspace/Clippy/format/Ruff pass; full Python suite 1,711 passed/6 skipped, 90.99% line and 85.19% branch. Fresh CI pending."
   ]
 }

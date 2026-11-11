@@ -20,8 +20,9 @@ PYTHONPATH=. python -m pytest -q --cov=agentrouter --cov-branch --cov-report=ter
 | CI total-coverage threshold | 80% — passed |
 | Warnings | 1 Starlette/httpx deprecation warning |
 
-Run used Python 3.12.15 on Linux against RC source at `07eb511` plus the local
-quota-aware usage migration slice and ten Python/Rust differential cases. The
+Run used Python 3.12.15 on Linux against RC commit `a423ac5` plus the local
+Rust doctor usage-check slice; the regression includes ten quota-routing
+Python/Rust differential cases and nine doctor compatibility cases. The
 candidate package version is
 `0.5.0rc1`. The six skips are environment-
 dependent; CI is responsible for Windows and macOS confirmation.

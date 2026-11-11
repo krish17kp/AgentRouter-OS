@@ -2,21 +2,22 @@
 
 ## Current checkpoint — 2026-11-11
 
-- Active branch: `release/agentrouter-v0.5-rc1`, pushed through `07eb511`.
+- Active branch: `release/agentrouter-v0.5-rc1`, pushed through `a423ac5`.
   Open PR: #16 to `main`; current Python/Rust OS matrix checks pass, but
   `enforce-release-gate` fails because frozen context-band accuracy is 0.6667
   against 0.90. Do not merge or tag while this gate fails.
-- Current local slice: Rust quota-aware reranking exposed through
-  `route_cli --verify-live`. Unsupported/available/error states preserve the
-  recommendation; verified exhaustion reranks once. Unicode sanitation now
-  matches Python `str.isprintable()`. Production adapters remain disabled.
-- That bundle/privacy slice is committed as `07eb511`; Linux/Windows/macOS
-  Python/Rust, security, mutation, package, API and site checks pass. PR #16's
-  promotion gate remains red because the frozen evaluation is 0.6667 < 0.90.
+- Rust quota-aware reranking is committed as `a423ac5`; its Python/Rust OS
+  matrix, Python 3.10–3.13 tests, security, mutation, site, package, and API
+  checks pass. Only PR #16's promotion gate fails at the unchanged frozen
+  context score 0.6667 < 0.90.
+- Current local slice: Rust doctor quota checks now use the shared host
+  detector, provider mapping, and bounded usage state machine instead of
+  duplicated credential-variable checks. They remain opt-in and never echo
+  credentials; no provider usage adapter is registered.
 - Local evidence: full Python suite 1,711 passed, 6 skipped; 90.99% line and
-  85.19% branch coverage. Eight Rust usage unit tests, ten Python/Rust
-  differential cases, the full Rust workspace, Clippy, formatting, and Ruff
-  pass. Changes need commit/push and fresh cross-platform CI.
+  85.19% branch coverage. The Rust doctor usage-check slice passes all nine
+  focused compatibility tests; full Rust workspace tests, Clippy, formatting,
+  and Ruff pass. This slice needs commit/push and fresh cross-platform CI.
 - Python remains the shipping implementation. The 77-module matrix is
   incomplete; Rust CLI/HTTP/MCP, plugins/skills, evaluation/annotation, and
   R5–R13 remain. Human annotation, OpenAI live validation, and production

@@ -21,15 +21,14 @@ HTTP/MCP, plugins, evaluation, and R5–R13 remain. Human annotation, paid OpenA
 validation, and production/release credentials are listed in
 `PRODUCTION_STATUS.md` under **Needs Krish**. `AGENT_HANDOFF.md` is authoritative.
 
-The Rust diagnostic bundle/privacy slice was committed as `07eb511` and its
-Python/Rust CI, security, mutation, package and API checks passed on Linux,
-Windows and macOS; PR #16 enforcement remains red only on the frozen evaluation.
-Current local work ports Python's exhausted-quota one-step reranking to Rust,
-with a deterministic offline seam, JSON compatibility probe, eight Rust unit
-tests and ten Python/Rust differential cases, including Python-compatible
-Unicode sanitation. Full Python regression passes: 1,711 passed, 6 skipped;
-90.99% line and 85.19% branch. Fresh CI is pending. Do not discard either new
-task evidence directory.
+The Rust diagnostic bundle/privacy slice was committed as `07eb511`, followed
+by quota-aware route verification in `a423ac5`. The latter's Linux/Windows/macOS
+Python/Rust matrix, security, mutation, package, API and site checks pass; PR
+#16 enforcement remains red only on the frozen evaluation. Current local work
+reuses host detection and the bounded usage state machine in Rust doctor's
+`--verify-live` checks. Nine focused compatibility cases and the full Python
+regression pass: 1,711 passed, 6 skipped; 90.99% line and 85.19% branch. Fresh
+CI for this slice is pending. Do not discard either new task evidence directory.
 
 ## Historical narrative
 

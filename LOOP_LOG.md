@@ -1566,3 +1566,21 @@ pass; Ruff and Python formatting pass. The quota rerank slice has not yet run
 through cross-platform CI. The previously pushed bundle commit `07eb511` passed
 the Linux/Windows/macOS Python/Rust matrix, security, mutation, API, package,
 and site jobs. PR #16 remains held by context-band accuracy 0.6667 < 0.90.
+
+## Iteration 32 — 2026-11-11 — Reuse host and quota state for Rust doctor
+
+The Rust doctor's opt-in quota report previously duplicated authentication by
+checking a short list of environment variable names and hard-coded an
+unsupported message. It now uses the shared host detector and API-host-to-
+provider mapping, then calls the bounded Rust usage state machine. Unauthenticated
+hosts are skipped; authenticated providers report the actual usage state without
+echoing credentials. The diagnostics test harness clears all provider-key
+environment variables before setting credentials for each case.
+
+Verification: all nine Rust diagnostics compatibility cases pass, including
+credential redaction and opt-in usage. Full Rust workspace tests, Clippy,
+formatting, Ruff, and diff checks pass. The full Python suite also passes with
+1,711 tests and 6 skips at 90.99% line / 85.19% branch coverage. This is still
+partial doctor parity:
+plugin health, server-extra detection, complete contract metadata, and Python
+runtime checks remain outstanding. Cross-platform CI is pending.
