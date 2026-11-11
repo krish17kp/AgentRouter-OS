@@ -10,7 +10,7 @@ accuracy is 0.6667 < 0.90. Rust now differentially normalizes CLINC150 raw rows 
 adapter behavior for six datasets. The AgentRouter-gold adapter matches Python
 metadata, availability, description, all 165 records, checksum, and seeded
 sampling, including Unicode/default behavior. Full Python regression passes:
-1,765 passed, 6 skipped; coverage is 91.75% line, 86.61% branch, and 90.58%
+1,766 passed, 6 skipped; coverage is 91.95% line, 86.85% branch, and 90.79%
 combined. Python remains the shipping authority, and the full Rust migration
 is not complete.
 

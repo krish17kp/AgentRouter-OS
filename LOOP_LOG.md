@@ -1947,3 +1947,18 @@ combined coverage. TASK-024 cross-platform CI passed; TASK-025 awaits push and C
 
 Next: commit/push TASK-025, inspect all platform CI, repair failures, and
 continue the next unfinished adapter and remaining Rust modules.
+
+
+## 2026-11-11 — TASK-026: Rust LongBench v2 row preparation
+
+Ported LongBench v2 context bucketing and row normalization, including the
+`int(words * 1.3)` estimate, reporting buckets, context-band labels, duplicate
+handling, metadata, source IDs, and missing/null semantics. The Python/Rust
+differential test covers boundary values and normalized rows. Focused differential
+test, full Rust workspace, Clippy, rustfmt, Ruff, and Python regression pass
+(1,766 passed/6 skipped; 91.95% line, 86.85% branch, 90.79% combined coverage).
+TASK-025 cross-platform Rust CI and mutation/security/site checks pass; its Python
+CI is finishing. TASK-026 awaits push and CI.
+
+Next: push TASK-026, inspect platform workflows and repair failures, then
+continue remaining evaluation adapters and public module parity.

@@ -3,23 +3,20 @@
 ## Current checkpoint — 2026-11-11
 
 PRs #27–#33 and #13 are merged into `release/agentrouter-v0.5-rc1`; RC head is
-`d9b2622` and PR #16 remains open to `main`. TASK-024 Rust workspace and
-adapter compatibility pass Linux/Windows/macOS, with security, website, and
-mutation checks passing. The unchanged promotion gate remains red: frozen
-context-band accuracy is 0.6667 against 0.90. Python remains the shipping
-authority.
+`5a0f22c` and PR #16 remains open to `main`. TASK-025 Rust compatibility and
+workspace checks pass Linux/Windows/macOS, with security, website, and mutation
+checks passing. General CI has no code/test failure; frozen context-band
+accuracy 0.6667 against 0.90 remains the promotion blocker.
 
-Current local task TASK-025 ports MASSIVE locale normalization for en/hi/fr,
-including deduplication, locale order, metadata, missing/null values, and
-checksums. Fourteen focused adapter checks, Rust workspace, Clippy, format,
-Ruff, and full Python regression pass: 1,765 passed, 6 skipped; 91.75% line,
-86.61% branch, and 90.58% combined coverage. Remote data fetching, other
-adapter transformations, evaluation runner/CLI/annotation, and many public
-modules remain incomplete in `docs/RUST_PARITY_MATRIX.md`. Owner-dependent
-human annotation, live OpenAI validation, and production credentials remain
-under **Needs Krish** in `PRODUCTION_STATUS.md`. `AGENT_HANDOFF.md` is
-
-authoritative.
+Current local task TASK-026 ports LongBench v2 row preparation and reporting
+buckets, including token estimation, deduplication, metadata, and missing/null
+semantics. Its differential test, Rust workspace, Clippy, format, Ruff, and full
+Python regression pass: 1,766 passed, 6 skipped; 91.95% line, 86.85% branch,
+and 90.79% combined coverage. Remote downloads/model execution, other adapter
+transforms, evaluation runner/CLI/annotation, and many public modules remain
+incomplete in `docs/RUST_PARITY_MATRIX.md`. Human annotation, live OpenAI
+validation, and production credentials are under **Needs Krish** in
+`PRODUCTION_STATUS.md`. `AGENT_HANDOFF.md` is authoritative.
 
 ## Historical narrative
 

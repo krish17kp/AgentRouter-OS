@@ -1895,6 +1895,130 @@ pub fn normalize_massive_rows(
     Ok(out)
 }
 
+const LONGBENCH_CONTEXT_BUCKETS: [(&str, i64, i64); 5] = [
+    ("under-8k", 0, 8_000),
+    ("8k-32k", 8_000, 32_000),
+    ("32k-128k", 32_000, 128_000),
+    ("128k-512k", 128_000, 512_000),
+    ("over-512k", 512_000, 1_000_000_000),
+];
+
+/// Match the reporting buckets used by `LongBenchV2Adapter.bucket_for`.
+pub fn longbench_bucket_for(tokens: i64) -> &'static str {
+    LONGBENCH_CONTEXT_BUCKETS
+        .iter()
+        .find(|(_, low, high)| *low <= tokens && tokens < *high)
+        .map_or(LONGBENCH_CONTEXT_BUCKETS[0].0, |(label, _, _)| label)
+}
+
+fn missing_longbench_id() -> serde_json::Value {
+    serde_json::Value::String("__AGENTROUTER_MISSING_LONGBENCH_ID__".to_string())
+}
+
+fn missing_longbench_domain() -> serde_json::Value {
+    serde_json::Value::String("__AGENTROUTER_MISSING_LONGBENCH_DOMAIN__".to_string())
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LongBenchRawRow {
+    #[serde(default)]
+    pub question: Option<String>,
+    #[serde(default)]
+    pub context: Option<String>,
+    #[serde(default = "missing_longbench_domain")]
+    pub domain: serde_json::Value,
+    #[serde(default = "empty_json_string")]
+    pub difficulty: serde_json::Value,
+    #[serde(rename = "_id", default = "missing_longbench_id")]
+    pub record_id: serde_json::Value,
+}
+
+/// Normalize caller-supplied LongBench v2 rows. Context lengths use the same
+/// word-count estimate as Python; model-based long-context evaluation remains
+/// outside this data-preparation function.
+pub fn normalize_longbench_rows(rows: &[LongBenchRawRow]) -> Vec<EvaluationCase> {
+    let mut out = Vec::new();
+    let mut seen = BTreeSet::new();
+    let mut hashes = BTreeSet::new();
+    for (index, row) in rows.iter().enumerate() {
+        let question = row.question.as_deref().unwrap_or_default().trim();
+        if question.is_empty() || !seen.insert(question.to_lowercase()) {
+            continue;
+        }
+        let context = row.context.as_deref().unwrap_or_default();
+        let words = context.split_whitespace().count();
+        let tokens = (words as f64 * 1.3) as i64;
+        let band = if tokens < 8_000 {
+            "small"
+        } else if tokens < 32_000 {
+            "medium"
+        } else {
+            "large"
+        };
+        let record_id = if row.record_id.as_str() == Some("__AGENTROUTER_MISSING_LONGBENCH_ID__") {
+            index.to_string()
+        } else {
+            python_string(&row.record_id)
+        };
+        let domain_missing =
+            row.domain.as_str() == Some("__AGENTROUTER_MISSING_LONGBENCH_DOMAIN__");
+        let domain = if domain_missing {
+            String::new()
+        } else {
+            python_string(&row.domain)
+        };
+        let note_domain = if domain_missing {
+            "None".to_string()
+        } else {
+            python_string(&row.domain)
+        };
+        let difficulty = python_string(&row.difficulty);
+        let case = EvaluationCase {
+            id: format!("longbench-{record_id}"),
+            dataset: "longbench-v2".to_string(),
+            task: question.to_string(),
+            dataset_version: Some("v2".to_string()),
+            source: Some("https://huggingface.co/datasets/THUDM/LongBench-v2".to_string()),
+            source_split: Some("train".to_string()),
+            language: default_language(),
+            domain: Some(domain.clone()),
+            tags: vec![
+                "long-context".to_string(),
+                longbench_bucket_for(tokens).to_string(),
+                difficulty,
+            ],
+            paraphrase_group: None,
+            expected: ExpectedClassification {
+                context_bands: vec![match band {
+                    "small" => ContextBand::Small,
+                    "medium" => ContextBand::Medium,
+                    _ => ContextBand::Large,
+                }],
+                ..ExpectedClassification::default()
+            },
+            routing: None,
+            safety: None,
+            context_tokens: Some(tokens),
+            cost_metadata: BTreeMap::new(),
+            model_outcomes: BTreeMap::new(),
+            provenance: Provenance {
+                method: AnnotationMethod::DatasetNative,
+                reviewer: None,
+                source_license: Some("LongBench v2 (see dataset card)".to_string()),
+                source_record_id: Some(record_id.clone()),
+                retrieved: None,
+            },
+            review_status: ReviewStatus::Pending,
+            checksum: None,
+            notes: Some(format!("longbench_domain={note_domain} words={words}")),
+        };
+        if hashes.insert(case.task_hash()) {
+            out.push(case.with_checksum());
+        }
+    }
+    out
+}
+
 #[derive(Debug, Deserialize)]
 struct AgentRouterGoldDocument {
     #[serde(default = "default_gold_version")]

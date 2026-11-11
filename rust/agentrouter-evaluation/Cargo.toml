@@ -104,3 +104,7 @@ path = "src/bin/evaluation_banking77_from_json.rs"
 [[bin]]
 name = "evaluation_massive_from_json"
 path = "src/bin/evaluation_massive_from_json.rs"
+
+[[bin]]
+name = "evaluation_longbench_from_json"
+path = "src/bin/evaluation_longbench_from_json.rs"

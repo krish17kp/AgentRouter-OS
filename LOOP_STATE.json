@@ -1,12 +1,12 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-11",
-  "current_phase": "IN_PROGRESS: TASK-025 Rust MASSIVE locale normalization is locally complete for en/hi/fr. Four locale differential cases, 14 focused adapter checks, Rust workspace/Clippy/format/Ruff, and full Python 1,765 passed/6 skipped (91.75/86.61/90.58 coverage) pass. Commit/push to RC, inspect CI, repair failures, continue parity.",
+  "current_phase": "IN_PROGRESS: TASK-026 LongBench v2 row preparation and bucket parity is locally complete. Differential test, Rust workspace/Clippy/format/Ruff pass; full Python suite 1,766 passed/6 skipped with 91.95/86.85/90.79 coverage. Push to authorized RC, inspect all CI, repair failures, continue parity.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
     "main": "PR #16 is the sole open PR against main. Cross-platform Python/Rust, security, site, API, build and mutation checks pass; enforce-release-gate fails honestly at context-band 0.6667 < 0.90. No gate bypass.",
-    "release/agentrouter-v0.5-rc1": "RC at d9b2622; TASK-022 shared adapter base, TASK-023 CLINC150, and TASK-024 Banking77 parity pushed. Rust compatibility/workspace, security, website, and mutation checks pass Linux/Windows/macOS. General CI fails only on frozen context score 0.6667 < 0.90. Local TASK-025 MASSIVE parity awaits push.",
+    "release/agentrouter-v0.5-rc1": "RC at 5a0f22c; TASK-022 shared base, TASK-023 CLINC150, TASK-024 Banking77, and TASK-025 MASSIVE are pushed. TASK-025 Rust CI, security, website, and mutation pass on all platforms; Python CI is finishing. Only known gate failure is frozen context 0.6667 < 0.90. Local TASK-026 LongBench parity awaits push.",
     "task/rust-r1-workspace": "PR #25 open against RC; 6ee8d3e passed complete GitHub CI; 32eee6f forced-init push failed Windows compile, file-handle repair awaits remote recheck; SQLite path-race blocker remains; Rust R4 partial and OpenAI execution hardening",
     "task/repo-cleanup-architecture-ponytail": "MERGED to RC (PR #14, merge commit 1ae3155); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/dynamic-skill-discovery": "MERGED to RC (PR #15, merge commit 62d5289); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
@@ -29,6 +29,7 @@
   "repo_sha_at_takeover": "602321af91ff298c0d5b59d6d36c24f845557fc1",
   "canonical_release_ready": false,
   "in_progress": [
+    "2026-11-11 TASK-026: LongBench v2 Rust bucket and row preparation parity; full suite 1,766 passed/6 skipped, coverage 91.95/86.85/90.79. Commit/push and inspect platform CI.",
     "2026-11-11 TASK-025: MASSIVE Rust locale normalizer matches Python across en/hi/fr, language selection, dedup, metadata, missing/null values. Full local suite 1,765 passed/6 skipped; coverage 91.75/86.61/90.58. Push and inspect cross-platform CI.",
     "2026-11-11 TASK-024: Banking77 Rust raw-row normalization, tested against Python including duplicate removal, financial domain label calibration, provenance, and checksums. Full local suite 1,761 passed/6 skipped and 91.52/86.23/90.31 coverage. Push and inspect cross-platform CI.",
     "2026-11-11 TASK-023: Rust CLINC150 raw-row normalization parity, locally verified with 8 focused tests and full suite 1,759 passed/6 skipped; 91.50% line, 86.18% branch, 90.29% combined coverage. Push and inspect cross-platform CI, then continue parity.",
@@ -140,7 +141,7 @@
     "historical task records remain under loop/tasks and loop/reports",
     "historical TASK-004 0.945 result is retained as in-sample evidence but no longer treated as canonical held-out readiness"
   ],
-  "next_action": "Commit and push TASK-025 on release/agentrouter-v0.5-rc1, inspect Linux/Windows/macOS CI and repair failures, then continue the next Rust parity slice.",
+  "next_action": "Commit and push TASK-026 to release/agentrouter-v0.5-rc1, inspect all Linux/Windows/macOS CI and repair failures, then continue the next Rust parity slice.",
   "completed_iter26": [
     "TASK-016 verified execution-host states MERGED to RC (PR #7 -> merge commit 5847c22; task branch deleted local+remote). hosts.py gained a readiness state vocabulary (missing/installed/configured/authenticated/authorized/degraded/unknown) plus a per-host remedy; `availability` keeps its exact prior meaning and is now derived from state. hosts list/doctor/show, the setup wizard and the execute refusal all report state + fix; hosts doctor ends with the cheapest concrete fix and exits non-zero only when no real host is ready. REST/MCP gained additive state/remedy and host_state/host_remedy keys. docs: new USER_GUIDE section 8 with the state table and the honesty note on `authorized`.",
     "BUG FIXED: host detection tested the API-key env var for truthiness, so a set-but-blank key (OPENAI_API_KEY='   ') reported available and `execute` would target a host that cannot authenticate. Now degraded/unavailable with a fix-it message, pinned by a parametrised test.",

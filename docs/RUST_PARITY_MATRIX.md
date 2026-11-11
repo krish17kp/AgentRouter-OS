@@ -43,7 +43,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/adapters/banking77.py` | `agentrouter-evaluation::normalize_banking77_rows` | Partial |
 | `agentrouter/evaluation/adapters/clinc150.py` | `agentrouter-evaluation::normalize_clinc150_rows` | Partial |
 | `agentrouter/evaluation/adapters/llmrouterbench.py` | `—` | Not ported |
-| `agentrouter/evaluation/adapters/longbench_v2.py` | `—` | Not ported |
+| `agentrouter/evaluation/adapters/longbench_v2.py` | `agentrouter-evaluation::{normalize_longbench_rows,longbench_bucket_for}` | Partial |
 | `agentrouter/evaluation/adapters/massive.py` | `agentrouter-evaluation::normalize_massive_rows` | Partial |
 | `agentrouter/evaluation/adapters/swebench.py` | `—` | Not ported |
 | `agentrouter/evaluation/adapters/twinrouterbench.py` | `—` | Not ported |
