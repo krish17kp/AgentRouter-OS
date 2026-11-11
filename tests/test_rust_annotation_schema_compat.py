@@ -156,6 +156,8 @@ def test_rust_annotation_schema_rejects_invalid_models(model, value):
         "2026-11-11 12:30:00.120000",
         "2026-11-11",
         "2026-11-11T12:30:00.123456789Z",
+        "2026-11-11T12:30",
+        "2026-11-11T12:30:00,25+05:30",
         0,
         1.5,
         "0",
@@ -189,3 +191,19 @@ def test_rust_annotation_datetime_rejects_invalid_value_like_python():
     assert process.returncode != 0
     with pytest.raises(ValidationError):
         AnnotatorLabel.model_validate(invalid)
+
+
+@pytest.mark.parametrize("confidence", ["0.75", True])
+def test_rust_annotation_confidence_matches_pydantic_scalar_coercion(confidence):
+    value = {
+        "annotator": "reviewer-a",
+        "band": "medium",
+        "abstain": False,
+        "rationale": "coercion fixture",
+        "confidence": confidence,
+        "at": None,
+    }
+    expected = AnnotatorLabel.model_validate(value).model_dump(mode="json")
+    process = _rust("annotator_label", value)
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == {"value": expected}

@@ -2,8 +2,10 @@
 //! `agentrouter.annotation.schema`.
 
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, SecondsFormat, Utc};
+use serde::de::{self, Visitor};
 use serde::{Deserialize, Serialize};
 use serde::{Deserializer, Serializer};
+use std::fmt;
 
 use agentrouter_core::ContextBand;
 
@@ -22,6 +24,46 @@ pub const CATEGORIES: [&str; 10] = [
 ];
 pub const SPLITS: [&str; 3] = ["train", "dev", "holdout"];
 pub const LABEL_SOURCES: [&str; 3] = ["generated_candidate", "curated", "real_prompt"];
+
+fn pydantic_float<'de, D>(deserializer: D) -> Result<f64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct FloatVisitor;
+
+    impl<'de> Visitor<'de> for FloatVisitor {
+        type Value = f64;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("a float, numeric string, or boolean accepted by Pydantic")
+        }
+
+        fn visit_bool<E>(self, value: bool) -> Result<Self::Value, E> {
+            Ok(if value { 1.0 } else { 0.0 })
+        }
+
+        fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E> {
+            Ok(value as f64)
+        }
+
+        fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E> {
+            Ok(value as f64)
+        }
+
+        fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E> {
+            Ok(value)
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            value.trim().parse::<f64>().map_err(E::custom)
+        }
+    }
+
+    deserializer.deserialize_any(FloatVisitor)
+}
 
 fn default_candidate_source() -> String {
     "generated_candidate".to_owned()
@@ -231,6 +273,7 @@ pub struct AnnotatorLabel {
     #[serde(default)]
     pub abstain: bool,
     pub rationale: String,
+    #[serde(deserialize_with = "pydantic_float")]
     pub confidence: f64,
     #[serde(
         default,
@@ -316,6 +359,7 @@ pub struct AdjudicatedItem {
     #[serde(default)]
     pub adjudicated_by: Option<String>,
     pub rationale: String,
+    #[serde(deserialize_with = "pydantic_float")]
     pub confidence: f64,
     #[serde(default)]
     pub split: Option<String>,

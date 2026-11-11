@@ -2205,3 +2205,10 @@ functions is unported. Focused tests and hosted CI are pending.
 Added the Rust core's public distribution version accessor from canonical
 `pyproject.toml` metadata with a differential test against Python's package
 version. Focused validation and hosted CI are pending.
+# TASK-049 — Annotation schema scalar coercions
+
+Rust annotation confidence fields now accept the same numeric, numeric-string,
+and boolean inputs Pydantic accepts, with exact JSON normalization verified by
+Python/Rust differential tests. Eighteen schema tests and evaluation-crate
+Clippy pass locally. The module remains Partial for datetime grammar and other
+scalar coercions.
