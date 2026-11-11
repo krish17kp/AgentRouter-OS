@@ -13,6 +13,7 @@ agentrouter-registry = { path = "../agentrouter-registry" }
 agentrouter-storage = { path = "../agentrouter-storage" }
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = { version = "1.0.128", features = ["preserve_order"] }
+serde_yaml = { package = "noyalib-serde-yaml", version = "=0.0.60" }
 sha2 = "=0.10.9"
 unicode-general-category = "=0.6.0"
 
@@ -83,3 +84,7 @@ path = "src/bin/evaluation_compare_from_json.rs"
 [[bin]]
 name = "evaluation_load_result_from_json"
 path = "src/bin/evaluation_load_result_from_json.rs"
+
+[[bin]]
+name = "evaluation_gold_from_json"
+path = "src/bin/evaluation_gold_from_json.rs"

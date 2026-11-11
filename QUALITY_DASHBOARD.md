@@ -2,22 +2,16 @@
 
 ## Current checkpoint — 2026-11-11
 
-RC `07eb511` includes the website redesign, macOS Python/Rust CI, routing
-benchmark/coverage evidence, Rust dashboard/OpenAI helpers, harness parity, and
-dependency hardening. PR #13 plugin mutation campaign is green locally
-(1,629 selected mutants; 0.9693 overall, 0.9663 safety/policy/execution,
-0.9815 routing; zero unreviewed survivors); PR #13 was merged after all checks
-passed. The latest full Python run passed
-1,720 tests with 6 skips and measured 91.01% line / 85.23% branch coverage,
-meeting the unchanged 90%/85% thresholds. Rust workspace tests, formatting,
-Clippy, and `cargo audit --deny warnings` pass locally; bundled SQLite is 3.54.1
-and `unsafe-libyaml` has been removed. A local Rust diagnostic-bundle parity
-slice now withholds all environment values except the resolved home path; its
-focused tests and Linux/Windows/macOS CI passed on `07eb511`. The latest local
-slice adds quota-aware Rust reranking with ten differential cases and
-Python-compatible Unicode sanitation; fresh CI is pending. Context-band
-accuracy remains 0.6667 < 0.90; Rust R4 and R5–R13 remain
-incomplete. This project is not release-ready.
+The current release-candidate base is `ab98662`, with PRs #27–#33 and #13
+merged. PR #16's Python 3.10–3.13, Windows/macOS Python, Rust Linux/Windows/
+macOS, Python/Rust compatibility, security, site, API, build, and mutation
+checks pass. The promotion gate correctly remains red: frozen context-band
+accuracy is 0.6667 < 0.90. The Rust AgentRouter-gold adapter matches Python on
+metadata, availability, description, all 165 records, checksum, and seeded
+sampling, including Unicode/default behavior. Full Python regression passes:
+1,751 passed, 6 skipped; coverage is 91.22% line, 85.75% branch, and 89.98%
+combined. Python remains the shipping authority, and the full Rust migration
+is not complete.
 
 ## Historical dashboard
 

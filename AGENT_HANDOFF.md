@@ -2,28 +2,13 @@
 
 ## Current checkpoint — 2026-11-11
 
-- Active branch: `release/agentrouter-v0.5-rc1`, pushed through `7714a8d`.
-  Open PR: #16 to `main`; current Python/Rust OS matrix checks pass, but
-  `enforce-release-gate` fails because frozen context-band accuracy is 0.6667
-  against 0.90. Do not merge or tag while this gate fails.
-- Rust quota-aware reranking is committed as `a423ac5`; Rust doctor host/usage
-  parity is committed as `7714a8d`. Their Python/Rust OS matrix, Python
-  3.10–3.13 tests, security, mutation, site, package, and API checks pass.
-  Only PR #16's promotion gate fails at the unchanged frozen context score
-  0.6667 < 0.90.
-- Current local slice: dedicated `agentrouter-learning` Rust crate now ports
-  reversible feedback-weight adjustments. Nine differential cases cover
-  limits, null ratings, exact note strings, and Python decimal rounding.
-- Local evidence: full Python suite 1,720 passed, 6 skipped; 91.01% line and
-  85.23% branch coverage. The Rust learning slice passes nine Python/Rust
-  differential cases and three Rust unit tests; full workspace tests, Clippy,
-  formatting, and Ruff pass. This slice needs commit/push and fresh CI.
-- Python remains the shipping implementation. The 77-module matrix is
-  incomplete; Rust CLI/HTTP/MCP, plugins/skills, evaluation/annotation, and
-  R5–R13 remain. Human annotation, OpenAI live validation, and production
-  credentials are listed under Needs Krish in `PRODUCTION_STATUS.md`.
-- Preserve inherited untracked `.codex/` and
-  `loop/reports/open-pr-review-2026-11-10.md`; do not stage or discard them.
+- Active candidate branch/worktree: `release/agentrouter-v0.5-rc1` at base `ab98662` before the current gold-adapter change. PRs #27–#33 and #13 are merged; PR #16 is the sole open PR to `main`.
+- PR #16's Python 3.10–3.13, Windows/macOS Python, Rust Linux/Windows/macOS, Python/Rust compatibility, security, site, API, build, and mutation checks pass. `enforce-release-gate` fails on the unchanged context-band accuracy 0.6667 < 0.90. Do not bypass this gate. Live smoke is skipped without owner credentials.
+- Current task ports the complete `agentrouter/evaluation/adapters/agentrouter_gold.py` surface into Rust: metadata, availability, description, load, checksum, deterministic sample, and invalid-input behavior. Differential JSON covers all 165 committed cases plus Unicode/default handling. Focused compatibility: 31 passed; full Rust workspace tests, Clippy, formatting, Ruff, and full Python regression pass.
+- Latest full Python evidence: 1,751 passed, 6 skipped; 91.22% line, 85.75% branch, 89.98% combined coverage. Coverage evidence: `docs/COVERAGE_REPORT_2026-11-11.md`.
+- Rust parity inventory: 77 Python files in `docs/RUST_PARITY_MATRIX.md`; 17 are currently marked parity. Evaluation base/external adapters, runner/CLI/annotation, full public CLI, HTTP/MCP, plugin/skill, provider execution, and remaining R milestones are open. Python remains shipping and release authority.
+- Before stopping: record final checks, commit, push only the authorized RC branch, inspect all resulting CI, repair failures, then continue the next local parity item. Do not merge/tag/publish while the release gate fails.
+- Owner inputs remain in `PRODUCTION_STATUS.md` under **Needs Krish**: two independent human annotators plus adjudicator, bounded paid OpenAI live smoke credentials, and production/deployment credentials and approval.
 
 ## Historical checkpoint
 

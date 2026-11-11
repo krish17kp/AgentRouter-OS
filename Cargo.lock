@@ -57,6 +57,7 @@ dependencies = [
  "agentrouter-registry",
  "agentrouter-routing",
  "agentrouter-storage",
+ "noyalib-serde-yaml",
  "serde",
  "serde_json",
  "sha2",

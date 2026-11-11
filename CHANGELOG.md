@@ -41,6 +41,7 @@ All notable changes to AgentRouter OS. Format loosely follows
 - Rust now scores the CLI platform evaluator from supplied command/group manifests; dynamic Typer registration discovery remains in Python.
 - Rust now measures its classifier and router for supplied performance cases and mirrors the Python median, threshold decay, and report contract; seed loading and injected classifiers remain Python-side.
 - Rust now loads evaluation result JSON, compares baseline/current scores and release gates, and writes matching Markdown/CSV comparison artifacts; Python comparison Markdown uses canonical LF across platforms.
+- Rust now ports the AgentRouter gold adapter's metadata, availability, describe, load, checksum, and deterministic sample behavior; differential tests cover all 165 committed records plus Unicode/default handling.
 - Evaluation report text artifacts now use canonical LF line endings on all operating systems for byte-stable Python/Rust parity.
 - Upgrade bundled SQLite to the patched 3.54.1 release and replace the unmaintained YAML parser with a pure-Rust serde-compatible layer; the Rust minimum is now 1.89.
 

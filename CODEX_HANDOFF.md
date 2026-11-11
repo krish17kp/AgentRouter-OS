@@ -2,33 +2,24 @@
 
 ## Current checkpoint — 2026-11-11
 
-PR #30 dashboard, privacy, observability, and OpenAI transport helpers merged at `bd98b6b`; PR #31 harness/dependency hardening, PR #32 benchmark/coverage evidence, PR #33 context-model parity, and the Rust diagnostic-bundle slice are merged to RC through `07eb511`. PR #13 `TASK-019`
-was merged into RC at `9958dd8` after its mutation, security, Python, Rust, and
-Linux/Windows/macOS checks passed. The plugin mutation campaign passed: 1,629 selected mutants,
-0.9693 overall, 0.9663 safety/policy/execution, 0.9815 routing, and zero
-unreviewed survivors. Exact-path and lifecycle tests cover Windows reserved
-aliases, link/reparse detection, ownership identity, and failure recovery.
+PRs #27–#33 and #13 are merged into `release/agentrouter-v0.5-rc1`; the current
+RC base before this task is `ab98662`. PR #16 is the sole open PR. Its latest
+Python 3.10–3.13, Windows/macOS Python, Rust Linux/Windows/macOS, compatibility,
+security, site, API, build, and mutation checks pass; the unchanged
+`enforce-release-gate` fails on context-band accuracy 0.6667 < 0.90. Python
+remains the shipping authority.
 
-RC is `07eb511` after PR #27 website, PR #28 macOS CI, PR #29 routing
-benchmark/coverage evidence, and PRs #30–#32 merged. PR #21 was closed as redundant because its
-change was already on RC. PR #16 remains blocked by context-band accuracy
-0.6667 < 0.90. Python remains the shipping authority.
-
-Latest full Python run: 1,720 passed, 6 skipped; 91.01% line and 85.23% branch
-coverage, meeting unchanged 90%/85% gates. Rust workspace tests,
-formatting, and Clippy pass locally. R4 remains partial; full public CLI,
-HTTP/MCP, plugins, evaluation, and R5–R13 remain. Human annotation, paid OpenAI
-validation, and production/release credentials are listed in
-`PRODUCTION_STATUS.md` under **Needs Krish**. `AGENT_HANDOFF.md` is authoritative.
-
-The Rust diagnostic bundle/privacy slice was committed as `07eb511`, followed
-by quota-aware route verification in `a423ac5` and Rust doctor host/usage parity
-in `7714a8d`. Their Linux/Windows/macOS Python/Rust matrix, security, mutation,
-package, API and site checks pass; PR #16 enforcement remains red only on the
-frozen evaluation. Current local work ports feedback-weight adaptation into
-`agentrouter-learning`. Nine differential cases and the full Python regression
-pass: 1,720 passed, 6 skipped; 91.01% line and 85.23% branch. Fresh CI is
-pending. Preserve the task evidence directories.
+Current local task ports the complete AgentRouter gold adapter surface into
+`agentrouter-evaluation`: metadata, availability, describe, load, checksum, and
+deterministic sample. Exact JSON comparison covers all 165 committed records
+and a Unicode/defaults fixture. Focused Python/Rust tests (27), workspace tests,
+Clippy, format, and Ruff pass. Full Python regression passes: 1,751 passed,
+6 skipped; 91.22% line, 85.75% branch, and 89.98% combined coverage. The
+77-module matrix is `docs/RUST_PARITY_MATRIX.md`; evaluation base
+semantics, external adapters, runner/CLI, annotation, and most other public
+modules remain incomplete. Human annotation, live OpenAI validation, and
+production credentials remain in `PRODUCTION_STATUS.md` under **Needs Krish**.
+`AGENT_HANDOFF.md` is authoritative.
 
 ## Historical narrative
 

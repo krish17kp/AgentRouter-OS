@@ -2,21 +2,15 @@
 
 ## Current checkpoint — 2026-11-11
 
-Product acceptance remains **not granted**. RC `07eb511` includes PRs #27–#33
-and #13,
-and the macOS Python/Rust CI changes have passed their PR checks. PR #13's local
-plugin mutation run passes at 0.9693 overall and 0.9663 safety/policy/execution,
-with zero unreviewed survivors; commit `984db4b` passed the currently reported
-cross-platform checks.
-
-The latest complete Python run passed 1,720 tests with 6 skips and measured
-91.01% line / 85.23% branch coverage, meeting the unchanged 90% / 85% gates.
-The context-band gate remains 0.6667 < 0.90 and requires real independent human
-labels and adjudication. Rust R4 is partial and R5–R13 remain outstanding. The
-website is in the RC; no production deployment or paid OpenAI request occurred.
-The latest local work adds quota-aware Rust reranking with Python-compatible
-Unicode sanitation; full local tests and Rust gates pass, with cross-platform CI
-pending.
+Product acceptance remains **not granted**. PRs #27–#33 and #13 are merged to
+the RC; PR #16 is the sole open PR. Its cross-platform Python/Rust, security,
+website, API, build, and mutation checks pass, but the unchanged
+context-band gate remains 0.6667 < 0.90. The Rust gold-adapter module now has
+differential coverage for metadata, availability, description, all 165 cases,
+checksums, and deterministic sampling. Full Python regression passes with
+1,751 passed and 6 skipped; line coverage is 91.22%, branch coverage 85.75%,
+and combined coverage 89.98%. Rust R4 and R5–R13 remain incomplete; no
+production deployment or paid OpenAI request occurred.
 The table below is historical.
 
 ## Historical assessment

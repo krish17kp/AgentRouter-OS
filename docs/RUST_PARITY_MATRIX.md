@@ -39,7 +39,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluate.py` | `—` | Not ported |
 | `agentrouter/evaluation/__init__.py` | `—` | Not ported |
 | `agentrouter/evaluation/adapters/__init__.py` | `—` | Not ported |
-| `agentrouter/evaluation/adapters/agentrouter_gold.py` | `—` | Not ported |
+| `agentrouter/evaluation/adapters/agentrouter_gold.py` | `agentrouter-evaluation::AgentRouterGoldAdapter` | Parity |
 | `agentrouter/evaluation/adapters/banking77.py` | `—` | Not ported |
 | `agentrouter/evaluation/adapters/clinc150.py` | `—` | Not ported |
 | `agentrouter/evaluation/adapters/llmrouterbench.py` | `—` | Not ported |
@@ -120,6 +120,7 @@ release authority until the full set is complete.
   behavior remain Python-side; latency values are machine-dependent.
 - Baseline/current comparison scoring, UTF-8 result loading, and Markdown/CSV
   artifact generation match Python.
+- The AgentRouter gold adapter now matches Python metadata, availability, description, all 165 records, checksums, and deterministic sampling; the full behavior is differentially tested, including Unicode/default handling.
 - Routing evaluation now scores caller-supplied model catalogs against gold
   constraints or the declared distinct-fallback proxy. Loading seed models and
   custom classifier injection remain Python-only.

@@ -1862,3 +1862,27 @@ Rust workspace/Clippy/format, Ruff, and Python formatting pass. Full Python
 suite 1,745 passed / 6 skipped; 91.15% line, 85.61% branch, 89.89% combined
 coverage. Rust Linux/Windows/macOS CI passed for the comparison commit; Python
 Windows CI remains in progress, and the result-loader extension needs CI.
+
+## 2026-11-11 — TASK-021: Rust AgentRouter gold adapter parity
+
+Ported the complete Python `agentrouter/evaluation/adapters/agentrouter_gold.py`
+surface into `agentrouter-evaluation`: metadata, availability, description,
+loading, deterministic sampling, and aggregate checksum. Risk-derived approval,
+human provenance, approved review status, dataset version/source, Unicode task
+hashing, and uniqueness validation match Python. `tests/test_rust_agentrouter_gold_compat.py`
+compares complete serialized adapter outputs for all 165 committed records and
+a Unicode/defaults/unknown-field fixture. Added both this test and the Rust
+evaluation compatibility suite to the Linux/Windows/macOS compatibility job.
+
+Verification: focused evaluation compatibility, 31 passed; Rust workspace tests,
+Clippy (`-D warnings`), rustfmt, Ruff check/format passed. Full Linux/Python
+3.12.15 suite: 1,751 passed, 6 skipped; 91.22% line, 85.75% branch, 89.98%
+combined coverage. No `TODO`, `todo!()`, or `unimplemented!()` markers found in
+shipped Python/Rust source. Cross-platform CI for this new slice is pending the
+authorized RC push. PR #16 remains honestly blocked by the frozen context-band
+score 0.6667 < 0.90; no threshold or annotation policy changed.
+
+Next: commit and push TASK-021 to `release/agentrouter-v0.5-rc1`, inspect all
+checks, fix failures, then continue evaluation adapter base/external adapters
+and the remaining public Rust module inventory. Human annotation, live OpenAI
+validation, and production deployment credentials remain owner inputs.

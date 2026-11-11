@@ -2,23 +2,20 @@
 
 ## Current checkpoint — 2026-11-11
 
-**NOT release ready.** RC is `07eb511`; PRs #27 (website), #28 (macOS CI),
-#29 (routing benchmark/coverage evidence), #30/#31 (Rust ports and security
-hardening), #32 (latency/coverage evidence), and #13 (plugin hardening/coverage)
-are merged. PR #13's mutation campaign passed (0.9693 overall, 0.9663
-safety/policy/execution, 0.9815 routing, zero unreviewed survivors) and its
-currently reported platform checks are green. The latest local full Python run
-passed 1,720 tests, 6 skipped, with 91.01% line / 85.23% branch coverage,
-meeting the unchanged 90% / 85% gates. The enforce-release-gate for PR #16 remains red because frozen
-context-band accuracy is 0.6667 < 0.90. Rust context-model parity (PR #33), full Rust CLI/HTTP/MCP, provider
-execution, plugins/skills, evaluation/annotation, R5–R13, Rust-only install,
-and staging/rollback remain incomplete. Human annotation, live OpenAI validation,
-and production credentials remain owner inputs. No paid request or production
-deployment occurred. A new local Rust usage-reranking parity slice passes the
-full local suite and Rust workspace gates; its changes have not yet run in
-cross-platform CI. PR #16 matrix
-checks pass, but enforcement remains red on the unchanged context-band gate
-(0.6667 < 0.90).
+**NOT release ready.** PRs #27–#33 and #13 are merged to
+`release/agentrouter-v0.5-rc1`; its current base before the gold-adapter slice
+is `ab98662`. PR #16 is the sole open PR. Its Python 3.10–3.13, Windows/macOS
+Python, Rust Linux/Windows/macOS, Python/Rust compatibility, security, site,
+API, build, and mutation checks pass. `enforce-release-gate` fails on the
+unchanged context-band accuracy 0.6667 < 0.90; live smoke is skipped because no
+credential was supplied. The local Rust gold-adapter parity slice now matches
+metadata, availability, describe, all 165 records, checksums, and deterministic
+sampling. Full Python regression passes with 1,751 passed and 6 skipped; line
+coverage is 91.22%, branch coverage 85.75%, and combined coverage 89.98%. Full Rust CLI,
+HTTP/MCP, provider execution, plugins/skills, evaluation base/runner/annotation,
+R5–R13, Rust-only install, and staging/rollback remain incomplete. Human
+annotation, live OpenAI validation, and production credentials remain owner
+inputs. No paid request or production deployment occurred.
 
 ## Historical v0.5 assessment
 

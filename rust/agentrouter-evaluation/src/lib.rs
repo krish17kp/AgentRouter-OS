@@ -5,6 +5,7 @@
 //! checked offline without running a model or changing evaluation labels.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::path::Path;
 
 use agentrouter_core::{ApprovalLevel, ContextBand, Level, OutputType, PricingTier, TaskType};
 use agentrouter_routing::round_half_even;
@@ -1449,6 +1450,189 @@ pub struct EvaluationCase {
     pub checksum: Option<String>,
     #[serde(default)]
     pub notes: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct AgentRouterGoldDocument {
+    #[serde(default = "default_gold_version")]
+    version: u64,
+    cases: Vec<AgentRouterGoldRow>,
+}
+
+fn default_gold_version() -> u64 {
+    1
+}
+
+#[derive(Debug, Deserialize)]
+struct AgentRouterGoldRow {
+    id: String,
+    prompt: String,
+    #[serde(default)]
+    task_type: Vec<TaskType>,
+    #[serde(default)]
+    complexity: Vec<Level>,
+    #[serde(default)]
+    risk: Vec<Level>,
+    #[serde(default)]
+    output_type: Vec<OutputType>,
+    #[serde(default)]
+    tools: Vec<String>,
+    #[serde(default)]
+    context_band: Vec<ContextBand>,
+}
+
+/// Load the committed human-labelled classifier gold set, mirroring
+/// `AgentRouterGoldAdapter.load()` including approval derivation, provenance,
+/// checksums, and adapter-level uniqueness validation.
+pub fn load_agentrouter_gold(path: &Path) -> Result<Vec<EvaluationCase>, String> {
+    let source = "benchmarks/classifier_gold_v1.yaml";
+    let contents = std::fs::read_to_string(path)
+        .map_err(|_| format!("gold benchmark not found: {}", path.display()))?;
+    let document: AgentRouterGoldDocument = serde_yaml::from_str(&contents)
+        .map_err(|_| format!("{}: expected a mapping with a 'cases' list", path.display()))?;
+
+    let cases = document
+        .cases
+        .into_iter()
+        .map(|row| {
+            let approval_levels = row
+                .risk
+                .iter()
+                .map(|risk| match risk {
+                    Level::Low => ApprovalLevel::Auto,
+                    Level::Medium => ApprovalLevel::Notify,
+                    Level::High => ApprovalLevel::HumanApprovalRequired,
+                })
+                .collect();
+            EvaluationCase {
+                id: row.id,
+                dataset: "agentrouter-gold".to_string(),
+                task: row.prompt,
+                dataset_version: Some(format!("v{}", document.version)),
+                source: Some(source.to_string()),
+                source_split: None,
+                language: default_language(),
+                domain: None,
+                tags: Vec::new(),
+                paraphrase_group: None,
+                expected: ExpectedClassification {
+                    task_types: row.task_type,
+                    complexities: row.complexity,
+                    risks: row.risk,
+                    context_bands: row.context_band,
+                    output_types: row.output_type,
+                    required_tools: row.tools,
+                    approval_levels,
+                },
+                routing: None,
+                safety: None,
+                context_tokens: None,
+                cost_metadata: BTreeMap::new(),
+                model_outcomes: BTreeMap::new(),
+                provenance: Provenance {
+                    method: AnnotationMethod::Human,
+                    reviewer: None,
+                    source_license: Some("MIT".to_string()),
+                    source_record_id: None,
+                    retrieved: None,
+                },
+                review_status: ReviewStatus::Approved,
+                checksum: None,
+                notes: None,
+            }
+            .with_checksum()
+        })
+        .collect::<Vec<_>>();
+
+    let mut ids = BTreeSet::new();
+    let mut hashes = BTreeSet::new();
+    for case in &cases {
+        if !ids.insert(&case.id) {
+            return Err("agentrouter-gold: duplicate case ids".to_string());
+        }
+        hashes.insert(case.task_hash());
+    }
+    if hashes.len() != cases.len() {
+        return Err(format!(
+            "agentrouter-gold: {} exact-duplicate task(s)",
+            cases.len() - hashes.len()
+        ));
+    }
+    Ok(cases)
+}
+
+pub fn agentrouter_gold_availability(path: &Path) -> &'static str {
+    if path.exists() {
+        "ready"
+    } else {
+        "skipped_external"
+    }
+}
+
+pub fn agentrouter_gold_metadata() -> serde_json::Value {
+    serde_json::json!({
+        "name": "agentrouter-gold",
+        "version": "v1",
+        "license": "project-internal (MIT repo)",
+        "source": "benchmarks/classifier_gold_v1.yaml",
+        "description": "Human-expectation gold labels for the 7-dimension classifier.",
+        "requires_network": false,
+        "requires_docker": false,
+        "languages": ["en"],
+    })
+}
+
+pub fn agentrouter_gold_describe(path: &Path) -> serde_json::Value {
+    let mut description = agentrouter_gold_metadata();
+    description
+        .as_object_mut()
+        .expect("gold metadata is an object")
+        .remove("description");
+    description["availability"] = serde_json::json!(agentrouter_gold_availability(path));
+    description["real_available"] = serde_json::json!(false);
+    description["real_reason"] =
+        serde_json::json!("agentrouter-gold: no real loader configured (source unverified)");
+    description["hf_repo"] = serde_json::Value::Null;
+    description
+}
+
+pub fn agentrouter_gold_sample(
+    path: &Path,
+    limit: Option<i64>,
+    seed: i64,
+) -> Result<Vec<EvaluationCase>, String> {
+    let cases = load_agentrouter_gold(path)?;
+    let Some(limit) = limit else {
+        return Ok(cases);
+    };
+    Ok(
+        deterministic_sample(&cases, limit, seed, |case| case.id.clone())
+            .into_iter()
+            .cloned()
+            .collect(),
+    )
+}
+
+pub fn agentrouter_gold_checksum(path: &Path) -> Result<String, String> {
+    let mut hashes: Vec<_> = load_agentrouter_gold(path)?
+        .iter()
+        .map(EvaluationCase::task_hash)
+        .collect();
+    hashes.sort();
+    // Python's json.dumps(payload) uses the default comma+space separator.
+    let payload = format!(
+        "[{}]",
+        hashes
+            .iter()
+            .map(|hash| format!("\"{hash}\""))
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
+    let digest = Sha256::digest(payload.as_bytes());
+    Ok(digest[..8]
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect())
 }
 
 fn deserialize_nonempty_task<'de, D>(deserializer: D) -> Result<String, D::Error>
