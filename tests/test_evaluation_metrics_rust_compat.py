@@ -8,6 +8,7 @@ import subprocess
 
 import pytest
 
+from agentrouter.evaluation.grading import grade
 from agentrouter.evaluation.metrics import classification_metrics
 from agentrouter.evaluation.provenance import dataset_quality
 from agentrouter.evaluation.registry import PROFILES, dataset_names, get_adapter
@@ -468,3 +469,63 @@ def test_rust_evaluation_markdown_matches_python():
         check=True,
     )
     assert process.stdout == render_markdown(result)
+
+
+def test_rust_classification_grade_matches_python():
+    case = EvaluationCase(
+        id="grade-fixture",
+        dataset="rust-grade-parity",
+        task="Refactor the payment module and add unit tests",
+        expected=ExpectedClassification(
+            task_types=["coding"],
+            complexities=["high"],
+            risks=["high"],
+            output_types=["code+tests"],
+            context_bands=["medium"],
+            required_tools=["file-edit", "shell"],
+            approval_levels=["human-approval-required"],
+        ),
+    )
+    predicted = {
+        "task_type": "coding",
+        "complexity": "high",
+        "risk": "high",
+        "output": "code+tests",
+        "context": "medium",
+        "approval": "human-approval-required",
+    }
+
+    def classify_fn(_):
+        return _Prediction(predicted, ["file-edit", "shell"])
+
+    cases = [case]
+    for generalization in (None, {"current_holdout": {"accuracy": 0.5}}):
+        expected = grade(
+            cases,
+            classify_fn=classify_fn,
+            context_band_generalization=generalization,
+        )
+        payload = {
+            "n_cases": len(cases),
+            "classification": expected["classification"],
+        }
+        if generalization is not None:
+            payload["context_band_generalization"] = generalization
+        process = subprocess.run(
+            [
+                "cargo",
+                "run",
+                "--quiet",
+                "--locked",
+                "--bin",
+                "evaluation_grade_from_json",
+                "-p",
+                "agentrouter-evaluation",
+            ],
+            input=json.dumps(payload),
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=True,
+        )
+        assert json.loads(process.stdout) == expected

@@ -130,7 +130,7 @@
     "historical task records remain under loop/tasks and loop/reports",
     "historical TASK-004 0.945 result is retained as in-sample evidence but no longer treated as canonical held-out readiness"
   ],
-  "next_action": "Commit and push evaluation report parity, watch Linux/Windows/macOS CI while implementing the next evaluation parity slice, and keep PR #16 blocked until independent human evaluation clears the frozen gate.",
+  "next_action": "Commit and push classification-only grading parity, monitor report-renderer and grading CI while implementing another public evaluation module, and keep PR #16 blocked until independent human evaluation clears the frozen gate.",
   "completed_iter26": [
     "TASK-016 verified execution-host states MERGED to RC (PR #7 -> merge commit 5847c22; task branch deleted local+remote). hosts.py gained a readiness state vocabulary (missing/installed/configured/authenticated/authorized/degraded/unknown) plus a per-host remedy; `availability` keeps its exact prior meaning and is now derived from state. hosts list/doctor/show, the setup wizard and the execute refusal all report state + fix; hosts doctor ends with the cheapest concrete fix and exits non-zero only when no real host is ready. REST/MCP gained additive state/remedy and host_state/host_remedy keys. docs: new USER_GUIDE section 8 with the state table and the honesty note on `authorized`.",
     "BUG FIXED: host detection tested the API-key env var for truthiness, so a set-but-blank key (OPENAI_API_KEY='   ') reported available and `execute` would target a host that cannot authenticate. Now degraded/unavailable with a fix-it message, pinned by a parametrised test.",
@@ -195,5 +195,8 @@
   ],
   "completed_iter34": [
     "Ported evaluation Markdown rendering to Rust with an offline exact-output Python differential case. Full Python suite: 1,731 passed/6 skipped; line 91.06%, branch 85.33%, combined 89.76%. Rust workspace tests, Clippy, formatting, Ruff, and Python formatting pass. Cross-platform checks remain pending for this local slice; JSON/scorecard/CSV report output remains Python-only."
+  ],
+  "completed_iter35": [
+    "Added Rust classification-only scorecard and release gates from precomputed classification metrics, including the frozen holdout override. Two differential cases pass. Full Python suite: 1,732 passed/6 skipped; 91.06% line, 85.33% branch, 89.76% combined. Workspace tests, Clippy, formatting, and Ruff pass. Evaluator execution/measure_all remain partial; cross-platform CI pending."
   ]
 }

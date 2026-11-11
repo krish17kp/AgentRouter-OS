@@ -58,7 +58,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/evaluators/provider.py` | `—` | Not ported |
 | `agentrouter/evaluation/evaluators/routing.py` | `—` | Not ported |
 | `agentrouter/evaluation/evaluators/safety.py` | `—` | Not ported |
-| `agentrouter/evaluation/grading.py` | `—` | Not ported |
+| `agentrouter/evaluation/grading.py` | `agentrouter-evaluation::grade_classification` | Partial |
 | `agentrouter/evaluation/metrics.py` | `agentrouter-evaluation::classification_metrics` | Parity |
 | `agentrouter/evaluation/provenance.py` | `agentrouter-evaluation::dataset_quality` | Partial |
 | `agentrouter/evaluation/registry.py` | `agentrouter-evaluation::profile_datasets` | Partial |
@@ -105,5 +105,7 @@ release authority until the full set is complete.
 - The evaluation report Markdown renderer has one exact differential fixture;
   JSON/scorecard/CSV file writing and report-directory orchestration remain
   Python-only.
+- Classification-only grading and gate calculation have differential coverage;
+  Rust does not invoke the classifier or implement the `measure_all` evaluators.
 - This table is a release checklist, not a replacement for CI evidence. Add a
   differential suite before moving any row to **Parity**.

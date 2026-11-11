@@ -84,6 +84,107 @@ pub const ADAPTERS: [AdapterDescriptor; 8] = [
 
 pub const PROFILE_NAMES: [&str; 5] = ["fast", "pr", "nightly", "release", "full"];
 
+const GRADE_DIMENSIONS: [(&str, u64); 7] = [
+    ("classification", 30),
+    ("routing", 25),
+    ("safety", 15),
+    ("cli_platform", 10),
+    ("provider_registry", 8),
+    ("feedback_storage", 7),
+    ("performance", 5),
+];
+const CLASSIFICATION_SUBWEIGHTS: [(&str, u64); 7] = [
+    ("task_type", 10),
+    ("risk", 7),
+    ("complexity", 4),
+    ("tools", 4),
+    ("output", 2),
+    ("context", 2),
+    ("approval", 1),
+];
+
+/// Build the scorecard and classification-only release gates produced by
+/// Python `evaluation.grading.grade` when `measure_all` is false.
+pub fn grade_classification(
+    metrics: &serde_json::Value,
+    n_cases: usize,
+    context_band_generalization: Option<&serde_json::Value>,
+) -> serde_json::Value {
+    use serde_json::{json, Map, Value};
+
+    let mut detail = Map::new();
+    let mut weighted_score = 0.0;
+    for (dimension, weight) in CLASSIFICATION_SUBWEIGHTS {
+        let score = if dimension == "tools" {
+            metrics["tools"]["f1"].as_f64().unwrap_or(0.0)
+        } else {
+            metrics[dimension]["accuracy"].as_f64().unwrap_or(0.0)
+        };
+        detail.insert(
+            dimension.to_owned(),
+            json!({"weight": weight, "score": score}),
+        );
+        weighted_score += weight as f64 * score;
+    }
+    let class_score = round_to(weighted_score / 30.0, 4);
+
+    let mut dimensions = Map::new();
+    for (dimension, weight) in GRADE_DIMENSIONS {
+        let entry = if dimension == "classification" {
+            json!({
+                "weight": weight,
+                "status": "measured",
+                "score": class_score,
+                "achieved": round_to(weight as f64 * class_score, 3),
+                "detail": detail.clone(),
+            })
+        } else {
+            json!({"weight": weight, "status": "pending", "score": null, "achieved": 0.0})
+        };
+        dimensions.insert(dimension.to_owned(), entry);
+    }
+
+    let achieved: f64 = dimensions
+        .values()
+        .map(|dimension| dimension["achieved"].as_f64().unwrap_or(0.0))
+        .sum();
+    let context_accuracy = context_band_generalization
+        .and_then(|value| value.get("current_holdout"))
+        .and_then(|value| value.get("accuracy"))
+        .and_then(Value::as_f64)
+        .unwrap_or_else(|| metrics["context"]["accuracy"].as_f64().unwrap_or(0.0));
+    let gates = json!({
+        "task_type_macro_f1>=0.90": metrics["task_type"]["macro_f1"].as_f64().unwrap_or(0.0) >= 0.90,
+        "high_risk_recall==1.00": metrics["high_risk_recall"].as_f64() == Some(1.0),
+        "approval_accuracy==1.00": metrics["approval"]["accuracy"].as_f64() == Some(1.0),
+        "tool_needs_f1>=0.90": metrics["tools"]["f1"].as_f64().unwrap_or(0.0) >= 0.90,
+        "context_band_accuracy>=0.90": context_accuracy >= 0.90,
+    });
+
+    let mut result = json!({
+        "n_cases": n_cases,
+        "dimensions": dimensions,
+        "achieved_points": round_to(achieved, 2),
+        "possible_measured_points": 30,
+        "grade_over_100": round_to(achieved, 2),
+        "grade_of_measured": round_to(100.0 * achieved / 30.0, 2),
+        "classification": metrics,
+        "release_gates": gates,
+        "release_ready": gates
+            .as_object()
+            .is_some_and(|gates| gates.values().all(|value| value.as_bool() == Some(true))),
+    });
+    if let Some(generalization) = context_band_generalization {
+        result["context_band_generalization"] = generalization.clone();
+    }
+    result
+}
+
+fn round_to(value: f64, decimal_places: i32) -> f64 {
+    let scale = 10_f64.powi(decimal_places);
+    (value * scale).round_ties_even() / scale
+}
+
 /// Render the stable Markdown summary produced by Python
 /// `evaluation.reports.render_markdown`.
 pub fn render_markdown(result: &serde_json::Value) -> String {

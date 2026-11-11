@@ -36,3 +36,7 @@ path = "src/bin/evaluation_registry_from_json.rs"
 [[bin]]
 name = "evaluation_report_from_json"
 path = "src/bin/evaluation_report_from_json.rs"
+
+[[bin]]
+name = "evaluation_grade_from_json"
+path = "src/bin/evaluation_grade_from_json.rs"

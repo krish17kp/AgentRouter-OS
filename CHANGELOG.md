@@ -32,6 +32,7 @@ All notable changes to AgentRouter OS. Format loosely follows
 - Added a Rust normalized evaluation-case schema with matching defaults, enum values, nonempty-task validation at the fixture boundary, checksums, and Unicode-aware task hashing.
 - Rust evaluation registry metadata now mirrors the eight dataset descriptors and five profile memberships; Python still constructs the actual dataset adapters.
 - Rust now renders evaluation Markdown with an offline Python/Rust differential fixture; structured JSON, scorecard, and CSV file writes remain Python-only.
+- Rust now computes the classification-only evaluation scorecard and its five release gates from measured metrics, with Python differential cases including the frozen context-band override.
 - Upgrade bundled SQLite to the patched 3.54.1 release and replace the unmaintained YAML parser with a pure-Rust serde-compatible layer; the Rust minimum is now 1.89.
 
 ### Fixed

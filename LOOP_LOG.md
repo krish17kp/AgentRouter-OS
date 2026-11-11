@@ -1700,3 +1700,18 @@ pass. The first build hit the shared temporary filesystem quota; removing this
 checkout's generated Rust incremental cache freed 700 MB without deleting source
 or dependency artifacts, and a locked rebuild passed. Full workspace and CI
 verification for this slice remain pending.
+
+## Iteration 40 — 2026-11-11 — Classification-only Rust evaluation grading
+
+Added Rust scorecard computation for the classification-only `grade` path:
+weighted dimension score, pending-dimension accounting, grade over 100, measured
+grade, and the five classification release gates. Context-band holdout accuracy
+continues to override in-sample context accuracy. Two differential cases match
+the Python result exactly, including a failing frozen-holdout override. Evaluator
+execution, `measure_all`, and extended routing/safety gates remain Python-only.
+
+Verification: full Python suite 1,732 passed / 6 skipped; 91.06% line, 85.33%
+branch, and 89.76% combined coverage. Full Rust workspace tests and Clippy pass;
+Rust formatting, Ruff, Python formatting, and 12 focused evaluation differential
+tests pass. Cross-platform CI for the preceding report-renderer commit is still
+running; this grading slice needs its own CI run after push.
