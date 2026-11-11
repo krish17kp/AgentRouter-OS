@@ -31,7 +31,8 @@ The Python CLI now has a default-off OpenAI Responses API text adapter. It is
 gated by provider opt-in, host readiness, the recorded safety decision, and
 `execute --yes`; hermetic tests do not use credentials or paid calls. The
 Rust workspace's advanced task branch has classifier/hosts/usage/storage/route
-CLI slices and now passes its declared Rust 1.75 minimum locally. Neither
+CLI slices. It now requires Rust 1.89 because the patched bundled SQLite
+release depends on that compiler minimum. Neither
 change closes the release evaluation gate below or retires Python.
 
 Per `AGENT_HANDOFF.md`'s Release truth section: **NOT RELEASE READY.**
@@ -409,6 +410,16 @@ validation is offline-tested; no live key was available. The module is not
 called from the CLI, is not an execution authorization mechanism, and does not
 change the default-off rule. Live validation and lifecycle/CLI integration
 remain in R6.
+
+R10 follow-up (2026-11-11, dependency audit): `cargo audit` found
+RUSTSEC-2026-0459 in the bundled SQLite used by rusqlite 0.31.0 and flagged
+`serde_yaml`'s unmaintained `unsafe-libyaml` parser. The workspace moved to
+rusqlite 0.41.1 / libsqlite3-sys 0.39.1 (patched SQLite 3.54.1), requiring Rust
+1.89, and switched the YAML-compatible API to patched `noyalib-serde-yaml`
+0.0.60,
+which uses noyalib's pure-Rust parser. The fresh `cargo audit --deny warnings`
+scan reports no advisories across 121 dependencies; workspace tests and
+Clippy pass locally. Declared-minimum and cross-platform CI are still required.
 
 R6 and R7 are deliberately placed after the interface milestones (R4–R5) and
 before the deep-hardening ones (R8–R10): nothing in orchestration or graph

@@ -13,13 +13,11 @@ agentrouter-policy = { path = "../agentrouter-policy" }
 agentrouter-routing = { path = "../agentrouter-routing" }
 agentrouter-hosts = { path = "../agentrouter-hosts" }
 agentrouter-storage = { path = "../agentrouter-storage" }
-rusqlite = { version = "=0.31.0", features = ["bundled"] }
+rusqlite = { version = "=0.41.1", features = ["bundled"] }
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.128"
-serde_yaml = "0.9.34"
+serde_yaml = { package = "noyalib-serde-yaml", version = "=0.0.60" }
 ureq = { version = "=2.10.1", default-features = false, features = ["tls"] }
-# Keep ureq's URL parser on the pre-ICU line so Cargo/Rust 1.75 can read the lock.
-url = "=2.4.1"
 regex = "=1.13.1"
 unicode-general-category = "=0.6.0"
 cap-std = "=3.4.4"
@@ -56,3 +54,7 @@ path = "src/bin/dashboard_cli.rs"
 [[bin]]
 name = "observability_cli"
 path = "src/bin/observability_cli.rs"
+
+[[bin]]
+name = "harness_cli"
+path = "src/bin/harness_cli.rs"

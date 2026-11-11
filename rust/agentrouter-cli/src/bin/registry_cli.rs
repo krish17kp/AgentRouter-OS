@@ -55,7 +55,7 @@ fn run() -> Result<(), (i32, String)> {
     }
     let rows: Vec<&ModelEntry> = models
         .iter()
-        .filter(|model| provider.as_deref().map_or(true, |id| model.provider == id))
+        .filter(|model| provider.as_deref().is_none_or(|id| model.provider == id))
         .filter(|model| !active_only || model.deprecation_status == DeprecationStatus::Active)
         .collect();
     if json_output {

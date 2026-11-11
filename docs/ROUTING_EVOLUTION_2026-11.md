@@ -64,9 +64,11 @@ accepted as AgentRouter benchmarks.
 
 ## Immediate acceptance checks
 
-- `cargo fmt --all --check`, `cargo clippy --workspace --all-targets --all-features
-  --locked -- -D warnings`, and `cargo +1.75.0 test --workspace --locked` pass
-  locally. The declared minimum is now a CI job.
+- Rust dependency auditing exposed a bundled SQLite memory-disclosure advisory
+  and the archived YAML parser. SQLite was upgraded to its patched release,
+  and the maintained pure-Rust YAML compatibility layer replaced the archived
+  parser. This raised the declared Rust minimum to 1.89; all platform jobs must
+  pass against this new minimum before release.
 - `tests/test_classifier_rust_compat.py` checks 40 regression prompts plus all
   165 committed classifier gold prompts, explicit overrides, and malformed
   JSON rejection.

@@ -374,7 +374,7 @@ fn load_yaml(path: &Path) -> Result<serde_yaml::Mapping, RegistryError> {
 }
 
 fn seq_field(map: &serde_yaml::Mapping, key: &str) -> Vec<serde_yaml::Value> {
-    map.get(serde_yaml::Value::String(key.to_string()))
+    map.get(key)
         .and_then(|v| v.as_sequence().cloned())
         .unwrap_or_default()
 }
@@ -408,7 +408,7 @@ pub fn load_models(
     for raw in seq_field(&data, "models") {
         let fallback_id = raw
             .as_mapping()
-            .and_then(|m| m.get(serde_yaml::Value::String("model_id".to_string())))
+            .and_then(|m| m.get("model_id"))
             .and_then(|v| v.as_str())
             .unwrap_or("<unknown>")
             .to_string();
@@ -542,7 +542,7 @@ fn apply_ability_overrides(
     }
     let data = load_yaml(&path)?;
     let overrides = data
-        .get(serde_yaml::Value::String("overrides".to_string()))
+        .get("overrides")
         .and_then(|v| v.as_mapping())
         .ok_or_else(|| RegistryError::OverridesNotAMapping(path.clone()))?
         .clone();
@@ -553,7 +553,7 @@ fn apply_ability_overrides(
     }
 
     for (key_val, scores) in overrides {
-        let key = key_val.as_str().unwrap_or_default().to_string();
+        let key = key_val.clone();
         let Some(&i) = by_key.get(&key) else {
             warnings.push(format!(
                 "{}: '{}' does not match any loaded model - ignored",
@@ -563,9 +563,9 @@ fn apply_ability_overrides(
         };
         let current = &models[i].ability;
         let mut merged = serde_yaml::Mapping::new();
-        merged.insert("coding".into(), (current.coding as i64).into());
-        merged.insert("reasoning".into(), (current.reasoning as i64).into());
-        merged.insert("writing".into(), (current.writing as i64).into());
+        merged.insert("coding", (current.coding as i64).into());
+        merged.insert("reasoning", (current.reasoning as i64).into());
+        merged.insert("writing", (current.writing as i64).into());
         if let Some(score_map) = scores.as_mapping() {
             for (k, v) in score_map {
                 merged.insert(k.clone(), v.clone());

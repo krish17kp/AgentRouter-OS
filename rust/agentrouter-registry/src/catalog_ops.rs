@@ -167,7 +167,7 @@ pub fn read_status(path: &Path, today: NaiveDate) -> Result<CatalogStatus, Strin
         .filter_map(parse_iso_date)
         .max();
     let age_days = newest.map(|date| today.signed_duration_since(date).num_days());
-    let stale = age_days.map_or(true, |days| days > STALE_AFTER_DAYS);
+    let stale = age_days.is_none_or(|days| days > STALE_AFTER_DAYS);
     let source_url = raw
         .get("provenance")
         .and_then(|value| value.get("source_url"))
