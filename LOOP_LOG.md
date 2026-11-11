@@ -2235,3 +2235,9 @@ Added the Rust dataset registry facade and a Python differential test for
 dataset order, profile membership/order, adapter descriptors, optional lookup,
 and unknown-dataset error text. Adapter factories and optional remote dataset
 loading remain partial; local validation and hosted checks are pending.
+# TASK-054 — Offline Rust evaluation runner
+
+Added a normalized-case runner that performs Rust classification, scorecard,
+and dataset-quality aggregation with explicit metadata. It is intentionally
+Partial because adapter loading, full `measure_all`, and runtime provenance
+discovery remain unported. Focused parity testing is in progress.

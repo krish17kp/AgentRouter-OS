@@ -18,6 +18,7 @@ pub mod evaluation_api;
 pub mod evaluators_api;
 pub mod package_markers;
 pub mod registry_api;
+pub mod runner;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
@@ -142,7 +143,8 @@ pub fn grade_classification(
         );
         weighted_score += weight as f64 * score;
     }
-    let class_score = round_to(weighted_score / 30.0, 4);
+    let raw_class_score = weighted_score / 30.0;
+    let class_score = round_to(raw_class_score, 4);
 
     let mut dimensions = Map::new();
     for (dimension, weight) in GRADE_DIMENSIONS {
@@ -151,7 +153,7 @@ pub fn grade_classification(
                 "weight": weight,
                 "status": "measured",
                 "score": class_score,
-                "achieved": round_to(weight as f64 * class_score, 3),
+                "achieved": round_to(weight as f64 * raw_class_score, 3),
                 "detail": detail.clone(),
             })
         } else {

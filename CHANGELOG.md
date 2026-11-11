@@ -20,6 +20,8 @@ All notable changes to AgentRouter OS. Format loosely follows
   initializer exports where those Python packages intentionally expose none.
 - Match Pydantic confidence, boolean, and manifest integer coercion in Rust
   annotation artifacts; remaining edge coercions stay explicitly Partial.
+- Add a Partial Rust offline evaluation runner for caller-supplied normalized
+  cases, with Python-matched classification grading and dataset-quality output.
 - Added Rust types and validation for the human annotation artifact schemas;
   supported datetime forms now normalize to Python-compatible ISO JSON while
   full scalar coercion and `fromisoformat` edge coverage remain open.
