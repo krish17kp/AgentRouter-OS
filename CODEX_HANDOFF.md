@@ -14,7 +14,7 @@ benchmark/coverage evidence, and PRs #30–#32 merged. PR #21 was closed as redu
 change was already on RC. PR #16 remains blocked by context-band accuracy
 0.6667 < 0.90. Python remains the shipping authority.
 
-Latest full Python run: 1,711 passed, 6 skipped; 90.99% line and 85.19% branch
+Latest full Python run: 1,720 passed, 6 skipped; 91.01% line and 85.23% branch
 coverage, meeting unchanged 90%/85% gates. Rust workspace tests,
 formatting, and Clippy pass locally. R4 remains partial; full public CLI,
 HTTP/MCP, plugins, evaluation, and R5–R13 remain. Human annotation, paid OpenAI
@@ -22,13 +22,13 @@ validation, and production/release credentials are listed in
 `PRODUCTION_STATUS.md` under **Needs Krish**. `AGENT_HANDOFF.md` is authoritative.
 
 The Rust diagnostic bundle/privacy slice was committed as `07eb511`, followed
-by quota-aware route verification in `a423ac5`. The latter's Linux/Windows/macOS
-Python/Rust matrix, security, mutation, package, API and site checks pass; PR
-#16 enforcement remains red only on the frozen evaluation. Current local work
-reuses host detection and the bounded usage state machine in Rust doctor's
-`--verify-live` checks. Nine focused compatibility cases and the full Python
-regression pass: 1,711 passed, 6 skipped; 90.99% line and 85.19% branch. Fresh
-CI for this slice is pending. Do not discard either new task evidence directory.
+by quota-aware route verification in `a423ac5` and Rust doctor host/usage parity
+in `7714a8d`. Their Linux/Windows/macOS Python/Rust matrix, security, mutation,
+package, API and site checks pass; PR #16 enforcement remains red only on the
+frozen evaluation. Current local work ports feedback-weight adaptation into
+`agentrouter-learning`. Nine differential cases and the full Python regression
+pass: 1,720 passed, 6 skipped; 91.01% line and 85.23% branch. Fresh CI is
+pending. Preserve the task evidence directories.
 
 ## Historical narrative
 

@@ -1584,3 +1584,19 @@ formatting, Ruff, and diff checks pass. The full Python suite also passes with
 partial doctor parity:
 plugin health, server-extra detection, complete contract metadata, and Python
 runtime checks remain outstanding. Cross-platform CI is pending.
+
+## Iteration 33 — 2026-11-11 — Dedicated Rust feedback learning crate
+
+Moved `agentrouter.learning.learned_weights` from the CLI layer to a standalone
+`agentrouter-learning` crate and wired the route binary to use it. The port
+preserves the minimum rating sample, negative threshold, per-rating shift,
+aggregate cap, minimum cost weight, and reversible explanation. Four-place
+rounding uses the shared Python-compatible ties-to-even helper. Added an
+offline JSON fixture binary and nine cross-language cases, including a decimal
+rounding edge case; added three Rust unit tests. The parity matrix now marks
+`agentrouter/learning.py` complete.
+
+Verification: Python regression 1,720 passed / 6 skipped; 91.0056% line,
+85.2327% branch, 89.6935% combined. Full Rust workspace tests, Clippy,
+formatting, Ruff, and learning/route differential tests pass. Cross-platform CI
+for the new crate is pending.

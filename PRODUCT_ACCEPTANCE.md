@@ -9,8 +9,8 @@ plugin mutation run passes at 0.9693 overall and 0.9663 safety/policy/execution,
 with zero unreviewed survivors; commit `984db4b` passed the currently reported
 cross-platform checks.
 
-The latest complete Python run passed 1,711 tests with 6 skips and measured
-90.99% line / 85.19% branch coverage, meeting the unchanged 90% / 85% gates.
+The latest complete Python run passed 1,720 tests with 6 skips and measured
+91.01% line / 85.23% branch coverage, meeting the unchanged 90% / 85% gates.
 The context-band gate remains 0.6667 < 0.90 and requires real independent human
 labels and adjudication. Rust R4 is partial and R5–R13 remain outstanding. The
 website is in the RC; no production deployment or paid OpenAI request occurred.

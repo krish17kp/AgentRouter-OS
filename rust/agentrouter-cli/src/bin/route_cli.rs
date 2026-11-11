@@ -97,7 +97,7 @@ fn main() {
 
     let conn = agentrouter_storage::connect(&home).expect("connect store");
     let (weights, note) = if learning {
-        agentrouter_cli::learned_weights(&conn, &configured_weights).expect("learned weights")
+        agentrouter_learning::learned_weights(&conn, &configured_weights).expect("learned weights")
     } else {
         (configured_weights, None)
     };

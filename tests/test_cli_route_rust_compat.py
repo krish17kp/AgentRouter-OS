@@ -8,8 +8,8 @@ calls `engine.route()` directly. Diffs that payload against the Rust
 `agentrouter-cli` port (via the `cli_route_cli` bin) for the same seeded
 registries and task.
 
-Scope: default path only — no config.yaml, no preference flag, no
-`--verify-live`. Skips (does not fail) when `cargo` isn't on PATH.
+Scope: route contract, configured routing, controls, and opt-in `--verify-live`.
+Skips (does not fail) when `cargo` isn't on PATH.
 """
 
 from __future__ import annotations

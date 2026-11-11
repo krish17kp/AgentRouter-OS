@@ -68,7 +68,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/schema.py` | `—` | Not ported |
 | `agentrouter/harness.py` | `agentrouter-cli::harness` | Parity |
 | `agentrouter/hosts.py` | `agentrouter-hosts` | Parity |
-| `agentrouter/learning.py` | `agentrouter-cli + agentrouter-storage` | Partial |
+| `agentrouter/learning.py` | `agentrouter-learning::learned_weights` | Parity |
 | `agentrouter/mcp_server.py` | `—` | Not ported |
 | `agentrouter/observability.py` | `agentrouter-cli::observability` | Partial |
 | `agentrouter/openai_adapter.py` | `agentrouter-cli::openai` | Partial |

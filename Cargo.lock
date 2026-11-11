@@ -19,6 +19,7 @@ dependencies = [
  "agentrouter-classifier",
  "agentrouter-core",
  "agentrouter-hosts",
+ "agentrouter-learning",
  "agentrouter-policy",
  "agentrouter-registry",
  "agentrouter-routing",
@@ -56,6 +57,16 @@ dependencies = [
  "serde_json",
  "tempfile",
  "which",
+]
+
+[[package]]
+name = "agentrouter-learning"
+version = "0.1.0"
+dependencies = [
+ "agentrouter-routing",
+ "rusqlite",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

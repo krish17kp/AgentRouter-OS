@@ -2,22 +2,22 @@
 
 ## Current checkpoint — 2026-11-11
 
-- Active branch: `release/agentrouter-v0.5-rc1`, pushed through `a423ac5`.
+- Active branch: `release/agentrouter-v0.5-rc1`, pushed through `7714a8d`.
   Open PR: #16 to `main`; current Python/Rust OS matrix checks pass, but
   `enforce-release-gate` fails because frozen context-band accuracy is 0.6667
   against 0.90. Do not merge or tag while this gate fails.
-- Rust quota-aware reranking is committed as `a423ac5`; its Python/Rust OS
-  matrix, Python 3.10–3.13 tests, security, mutation, site, package, and API
-  checks pass. Only PR #16's promotion gate fails at the unchanged frozen
-  context score 0.6667 < 0.90.
-- Current local slice: Rust doctor quota checks now use the shared host
-  detector, provider mapping, and bounded usage state machine instead of
-  duplicated credential-variable checks. They remain opt-in and never echo
-  credentials; no provider usage adapter is registered.
-- Local evidence: full Python suite 1,711 passed, 6 skipped; 90.99% line and
-  85.19% branch coverage. The Rust doctor usage-check slice passes all nine
-  focused compatibility tests; full Rust workspace tests, Clippy, formatting,
-  and Ruff pass. This slice needs commit/push and fresh cross-platform CI.
+- Rust quota-aware reranking is committed as `a423ac5`; Rust doctor host/usage
+  parity is committed as `7714a8d`. Their Python/Rust OS matrix, Python
+  3.10–3.13 tests, security, mutation, site, package, and API checks pass.
+  Only PR #16's promotion gate fails at the unchanged frozen context score
+  0.6667 < 0.90.
+- Current local slice: dedicated `agentrouter-learning` Rust crate now ports
+  reversible feedback-weight adjustments. Nine differential cases cover
+  limits, null ratings, exact note strings, and Python decimal rounding.
+- Local evidence: full Python suite 1,720 passed, 6 skipped; 91.01% line and
+  85.23% branch coverage. The Rust learning slice passes nine Python/Rust
+  differential cases and three Rust unit tests; full workspace tests, Clippy,
+  formatting, and Ruff pass. This slice needs commit/push and fresh CI.
 - Python remains the shipping implementation. The 77-module matrix is
   incomplete; Rust CLI/HTTP/MCP, plugins/skills, evaluation/annotation, and
   R5–R13 remain. Human annotation, OpenAI live validation, and production

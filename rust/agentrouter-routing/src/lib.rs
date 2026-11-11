@@ -263,7 +263,7 @@ fn use_case_adjust(m: &ModelEntry, task_type: TaskType) -> f64 {
 /// which is exactly what Rust's `{:.N}` float formatting does too — scaling
 /// by `10^ndigits` first (the previous approach here) reintroduces binary
 /// float error that can flip a case landing exactly on a `.5` boundary.
-fn round_half_even(x: f64, ndigits: i32) -> f64 {
+pub fn round_half_even(x: f64, ndigits: i32) -> f64 {
     let ndigits = ndigits.max(0) as usize;
     format!("{x:.ndigits$}").parse().unwrap()
 }

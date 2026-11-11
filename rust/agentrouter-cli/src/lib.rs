@@ -6,9 +6,10 @@
 //! classification, routing, controls, and host resolution are all delegated
 //! to their own already-ported crates. See `tests/test_cli_route_rust_compat.py`.
 //!
-//! Scope note: this covers `route --json` with config.yaml routing overrides
-//! and hard controls, but no `--verify-live` (a documented no-op today since
-//! no live usage adapter is registered — see `agentrouter-usage`). `init`,
+//! Scope note: this covers `route --json` with config.yaml routing overrides,
+//! hard controls, and opt-in `--verify-live` quota checking. No live usage
+//! adapter is registered today, so real providers report unsupported.
+//! `init`,
 //! `explain`, `feedback`, `registry list`, `prompt generate`, `plugin`, and
 //! `providers *` are not ported in this slice.
 
@@ -143,42 +144,6 @@ pub fn prompt_from_decision(payload: &Value, tool: Option<&str>) -> Result<Strin
         .as_str()
         .map(str::to_string)
         .ok_or_else(|| "stored decision has no prompt".to_string())
-}
-
-const MIN_FEEDBACK: i64 = 3;
-const STEP: f64 = 0.01;
-const MAX_SHIFT: f64 = 0.10;
-const MIN_W_COST: f64 = 0.05;
-const NEGATIVE_AT_OR_BELOW: i64 = 2;
-
-/// Mirrors `learning.learned_weights`.
-pub fn learned_weights(
-    conn: &rusqlite::Connection,
-    base: &agentrouter_routing::Weights,
-) -> rusqlite::Result<(agentrouter_routing::Weights, Option<String>)> {
-    let (total, negative): (i64, i64) = conn.query_row(
-        "SELECT COUNT(*), COALESCE(SUM(rating <= ?1), 0) FROM feedback WHERE rating IS NOT NULL",
-        rusqlite::params![NEGATIVE_AT_OR_BELOW],
-        |r| Ok((r.get(0)?, r.get(1)?)),
-    )?;
-    if total < MIN_FEEDBACK || negative == 0 {
-        return Ok((*base, None));
-    }
-    let shift = (STEP * negative as f64)
-        .min(MAX_SHIFT)
-        .min(base.w_cost - MIN_W_COST);
-    if shift <= 0.0 {
-        return Ok((*base, None));
-    }
-    let w = agentrouter_routing::Weights {
-        w_cap: (base.w_cap + shift * 10000.0).round() / 10000.0,
-        w_cost: (base.w_cost - shift * 10000.0).round() / 10000.0,
-        ..*base
-    };
-    let note = format!(
-        "learned from {total} rating(s), {negative} negative -> w_cap +{shift:.2}, w_cost -{shift:.2} (delete feedback or set learning: false to revert)"
-    );
-    Ok((w, Some(note)))
 }
 
 /// Mirrors `cli._apply_policy`'s pricing-tier cap. Returns `Err` with the

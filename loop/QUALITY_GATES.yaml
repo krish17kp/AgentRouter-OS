@@ -7,7 +7,7 @@ testing:
   mandatory_tests_pass:
     required: true
     current: pass_local
-    last_full_baseline_passed: 1711
+    last_full_baseline_passed: 1720
   unexplained_failures:
     required: 0
     current: 0
@@ -21,8 +21,8 @@ coverage:
   safety_execution_gateway_branch: 1.00
   policy_enforcement_branch: 1.00
   current: pass_local
-  line: 0.909916
-  branch: 0.851852
+  line: 0.910056
+  branch: 0.852327
   evidence: docs/COVERAGE_REPORT_2026-11-11.md
 
 mutation:

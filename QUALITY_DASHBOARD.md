@@ -8,7 +8,7 @@ dependency hardening. PR #13 plugin mutation campaign is green locally
 (1,629 selected mutants; 0.9693 overall, 0.9663 safety/policy/execution,
 0.9815 routing; zero unreviewed survivors); PR #13 was merged after all checks
 passed. The latest full Python run passed
-1,711 tests with 6 skips and measured 90.99% line / 85.19% branch coverage,
+1,720 tests with 6 skips and measured 91.01% line / 85.23% branch coverage,
 meeting the unchanged 90%/85% thresholds. Rust workspace tests, formatting,
 Clippy, and `cargo audit --deny warnings` pass locally; bundled SQLite is 3.54.1
 and `unsafe-libyaml` has been removed. A local Rust diagnostic-bundle parity
