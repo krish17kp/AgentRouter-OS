@@ -1835,3 +1835,17 @@ PR #16 code/spec review found no separate implementation defect in the
 reviewed scope. Release requirements remain unmet: context-band accuracy is
 0.6667 < 0.90; independent human annotation is required, so promotion remains
 blocked.
+
+## Iteration 49 — 2026-11-11 — Rust evaluation comparison artifacts
+
+Ported baseline/current score comparison, sorted dimension regressions and
+improvements, release-gate regressions, grade delta, and critical-regression
+classification. Rust writes the comparison Markdown plus regressions and
+improvements CSVs. Python now emits comparison Markdown with canonical LF on
+Windows as well as Unix. Differential coverage includes regression, unchanged,
+new-dimension, unmeasured-score, and no-regressed-gate cases.
+
+Verification: comparison/artifact differential and full Rust/Clippy/format/
+Ruff checks pass. The 24 evaluation compatibility cases pass. Full Python suite
+1,744 passed / 6 skipped; 91.15% line, 85.61% branch, and 89.89% combined
+coverage. Cross-platform CI is pending after push.

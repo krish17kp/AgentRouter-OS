@@ -8,6 +8,7 @@ import subprocess
 
 import pytest
 
+from agentrouter.evaluation import comparison as evaluate_python_comparison
 from agentrouter.evaluation.evaluators import load_seed_models
 from agentrouter.evaluation.evaluators.feedback import evaluate_feedback as evaluate_python_feedback
 from agentrouter.evaluation.evaluators.performance import (
@@ -893,3 +894,94 @@ def test_rust_performance_evaluator_measures_classifier_and_router():
     assert detail["route_median_ms"] >= 0
     assert 0 <= result["score"] <= 1
     assert detail["note"] == "smoke perf check on this machine; not a benchmark"
+
+
+def test_rust_evaluation_comparison_and_artifacts_match_python(tmp_path):
+    baseline = {
+        "grade_over_100": 80.25,
+        "dimensions": {
+            "safety": {"score": 1.0},
+            "classification": {"score": 0.9},
+            "unmeasured": {"score": None},
+        },
+        "release_gates": {"human_review": True, "context_gate": False},
+    }
+    current = {
+        "grade_over_100": 79.0,
+        "dimensions": {
+            "safety": {"score": 1.0},
+            "classification": {"score": 0.8998},
+            "unmeasured": {"score": 0.5},
+            "new_dimension": {"score": 1.0},
+        },
+        "release_gates": {
+            "human_review": False,
+            "context_gate": True,
+            "new_gate": False,
+        },
+    }
+    python_result = evaluate_python_comparison.compare(baseline, current)
+    python_dir = tmp_path / "python"
+    rust_dir = tmp_path / "rust"
+    python_paths = evaluate_python_comparison.write_comparison(python_result, python_dir)
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_compare_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps({"baseline": baseline, "current": current, "out_dir": str(rust_dir)}),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+        check=True,
+    )
+    rust_result = json.loads(process.stdout)
+    assert rust_result["comparison"] == python_result
+    assert rust_result["files"] == [path.name for path in python_paths]
+    for name in ("comparison.md", "regressions.csv", "improvements.csv"):
+        assert (rust_dir / name).read_bytes() == (python_dir / name).read_bytes()
+
+    no_regression = {"grade_over_100": 80.25, "dimensions": {}, "release_gates": {}}
+    python_empty = evaluate_python_comparison.compare(no_regression, no_regression)
+    rust_empty_dir = tmp_path / "rust-empty"
+    empty_process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_compare_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps(
+            {
+                "baseline": no_regression,
+                "current": no_regression,
+                "out_dir": str(rust_empty_dir),
+            }
+        ),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+        check=True,
+    )
+    assert json.loads(empty_process.stdout)["comparison"] == python_empty
+    expected_empty_markdown = (
+        b"# Baseline vs current\n\n"
+        b"- grade delta: 0.0\n"
+        b"- critical regression: NO\n"
+        b"- gate regressions: none\n\n"
+        b"## Regressions\n\n\n"
+        b"## Improvements\n\n"
+    )
+    assert (rust_empty_dir / "comparison.md").read_bytes() == expected_empty_markdown

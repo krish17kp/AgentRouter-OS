@@ -599,6 +599,206 @@ pub fn evaluate_performance(
     summarize_performance(&classify_seconds, &route_seconds)
 }
 
+/// Compare two completed evaluation reports using the Python release
+/// regression contract.
+pub fn compare_results(
+    baseline: &serde_json::Value,
+    current: &serde_json::Value,
+) -> serde_json::Value {
+    use serde_json::{json, Map, Value};
+
+    const REGRESSION_EPSILON: f64 = 1e-4;
+    let scores = |result: &Value| -> BTreeMap<String, f64> {
+        result
+            .get("dimensions")
+            .and_then(Value::as_object)
+            .into_iter()
+            .flat_map(|dimensions| dimensions.iter())
+            .filter_map(|(name, dimension)| {
+                dimension
+                    .get("score")
+                    .and_then(Value::as_f64)
+                    .map(|score| (name.clone(), score))
+            })
+            .collect()
+    };
+    let baseline_scores = scores(baseline);
+    let current_scores = scores(current);
+    let mut regressions = Vec::new();
+    let mut improvements = Vec::new();
+    for (dimension, baseline_score) in &baseline_scores {
+        let Some(current_score) = current_scores.get(dimension) else {
+            continue;
+        };
+        let delta = round_to(current_score - baseline_score, 6);
+        let row = json!({
+            "dimension": dimension,
+            "baseline": baseline_score,
+            "current": current_score,
+            "delta": delta,
+        });
+        if delta < -REGRESSION_EPSILON {
+            regressions.push(row);
+        } else if delta > REGRESSION_EPSILON {
+            improvements.push(row);
+        }
+    }
+
+    let baseline_gates = baseline
+        .get("release_gates")
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_else(Map::new);
+    let current_gates = current
+        .get("release_gates")
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_else(Map::new);
+    let gate_regressions: Vec<_> = current_gates
+        .iter()
+        .filter(|(gate, status)| {
+            baseline_gates.get(*gate).and_then(Value::as_bool) == Some(true)
+                && status.as_bool() == Some(false)
+        })
+        .map(|(gate, _)| gate.clone())
+        .collect();
+    let baseline_grade = baseline
+        .get("grade_over_100")
+        .and_then(Value::as_f64)
+        .unwrap_or(0.0);
+    let current_grade = current
+        .get("grade_over_100")
+        .and_then(Value::as_f64)
+        .unwrap_or(0.0);
+    json!({
+        "regressions": regressions,
+        "improvements": improvements,
+        "gate_regressions": gate_regressions,
+        "grade_delta": round_to(current_grade - baseline_grade, 2),
+        "has_critical_regression": !regressions.is_empty() || !gate_regressions.is_empty(),
+    })
+}
+
+/// Render the stable comparison Markdown and CSV artifacts.
+pub fn write_comparison(
+    comparison: &serde_json::Value,
+    out_dir: &std::path::Path,
+) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    use std::fs;
+
+    fs::create_dir_all(out_dir)?;
+    let mut lines = vec![
+        "# Baseline vs current".to_owned(),
+        String::new(),
+        format!(
+            "- grade delta: {}",
+            python_string(
+                comparison
+                    .get("grade_delta")
+                    .unwrap_or(&serde_json::Value::Null)
+            )
+        ),
+        format!(
+            "- critical regression: {}",
+            if comparison
+                .get("has_critical_regression")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(false)
+            {
+                "YES"
+            } else {
+                "NO"
+            }
+        ),
+        format!(
+            "- gate regressions: {}",
+            python_list(
+                comparison
+                    .get("gate_regressions")
+                    .and_then(serde_json::Value::as_array)
+            )
+        ),
+        String::new(),
+        "## Regressions".to_owned(),
+        String::new(),
+    ];
+    append_comparison_rows(&mut lines, comparison.get("regressions"));
+    lines.extend([String::new(), "## Improvements".to_owned(), String::new()]);
+    append_comparison_rows(&mut lines, comparison.get("improvements"));
+    fs::write(
+        out_dir.join("comparison.md"),
+        format!("{}\n", lines.join("\n")),
+    )?;
+
+    let mut written = vec!["comparison.md".to_owned()];
+    for (filename, key) in [
+        ("regressions.csv", "regressions"),
+        ("improvements.csv", "improvements"),
+    ] {
+        let mut csv = vec![csv_record(&[
+            "dimension".to_owned(),
+            "baseline".to_owned(),
+            "current".to_owned(),
+            "delta".to_owned(),
+        ])];
+        if let Some(rows) = comparison.get(key).and_then(serde_json::Value::as_array) {
+            for row in rows {
+                csv.push(csv_record(&[
+                    result_value(row, "dimension"),
+                    result_value(row, "baseline"),
+                    result_value(row, "current"),
+                    result_value(row, "delta"),
+                ]));
+            }
+        }
+        fs::write(out_dir.join(filename), csv.concat())?;
+        written.push(filename.to_owned());
+    }
+    Ok(written)
+}
+
+fn append_comparison_rows(lines: &mut Vec<String>, rows: Option<&serde_json::Value>) {
+    if let Some(rows) = rows.and_then(serde_json::Value::as_array) {
+        for row in rows {
+            let dimension = result_value(row, "dimension");
+            let baseline = result_value(row, "baseline");
+            let current = result_value(row, "current");
+            let delta = row
+                .get("delta")
+                .and_then(serde_json::Value::as_f64)
+                .unwrap_or_default();
+            lines.push(format!(
+                "- {dimension}: {baseline} -> {current} ({delta:+})"
+            ));
+        }
+    }
+}
+
+fn python_list(values: Option<&Vec<serde_json::Value>>) -> String {
+    let Some(values) = values.filter(|values| !values.is_empty()) else {
+        return "none".to_owned();
+    };
+    format!(
+        "[{}]",
+        values
+            .iter()
+            .map(|value| {
+                let value = python_string(value);
+                let quote = if value.contains('\'') && !value.contains('"') {
+                    '"'
+                } else {
+                    '\''
+                };
+                let escaped = value
+                    .replace('\\', "\\\\")
+                    .replace(quote, &format!("\\{quote}"));
+                format!("{quote}{escaped}{quote}")
+            })
+            .collect::<Vec<_>>()
+            .join(", ")
+    )
+}
+
 fn median_milliseconds(samples_seconds: &[f64]) -> f64 {
     if samples_seconds.is_empty() {
         return 0.0;

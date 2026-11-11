@@ -12,8 +12,8 @@ PYTHONPATH=. python -m pytest -q --cov=agentrouter --cov-branch --cov-report=ter
 
 | Measure | Result |
 |---|---:|
-| Python regression | 1,743 passed, 6 skipped |
-| Line coverage | 91.15% (6,531 / 7,165 statements) |
+| Python regression | 1,744 passed, 6 skipped |
+| Line coverage | 91.15% (6,532 / 7,166 statements) |
 | Branch coverage | 85.61% (1,803 / 2,106 branch outcomes) |
 | Combined coverage reported by pytest-cov | 89.89% |
 | Project line / branch thresholds | 90% / 85% — both passed |
