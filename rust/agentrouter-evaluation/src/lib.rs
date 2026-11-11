@@ -6,8 +6,11 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use agentrouter_core::{ApprovalLevel, ContextBand, Level, OutputType, PricingTier, TaskType};
 use agentrouter_routing::round_half_even;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use unicode_general_category::{get_general_category, GeneralCategory};
 
 pub const SINGLE_DIMS: [&str; 6] = [
     "task_type",
@@ -17,6 +20,238 @@ pub const SINGLE_DIMS: [&str; 6] = [
     "context",
     "approval",
 ];
+
+#[derive(Debug, Clone, Copy, Default, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AnnotationMethod {
+    Human,
+    #[default]
+    ModelAssisted,
+    Heuristic,
+    DatasetNative,
+}
+
+#[derive(Debug, Clone, Copy, Default, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ReviewStatus {
+    #[default]
+    Pending,
+    Approved,
+    Rejected,
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct Provenance {
+    #[serde(default)]
+    pub method: AnnotationMethod,
+    #[serde(default)]
+    pub reviewer: Option<String>,
+    #[serde(default)]
+    pub source_license: Option<String>,
+    #[serde(default)]
+    pub source_record_id: Option<String>,
+    #[serde(default)]
+    pub retrieved: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ExpectedClassification {
+    #[serde(default)]
+    pub task_types: Vec<TaskType>,
+    #[serde(default)]
+    pub complexities: Vec<Level>,
+    #[serde(default)]
+    pub risks: Vec<Level>,
+    #[serde(default)]
+    pub context_bands: Vec<ContextBand>,
+    #[serde(default)]
+    pub output_types: Vec<OutputType>,
+    #[serde(default)]
+    pub required_tools: Vec<String>,
+    #[serde(default)]
+    pub approval_levels: Vec<ApprovalLevel>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RoutingExpectation {
+    #[serde(default)]
+    pub minimum_ability: BTreeMap<String, i64>,
+    #[serde(default)]
+    pub acceptable_pricing_tiers: Vec<PricingTier>,
+    #[serde(default)]
+    pub permitted_providers: Vec<String>,
+    #[serde(default)]
+    pub forbidden_models: Vec<String>,
+    #[serde(default)]
+    pub required_tools: Vec<String>,
+    #[serde(default)]
+    pub min_context_tokens: Option<i64>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SafetyExpectation {
+    #[serde(default)]
+    pub auto_execute_allowed: Option<bool>,
+    #[serde(default)]
+    pub must_require_human_approval: bool,
+}
+
+/// Normalized evaluation record; serialized field names and defaults mirror
+/// `agentrouter.evaluation.schema.EvaluationCase`.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct EvaluationCase {
+    pub id: String,
+    pub dataset: String,
+    #[serde(deserialize_with = "deserialize_nonempty_task")]
+    pub task: String,
+    #[serde(default)]
+    pub dataset_version: Option<String>,
+    #[serde(default)]
+    pub source: Option<String>,
+    #[serde(default)]
+    pub source_split: Option<String>,
+    #[serde(default = "default_language")]
+    pub language: String,
+    #[serde(default)]
+    pub domain: Option<String>,
+    #[serde(default)]
+    pub tags: Vec<String>,
+    #[serde(default)]
+    pub paraphrase_group: Option<String>,
+    #[serde(default)]
+    pub expected: ExpectedClassification,
+    #[serde(default)]
+    pub routing: Option<RoutingExpectation>,
+    #[serde(default)]
+    pub safety: Option<SafetyExpectation>,
+    #[serde(default)]
+    pub context_tokens: Option<i64>,
+    #[serde(default)]
+    pub cost_metadata: BTreeMap<String, serde_json::Value>,
+    #[serde(default)]
+    pub model_outcomes: BTreeMap<String, serde_json::Value>,
+    #[serde(default)]
+    pub provenance: Provenance,
+    #[serde(default)]
+    pub review_status: ReviewStatus,
+    #[serde(default)]
+    pub checksum: Option<String>,
+    #[serde(default)]
+    pub notes: Option<String>,
+}
+
+fn deserialize_nonempty_task<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let task = String::deserialize(deserializer)?;
+    if task.chars().all(is_python_whitespace) {
+        return Err(serde::de::Error::custom("task must be non-empty"));
+    }
+    Ok(task)
+}
+
+impl EvaluationCase {
+    /// Enforce the Python model's semantic task validator.
+    pub fn validate(&self) -> Result<(), &'static str> {
+        if self.task.chars().all(is_python_whitespace) {
+            Err("task must be non-empty")
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn task_hash(&self) -> String {
+        normalized_hash(&self.task)
+    }
+
+    pub fn with_checksum(mut self) -> Self {
+        self.checksum = Some(self.task_hash());
+        self
+    }
+}
+
+fn is_python_whitespace(character: char) -> bool {
+    character.is_whitespace() || matches!(character as u32, 0x1c..=0x1f)
+}
+
+fn is_python_word(character: char) -> bool {
+    matches!(
+        get_general_category(character),
+        GeneralCategory::UppercaseLetter
+            | GeneralCategory::LowercaseLetter
+            | GeneralCategory::TitlecaseLetter
+            | GeneralCategory::ModifierLetter
+            | GeneralCategory::OtherLetter
+            | GeneralCategory::LetterNumber
+            | GeneralCategory::DecimalNumber
+            | GeneralCategory::OtherNumber
+    ) || character == '_'
+}
+
+/// Python-compatible `schema.normalized_hash`: lowercase, collapse Unicode
+/// whitespace, delete non-word punctuation, SHA-256, then take 16 hex digits.
+pub fn normalized_hash(text: &str) -> String {
+    let mut compact = String::new();
+    let mut pending_space = false;
+    for lowered in text.chars().flat_map(char::to_lowercase) {
+        if is_python_whitespace(lowered) {
+            if !compact.is_empty() {
+                pending_space = true;
+            }
+        } else {
+            if pending_space {
+                compact.push(' ');
+                pending_space = false;
+            }
+            if is_python_word(lowered) {
+                compact.push(lowered);
+            }
+        }
+    }
+    let digest = Sha256::digest(compact.as_bytes());
+    digest[..8]
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
+}
+
+/// Match `evaluation.sampling.deterministic_sample`, including original-order
+/// output and SHA-256 ranking by the exact `"{seed}:{key}"` bytes.
+pub fn deterministic_sample<T>(
+    items: &[T],
+    limit: i64,
+    seed: i64,
+    key: impl Fn(&T) -> String,
+) -> Vec<&T> {
+    if limit <= 0 {
+        return Vec::new();
+    }
+    if limit as u128 >= items.len() as u128 {
+        return items.iter().collect();
+    }
+    let mut ranked: Vec<(usize, [u8; 32])> = items
+        .iter()
+        .enumerate()
+        .map(|(index, item)| {
+            let input = format!("{seed}:{}", key(item));
+            (index, Sha256::digest(input.as_bytes()).into())
+        })
+        .collect();
+    ranked.sort_by_key(|(_, digest)| *digest);
+    let mut chosen: Vec<_> = ranked
+        .into_iter()
+        .take(limit as usize)
+        .map(|(index, _)| index)
+        .collect();
+    chosen.sort_unstable();
+    chosen.into_iter().map(|index| &items[index]).collect()
+}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]

@@ -10,7 +10,15 @@ import pytest
 
 from agentrouter.evaluation.metrics import classification_metrics
 from agentrouter.evaluation.provenance import dataset_quality
-from agentrouter.evaluation.schema import EvaluationCase, ExpectedClassification, Provenance
+from agentrouter.evaluation.sampling import deterministic_sample
+from agentrouter.evaluation.schema import (
+    EvaluationCase,
+    ExpectedClassification,
+    Provenance,
+    RoutingExpectation,
+    SafetyExpectation,
+    normalized_hash,
+)
 
 pytestmark = pytest.mark.skipif(shutil.which("cargo") is None, reason="cargo not on PATH")
 
@@ -239,3 +247,129 @@ def test_rust_dataset_quality_matches_python_aggregation():
         check=True,
     )
     assert json.loads(process.stdout) == dataset_quality(cases)
+
+
+@pytest.mark.parametrize(
+    ("items", "limit", "seed"),
+    [
+        ([f"item-{index}" for index in range(50)], 10, 7),
+        ([f"item-{index}" for index in range(50)], 10, 8),
+        (["duplicate", "item-a", "duplicate", "item-b", "item-c"], 3, 11),
+        (["a", "b", "c"], 0, 1),
+        (["a", "b", "c"], 8, 1),
+        (["a", "b", "c"], -2, 4),
+    ],
+)
+def test_rust_deterministic_sampling_matches_python(items, limit, seed):
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_sample_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps({"items": items, "limit": limit, "seed": seed}),
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=True,
+    )
+    expected = deterministic_sample(items, limit, seed, key=lambda item: item)
+    assert json.loads(process.stdout) == expected
+
+
+def test_rust_evaluation_schema_and_hash_match_python():
+    cases = [
+        EvaluationCase(id="defaults", dataset="fixture", task="Build a RAG system!"),
+        EvaluationCase(
+            id="complete",
+            dataset="fixture",
+            task="İstanbul\u001c systems — reviewed",
+            dataset_version="v2",
+            source="curated",
+            source_split="development",
+            language="tr",
+            domain="software",
+            tags=["security", "unicode"],
+            paraphrase_group="family-3",
+            expected=ExpectedClassification(
+                task_types=["coding", "analysis"],
+                complexities=["medium"],
+                risks=["high"],
+                context_bands=["large"],
+                output_types=["code+tests"],
+                required_tools=["shell", "file-edit"],
+                approval_levels=["human-approval-required"],
+            ),
+            routing=RoutingExpectation(
+                minimum_ability={"coding": 7, "reasoning": 6},
+                acceptable_pricing_tiers=["medium", "high"],
+                permitted_providers=["openai"],
+                forbidden_models=["legacy"],
+                required_tools=["shell"],
+                min_context_tokens=-1,
+            ),
+            safety=SafetyExpectation(
+                auto_execute_allowed=False,
+                must_require_human_approval=True,
+            ),
+            context_tokens=-5,
+            cost_metadata={"budget": {"usd": 2.5}},
+            model_outcomes={"model-a": {"success": True}},
+            provenance=Provenance(
+                method="human",
+                reviewer="reviewer-1",
+                source_license="MIT",
+                source_record_id="source-7",
+                retrieved="2026-11-11",
+            ),
+            review_status="approved",
+            checksum="provided-checksum",
+            notes="adjudicated",
+        ),
+    ]
+    input_cases = [case.model_dump(mode="json") for case in cases]
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_schema_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps({"cases": input_cases}),
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=True,
+    )
+    actual = json.loads(process.stdout)
+    assert actual["cases"] == input_cases
+    assert actual["task_hashes"] == [normalized_hash(case.task) for case in cases]
+
+    invalid = EvaluationCase.model_construct(id="empty", dataset="fixture", task="   ")
+    rejected = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_schema_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps({"cases": [invalid.model_dump(mode="json")]}),
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert rejected.returncode != 0

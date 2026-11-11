@@ -1634,3 +1634,38 @@ Verification: full Python regression 1,722 passed / 6 skipped; 91.0056% line,
 and focused Python/Rust tests pass. Cross-platform CI for the preceding
 evaluation-metrics commit is still running; this follow-on change also needs
 CI after push.
+
+## Iteration 36 — 2026-11-11 — Rust deterministic evaluation sampling
+
+Added `agentrouter-evaluation::deterministic_sample`, matching the Python
+sampler's SHA-256 rank from the decimal seed and item key, selecting the
+smallest ranks, then returning selected items in original input order. SHA-2
+0.10.9 is pinned as a portable pure-Rust implementation. Six differential
+cases cover stable seeds, changed seeds, duplicate keys, nonpositive limits,
+and limits at or above the item count. `evaluation/sampling.py` is now marked
+Parity.
+
+Verification: full Python regression 1,727 passed / 6 skipped; 91.0056% line,
+85.2327% branch, 89.6935% combined. Full Rust workspace tests, Clippy,
+formatting, Ruff, and focused sampling/metrics/provenance Python/Rust tests
+pass. The earlier `b5b6b8d` Rust migration CI passed all three operating systems
+and the declared Rust 1.89 check; CI for the SHA-2 dependency and sampler is
+pending push.
+
+## Iteration 37 — 2026-11-11 — Rust evaluation case schema
+
+Added normalized Rust evaluation schema types for annotation provenance,
+acceptable classification sets, routing and safety expectations, review
+status, and the full evaluation-case record. Defaults and serialized enum
+values match Python, unknown fields are rejected, and deserialization rejects
+blank tasks. The Rust probe round-trips default and fully populated Python
+records and checks Unicode-aware task hashes, including punctuation, repeated
+whitespace, Turkish lowercase expansion, and Python's C0 separator whitespace.
+`schema.py` remains Partial while all Pydantic coercion edges receive explicit
+differential coverage.
+
+Verification: full Python regression 1,729 passed / 6 skipped; 91.0056% line,
+85.2327% branch, 89.6935% combined. Workspace tests, Clippy, formatting, Ruff,
+and schema/metrics/provenance/sampling differential cases pass locally. The
+cross-platform pipeline for the existing `b5b6b8d` commit passed; schema and
+sampler additions need a new CI run.

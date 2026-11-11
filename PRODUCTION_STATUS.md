@@ -7,7 +7,7 @@ Updated: 2026-11-11
 - [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PRs #30–#33 are merged through RC `019233a`; PR #33 checks passed on Linux, Windows, macOS, Python 3.10–3.13, Rust, security, and mutation jobs. PR #16 is the sole open PR and its unchanged context-band release gate has failed again; finish collecting the remaining matrix checks, then keep main promotion blocked until human evaluation meets the existing threshold.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is now tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md); current gaps are explicit, and only modules with differential tests are marked parity.
-- [x] Full Python suite: 1,722 passed, 6 skipped; 91.01% line and 85.23% branch coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; exact evidence is in `docs/COVERAGE_REPORT_2026-11-11.md`.
+- [x] Full Python suite: 1,729 passed, 6 skipped; 91.01% line and 85.23% branch coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; exact evidence is in `docs/COVERAGE_REPORT_2026-11-11.md`.
 - [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations; the Rust release benchmark now runs the same 10/100/1,000 candidate fleets, with a paired local p50 ratio of 2.70×–3.25× under stated synthetic conditions.
 - [x] Changelog, coverage evidence, and local latency measurements are committed to the release candidate. Candidate package version is now `0.5.0rc1`, with draft release notes in `docs/RELEASE_NOTES_v0.5.0rc1.md`; final `0.5.0` packaging and publication remain blocked on parity and all release gates.
 - [ ] Release candidate promoted to `main` with a tagged release.
@@ -19,7 +19,7 @@ Updated: 2026-11-11
 - [ ] Rust quota-aware reranking is wired to `route_cli --verify-live`; eight Rust unit tests and ten Python/Rust differential cases cover unsupported/available/error preservation, verified exhaustion, no recommendation, invalid states, Python-compatible Unicode sanitation, and the CLI contract. Production live adapters remain disabled. Full suite is green locally; fresh CI is pending.
 - [ ] Rust doctor quota checks now share `agentrouter-hosts::detect_host`, provider mapping, and the bounded usage state machine; nine diagnostic compatibility tests pass. The full Python suite remains green at 1,720 passed/6 skipped. Overall doctor parity remains partial, and fresh CI is pending.
 - [x] `agentrouter/learning.py` now has a dedicated `agentrouter-learning` Rust crate; nine differential fixtures cover caps, sample thresholds, nullable ratings, exact explanations, and ties-to-even rounding. Route CLI learning-on/off parity remains covered.
-- [ ] `agentrouter/evaluation/metrics.py` now has a standalone `agentrouter-evaluation` Rust metric aggregator and deterministic Python/Rust report comparison. `evaluation/provenance.py` has a partial Rust `dataset_quality` port covering distributions, duplicates, and paraphrase split leakage; environment snapshots remain unported. Both changes are local and need cross-platform CI; the broader evaluation schema, datasets, CLI, and runners remain unported.
+- [ ] `agentrouter/evaluation/metrics.py` and `evaluation/sampling.py` have Rust counterparts with Python differential tests. `evaluation/schema.py` now has a partial normalized-case Rust schema, checksum, and hash implementation; Pydantic coercion and broader schema validation parity remain open. `evaluation/provenance.py` has a partial `dataset_quality` port; environment snapshots remain unported. Changes after `b5b6b8d` need cross-platform CI; datasets, CLI, and runners remain unported.
 
 - [x] PR #22 MCP dependency bound merged to release candidate.
 - [x] PR #25 staged Rust migration, registry and provider-status probes merged to release candidate as `99f5b76`; Python remains the shipping authority.
@@ -57,4 +57,4 @@ promotion-only evaluation gate failed. On `a4d2f79`, cross-platform Rust,
 Python, security, mutation, site, and API jobs passed; the only failed job is
 the unchanged frozen context-band gate (0.6667 < 0.90). The evaluation-metrics
 Rust slice is local and needs its own CI run. Full local Python regression:
-1,722 passed, 6 skipped; 91.01% line and 85.23% branch coverage.
+1,729 passed, 6 skipped; 91.01% line and 85.23% branch coverage.

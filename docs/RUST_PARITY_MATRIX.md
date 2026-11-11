@@ -64,8 +64,8 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/registry.py` | `—` | Not ported |
 | `agentrouter/evaluation/reports.py` | `—` | Not ported |
 | `agentrouter/evaluation/runner.py` | `—` | Not ported |
-| `agentrouter/evaluation/sampling.py` | `—` | Not ported |
-| `agentrouter/evaluation/schema.py` | `—` | Not ported |
+| `agentrouter/evaluation/sampling.py` | `agentrouter-evaluation::deterministic_sample` | Parity |
+| `agentrouter/evaluation/schema.py` | `agentrouter-evaluation::EvaluationCase` | Partial |
 | `agentrouter/harness.py` | `agentrouter-cli::harness` | Parity |
 | `agentrouter/hosts.py` | `agentrouter-hosts` | Parity |
 | `agentrouter/learning.py` | `agentrouter-learning::learned_weights` | Parity |

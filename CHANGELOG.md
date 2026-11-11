@@ -28,6 +28,8 @@ All notable changes to AgentRouter OS. Format loosely follows
 - Added a dedicated Rust `agentrouter-learning` crate for reversible feedback-weight adaptation, with nine Python/Rust differential cases and Python-compatible decimal rounding.
 - Added a standalone Rust evaluation-metrics crate with offline Python/Rust report parity coverage for acceptable labels, tool sets, confusion matrices, high-risk recall, and per-case failures.
 - Rust evaluation quality reporting now computes dataset label/provenance distributions, duplicate counts, and paraphrase-family split leakage from supplied case metadata; environment snapshots remain Python-only.
+- Added Rust parity for evaluation's deterministic SHA-256 sampler, preserving seed/key ranking and original input order.
+- Added a Rust normalized evaluation-case schema with matching defaults, enum values, nonempty-task validation at the fixture boundary, checksums, and Unicode-aware task hashing.
 - Upgrade bundled SQLite to the patched 3.54.1 release and replace the unmaintained YAML parser with a pure-Rust serde-compatible layer; the Rust minimum is now 1.89.
 
 ### Fixed
