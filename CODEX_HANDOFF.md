@@ -2,20 +2,19 @@
 
 ## Current checkpoint — 2026-11-11
 
-Active branch `task/TASK-019-plugin-installer-hardening`, head `984db4b`, PR #13
-against RC. The local plugin mutation campaign passes: 1,629 selected mutants,
+Active branch `task/rust-openai-contract`, based on PR #30. PR #13 `TASK-019`
+was merged into RC at `9958dd8` after its mutation, security, Python, Rust, and
+Linux/Windows/macOS checks passed. The plugin mutation campaign passed: 1,629 selected mutants,
 0.9693 overall, 0.9663 safety/policy/execution, 0.9815 routing, and zero
 unreviewed survivors. Exact-path and lifecycle tests cover Windows reserved
-aliases, link/reparse detection, ownership identity, and failure recovery. PR #13
-its currently reported CI checks are green. New offline coverage additions are
-local and need to be pushed for their own CI run.
+aliases, link/reparse detection, ownership identity, and failure recovery.
 
-RC is `3fcfd05` after PR #27 website, PR #28 macOS CI, and PR #29 routing
+RC is `9958dd8` after PR #27 website, PR #28 macOS CI, PR #29 routing
 benchmark/coverage evidence merged. PR #21 was closed as redundant because its
 change was already on RC. PR #16 remains blocked by context-band accuracy
 0.6667 < 0.90. Python remains the shipping authority.
 
-Latest full Python run: 1,650 passed, 6 skipped; 90.96% line and 85.09% branch
+Latest full Python run: 1,652 passed, 6 skipped; 90.96% line and 85.09% branch
 coverage, meeting unchanged 90%/85% gates. Rust workspace tests,
 formatting, and Clippy pass locally. R4 remains partial; full public CLI,
 HTTP/MCP, plugins, evaluation, and R5–R13 remain. Human annotation, paid OpenAI

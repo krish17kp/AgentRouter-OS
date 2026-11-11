@@ -204,8 +204,8 @@ pub fn aggregate_stats(
         *by_tier.entry(tier).or_insert(0) += n;
     }
 
-    let (fb_total, fb_avg, fb_accepted): (i64, Option<f64>, i64) = conn.query_row(
-        "SELECT COUNT(*), AVG(rating), COALESCE(SUM(rating >= 4), 0) \
+    let (fb_total, fb_sum, fb_accepted): (i64, i64, i64) = conn.query_row(
+        "SELECT COUNT(*), COALESCE(SUM(rating), 0), COALESCE(SUM(rating >= 4), 0) \
          FROM feedback WHERE rating IS NOT NULL",
         [],
         |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
@@ -219,14 +219,37 @@ pub fn aggregate_stats(
         "by_user": by_user,
         "feedback": {
             "count": fb_total,
-            "avg_rating": fb_avg.map(|a| (a * 100.0).round() / 100.0),
+            "avg_rating": if fb_total > 0 {
+                Some(round_ratio_hundredths(fb_sum, fb_total))
+            } else {
+                None
+            },
             "acceptance_rate": if fb_total > 0 {
-                Some(((fb_accepted as f64 / fb_total as f64) * 100.0).round() / 100.0)
+                Some(round_ratio_hundredths(fb_accepted, fb_total))
             } else {
                 None
             },
         },
     }))
+}
+
+/// Round an exact integer ratio to two decimal places using Python's
+/// round-half-to-even rule (`round(value, 2)`). Integer arithmetic avoids the
+/// platform-dependent half-way behavior of `f64::round`.
+fn round_ratio_hundredths(numerator: i64, denominator: i64) -> f64 {
+    let scaled = i128::from(numerator) * 100;
+    let denominator = i128::from(denominator);
+    let quotient = scaled / denominator;
+    let remainder = scaled % denominator;
+    let twice_remainder = remainder.abs() * 2;
+    let rounded = if twice_remainder > denominator.abs()
+        || (twice_remainder == denominator.abs() && quotient % 2 != 0)
+    {
+        quotient + scaled.signum()
+    } else {
+        quotient
+    };
+    rounded as f64 / 100.0
 }
 
 pub fn load_decision(conn: &Connection, decision_id_str: &str) -> rusqlite::Result<Option<Value>> {

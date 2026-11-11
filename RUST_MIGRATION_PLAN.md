@@ -345,7 +345,7 @@ consistent with this repo's standing rule to reproduce before trusting.
 | R3 | Routing + policy + safety | R2 | **DONE** (`task/rust-r1-workspace`) — `agentrouter-policy` (`taxonomy.py` + `controls.py` ports), `agentrouter-routing` (`engine.py` port), `agentrouter-hosts` (`hosts.py` port), `agentrouter-usage` (`usage.py` state machine, minus the CLI/route presentation glue `apply_live_verification`, deferred to R4/R5 alongside the typed `RouteResult` it re-ranks) | Port-plan rows 1, 3–4 passing — 12-scenario routing compat test, 9-case controls compat test (`tests/test_controls_rust_compat.py`), env-controlled hosts compat test (`tests/test_hosts_rust_compat.py`), all byte-identical against Python; full `cargo test --workspace` and `pytest -q` (1050 passed/1 skipped) green | Any scoring/explanation divergence |
 | R4 | SQLite + CLI (core commands) | R3 | **PARTIAL** (`task/rust-r1-workspace`) — `agentrouter-storage` ports `connect`/`save_decision`/`recent_ids`/`recent_decisions`/`aggregate_stats`/`load_decision`/`snapshot` and validates and records decision feedback atomically. `agentrouter-cli` has the `route --json` pipeline, a probe that persists its Rust route into the Python-readable SQLite log, stored-decision `explain --json`/`prompt generate --from` probes, a non-forced `init` probe, and a `registry list` JSON/table/filter probe. Python/Rust differential tests use the same SQLite log and seeded registries. These are probes, not a replacement public CLI. `doctor`/forced `init`/`plugin`/`providers *` and full option/error parity remain outstanding. | Port-plan row 5 (storage) passing; row 7 (CLI) partial — route, persisted decision, init, registry list, prompt and feedback probes passing; full CLI contract outstanding | Any SQLite round-trip or CLI contract break |
 | R5 | HTTP API + TS SDK + MCP | R4 | `agentrouter-api`, `agentrouter-mcp` | `api-compatibility` CI job green against Rust server; TS SDK test suite unchanged and green against it | Any semantic contract diff the existing gate would catch |
-| R6 | Provider execution + auth (adapters) | R3, owner credential action | `agentrouter-execution` adapter trait + first real adapter, behind default-off flag | Lifecycle test matrix from **Real-execution requirements** above, all green; security review | Remote execution ever defaults on, or an adapter bypasses policy gating |
+| R6 | Provider execution + auth (adapters) | R3, owner credential action | **PARTIAL** — Rust OpenAI Responses request/response contract and concrete rustls HTTPS transport in `agentrouter-cli::openai`; bounded body (2 MB), timeout (60 s), no redirects/retries, non-streaming and `store:false`. Not wired into the user-facing guarded execution lifecycle; Python remains authoritative. | Offline Rust contract/transport tests and Python adapter tests; live credential smoke and the full gated execution lifecycle remain outstanding | Remote execution ever defaults on, or an adapter bypasses policy gating |
 | R7 | Multi-agent orchestration | R6 | `agentrouter-orchestration` | Full test matrix from **Multi-agent orchestration architecture** above (loop/duplicate/cost/tool/conflict guards each independently tested) | Any guard in that section fails under adversarial fixture |
 | R8 | Graphify + skills + plugins | R4 | `agentrouter-graph` (design + minimal viable query, since Graphify itself is absent — see inventory), `agentrouter-skills`, `agentrouter-plugins` | Port-plan row 11 passing + fresh `std::fs` security review; graph capability has its own test fixtures (no claim of parity with a tool not present on this machine) | Plugin security review finds an unresolved HIGH/CRITICAL |
 | R9 | Evaluation + annotation + benchmarking | R4 | `agentrouter-evaluation`, `agentrouter-annotation` | Port-plan row 9 (bit-identical 45-case holdout) and row 12 (annotation CLI parity + leakage guardrail + blinding) both passing | Any holdout numeric drift, or any weakening of the human-review/leakage/blinding guarantees |
@@ -381,6 +381,34 @@ path-swap risk. A Linux proc-fd path helps after a swap before connect but
 does not close later or leaf swaps;
 handle-safe database initialization and the complete public CLI remain R4
 work. This probe is not a production replacement for Python.
+
+R4 follow-up (2026-11-11): added `agentrouter-cli::dashboard` with the
+read-only loopback HTTP surface and HTML renderer corresponding to
+`agentrouter/dashboard.py`. Rust tests cover empty and populated views,
+HTML escaping, absence of interactive controls, and a real loopback HTTP GET/POST
+smoke test. The cross-language storage compatibility test now seeds accepted
+and rejected feedback and caught a Rust
+`acceptance_rate` scale mismatch; the Rust aggregate now matches Python's
+0–1 ratio and ties-to-even two-decimal rounding. The module is ported, but wiring it into a unified user-facing Rust
+CLI remains part of the outstanding full CLI migration.
+
+R4 follow-up (2026-11-11, observability slice): added Rust `redact`, recursive
+JSON redaction, and Unicode-safe `safe_echo` helpers with a Python/Rust
+differential fixture matrix for all 16 supported credential formats, ordinary
+diagnostics, path preservation, and every Python-classified control/format
+character and line separator. This is a partial
+port only; request-ID context, structured logging, API-error traceback policy,
+and optional OTel spans remain outstanding.
+
+R6 follow-up (2026-11-11, OpenAI transport slice): added a concrete Rust
+`ureq`/rustls HTTPS transport for the existing Responses API contract. It is
+fixed to the OpenAI endpoint, disables redirects to prevent bearer-token
+forwarding, caps reads at the documented response limit, sets a per-request
+timeout, and never retries a possibly billable operation. Request and response
+validation is offline-tested; no live key was available. The module is not
+called from the CLI, is not an execution authorization mechanism, and does not
+change the default-off rule. Live validation and lifecycle/CLI integration
+remain in R6.
 
 R6 and R7 are deliberately placed after the interface milestones (R4–R5) and
 before the deep-hardening ones (R8–R10): nothing in orchestration or graph
