@@ -6,6 +6,8 @@ All notable changes to AgentRouter OS. Format loosely follows
 ## [Unreleased]
 
 ### Changed
+- Ported annotation duplicate and leakage guards to Rust, including Python
+  sequence-matcher compatibility and deterministic split-safe clustering.
 - Ported the human annotation merge/adjudication rules to Rust, preserving
   unresolved conflicts and explicit abstention without generating labels.
 - Completed Rust evaluation-schema parity for serialized cases, normalized

@@ -4,6 +4,8 @@
 //! Predictions are supplied by the caller so the scorer can be differentially
 //! checked offline without running a model or changing evaluation labels.
 
+pub mod annotation_dedup;
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 

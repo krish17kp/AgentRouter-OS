@@ -2040,5 +2040,19 @@ Seven Python/Rust differential cases pass, along with workspace tests, Clippy,
 format, Ruff, and diff checks. The human label/adjudication round remains a
 release blocker and is not replaced by this code.
 
-Next: push TASK-032, inspect cross-platform CI, and continue the remaining
-annotation and public-module parity work.
+TASK-032 is pushed as `e45cd5f`; its cross-platform workflows are running.
+
+Next: push TASK-033, inspect cross-platform CI, refresh full test/coverage
+evidence, and continue the remaining annotation and public-module parity work.
+
+## 2026-11-11 — TASK-033: Rust annotation deduplication/leakage
+
+Ported the annotation prompt normalizer, three-word shingles, Python-compatible
+sequence matching (including the long-sequence popularity heuristic),
+combined similarity, deterministic transitive clustering, and ordered leakage
+reports. Differential coverage includes Unicode and long prompts; focused
+tests, workspace, Clippy, format, Ruff, and diff checks pass. It never reads
+holdout labels.
+
+Next: push TASK-033, inspect CI alongside TASK-032, run full suite/coverage, and
+continue the annotation package and remaining public-module parity.

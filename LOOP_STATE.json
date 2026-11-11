@@ -1,12 +1,12 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-11",
-  "current_phase": "IN_PROGRESS: TASK-032 ports the human-only annotation adjudication rules. Seven differential cases pass with Rust workspace/Clippy/format and Ruff; full regression and hosted CI remain to run. TASK-029/030 cross-platform checks pass; TASK-031 compatibility is finishing. Frozen context-band gate remains at 0.6667 < 0.90.",
+  "current_phase": "IN_PROGRESS: TASK-033 ports the annotation duplicate/leakage module with Python-compatible normalization, SequenceMatcher behavior, clustering, and leakage reports. Focused differential and Rust workspace/Clippy/format plus Ruff pass. Full local suite passed 1,778/6 before this test was added; refresh after push. TASK-029/030 cross-platform CI passes; frozen release gate remains below threshold.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
     "main": "PR #16 is the sole open PR against main. Cross-platform Python/Rust, security, site, API, build and mutation checks pass; enforce-release-gate fails honestly at context-band 0.6667 < 0.90. No gate bypass.",
-    "release/agentrouter-v0.5-rc1": "RC at 66c2fcf; TASK-022 through TASK-031 are pushed. TASK-029/030 cross-platform Rust and Python/Rust checks pass. TASK-031 macOS compatibility and TASK-032 CI are in progress. Frozen context release gate 0.6667 < 0.90 remains.",
+    "release/agentrouter-v0.5-rc1": "RC at e45cd5f; TASK-022 through TASK-032 are pushed. TASK-029/030 cross-platform checks pass; TASK-031/032 hosted workflows continue. TASK-033 is local. Frozen context release gate 0.6667 < 0.90 remains.",
     "task/rust-r1-workspace": "PR #25 open against RC; 6ee8d3e passed complete GitHub CI; 32eee6f forced-init push failed Windows compile, file-handle repair awaits remote recheck; SQLite path-race blocker remains; Rust R4 partial and OpenAI execution hardening",
     "task/repo-cleanup-architecture-ponytail": "MERGED to RC (PR #14, merge commit 1ae3155); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/dynamic-skill-discovery": "MERGED to RC (PR #15, merge commit 62d5289); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
@@ -29,6 +29,7 @@
   "repo_sha_at_takeover": "602321af91ff298c0d5b59d6d36c24f845557fc1",
   "canonical_release_ready": false,
   "in_progress": [
+    "2026-11-11 TASK-033: annotation deduplication/leakage functions have Rust/Python differential coverage for normalization, exact/near similarity, clustering, ordered leakage, Unicode, and long-sequence behavior. Push, run full suite/coverage, inspect CI, continue annotation and public-module parity.",
     "2026-11-11 TASK-032: human-only adjudication logic is locally differential-tested across agreement, unanimous abstention, disagreement, mixed abstention, and explicit decisions. Push, run full regression, inspect cross-platform CI, continue annotation/public-module parity.",
     "2026-11-11 TASK-031: evaluation schema contract now has full Rust serialization/hash/checksum and invalid-input differential coverage. Focused tests and Rust workspace checks pass; commit/push, inspect CI, continue parity.",
     "2026-11-11 TASK-030: evaluation provenance Rust environment snapshot parity; focused checks and full regression (1,770/6) pass. Cross-platform CI is running; inspect and repair, then continue parity.",
@@ -124,7 +125,7 @@
     "historical task records remain under loop/tasks and loop/reports",
     "historical TASK-004 0.945 result is retained as in-sample evidence but no longer treated as canonical held-out readiness"
   ],
-  "next_action": "Finish and push TASK-032, run the full regression and coverage, inspect/repair cross-platform CI, and continue Rust parity.",
+  "next_action": "Commit/push TASK-033, run full regression and update coverage evidence, inspect/repair hosted CI, then continue Rust parity.",
   "completed_iter26": [
     "TASK-016 verified execution-host states MERGED to RC (PR #7 -> merge commit 5847c22; task branch deleted local+remote). hosts.py gained a readiness state vocabulary (missing/installed/configured/authenticated/authorized/degraded/unknown) plus a per-host remedy; `availability` keeps its exact prior meaning and is now derived from state. hosts list/doctor/show, the setup wizard and the execute refusal all report state + fix; hosts doctor ends with the cheapest concrete fix and exits non-zero only when no real host is ready. REST/MCP gained additive state/remedy and host_state/host_remedy keys. docs: new USER_GUIDE section 8 with the state table and the honesty note on `authorized`.",
     "BUG FIXED: host detection tested the API-key env var for truthiness, so a set-but-blank key (OPENAI_API_KEY='   ') reported available and `execute` would target a host that cannot authenticate. Now degraded/unavailable with a fix-it message, pinned by a parametrised test.",

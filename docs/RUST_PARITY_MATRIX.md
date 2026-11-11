@@ -20,7 +20,7 @@ release authority until the full set is complete.
 | `agentrouter/annotation/candidates.py` | `—` | Not ported |
 | `agentrouter/annotation/cli.py` | `—` | Not ported |
 | `agentrouter/annotation/compare.py` | `—` | Not ported |
-| `agentrouter/annotation/dedup.py` | `—` | Not ported |
+| `agentrouter/annotation/dedup.py` | `agentrouter-evaluation::annotation_dedup` | Parity |
 | `agentrouter/annotation/graph_signals.py` | `—` | Not ported |
 | `agentrouter/annotation/packs.py` | `—` | Not ported |
 | `agentrouter/annotation/schema.py` | `—` | Not ported |
