@@ -27,7 +27,10 @@ def test_registry_rejects_models_with_unconfigured_provider(home):
     providers = registry.load_providers(home / "registry" / "providers.yaml")
     models_path = home / "registry" / "models.yaml"
     original = models_path.read_text(encoding="utf-8")
-    models_path.write_text(original.replace("provider: openai", "provider: missing-provider", 1))
+    models_path.write_text(
+        original.replace("provider: openai", "provider: missing-provider", 1),
+        encoding="utf-8",
+    )
     with pytest.raises(registry.RegistryError, match="references unknown provider"):
         registry.load_models(models_path, providers)
 
