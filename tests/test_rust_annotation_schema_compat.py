@@ -158,6 +158,13 @@ def test_rust_annotation_schema_rejects_invalid_models(model, value):
         "2026-11-11T12:30:00.123456789Z",
         "2026-11-11T12:30:00.5Z",
         "2026-11-11t12:30:00",
+        "2026-11-11_12:30",
+        "2026-11-11_12:30:00",
+        "2026-11-11_12:30:00.1",
+        "2026-11-11_12:30:00,1",
+        "2026-11-11_12:30:00Z",
+        "2026-11-11_12:30:00+05:30",
+        "2026-11-11_12:30:00+0530",
         "2026-11-11T12:30:00+0530",
         "2026-11-11T12:30:00.123+05:30",
         "2026-11-11T12:30",
@@ -220,6 +227,8 @@ def test_rust_annotation_confidence_matches_pydantic_scalar_coercion(confidence)
 def test_rust_annotation_manifest_matches_pydantic_integer_and_boolean_coercion():
     for schema_version, untouched in [
         ("1", "yes"),
+        ("1.0", "yes"),
+        ("1_000", "yes"),
         (1.0, 1.0),
         (True, 1),
         (1, "off"),
@@ -231,7 +240,7 @@ def test_rust_annotation_manifest_matches_pydantic_integer_and_boolean_coercion(
             "dataset": "agentrouter-context-band-v2",
             "version": "v2.0",
             "created": "2026-11-11T00:00:00Z",
-            "split_counts": {"train": "2", "dev": 2.0, "holdout": True},
+            "split_counts": {"train": "2.0", "dev": 2.0, "holdout": True},
             "split_sha256": {},
             "category_counts": {"coding": -1},
             "band_counts": {"small": 3},
@@ -243,3 +252,16 @@ def test_rust_annotation_manifest_matches_pydantic_integer_and_boolean_coercion(
         process = _rust("dataset_manifest", value)
         assert process.returncode == 0, process.stderr
         assert json.loads(process.stdout) == {"value": expected}
+
+
+@pytest.mark.parametrize("schema_version", ["1.5", "1e2", "1__0", "1.000000001"])
+def test_rust_annotation_manifest_rejects_non_integer_strings_like_python(schema_version):
+    value = {
+        "schema_version": schema_version,
+        "version": "v2.0",
+        "created": "2026-11-11T00:00:00Z",
+    }
+    process = _rust("dataset_manifest", value)
+    assert process.returncode != 0
+    with pytest.raises(ValidationError):
+        DatasetManifest.model_validate(value)

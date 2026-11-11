@@ -180,11 +180,68 @@ where
         where
             E: de::Error,
         {
-            value.trim().parse::<i64>().map_err(E::custom)
+            parse_pydantic_integer(value).map_err(E::custom)
         }
     }
 
     deserializer.deserialize_any(IntegerVisitor)
+}
+
+fn parse_pydantic_integer(value: &str) -> Result<i64, String> {
+    let value = value.trim();
+    if let Ok(integer) = value.parse::<i64>() {
+        return Ok(integer);
+    }
+    if let Ok(normalized) = normalize_python_digits(value) {
+        if let Ok(integer) = normalized.parse::<i64>() {
+            return Ok(integer);
+        }
+    }
+
+    // Pydantic accepts underscore-separated digits and decimal strings only
+    // when every fractional digit is zero (for example, "1_000", "1.0",
+    // and "-0.00"). Exponent notation and fractional values are rejected.
+    let (whole, fraction) = value
+        .split_once('.')
+        .ok_or_else(|| "value must be an integer".to_owned())?;
+    if fraction.contains('.') {
+        return Err("value must be an integer".to_owned());
+    }
+    if fraction.starts_with(['+', '-']) {
+        return Err("value must be an integer".to_owned());
+    }
+    let whole = normalize_python_digits(whole)?;
+    let fraction = normalize_python_digits(fraction)?;
+    if fraction.is_empty() || fraction.bytes().any(|digit| digit != b'0') {
+        return Err("value must be an integer".to_owned());
+    }
+    whole
+        .parse::<i64>()
+        .map_err(|_| "integer is outside the supported range".to_owned())
+}
+
+fn normalize_python_digits(value: &str) -> Result<String, String> {
+    let (sign, digits) = match value.strip_prefix('-') {
+        Some(digits) => ("-", digits),
+        None => match value.strip_prefix('+') {
+            Some(digits) => ("+", digits),
+            None => ("", value),
+        },
+    };
+    let bytes = digits.as_bytes();
+    if bytes.is_empty()
+        || !bytes.iter().enumerate().all(|(index, byte)| {
+            byte.is_ascii_digit()
+                || (*byte == b'_'
+                    && index > 0
+                    && index + 1 < bytes.len()
+                    && bytes[index - 1].is_ascii_digit()
+                    && bytes[index + 1].is_ascii_digit())
+        })
+    {
+        return Err("value must be an integer".to_owned());
+    }
+    Ok(format!("{sign}{}", digits.replace('_', "")))
 }
 
 #[derive(Debug)]
@@ -349,7 +406,7 @@ mod optional_datetime {
             return Ok(format_aware(parsed));
         }
         // Match the extended forms accepted by Pydantic's datetime parser:
-        // lowercase/space separators, omitted seconds, and comma fractions.
+        // lowercase/space/underscore separators, omitted seconds, and comma fractions.
         let mut iso = value.to_owned();
         if !iso.starts_with(char::is_numeric) && iso.len() > 10 {
             return Err(format!("invalid datetime {value:?}"));
@@ -359,7 +416,7 @@ mod optional_datetime {
         }
         if iso.len() > 10 {
             let separator = iso.as_bytes()[10];
-            if !matches!(separator, b'T' | b't' | b' ') {
+            if !matches!(separator, b'T' | b't' | b' ' | b'_') {
                 return Err(format!("invalid datetime {value:?}"));
             }
             iso.replace_range(10..11, "T");

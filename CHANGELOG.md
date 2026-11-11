@@ -29,6 +29,10 @@ All notable changes to AgentRouter OS. Format loosely follows
   real-data preparation blockers, and context-band generalization.
 - Tighten Rust annotation timestamp parsing to match the accepted Python
   datetime forms in differential fixtures and reject invalid separators.
+- Match Python annotation datetime parsing for the underscore date/time
+  separator, including omitted seconds, fractions, and timezone offsets.
+- Match Pydantic integer coercion for underscore-separated and integral decimal
+  strings in Rust annotation manifests.
 - Added Rust types and validation for the human annotation artifact schemas;
   supported datetime forms now normalize to Python-compatible ISO JSON while
   full scalar coercion and `fromisoformat` edge coverage remain open.
