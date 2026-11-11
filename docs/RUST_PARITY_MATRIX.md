@@ -61,9 +61,9 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/grading.py` | `agentrouter-evaluation::{grade_classification,runner::run_all_dimensions}` | Partial |
 | `agentrouter/evaluation/metrics.py` | `agentrouter-evaluation::classification_metrics` | Parity |
 | `agentrouter/evaluation/provenance.py` | `agentrouter-evaluation::{dataset_quality,environment_snapshot}` | Parity |
-| `agentrouter/evaluation/registry.py` | `agentrouter-evaluation::registry_api` | Partial |
+| `agentrouter/evaluation/registry.py` | `agentrouter-evaluation::registry_api::{dataset_spec,collect,profile}` | Partial |
 | `agentrouter/evaluation/reports.py` | `agentrouter-evaluation::{render_markdown, write_reports}` | Parity |
-| `agentrouter/evaluation/runner.py` | `agentrouter-evaluation::runner` | Partial |
+| `agentrouter/evaluation/runner.py` | `agentrouter-evaluation::runner::{run_classification,run_all_dimensions,run_registered}` | Partial |
 | `agentrouter/evaluation/sampling.py` | `agentrouter-evaluation::deterministic_sample` | Parity |
 | `agentrouter/evaluation/schema.py` | `agentrouter-evaluation::{EvaluationCase,ExpectedClassification,Provenance,normalized_hash}` | Parity |
 | `agentrouter/harness.py` | `agentrouter-cli::harness` | Parity |

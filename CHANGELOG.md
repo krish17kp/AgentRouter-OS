@@ -20,9 +20,10 @@ All notable changes to AgentRouter OS. Format loosely follows
   initializer exports where those Python packages intentionally expose none.
 - Match Pydantic confidence, boolean, and manifest integer coercion in Rust
   annotation artifacts; remaining edge coercions stay explicitly Partial.
-- Add a Partial Rust offline evaluation runner for caller-supplied normalized
-  cases, with Python-matched classification grading, dataset quality, and a
-  composed seven-dimension `measure_all` scorecard.
+- Add a Rust offline evaluation runner for registered fixture profiles and
+  single datasets, with deterministic sampling, provenance and dataset-quality
+  reports, classification grading, and a composed seven-dimension `measure_all`
+  scorecard. Real dataset downloads remain explicit external skips.
 - Tighten Rust annotation timestamp parsing to match the accepted Python
   datetime forms in differential fixtures and reject invalid separators.
 - Added Rust types and validation for the human annotation artifact schemas;

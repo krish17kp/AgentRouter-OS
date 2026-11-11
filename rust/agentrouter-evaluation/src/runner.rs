@@ -5,6 +5,7 @@
 //! attaches deterministic dataset-quality and caller-supplied provenance.
 
 use agentrouter_classifier::{classify, ClassifyOptions};
+use std::path::PathBuf;
 
 use crate::{
     classification_metrics, dataset_quality, evaluate_feedback, evaluate_performance,
@@ -114,6 +115,89 @@ pub struct RunOptions {
     pub environment: serde_json::Value,
     pub datasets: serde_json::Value,
     pub context_band_generalization: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RegisteredRunOptions {
+    pub project_root: PathBuf,
+    pub dataset: Option<String>,
+    pub profile: Option<String>,
+    pub limit: Option<i64>,
+    pub seed: i64,
+    pub source: String,
+    pub languages: Option<Vec<String>>,
+    pub measure_all: bool,
+    pub commands: Vec<String>,
+    pub groups: Vec<String>,
+    pub environment: serde_json::Value,
+}
+
+/// Collect registered local fixtures and run the Rust evaluation end to end.
+/// Real data remains explicit: adapters without Rust real loaders produce
+/// `SKIPPED_EXTERNAL` records and never fall back to their fixture files.
+pub fn run_registered(options: RegisteredRunOptions) -> Result<serde_json::Value, String> {
+    let names: Vec<String> = if let Some(dataset) = options.dataset.as_ref() {
+        vec![dataset.clone()]
+    } else if let Some(profile) = options.profile.as_deref() {
+        crate::profile_datasets(profile)?
+            .iter()
+            .map(|name| (*name).to_owned())
+            .collect()
+    } else {
+        crate::profile_datasets("fast")?
+            .iter()
+            .map(|name| (*name).to_owned())
+            .collect()
+    };
+    let name_refs = names.iter().map(String::as_str).collect::<Vec<_>>();
+    let massive_languages = (options.dataset.as_deref() == Some("massive"))
+        .then_some(options.languages.as_deref())
+        .flatten();
+    let collection = crate::registry_api::collect(
+        &name_refs,
+        &options.project_root,
+        options.limit,
+        options.seed,
+        &options.source,
+        massive_languages,
+    )?;
+    let context_band_generalization = if options.measure_all {
+        Some(crate::context_bands::evaluate_generalization()?)
+    } else {
+        None
+    };
+    let run_options = RunOptions {
+        profile: if options.dataset.is_some() {
+            None
+        } else {
+            options.profile
+        },
+        seed: options.seed,
+        source: options.source,
+        environment: options.environment,
+        datasets: collection.datasets,
+        context_band_generalization,
+    };
+    if options.measure_all {
+        let models = crate::evaluators_api::load_seed_models()?;
+        run_all_dimensions(
+            &collection.cases,
+            &models,
+            &options.commands,
+            &options.groups,
+            run_options,
+        )
+    } else {
+        Ok(run_classification(
+            &collection.cases,
+            run_options.profile.as_deref(),
+            run_options.seed,
+            &run_options.source,
+            run_options.environment,
+            run_options.datasets,
+            run_options.context_band_generalization.as_ref(),
+        ))
+    }
 }
 
 /// Run the Rust classifier and classification-only grade over normalized cases.
