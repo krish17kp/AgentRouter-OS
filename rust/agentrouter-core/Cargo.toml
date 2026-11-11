@@ -3,8 +3,13 @@ name = "agentrouter-core"
 version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
+
 license.workspace = true
 description = "Shared types for AgentRouter OS (Task, Decision, model/registry enums, errors) — no routing logic. Mirrors agentrouter/schema.py."
+
+[[bin]]
+name = "package_version_from_json"
+path = "src/bin/package_version_from_json.rs"
 
 [dependencies]
 serde = { version = "1.0.210", features = ["derive"] }

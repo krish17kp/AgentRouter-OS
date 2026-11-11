@@ -2200,3 +2200,8 @@ Added a Rust facade with all seven Python evaluator exports and loads the
 embedded, validated seed model catalog through the existing registry loader.
 The module remains Partial because runtime discovery in several evaluator
 functions is unported. Focused tests and hosted CI are pending.
+# TASK-048 — Rust package version parity
+
+Added the Rust core's public distribution version accessor from canonical
+`pyproject.toml` metadata with a differential test against Python's package
+version. Focused validation and hosted CI are pending.

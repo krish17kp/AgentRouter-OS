@@ -13,7 +13,7 @@ release authority until the full set is complete.
 
 | Python module | Rust counterpart | Status |
 |---|---|---|
-| `agentrouter/__init__.py` | `—` | Not ported |
+| `agentrouter/__init__.py` | `agentrouter-core::package_version` | Parity |
 | `agentrouter/__main__.py` | `—` | Not ported |
 | `agentrouter/annotation/__init__.py` | `agentrouter-evaluation::annotation_api` | Parity |
 | `agentrouter/annotation/adjudicate.py` | `agentrouter-evaluation::{annotation_needs_adjudication,resolve_annotation}` | Parity |

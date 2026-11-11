@@ -10,6 +10,19 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+const PROJECT_METADATA: &str = include_str!("../../../pyproject.toml");
+
+/// The distribution version shared with the Python package metadata.
+pub fn package_version() -> &'static str {
+    PROJECT_METADATA
+        .lines()
+        .find_map(|line| {
+            line.strip_prefix("version = \"")
+                .and_then(|value| value.strip_suffix('\"'))
+        })
+        .expect("pyproject.toml must declare the AgentRouter distribution version")
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TaskType {
