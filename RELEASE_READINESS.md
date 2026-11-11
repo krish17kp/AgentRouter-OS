@@ -10,8 +10,8 @@ API, build, and mutation checks pass. `enforce-release-gate` fails on the
 unchanged context-band accuracy 0.6667 < 0.90; live smoke is skipped because no
 credential was supplied. The local Rust gold-adapter parity slice now matches
 metadata, availability, describe, all 165 records, checksums, and deterministic
-sampling. Full Python regression passes with 1,751 passed and 6 skipped; line
-coverage is 91.22%, branch coverage 85.75%, and combined coverage 89.98%. Full Rust CLI,
+sampling. Full Python regression passes with 1,757 passed and 6 skipped; line
+coverage is 91.24%, branch coverage 85.80%, and combined coverage 90.00%. Full Rust CLI,
 HTTP/MCP, provider execution, plugins/skills, evaluation base/runner/annotation,
 R5–R13, Rust-only install, and staging/rollback remain incomplete. Human
 annotation, live OpenAI validation, and production credentials remain owner

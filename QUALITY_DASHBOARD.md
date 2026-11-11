@@ -9,7 +9,7 @@ checks pass. The promotion gate correctly remains red: frozen context-band
 accuracy is 0.6667 < 0.90. The Rust AgentRouter-gold adapter matches Python on
 metadata, availability, description, all 165 records, checksum, and seeded
 sampling, including Unicode/default behavior. Full Python regression passes:
-1,751 passed, 6 skipped; coverage is 91.22% line, 85.75% branch, and 89.98%
+1,757 passed, 6 skipped; coverage is 91.24% line, 85.80% branch, and 90.00%
 combined. Python remains the shipping authority, and the full Rust migration
 is not complete.
 

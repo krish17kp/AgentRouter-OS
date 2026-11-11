@@ -2,24 +2,24 @@
 
 ## Current checkpoint — 2026-11-11
 
-PRs #27–#33 and #13 are merged into `release/agentrouter-v0.5-rc1`; the current
-RC base before this task is `ab98662`. PR #16 is the sole open PR. Its latest
-Python 3.10–3.13, Windows/macOS Python, Rust Linux/Windows/macOS, compatibility,
-security, site, API, build, and mutation checks pass; the unchanged
-`enforce-release-gate` fails on context-band accuracy 0.6667 < 0.90. Python
-remains the shipping authority.
+PRs #27–#33 and #13 are merged into `release/agentrouter-v0.5-rc1`; the RC
+head is `a7e5cf3` and PR #16 is the sole open PR to `main`. Its cross-platform
+Python/Rust, compatibility, security, site, API, build, and mutation checks
+pass. The unchanged promotion gate fails honestly because frozen context-band
+accuracy is 0.6667 against the 0.90 threshold. Python remains the shipping
+authority; no merge/tag is allowed while that gate fails.
 
-Current local task ports the complete AgentRouter gold adapter surface into
-`agentrouter-evaluation`: metadata, availability, describe, load, checksum, and
-deterministic sample. Exact JSON comparison covers all 165 committed records
-and a Unicode/defaults fixture. Focused Python/Rust tests (27), workspace tests,
-Clippy, format, and Ruff pass. Full Python regression passes: 1,751 passed,
-6 skipped; 91.22% line, 85.75% branch, and 89.98% combined coverage. The
-77-module matrix is `docs/RUST_PARITY_MATRIX.md`; evaluation base
-semantics, external adapters, runner/CLI, annotation, and most other public
-modules remain incomplete. Human annotation, live OpenAI validation, and
-production credentials remain in `PRODUCTION_STATUS.md` under **Needs Krish**.
-`AGENT_HANDOFF.md` is authoritative.
+Current local task TASK-022 ports shared fixture-mode evaluation adapter-base
+behavior into Rust, differentially checked against six dataset adapters. It
+covers metadata, availability, description, JSONL fixture loading and
+validation, seeded sampling, checksums, and explicit real-mode skip behavior.
+Focused adapter/gold tests (12), Rust workspace, Clippy, format, Ruff, and full
+Python regression pass: 1,757 passed, 6 skipped; 91.24% line, 85.80% branch,
+and 90.00% combined coverage. The 77-module matrix is
+`docs/RUST_PARITY_MATRIX.md`; real downloads/transforms, evaluation runner/CLI,
+annotation, and many public modules remain incomplete. Human annotation, live
+OpenAI validation, and production credentials remain under **Needs Krish** in
+`PRODUCTION_STATUS.md`. `AGENT_HANDOFF.md` is authoritative.
 
 ## Historical narrative
 

@@ -1886,3 +1886,20 @@ Next: commit and push TASK-021 to `release/agentrouter-v0.5-rc1`, inspect all
 checks, fix failures, then continue evaluation adapter base/external adapters
 and the remaining public Rust module inventory. Human annotation, live OpenAI
 validation, and production deployment credentials remain owner inputs.
+
+## 2026-11-11 — TASK-022: Rust fixture adapter base parity
+
+Implemented shared Rust fixture-mode behavior for the public evaluation adapter
+base: metadata, fixture availability, JSONL loading/validation, deterministic
+sampling, checksum, description, and explicit external-mode skip/error semantics.
+Differential tests compare six dataset adapters and every normalized fixture row.
+The full Python suite passes (1,757 passed, 6 skipped; 91.24% line, 85.80%
+branch, 90.00% combined coverage). Focused adapter/gold tests (12), Rust
+workspace, Clippy, formatting, Ruff, and diff checks pass. Cross-platform CI is
+pending push. Real dataset downloads/transforms, annotation, and evaluation
+runner/CLI remain incomplete and are tracked in the parity matrix.
+
+Next: commit and push TASK-022 to the authorized RC, inspect all platform CI,
+repair failures, then continue the next unfinished parity slice. PR #16 remains
+blocked by the frozen context-band accuracy 0.6667 < 0.90; do not weaken or
+bypass the release gate.

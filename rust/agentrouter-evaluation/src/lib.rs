@@ -1452,6 +1452,177 @@ pub struct EvaluationCase {
     pub notes: Option<String>,
 }
 
+/// Shared metadata contract from `evaluation.base.DatasetMetadata`.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct EvaluationDatasetMetadata {
+    pub name: String,
+    pub version: String,
+    pub license: String,
+    pub source: String,
+    pub description: String,
+    #[serde(default)]
+    pub requires_network: bool,
+    #[serde(default)]
+    pub requires_docker: bool,
+    #[serde(default = "default_languages")]
+    pub languages: Vec<String>,
+}
+
+fn default_languages() -> Vec<String> {
+    vec!["en".to_string()]
+}
+
+/// Load a normalized JSONL smoke fixture using the shared Python adapter
+/// contract: blank lines are ignored, each record is validated, and checksums
+/// are attached before adapter-level uniqueness checks.
+pub fn load_adapter_fixture(
+    path: &Path,
+    metadata: &EvaluationDatasetMetadata,
+) -> Result<Vec<EvaluationCase>, String> {
+    let contents = std::fs::read_to_string(path)
+        .map_err(|_| format!("{}: fixture not found at {}", metadata.name, path.display()))?;
+    let mut cases = Vec::new();
+    for line in contents
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+    {
+        let case: EvaluationCase = serde_json::from_str(line)
+            .map_err(|error| format!("{}: invalid fixture record: {error}", metadata.name))?;
+        cases.push(case.with_checksum());
+    }
+    validate_adapter_cases(metadata, &cases)?;
+    Ok(cases)
+}
+
+fn validate_adapter_cases(
+    metadata: &EvaluationDatasetMetadata,
+    cases: &[EvaluationCase],
+) -> Result<(), String> {
+    let mut ids = BTreeSet::new();
+    let mut hashes = BTreeSet::new();
+    for case in cases {
+        if !ids.insert(&case.id) {
+            return Err(format!("{}: duplicate case ids", metadata.name));
+        }
+        hashes.insert(case.task_hash());
+    }
+    if metadata.source.is_empty() || metadata.license.is_empty() {
+        return Err(format!(
+            "{}: missing source/license metadata",
+            metadata.name
+        ));
+    }
+    if hashes.len() != cases.len() {
+        return Err(format!(
+            "{}: {} exact-duplicate task(s)",
+            metadata.name,
+            cases.len() - hashes.len()
+        ));
+    }
+    Ok(())
+}
+
+pub fn adapter_availability(path: &Path) -> &'static str {
+    if path.exists() {
+        "fixture_only"
+    } else {
+        "skipped_external"
+    }
+}
+
+/// Rust has no Hugging Face `datasets` runtime. Real mode therefore remains
+/// an explicit skipped-external result and never falls back to fixture data.
+pub fn adapter_real_availability(name: &str, hf_repo: Option<&str>) -> (bool, String) {
+    if hf_repo.is_none() {
+        return (
+            false,
+            format!("{name}: no real loader configured (source unverified)"),
+        );
+    }
+    (
+        false,
+        "the `datasets` library is not installed (pip install -e '.[eval]')".to_string(),
+    )
+}
+
+pub fn load_adapter_dataset(
+    path: &Path,
+    metadata: &EvaluationDatasetMetadata,
+    hf_repo: Option<&str>,
+    source: &str,
+) -> Result<Vec<EvaluationCase>, String> {
+    match source {
+        "fixture" => load_adapter_fixture(path, metadata),
+        "real" => {
+            let (available, reason) = adapter_real_availability(&metadata.name, hf_repo);
+            if available {
+                Err(format!(
+                    "{}: Rust real dataset loading is unsupported",
+                    metadata.name
+                ))
+            } else {
+                Err(format!("{}: {reason}", metadata.name))
+            }
+        }
+        _ => Err(format!("{}: unknown source '{source}'", metadata.name)),
+    }
+}
+
+pub fn sample_adapter_cases(
+    cases: &[EvaluationCase],
+    limit: Option<i64>,
+    seed: i64,
+) -> Vec<EvaluationCase> {
+    let Some(limit) = limit else {
+        return cases.to_vec();
+    };
+    deterministic_sample(cases, limit, seed, |case| case.id.clone())
+        .into_iter()
+        .cloned()
+        .collect()
+}
+
+pub fn adapter_checksum(cases: &[EvaluationCase]) -> String {
+    let mut hashes: Vec<_> = cases.iter().map(EvaluationCase::task_hash).collect();
+    hashes.sort();
+    let payload = format!(
+        "[{}]",
+        hashes
+            .iter()
+            .map(|hash| format!("\"{hash}\""))
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
+    let digest = Sha256::digest(payload.as_bytes());
+    digest[..8]
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
+}
+
+pub fn describe_adapter(
+    path: &Path,
+    metadata: &EvaluationDatasetMetadata,
+    hf_repo: Option<&str>,
+) -> serde_json::Value {
+    let (real_available, real_reason) = adapter_real_availability(&metadata.name, hf_repo);
+    serde_json::json!({
+        "name": metadata.name,
+        "version": metadata.version,
+        "license": metadata.license,
+        "source": metadata.source,
+        "availability": adapter_availability(path),
+        "real_available": real_available,
+        "real_reason": real_reason,
+        "hf_repo": hf_repo,
+        "requires_network": metadata.requires_network,
+        "requires_docker": metadata.requires_docker,
+        "languages": metadata.languages,
+    })
+}
+
 #[derive(Debug, Deserialize)]
 struct AgentRouterGoldDocument {
     #[serde(default = "default_gold_version")]
@@ -1614,25 +1785,8 @@ pub fn agentrouter_gold_sample(
 }
 
 pub fn agentrouter_gold_checksum(path: &Path) -> Result<String, String> {
-    let mut hashes: Vec<_> = load_agentrouter_gold(path)?
-        .iter()
-        .map(EvaluationCase::task_hash)
-        .collect();
-    hashes.sort();
-    // Python's json.dumps(payload) uses the default comma+space separator.
-    let payload = format!(
-        "[{}]",
-        hashes
-            .iter()
-            .map(|hash| format!("\"{hash}\""))
-            .collect::<Vec<_>>()
-            .join(", ")
-    );
-    let digest = Sha256::digest(payload.as_bytes());
-    Ok(digest[..8]
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect())
+    let cases = load_agentrouter_gold(path)?;
+    Ok(adapter_checksum(&cases))
 }
 
 fn deserialize_nonempty_task<'de, D>(deserializer: D) -> Result<String, D::Error>

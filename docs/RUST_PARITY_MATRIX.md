@@ -47,7 +47,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/adapters/massive.py` | `—` | Not ported |
 | `agentrouter/evaluation/adapters/swebench.py` | `—` | Not ported |
 | `agentrouter/evaluation/adapters/twinrouterbench.py` | `—` | Not ported |
-| `agentrouter/evaluation/base.py` | `—` | Not ported |
+| `agentrouter/evaluation/base.py` | `agentrouter-evaluation::{load_adapter_fixture,adapter_availability,sample_adapter_cases,adapter_checksum,describe_adapter}` | Partial |
 | `agentrouter/evaluation/cli.py` | `—` | Not ported |
 | `agentrouter/evaluation/comparison.py` | `agentrouter-evaluation::{compare_results,load_result,write_comparison}` | Parity |
 | `agentrouter/evaluation/context_bands.py` | `—` | Not ported |
@@ -121,6 +121,7 @@ release authority until the full set is complete.
 - Baseline/current comparison scoring, UTF-8 result loading, and Markdown/CSV
   artifact generation match Python.
 - The AgentRouter gold adapter now matches Python metadata, availability, description, all 165 records, checksums, and deterministic sampling; the full behavior is differentially tested, including Unicode/default handling.
+- Shared fixture-mode evaluation adapter behavior now matches six fixture-backed adapters for metadata, availability, description, JSONL record loading/checksums, deterministic sampling, and explicit skipped-external behavior. Real dataset downloads, preparation, and adapter-specific real-data mappings remain Python-only.
 - Routing evaluation now scores caller-supplied model catalogs against gold
   constraints or the declared distinct-fallback proxy. Loading seed models and
   custom classifier injection remain Python-only.

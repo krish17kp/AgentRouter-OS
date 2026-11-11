@@ -8,8 +8,8 @@ website, API, build, and mutation checks pass, but the unchanged
 context-band gate remains 0.6667 < 0.90. The Rust gold-adapter module now has
 differential coverage for metadata, availability, description, all 165 cases,
 checksums, and deterministic sampling. Full Python regression passes with
-1,751 passed and 6 skipped; line coverage is 91.22%, branch coverage 85.75%,
-and combined coverage 89.98%. Rust R4 and R5–R13 remain incomplete; no
+1,757 passed and 6 skipped; line coverage is 91.24%, branch coverage 85.80%,
+and combined coverage 90.00%. Rust R4 and R5–R13 remain incomplete; no
 production deployment or paid OpenAI request occurred.
 The table below is historical.
 

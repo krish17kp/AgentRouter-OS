@@ -23,11 +23,12 @@ of labels and release evaluation.
 - Rust Clippy (`-D warnings`): passed.
 - `cargo fmt --all -- --check`: passed.
 - Ruff check and format: passed.
-- Full Python suite: 1,751 passed, 6 skipped; 91.22% line, 85.75% branch,
-  89.98% combined coverage (Python 3.12.15, Linux).
-- Cross-platform PR CI for this slice: not yet run; the authorized RC push will
-  trigger Linux, Windows, macOS, Rust 1.89, compatibility, security, and mutation
-  checks.
+- Full Python suite on the cumulative RC worktree: 1,757 passed, 6 skipped;
+  91.24% line, 85.80% branch, 90.00% combined coverage (Python 3.12.15, Linux).
+- Cross-platform PR CI on RC `a7e5cf3`: Linux, Windows, macOS, Rust 1.89,
+  Python/Rust compatibility, security, and mutation checks passed. PR #16's
+  promotion gate remains the only failure because the frozen context-band score
+  is 0.6667 < 0.90; live smoke is skipped without credentials.
 
 ## Scope limits
 

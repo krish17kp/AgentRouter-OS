@@ -2,11 +2,12 @@
 
 ## Current checkpoint — 2026-11-11
 
-- Active candidate branch/worktree: `release/agentrouter-v0.5-rc1` at base `ab98662` before the current gold-adapter change. PRs #27–#33 and #13 are merged; PR #16 is the sole open PR to `main`.
+- Active candidate branch/worktree: `release/agentrouter-v0.5-rc1` at `a7e5cf3`. PRs #27–#33 and #13 are merged; PR #16 is the sole open PR to `main`.
 - PR #16's Python 3.10–3.13, Windows/macOS Python, Rust Linux/Windows/macOS, Python/Rust compatibility, security, site, API, build, and mutation checks pass. `enforce-release-gate` fails on the unchanged context-band accuracy 0.6667 < 0.90. Do not bypass this gate. Live smoke is skipped without owner credentials.
-- Current task ports the complete `agentrouter/evaluation/adapters/agentrouter_gold.py` surface into Rust: metadata, availability, description, load, checksum, deterministic sample, and invalid-input behavior. Differential JSON covers all 165 committed cases plus Unicode/default handling. Focused compatibility: 31 passed; full Rust workspace tests, Clippy, formatting, Ruff, and full Python regression pass.
-- Latest full Python evidence: 1,751 passed, 6 skipped; 91.22% line, 85.75% branch, 89.98% combined coverage. Coverage evidence: `docs/COVERAGE_REPORT_2026-11-11.md`.
-- Rust parity inventory: 77 Python files in `docs/RUST_PARITY_MATRIX.md`; 17 are currently marked parity. Evaluation base/external adapters, runner/CLI/annotation, full public CLI, HTTP/MCP, plugin/skill, provider execution, and remaining R milestones are open. Python remains shipping and release authority.
+- Rust AgentRouter gold adapter parity is committed at `a7e5cf3`; its Linux/Windows/macOS, Rust 1.89, compatibility, security, and mutation checks pass. PR #16's only failure remains the context-band release gate; live smoke is skipped without credentials.
+- Current local task ports fixture-mode shared evaluation adapter methods; six adapter fixtures match Python for metadata, availability, description, records/checksums, deterministic sampling, and explicit real-mode skips. Focused adapter/gold tests: 12 passed; full Rust workspace, Clippy, format, Ruff, and Python regression pass. This shared base slice awaits RC push and fresh CI.
+- Latest full Python evidence: 1,757 passed, 6 skipped; 91.24% line, 85.80% branch, 90.00% combined coverage. Coverage evidence: `docs/COVERAGE_REPORT_2026-11-11.md`.
+- Rust parity inventory: 77 Python files in `docs/RUST_PARITY_MATRIX.md`; 17 are currently marked parity. External downloads/row transformations, evaluation runner/CLI/annotation, full public CLI, HTTP/MCP, plugin/skill, provider execution, and remaining R milestones are open. Python remains shipping and release authority.
 - Before stopping: record final checks, commit, push only the authorized RC branch, inspect all resulting CI, repair failures, then continue the next local parity item. Do not merge/tag/publish while the release gate fails.
 - Owner inputs remain in `PRODUCTION_STATUS.md` under **Needs Krish**: two independent human annotators plus adjudicator, bounded paid OpenAI live smoke credentials, and production/deployment credentials and approval.
 

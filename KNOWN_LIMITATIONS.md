@@ -3,6 +3,7 @@
 ## Current migration and release limits (2026-11-11)
 
 - The Rust evaluation crate now matches the full `agentrouter/evaluation/adapters/agentrouter_gold.py` module surface: metadata, availability, describe, loading, checksum and deterministic sampling. Its Python/Rust differential test covers all 165 committed cases plus Unicode/default handling. External adapter base behavior and the other dataset adapters remain Python-only; see `docs/RUST_PARITY_MATRIX.md`.
+- A Rust fixture-mode adapter base now covers metadata, availability, description, JSONL loading/checksums, deterministic sampling, and explicit real-mode skips for six external fixtures. Real dataset downloads and dataset-specific row transformations still require Python's optional `datasets` integration.
 - Python is still the shipping router. Rust R4 has route, SQLite,
   stored-decision, prompt, and feedback compatibility probes, but no complete
   public Rust CLI/HTTP/MCP replacement. R5–R13 remain open.
@@ -20,7 +21,7 @@
   tests; full CLI parity, Windows ACL restrictions, and cross-platform CI for
   this change remain open.
 - Rust provider-status parity is a new probe, not full `providers` CLI parity.
-- Latest full Python coverage is 91.22% line / 85.75% branch, meeting the
+- Latest full Python coverage is 91.24% line / 85.80% branch, meeting the
   unchanged 90%/85% gates; see `docs/COVERAGE_REPORT_2026-11-11.md`.
 - The frozen context-band release gate remains 0.6667 < 0.90. The 63-candidate
   two-human annotation/adjudication round is not complete. Synthetic or AI
