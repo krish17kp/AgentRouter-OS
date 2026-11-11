@@ -2189,3 +2189,8 @@ remain unchanged; this work does not clear release promotion.
 Added the Rust `evaluation_api` module to match the Python evaluation package's
 three declared public exports, with a differential contract test. Focused
 validation and hosted matrix checks follow this push.
+# TASK-046 — Rust annotation package facade
+
+Exposed the Python annotation package's schema version, category list, and
+split list through the Rust `annotation_api` module with a value and ordering
+differential test. Focused validation and hosted CI are pending.

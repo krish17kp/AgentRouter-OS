@@ -4,6 +4,7 @@
 //! Predictions are supplied by the caller so the scorer can be differentially
 //! checked offline without running a model or changing evaluation labels.
 
+pub mod annotation_api;
 pub mod annotation_candidates;
 pub mod annotation_compare;
 pub mod annotation_dedup;
