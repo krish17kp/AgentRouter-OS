@@ -2212,3 +2212,9 @@ and boolean inputs Pydantic accepts, with exact JSON normalization verified by
 Python/Rust differential tests. Eighteen schema tests and evaluation-crate
 Clippy pass locally. The module remains Partial for datetime grammar and other
 scalar coercions.
+# TASK-050 — Annotation boolean and integer coercions
+
+Added Pydantic-compatible JSON coercions for annotation schema booleans and
+manifest `schema_version`, including numeric strings and 0/1 values. The
+focused schema suite now has 23 passing cases; evaluation-crate Clippy passes.
+Remaining annotation schema coercions still need a full audit.

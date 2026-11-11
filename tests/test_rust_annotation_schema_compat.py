@@ -156,6 +156,10 @@ def test_rust_annotation_schema_rejects_invalid_models(model, value):
         "2026-11-11 12:30:00.120000",
         "2026-11-11",
         "2026-11-11T12:30:00.123456789Z",
+        "2026-11-11T12:30:00.5Z",
+        "2026-11-11t12:30:00",
+        "2026-11-11T12:30:00+0530",
+        "2026-11-11T12:30:00.123+05:30",
         "2026-11-11T12:30",
         "2026-11-11T12:30:00,25+05:30",
         0,
@@ -207,3 +211,24 @@ def test_rust_annotation_confidence_matches_pydantic_scalar_coercion(confidence)
     process = _rust("annotator_label", value)
     assert process.returncode == 0, process.stderr
     assert json.loads(process.stdout) == {"value": expected}
+
+
+def test_rust_annotation_manifest_matches_pydantic_integer_and_boolean_coercion():
+    for schema_version, untouched in [("1", "yes"), (1.0, 1.0), (True, 1), (1, "off"), (1, 0.0)]:
+        value = {
+            "schema_version": schema_version,
+            "dataset": "agentrouter-context-band-v2",
+            "version": "v2.0",
+            "created": "2026-11-11T00:00:00Z",
+            "split_counts": {},
+            "split_sha256": {},
+            "category_counts": {},
+            "band_counts": {},
+            "frozen_holdout_untouched": untouched,
+            "leakage_report": None,
+            "provenance": "",
+        }
+        expected = DatasetManifest.model_validate(value).model_dump(mode="json")
+        process = _rust("dataset_manifest", value)
+        assert process.returncode == 0, process.stderr
+        assert json.loads(process.stdout) == {"value": expected}

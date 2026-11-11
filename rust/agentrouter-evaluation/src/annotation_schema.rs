@@ -65,6 +65,125 @@ where
     deserializer.deserialize_any(FloatVisitor)
 }
 
+fn pydantic_bool<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct BoolVisitor;
+
+    impl<'de> Visitor<'de> for BoolVisitor {
+        type Value = bool;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("a boolean accepted by Pydantic")
+        }
+
+        fn visit_bool<E>(self, value: bool) -> Result<Self::Value, E> {
+            Ok(value)
+        }
+
+        fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            match value {
+                0 => Ok(false),
+                1 => Ok(true),
+                _ => Err(E::custom("boolean integer must be 0 or 1")),
+            }
+        }
+
+        fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            match value {
+                0 => Ok(false),
+                1 => Ok(true),
+                _ => Err(E::custom("boolean integer must be 0 or 1")),
+            }
+        }
+
+        fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            match value {
+                0.0 => Ok(false),
+                1.0 => Ok(true),
+                _ => Err(E::custom("boolean number must be 0 or 1")),
+            }
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            match value.to_ascii_lowercase().as_str() {
+                "0" | "off" | "false" | "no" | "n" | "f" => Ok(false),
+                "1" | "on" | "true" | "yes" | "y" | "t" => Ok(true),
+                _ => Err(E::custom("invalid boolean string")),
+            }
+        }
+    }
+
+    deserializer.deserialize_any(BoolVisitor)
+}
+
+fn pydantic_u32<'de, D>(deserializer: D) -> Result<u32, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct IntegerVisitor;
+
+    impl<'de> Visitor<'de> for IntegerVisitor {
+        type Value = u32;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("an integer accepted by Pydantic")
+        }
+
+        fn visit_bool<E>(self, value: bool) -> Result<Self::Value, E> {
+            Ok(u32::from(value))
+        }
+
+        fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            u32::try_from(value).map_err(E::custom)
+        }
+
+        fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            u32::try_from(value).map_err(E::custom)
+        }
+
+        fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            if value.is_finite() && value.fract() == 0.0 && (0.0..=u32::MAX as f64).contains(&value)
+            {
+                Ok(value as u32)
+            } else {
+                Err(E::custom("value must be an unsigned 32-bit integer"))
+            }
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            value.trim().parse::<u32>().map_err(E::custom)
+        }
+    }
+
+    deserializer.deserialize_any(IntegerVisitor)
+}
+
 fn default_candidate_source() -> String {
     "generated_candidate".to_owned()
 }
@@ -271,6 +390,7 @@ pub struct AnnotatorLabel {
     #[serde(default)]
     pub band: Option<ContextBand>,
     #[serde(default)]
+    #[serde(deserialize_with = "pydantic_bool")]
     pub abstain: bool,
     pub rationale: String,
     #[serde(deserialize_with = "pydantic_float")]
@@ -352,6 +472,7 @@ pub struct AdjudicatedItem {
     #[serde(default)]
     pub band: Option<ContextBand>,
     #[serde(default)]
+    #[serde(deserialize_with = "pydantic_bool")]
     pub abstained: bool,
     pub label_source: String,
     #[serde(default)]
@@ -404,6 +525,7 @@ impl AdjudicatedItem {
 #[serde(deny_unknown_fields)]
 pub struct DatasetManifest {
     #[serde(default = "default_schema_version")]
+    #[serde(deserialize_with = "pydantic_u32")]
     pub schema_version: u32,
     #[serde(default = "default_manifest_dataset")]
     pub dataset: String,
@@ -418,6 +540,7 @@ pub struct DatasetManifest {
     #[serde(default)]
     pub band_counts: std::collections::BTreeMap<String, u64>,
     #[serde(default = "default_true")]
+    #[serde(deserialize_with = "pydantic_bool")]
     pub frozen_holdout_untouched: bool,
     #[serde(default)]
     pub leakage_report: Option<String>,
