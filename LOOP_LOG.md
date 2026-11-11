@@ -2082,3 +2082,17 @@ and the refreshed complete Python coverage run are being checked.
 
 Next: push the schema slice with refreshed coverage, inspect CI, and continue
 the remaining annotation pipeline and public modules.
+
+## 2026-11-11 — TASK-036: Rust annotation graph impact signal
+
+Added a Rust counterpart for Graphify graph loading, node-name extraction,
+ASCII prompt token matching, direct-neighbor reach, the bounded impact feature,
+and the default graph path. Offline Python/Rust differential tests cover absent
+and invalid-JSON fallback, name keys/path stems, duplicate edges, empty/falsey
+edge fallback to `links`, matches, misses, and saturation. Evaluation crate
+tests, Clippy, format, Ruff, and focused differentials pass. The module remains
+Partial because Python's four-entry LRU and exceptions for malformed root/node
+shapes are not yet mirrored. TASK-035 cross-platform CI is running.
+
+Next: push this slice and inspect hosted checks while continuing annotation
+pack/store/CLI parity work.

@@ -21,7 +21,7 @@ release authority until the full set is complete.
 | `agentrouter/annotation/cli.py` | `—` | Not ported |
 | `agentrouter/annotation/compare.py` | `—` | Not ported |
 | `agentrouter/annotation/dedup.py` | `agentrouter-evaluation::annotation_dedup` | Parity |
-| `agentrouter/annotation/graph_signals.py` | `—` | Not ported |
+| `agentrouter/annotation/graph_signals.py` | `agentrouter-evaluation::annotation_graph_signals` | Partial |
 | `agentrouter/annotation/packs.py` | `—` | Not ported |
 | `agentrouter/annotation/schema.py` | `agentrouter-evaluation::annotation_schema` | Partial |
 | `agentrouter/annotation/splits.py` | `agentrouter-evaluation::annotation_splits` | Parity |

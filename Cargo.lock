@@ -59,6 +59,7 @@ dependencies = [
  "agentrouter-storage",
  "chrono",
  "noyalib-serde-yaml",
+ "regex",
  "serde",
  "serde_json",
  "sha2",
