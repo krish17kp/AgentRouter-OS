@@ -6,6 +6,9 @@ All notable changes to AgentRouter OS. Format loosely follows
 ## [Unreleased]
 
 ### Changed
+- Port deterministic annotation candidate generation and rules/learned/hybrid
+  context-band comparison to Rust with Python differential coverage.
+- Match Python text-file newline behavior on Windows for annotation artifacts.
 - Added Rust types and validation for the human annotation artifact schemas;
   supported datetime forms now normalize to Python-compatible ISO JSON while
   full scalar coercion and `fromisoformat` edge coverage remain open.

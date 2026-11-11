@@ -2,27 +2,19 @@
 
 ## Current checkpoint — 2026-11-11
 
-PRs #27–#33 and #13 are merged into `release/agentrouter-v0.5-rc1`; RC head is
-`dca1300` after TASK-037 push, with TASK-038 local, and PR #16 remains
-open to `main`. Cross-platform Rust/Python checks through TASK-037 pass.
-The only hosted failure is the frozen gate: context-band
-accuracy 0.6667 against 0.90. The live smoke is skipped without credentials.
-
-TASK-029 completes TwinRouterBench's offline dynamic-track status contract,
-alongside static fixture behavior from the shared adapter base. TASK-030
-completes evaluation provenance parity. Current local task closes evaluation
-schema serialization, hashing/checksum, and invalid-input parity. Focused
-differential tests, Rust workspace, Clippy, format, and Ruff pass. TASK-035
-adds 14 annotation schema/datetime cases; TASK-036 adds the repository-impact
-signal; TASK-037 completes annotation pack parity. Twelve graph/pack differential
-cases and workspace checks pass locally. The latest Python suite passes:
-1,863 passed, 6 skipped; coverage is 92.15% line, 87.22% branch, and 91.03%
-combined. Remaining
-adapter transformations, remote runs, evaluation
-runner/CLI/annotation, and many public modules are inventoried in
-`docs/RUST_PARITY_MATRIX.md`. Human annotation, live OpenAI validation, and
-production credentials are recorded under **Needs Krish** in
-`PRODUCTION_STATUS.md`. `AGENT_HANDOFF.md` is authoritative.
+Active RC branch `release/agentrouter-v0.5-rc1`; latest pushed head is
+`1c88b3c`, with TASK-040 annotation comparison complete locally and in full
+verification. PR #16 is the sole open PR. TASK-038 Windows CRLF parity was
+fixed after hosted Windows tests caught the mismatch; cross-platform CI is
+running on the fix. TASK-039 (candidate generation) and TASK-040 (rules,
+learned and hybrid comparison with CPython-seeded bootstrap intervals) have
+focused parity evidence. Full Python regression is 1,868 passed/6 skipped;
+coverage is 92.15% line, 87.22% branch, 91.03% combined. Rust workspace,
+Clippy, Ruff, and formatting pass locally. Do not merge PR #16 while the frozen
+context-band score is 0.6667 < 0.90. Human annotation, bounded OpenAI live
+validation, and deployment credentials are under **Needs Krish** in
+`PRODUCTION_STATUS.md`. Continue with the next module and hosted-check review;
+`AGENT_HANDOFF.md` remains authoritative.
 
 ## Historical narrative
 

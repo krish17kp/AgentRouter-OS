@@ -2128,3 +2128,19 @@ shuffle reuses the CPython-compatible arbitrary-width integer implementation.
 Fifty differential cases cover the exact bank, five seeds, ten positive,
 zero, and negative slice counts, IDs, provenance source, template scopes, and
 prompt order. The candidate module meets its parity bar.
+
+## 2026-11-11 — TASK-040: Rust annotation comparison
+
+Ported rules, learned, and hybrid context-band prediction/reporting with
+accuracy, macro-F1, per-band recall, seeded 95% bootstrap confidence intervals,
+ECE, abstention counts, and fallback rate. Five Python/Rust cases pass, including
+threshold edges; seeded sampling reuses the verified CPython MT19937 stream.
+Full regression: 1,868 passed/6 skipped; 92.15% line, 87.22% branch, 91.03%
+combined. Workspace, Clippy, Rust/Python formatting and lint pass locally.
+
+Windows CI had exposed CRLF differences in annotation JSONL/manifest writes.
+Fixed cross-platform Python text-mode newline translation and pushed
+`1c88b3c`; its CI rerun is pending. Continue checking it while moving to the
+next unfinished module. PR #16 remains blocked honestly by context-band 0.6667
+< 0.90, and human annotation/live credential/deployment actions stay under
+Needs Krish.

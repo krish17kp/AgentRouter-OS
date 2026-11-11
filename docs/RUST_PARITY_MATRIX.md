@@ -19,7 +19,7 @@ release authority until the full set is complete.
 | `agentrouter/annotation/adjudicate.py` | `agentrouter-evaluation::{annotation_needs_adjudication,resolve_annotation}` | Parity |
 | `agentrouter/annotation/candidates.py` | `agentrouter-evaluation::annotation_candidates` | Parity |
 | `agentrouter/annotation/cli.py` | `—` | Not ported |
-| `agentrouter/annotation/compare.py` | `—` | Not ported |
+| `agentrouter/annotation/compare.py` | `agentrouter-evaluation::annotation_compare` | Parity |
 | `agentrouter/annotation/dedup.py` | `agentrouter-evaluation::annotation_dedup` | Parity |
 | `agentrouter/annotation/graph_signals.py` | `agentrouter-evaluation::annotation_graph_signals` | Partial |
 | `agentrouter/annotation/packs.py` | `agentrouter-evaluation::annotation_packs` | Parity |
@@ -102,6 +102,10 @@ release authority until the full set is complete.
 - Context-band model inference is ported but remains disabled in the default
   classifier. The frozen evaluation gate still controls whether learned routing
   can be enabled.
+- Context-band annotation comparison matches rules, learned and hybrid
+  prediction reports, including macro-F1, per-band recall, deterministic
+  CPython-seeded bootstrap confidence intervals, ECE, abstention and fallback
+  counts. It only measures; it does not change classifier thresholds or gates.
 - Evaluation JSON, scorecard, Markdown, failure/holdout CSV, confusion CSV, and
   output file ordering all have a Python/Rust differential fixture.
 - Classification-only grading and gate calculation have differential coverage;

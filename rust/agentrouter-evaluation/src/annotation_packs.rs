@@ -8,13 +8,13 @@ use crate::annotation_schema::{Candidate, ItemLabels};
 /// CPython's MT19937 seeding and `_randbelow`-based shuffle, so pack order is
 /// stable across the Python and Rust implementations for integer seeds.
 #[derive(Clone)]
-struct PythonRandom {
+pub(crate) struct PythonRandom {
     state: [u32; 624],
     index: usize,
 }
 
 impl PythonRandom {
-    fn new(seed: &str) -> Result<Self, String> {
+    pub(crate) fn new(seed: &str) -> Result<Self, String> {
         let magnitude = seed.strip_prefix('-').unwrap_or(seed);
         if magnitude.is_empty() || !magnitude.bytes().all(|digit| digit.is_ascii_digit()) {
             return Err("seed must be a decimal integer".to_owned());
@@ -105,7 +105,7 @@ impl PythonRandom {
         y
     }
 
-    fn randbelow(&mut self, upper: usize) -> usize {
+    pub(crate) fn randbelow(&mut self, upper: usize) -> usize {
         let bits = usize::BITS - upper.leading_zeros();
         loop {
             let value = if bits <= 32 {
@@ -120,6 +120,19 @@ impl PythonRandom {
             }
         }
     }
+}
+
+/// Draw indexes using Python `random.Random(seed).randrange(length)` semantics.
+pub fn sample_indexes_python_seed(
+    length: usize,
+    draws: usize,
+    seed: &str,
+) -> Result<Vec<usize>, String> {
+    if length == 0 && draws != 0 {
+        return Err("cannot sample from an empty population".to_owned());
+    }
+    let mut rng = PythonRandom::new(seed)?;
+    Ok((0..draws).map(|_| rng.randbelow(length)).collect())
 }
 
 pub fn shuffle_python_seed<T>(values: &mut [T], seed: &str) -> Result<(), String> {

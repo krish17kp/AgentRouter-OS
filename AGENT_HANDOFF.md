@@ -2,19 +2,12 @@
 
 ## Current checkpoint — 2026-11-11
 
-- Active RC worktree: `release/agentrouter-v0.5-rc1` at `dca1300`. PRs #27–#33 and #13 are merged; PR #16 remains open to `main`.
-- TASK-028 is pushed. Rust workspace and non-skipping Python/Rust compatibility pass Linux; Windows/macOS and general Python checks are still running. Security and website pass. The unchanged frozen context-band gate (0.6667 < 0.90) remains the promotion blocker.
-- TASK-029 locally completes TwinRouterBench's dynamic-track full-run skip report. The focused differential test, shared adapter tests, full Python suite, Rust workspace, Clippy, format, Ruff, and diff checks pass.
-- TASK-029 has been pushed as `55d5fbd`; hosted Rust and Python/Rust checks pass on Linux, with Windows/macOS and general tests running. TASK-030 is pushed as `d1ba467`; its cross-platform Rust/compatibility runs are in progress.
-- Latest Python evidence: 1,863 passed, 6 skipped; 92.15% line (6,603/7,166), 87.22% branch (1,837/2,106), 91.03% combined. See `docs/COVERAGE_REPORT_2026-11-11.md`.
-- The 77-module matrix is in `docs/RUST_PARITY_MATRIX.md`; external data execution, other adapter transforms, evaluation runner/CLI/annotation, most public CLI, HTTP/MCP, plugins/skills, and provider execution remain incomplete. Python remains the shipping authority.
-- TASK-029 ports TwinRouterBench's dynamic-track full-run status, with fixture behavior covered by the shared adapter test. Focused differential tests, full Python suite, Rust workspace, Clippy, format, Ruff, and diff checks pass.
-- TASK-030 ports the remaining evaluation provenance environment snapshot; existing dataset-quality/leakage aggregation is also differential-tested. Rust workspace/compatibility and general Python CI are running for the pushed head. Next: inspect/repair CI and continue parity. Do not merge/tag while the frozen release gate fails.
-- TASK-031 closes evaluation-schema parity, including serialization, Unicode hashes, checksum copies, and malformed input rejection. TASK-032 is pushed; seven focused adjudication cases, Rust workspace, Clippy, format, Ruff, and diff checks pass. TASK-033 has cross-platform Rust/Python checks; a hosted Ruff format failure is fixed locally. TASK-034 adds split assignment and frozen-holdout leak checks; focused differential tests pass.
-- Latest full regression: 1,863 passed, 6 skipped; coverage is 92.15% line, 87.22% branch, and 91.03% combined, including annotation schema, graph, pack, store, and candidate generation differentials.
-- TASK-029 through TASK-034 cross-platform Rust/Python checks pass. Latest hosted CI has only the frozen promotion gate failure (context-band 0.6667 < 0.90); live smoke is skipped without credentials. TASK-035 adds 14 datetime/schema differential checks; Rust workspace, Clippy, format, and Ruff pass locally. Full suite/coverage refresh is running. PR #16 remains blocked by the unchanged gate.
-- TASK-035 `91b038f` through TASK-037 `dca1300` are pushed. Rust/Python compatibility and workspace checks pass across Linux, Windows, and macOS; security, website, and mutation checks pass. The sole hosted failure remains the frozen promotion gate. TASK-038 storage code/tests are local pending push; four file/hash differentials, full workspace, Clippy, format, Ruff, and the full Python regression pass locally (1,812/6).
-- Owner actions are in `PRODUCTION_STATUS.md` under **Needs Krish**: independent human annotation/adjudication, bounded paid OpenAI validation credentials, and production deployment credentials/approval.
+- Active RC branch `release/agentrouter-v0.5-rc1`; latest pushed head is `1c88b3c` (Windows newline parity fix). TASK-039 is pushed as `40d5a7f`; TASK-040 annotation comparison is locally complete and undergoing full verification. PR #16 is the sole open PR to `main`.
+- TASK-038’s Windows CI failure found that Python text-mode file writes use CRLF while Rust wrote LF. The Rust store now translates text newlines by platform; new cross-platform CI is running on `1c88b3c`.
+- TASK-039 ports the 63-prompt deterministic candidate bank. TASK-040 ports rules/learned/hybrid comparison, all report metrics, and CPython-seeded bootstrap intervals. Their focused differential suites pass (51 and 5 cases).
+- Latest full Python regression after TASK-040: 1,868 passed, 6 skipped; 92.15% line, 87.22% branch, 91.03% combined coverage. Rust workspace and Clippy pass locally; Ruff and formatting pass.
+- PR #16 must remain open: the frozen context-band release gate is 0.6667 against 0.90. Do not enable learned routing or alter the gate. Human annotation, bounded OpenAI live smoke credentials, and production deployment credentials remain under **Needs Krish** in `PRODUCTION_STATUS.md`.
+- The 77-module inventory is in `docs/RUST_PARITY_MATRIX.md`; Python remains the shipping authority until all public surfaces reach measured parity and release gates pass. Continue immediately with the next Partial/Not ported module, inspect hosted checks, review every open PR, and update `PRODUCTION_STATUS.md` after each slice.
 
 ## Historical checkpoint
 

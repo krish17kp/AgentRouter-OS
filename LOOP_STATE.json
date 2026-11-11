@@ -1,12 +1,12 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-11",
-  "current_phase": "IN_PROGRESS: TASK-039 Rust annotation candidate generation is implemented and locally verified; commit/push it, inspect CI, and continue the annotation CLI/evaluation parity inventory. Release gate remains frozen and unchanged.",
+  "current_phase": "IN_PROGRESS: TASK-040 annotation comparison is locally complete with five exact Python differentials and full regression. TASK-038 Windows newline parity repair 1c88b3c is verified by Rust workspace and non-skipping Python/Rust jobs on Linux, Windows, and macOS. Continue parity inventory and hosted checks.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
     "main": "PR #16 is the sole open PR against main. Cross-platform Python/Rust, security, site, API, build and mutation checks pass; enforce-release-gate fails honestly at context-band 0.6667 < 0.90. No gate bypass.",
-    "release/agentrouter-v0.5-rc1": "RC at 1065ec7 plus locally verified TASK-039 candidate generation. TASK-038 hosted checks are running; TASK-039 cross-platform checks will run after push. The honest frozen context gate remains 0.6667 < 0.90; live smoke is skipped without credentials.",
+    "release/agentrouter-v0.5-rc1": "RC at 1c88b3c. TASK-038 Windows CRLF parity fix is green: Rust workspace and Python/Rust compatibility pass Linux/Windows/macOS. TASK-039 candidate generation is pushed. TASK-040 annotation compare locally complete; hosted CI starts after push. PR #16 remains blocked by frozen context gate 0.6667 < 0.90; live smoke skipped without credentials.",
     "task/rust-r1-workspace": "PR #25 open against RC; 6ee8d3e passed complete GitHub CI; 32eee6f forced-init push failed Windows compile, file-handle repair awaits remote recheck; SQLite path-race blocker remains; Rust R4 partial and OpenAI execution hardening",
     "task/repo-cleanup-architecture-ponytail": "MERGED to RC (PR #14, merge commit 1ae3155); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/dynamic-skill-discovery": "MERGED to RC (PR #15, merge commit 62d5289); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
@@ -31,7 +31,7 @@
   "in_progress": [
     "2026-11-11 TASK-035 schema remains Partial for Pydantic scalar coercion and complete datetime grammar; 14 focused cases. Cross-platform checks passed through dca1300.",
     "2026-11-11 TASK-036 graph impact remains Partial for LRU cache and malformed-root/node exception behavior; four focused cases. Cross-platform checks passed through dca1300.",
-    "2026-11-11 TASK-039 candidate generation locally complete: 51 Python/Rust differential cases, full Python 1,863/6 with 92.15% line and 87.22% branch coverage, workspace/Clippy/format/Ruff clean. Commit/push, inspect hosted checks, continue next public module."
+    "2026-11-11 TASK-040 annotation comparison locally complete: five exact Rust/Python cases, full suite 1,868/6, coverage 92.15% line and 87.22% branch, workspace/Clippy/format/Ruff pass. Commit/push and inspect hosted checks."
   ],
   "completed_iter25": [
     "TASK-015 trusted catalogs MERGED to RC (PR #6 -> merge commit 8661629; task branch deleted local+remote). Closes TASK-013's deferred scope: file-level provenance block (provider, source_url, fetched_at UTC, count, tool_version, cli_args) ignored by the registry loader; atomic refresh via tempfile.mkstemp + os.replace; candidate-deprecation reporting on refresh (report-only, never auto-deletes); rollback with non-destructive backup rotation + new `providers restore`; new `providers doctor` that schema-validates every generated catalog and exits 3 only on real corruption (not staleness).",
@@ -124,7 +124,7 @@
     "historical task records remain under loop/tasks and loop/reports",
     "historical TASK-004 0.945 result is retained as in-sample evidence but no longer treated as canonical held-out readiness"
   ],
-  "next_action": "Commit/push TASK-039 and refreshed release evidence; inspect TASK-038/TASK-039 CI while implementing TASK-040 for the next annotation or evaluation module. Continue PR review and release evidence without bypassing the frozen human-evaluation gate.",
+  "next_action": "Commit/push TASK-040 and refreshed evidence; inspect CI while starting the next Rust public-module port. Review PR #16 and preserve the unchanged human-evaluation release gate.",
   "completed_iter26": [
     "TASK-016 verified execution-host states MERGED to RC (PR #7 -> merge commit 5847c22; task branch deleted local+remote). hosts.py gained a readiness state vocabulary (missing/installed/configured/authenticated/authorized/degraded/unknown) plus a per-host remedy; `availability` keeps its exact prior meaning and is now derived from state. hosts list/doctor/show, the setup wizard and the execute refusal all report state + fix; hosts doctor ends with the cheapest concrete fix and exits non-zero only when no real host is ready. REST/MCP gained additive state/remedy and host_state/host_remedy keys. docs: new USER_GUIDE section 8 with the state table and the honesty note on `authorized`.",
     "BUG FIXED: host detection tested the API-key env var for truthiness, so a set-but-blank key (OPENAI_API_KEY='   ') reported available and `execute` would target a host that cannot authenticate. Now degraded/unavailable with a fix-it message, pinned by a parametrised test.",
@@ -233,6 +233,9 @@
     "Ported agentrouter.annotation.store: candidate/dataset YAML save/load, label JSONL save/load, manifest JSON save/load, directory creation, sorted split output, and canonical split SHA-256. Four Python/Rust tests cover both directions, exact JSONL and pretty sorted manifest bytes, Unicode escaping/hash, and sorted item order. Full Python suite 1,812 passed/6 skipped; line 92.15%, branch 87.22%, combined 91.03%. Full Rust workspace, Clippy, format, Ruff, and diff checks pass. Hosted CI to run after push."
   ],
   "completed_iter49": [
-    "Ported agentrouter.annotation.candidates, including the exact stable 63-prompt bank and CPython-compatible deterministic seeded shuffle. Fifty generation cases plus a bank inventory case cover positive, negative, arbitrary-width seeds and Python count slicing. Full Python suite 1,863 passed/6 skipped; 92.15% line, 87.22% branch, 91.03% combined. Full Rust workspace, Clippy, formatting, Ruff, and 51 focused differentials pass locally. Cross-platform CI pending push."
+    "Ported agentrouter.annotation.candidates, including the exact stable 63-prompt bank and CPython-compatible deterministic seeded shuffle. Fifty generation cases plus a bank inventory case cover positive, negative, arbitrary-width seeds and Python count slicing. Full Python suite 1,868 passed/6 skipped; 92.15% line, 87.22% branch, 91.03% combined. Full Rust workspace, Clippy, formatting, Ruff, and 51 focused differentials pass locally. Linux/Windows/macOS compatibility passes on 1c88b3c."
+  ],
+  "completed_iter50": [
+    "Ported agentrouter.annotation.compare with rules/learned/hybrid prediction, accuracy, macro-F1, per-band recall, abstention and fallback counts, ECE, and exact CPython-seeded 95% bootstrap confidence intervals. Five Python/Rust cases pass. Full Python suite 1,868 passed/6 skipped; 92.15% line, 87.22% branch, 91.03% combined. Full Rust workspace, Clippy, formatting and Ruff pass. The frozen release gate remains unchanged."
   ]
 }
