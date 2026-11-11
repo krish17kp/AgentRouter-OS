@@ -386,14 +386,19 @@ pub fn command_preview(target: &ExecutionTarget, redact: bool) -> String {
 }
 
 pub fn known_hosts() -> Vec<&'static str> {
-    let mut v: Vec<&'static str> = cli_hosts().keys().copied().collect();
-    v.extend(api_hosts_map().keys().copied());
-    v.push("manual");
-    v
+    vec![
+        "claude-code",
+        "codex-cli",
+        "anthropic-api",
+        "openai-api",
+        "gemini-api",
+        "openrouter",
+        "manual",
+    ]
 }
 
 pub fn api_hosts() -> Vec<&'static str> {
-    api_hosts_map().keys().copied().collect()
+    vec!["anthropic-api", "openai-api", "gemini-api", "openrouter"]
 }
 
 pub fn provider_for_api_host(host: &str) -> Option<&'static str> {
@@ -438,6 +443,26 @@ mod tests {
         std::env::remove_var("OPENROUTER_API_KEY");
         let s = detect_host("openrouter", None);
         assert_eq!(s.state, MISSING);
+    }
+
+    #[test]
+    fn host_lists_match_python_contract_order() {
+        assert_eq!(
+            known_hosts(),
+            vec![
+                "claude-code",
+                "codex-cli",
+                "anthropic-api",
+                "openai-api",
+                "gemini-api",
+                "openrouter",
+                "manual",
+            ]
+        );
+        assert_eq!(
+            api_hosts(),
+            vec!["anthropic-api", "openai-api", "gemini-api", "openrouter"]
+        );
     }
 
     #[test]

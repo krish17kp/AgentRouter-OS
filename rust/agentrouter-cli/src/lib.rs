@@ -22,6 +22,7 @@ use agentrouter_routing::RouteResult;
 use serde_json::{json, Value};
 
 pub mod dashboard;
+pub mod diagnostics;
 pub mod harness;
 pub mod observability;
 pub mod openai;

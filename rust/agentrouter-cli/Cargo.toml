@@ -58,3 +58,7 @@ path = "src/bin/observability_cli.rs"
 [[bin]]
 name = "harness_cli"
 path = "src/bin/harness_cli.rs"
+
+[[bin]]
+name = "doctor_cli"
+path = "src/bin/doctor_cli.rs"
