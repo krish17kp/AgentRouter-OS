@@ -1,6 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 .mobile-menu{display:none!important}@media(max-width:900px){.mobile-menu{display:block!important}}
 @media(max-width:560px){.hero .hero-copy{padding-top:110px!important}.hero .hero-node{display:none}.hero .hero-orbit{opacity:.30}}
