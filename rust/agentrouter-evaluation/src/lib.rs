@@ -21,6 +21,94 @@ pub const SINGLE_DIMS: [&str; 6] = [
     "approval",
 ];
 
+pub const DATASET_NAMES: [&str; 8] = [
+    "agentrouter-gold",
+    "clinc150",
+    "banking77",
+    "massive",
+    "longbench-v2",
+    "swebench",
+    "llmrouterbench",
+    "twinrouterbench",
+];
+
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct AdapterDescriptor {
+    pub name: &'static str,
+    pub module: &'static str,
+    pub class: &'static str,
+}
+
+pub const ADAPTERS: [AdapterDescriptor; 8] = [
+    AdapterDescriptor {
+        name: "agentrouter-gold",
+        module: "agentrouter_gold",
+        class: "AgentRouterGoldAdapter",
+    },
+    AdapterDescriptor {
+        name: "clinc150",
+        module: "clinc150",
+        class: "CLINC150Adapter",
+    },
+    AdapterDescriptor {
+        name: "banking77",
+        module: "banking77",
+        class: "Banking77Adapter",
+    },
+    AdapterDescriptor {
+        name: "massive",
+        module: "massive",
+        class: "MassiveAdapter",
+    },
+    AdapterDescriptor {
+        name: "longbench-v2",
+        module: "longbench_v2",
+        class: "LongBenchV2Adapter",
+    },
+    AdapterDescriptor {
+        name: "swebench",
+        module: "swebench",
+        class: "SWEBenchAdapter",
+    },
+    AdapterDescriptor {
+        name: "llmrouterbench",
+        module: "llmrouterbench",
+        class: "LLMRouterBenchAdapter",
+    },
+    AdapterDescriptor {
+        name: "twinrouterbench",
+        module: "twinrouterbench",
+        class: "TwinRouterBenchAdapter",
+    },
+];
+
+pub const PROFILE_NAMES: [&str; 5] = ["fast", "pr", "nightly", "release", "full"];
+
+pub fn profile_datasets(profile: &str) -> Result<&'static [&'static str], String> {
+    match profile {
+        "fast" | "pr" => Ok(&DATASET_NAMES[..1]),
+        "nightly" => Ok(&DATASET_NAMES[..4]),
+        "release" => Ok(&DATASET_NAMES[..5]),
+        "full" => Ok(&DATASET_NAMES),
+        _ => Err(format!(
+            "unknown profile '{profile}'. Known: {}",
+            PROFILE_NAMES.join(", ")
+        )),
+    }
+}
+
+pub fn adapter_descriptor(name: &str) -> Result<&'static AdapterDescriptor, String> {
+    ADAPTERS
+        .iter()
+        .find(|descriptor| descriptor.name == name)
+        .ok_or_else(|| {
+            format!(
+                "unknown dataset '{name}'. Known: {}",
+                DATASET_NAMES.join(", ")
+            )
+        })
+}
+
 #[derive(Debug, Clone, Copy, Default, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AnnotationMethod {

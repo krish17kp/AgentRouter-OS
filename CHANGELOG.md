@@ -30,6 +30,7 @@ All notable changes to AgentRouter OS. Format loosely follows
 - Rust evaluation quality reporting now computes dataset label/provenance distributions, duplicate counts, and paraphrase-family split leakage from supplied case metadata; environment snapshots remain Python-only.
 - Added Rust parity for evaluation's deterministic SHA-256 sampler, preserving seed/key ranking and original input order.
 - Added a Rust normalized evaluation-case schema with matching defaults, enum values, nonempty-task validation at the fixture boundary, checksums, and Unicode-aware task hashing.
+- Rust evaluation registry metadata now mirrors the eight dataset descriptors and five profile memberships; Python still constructs the actual dataset adapters.
 - Upgrade bundled SQLite to the patched 3.54.1 release and replace the unmaintained YAML parser with a pure-Rust serde-compatible layer; the Rust minimum is now 1.89.
 
 ### Fixed

@@ -1669,3 +1669,18 @@ Verification: full Python regression 1,729 passed / 6 skipped; 91.0056% line,
 and schema/metrics/provenance/sampling differential cases pass locally. The
 cross-platform pipeline for the existing `b5b6b8d` commit passed; schema and
 sampler additions need a new CI run.
+
+## Iteration 38 — 2026-11-11 — Rust evaluation registry metadata
+
+Added the eight dataset names, exact adapter module/class descriptors, and all
+five evaluation profiles to `agentrouter-evaluation`. The differential test
+compares the complete registry manifest and profile memberships with the
+Python registry. This remains a partial module port because Rust adapter
+construction, optional dataset loading, and validation are still pending.
+
+Verification: full Python regression 1,730 passed / 6 skipped; 91.0056% line,
+85.2327% branch, 89.6935% combined. Full Rust workspace tests, Clippy,
+formatting, Ruff, and registry/evaluation Python-Rust tests pass locally. The
+cross-platform workflow for commit `6186979` passed its Rust workspace, Python/
+Rust parity, and Rust 1.89 jobs; the current registry addition needs a new CI
+run.

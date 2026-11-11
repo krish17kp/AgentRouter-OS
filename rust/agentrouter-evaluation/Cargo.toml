@@ -28,3 +28,7 @@ path = "src/bin/evaluation_sample_from_json.rs"
 [[bin]]
 name = "evaluation_schema_from_json"
 path = "src/bin/evaluation_schema_from_json.rs"
+
+[[bin]]
+name = "evaluation_registry_from_json"
+path = "src/bin/evaluation_registry_from_json.rs"

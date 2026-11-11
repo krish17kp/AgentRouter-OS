@@ -10,6 +10,7 @@ import pytest
 
 from agentrouter.evaluation.metrics import classification_metrics
 from agentrouter.evaluation.provenance import dataset_quality
+from agentrouter.evaluation.registry import PROFILES, dataset_names, get_adapter
 from agentrouter.evaluation.sampling import deterministic_sample
 from agentrouter.evaluation.schema import (
     EvaluationCase,
@@ -373,3 +374,37 @@ def test_rust_evaluation_schema_and_hash_match_python():
         check=False,
     )
     assert rejected.returncode != 0
+
+
+def test_rust_evaluation_registry_and_profiles_match_python():
+    names = dataset_names()
+    expected = {
+        "dataset_names": names,
+        "profiles": PROFILES,
+        "adapters": [
+            {
+                "name": name,
+                "module": type(get_adapter(name)).__module__.rsplit(".", 1)[-1],
+                "class": type(get_adapter(name)).__name__,
+            }
+            for name in names
+        ],
+    }
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_registry_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps({"profiles": list(PROFILES), "names": names}),
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=True,
+    )
+    assert json.loads(process.stdout) == expected

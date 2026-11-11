@@ -61,7 +61,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/grading.py` | `—` | Not ported |
 | `agentrouter/evaluation/metrics.py` | `agentrouter-evaluation::classification_metrics` | Parity |
 | `agentrouter/evaluation/provenance.py` | `agentrouter-evaluation::dataset_quality` | Partial |
-| `agentrouter/evaluation/registry.py` | `—` | Not ported |
+| `agentrouter/evaluation/registry.py` | `agentrouter-evaluation::profile_datasets` | Partial |
 | `agentrouter/evaluation/reports.py` | `—` | Not ported |
 | `agentrouter/evaluation/runner.py` | `—` | Not ported |
 | `agentrouter/evaluation/sampling.py` | `agentrouter-evaluation::deterministic_sample` | Parity |
