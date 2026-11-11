@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "model": "multinomial_logistic_regression",
+  "trained_on": "context_band_dev_v1.yaml",
+  "note": "Trained ONLY on the development split. Frozen holdout never used for fit/selection.",
+  "C": 1.0,
+  "features": [
+    "explicit_ktoken",
+    "explicit_tokens",
+    "big_quantity",
+    "definite_existing",
+    "existing_marker",
+    "review_verb",
+    "pipeline",
+    "conceptual",
+    "new_indefinite",
+    "big_corpus",
+    "doc_noun",
+    "self_contained",
+    "wc_short",
+    "wc_long"
+  ],
+  "classes": [
+    "small",
+    "medium",
+    "large"
+  ],
+  "coef": [
+    [
+      -0.501452,
+      -0.460659,
+      -0.207401,
+      -0.525276,
+      -0.525276,
+      -0.380513,
+      0.074116,
+      0.772569,
+      0.404946,
+      -0.521773,
+      -0.207347,
+      0.214376,
+      0.837038,
+      0.0
+    ],
+    [
+      -0.223245,
+      -0.147282,
+      -0.136281,
+      1.113291,
+      1.113291,
+      0.158387,
+      -0.001231,
+      -0.265425,
+      -0.120739,
+      -0.297683,
+      -0.077053,
+      -0.061611,
+      -0.484262,
+      0.0
+    ],
+    [
+      0.724697,
+      0.607941,
+      0.343682,
+      -0.588015,
+      -0.588015,
+      0.222126,
+      -0.072884,
+      -0.507144,
+      -0.284207,
+      0.819456,
+      0.2844,
+      -0.152765,
+      -0.352776,
+      0.0
+    ]
+  ],
+  "intercept": [
+    0.341821,
+    -0.605257,
+    0.263435
+  ]
+}

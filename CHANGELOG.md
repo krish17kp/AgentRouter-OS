@@ -19,6 +19,7 @@ All notable changes to AgentRouter OS. Format loosely follows
 - Dated routing benchmark report: 12/12 committed gold scenarios and 15 focused benchmark/invariant tests pass; live latency and cost remain unmeasured.
 - macOS Python and Rust CI coverage now passes the configured platform jobs.
 - Rust harness detection now matches the Python module's verified environment markers and conservative fallback behavior across eight differential cases.
+- Rust now mirrors the dormant Python context-band model's deterministic features, artifact validation, and logistic inference, with 30 cross-language differential cases; classification remains rule-based and unchanged by default.
 - Upgrade bundled SQLite to the patched 3.54.1 release and replace the unmaintained YAML parser with a pure-Rust serde-compatible layer; the Rust minimum is now 1.89.
 
 ### Fixed

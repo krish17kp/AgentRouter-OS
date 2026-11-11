@@ -4,16 +4,17 @@
 //! module so the two stay behaviorally identical; see
 //! `tests/test_classifier_rust_compat.py` for the byte-for-byte check.
 //!
-//! The learned context-band model (`context_model.py`) is intentionally not
-//! ported: Python's `_USE_LEARNED_BAND` is `False`, so that code path is
-//! dead in the current shipping classifier. If it is ever flipped on, this
-//! crate must be revisited together with it.
+//! The learned context-band feature extractor and inference artifact are
+//! ported in `context_model`; the learned classifier remains disabled by
+//! default to preserve current Python routing behavior.
 
 use std::sync::OnceLock;
 
 use agentrouter_core::{ApprovalLevel, Classification, ContextBand, Level, OutputType, TaskType};
 use regex::Regex;
 use serde::Deserialize;
+
+pub mod context_model;
 
 fn matcher(words: &[&str]) -> Regex {
     let pattern = format!(
