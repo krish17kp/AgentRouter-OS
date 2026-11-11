@@ -5,10 +5,10 @@
 Product acceptance remains **not granted**. PRs #27–#33 and #13 are merged to
 the RC; PR #16 is the sole open PR. Its cross-platform Python/Rust, security,
 website, API, build, and mutation checks pass, but the unchanged
-context-band gate remains 0.6667 < 0.90. The Rust gold-adapter module now has
+context-band gate remains 0.6667 < 0.90. The Rust gold-adapter and LLMRouterBench modules now have
 differential coverage for metadata, availability, description, all 165 cases,
 checksums, and deterministic sampling. Full Python regression passes with
-1,767 passed and 6 skipped; line coverage is 92.09%, branch coverage 87.04%,
+1,768 passed and 6 skipped; line coverage is 92.09%, branch coverage 87.04%,
 and combined coverage 90.94%. Rust R4 and R5–R13 remain incomplete; no
 production deployment or paid OpenAI request occurred.
 The table below is historical.

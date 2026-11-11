@@ -112,3 +112,7 @@ path = "src/bin/evaluation_longbench_from_json.rs"
 [[bin]]
 name = "evaluation_swebench_from_json"
 path = "src/bin/evaluation_swebench_from_json.rs"
+
+[[bin]]
+name = "evaluation_llmrouterbench_from_json"
+path = "src/bin/evaluation_llmrouterbench_from_json.rs"

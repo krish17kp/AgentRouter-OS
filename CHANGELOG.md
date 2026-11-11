@@ -8,8 +8,9 @@ All notable changes to AgentRouter OS. Format loosely follows
 ### Added
 - Rust evaluation parity now includes shared fixture-adapter behavior across six
   datasets and raw-row normalization for CLINC150, Banking77, MASSIVE, and
-  LongBench v2, and SWE-bench. Remote dataset fetching remains external to the
-  Rust adapter and is reported as such.
+  LongBench v2, and SWE-bench; Rust now matches the complete LLMRouterBench
+  adapter contract and offline run-status output. Remote dataset fetching
+  remains external to the Rust adapter and is reported as such.
 - **`agentrouter plugin doctor` now diagnoses instead of describing.** For every
   plugin destination it reports the state and the exact safe fix, with exit `0`
   installed and unmodified, `1` blocked, `2` needs attention, plus `--json`. It

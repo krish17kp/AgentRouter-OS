@@ -1976,3 +1976,18 @@ Windows and general CI are finishing. TASK-027 awaits push and CI.
 
 Next: commit/push TASK-027, inspect cross-platform workflows, fix failures, and
 continue remaining adapters and public modules.
+
+
+## 2026-11-11 — TASK-028: Rust LLMRouterBench adapter parity
+
+Ported the complete adapter behavior: fixture cases and checksums, metadata,
+availability, real-mode skip, model-mapping requirements, full-run status and
+commands, description, and deterministic sample. One differential test compares
+the full Rust result with Python; the parity matrix marks the module Parity.
+Rust workspace/Clippy/format/Ruff and the full Python suite pass (1,768
+passed/6 skipped; 92.09% line, 87.04% branch, 90.94% combined coverage).
+TASK-027 cross-platform Rust workspace and compatibility pass; broader CI is
+finishing. TASK-028 awaits push and CI.
+
+Next: commit/push TASK-028, inspect platform workflows, fix failures, and
+continue remaining adapter and public module parity.

@@ -1,12 +1,12 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-11",
-  "current_phase": "IN_PROGRESS: TASK-027 SWE-bench Lite issue row preparation is locally complete. Differential tests, Rust workspace/Clippy/format/Ruff pass; full Python suite 1,767 passed/6 skipped and coverage 92.09/87.04/90.94. Commit/push to RC, inspect all CI, fix failures, continue parity.",
+  "current_phase": "IN_PROGRESS: TASK-028 completes LLMRouterBench adapter parity (fixture, mapping requirements, offline run status, description, availability, sample, checksum, real-mode skip). Differential test and local full checks pass; Python 1,768/6 with 92.09/87.04/90.94 coverage. Commit/push to RC, inspect CI, repair failures, continue parity.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
     "main": "PR #16 is the sole open PR against main. Cross-platform Python/Rust, security, site, API, build and mutation checks pass; enforce-release-gate fails honestly at context-band 0.6667 < 0.90. No gate bypass.",
-    "release/agentrouter-v0.5-rc1": "RC at 6bd5779; TASK-022 through TASK-026 adapter/base slices pushed. TASK-026 Rust workspace Linux/Windows/macOS and compatibility Linux/macOS pass, Windows/general CI still running; known release gate remains frozen context 0.6667 < 0.90. Local TASK-027 SWE-bench normalization awaits push.",
+    "release/agentrouter-v0.5-rc1": "RC at 4005a78; TASK-022 through TASK-027 adapter slices pushed. TASK-027 Linux/Windows/macOS Rust workspace and compatibility, security, website pass; mutation/general CI running. Frozen context release gate 0.6667 < 0.90 remains. Local TASK-028 LLMRouterBench full adapter parity awaits push.",
     "task/rust-r1-workspace": "PR #25 open against RC; 6ee8d3e passed complete GitHub CI; 32eee6f forced-init push failed Windows compile, file-handle repair awaits remote recheck; SQLite path-race blocker remains; Rust R4 partial and OpenAI execution hardening",
     "task/repo-cleanup-architecture-ponytail": "MERGED to RC (PR #14, merge commit 1ae3155); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/dynamic-skill-discovery": "MERGED to RC (PR #15, merge commit 62d5289); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
@@ -29,6 +29,7 @@
   "repo_sha_at_takeover": "602321af91ff298c0d5b59d6d36c24f845557fc1",
   "canonical_release_ready": false,
   "in_progress": [
+    "2026-11-11 TASK-028: LLMRouterBench full module parity, Rust differential test passes; full suite 1,768/6 and 92.09/87.04/90.94 coverage. Push and inspect cross-platform CI.",
     "2026-11-11 TASK-027: SWE-bench Rust issue preparation parity; full suite 1,767 passed/6 skipped, coverage 92.09/87.04/90.94. Push and inspect platform CI.",
     "2026-11-11 TASK-026: LongBench v2 Rust bucket and row preparation parity; full suite 1,766 passed/6 skipped, coverage 91.95/86.85/90.79. Commit/push and inspect platform CI.",
     "2026-11-11 TASK-025: MASSIVE Rust locale normalizer matches Python across en/hi/fr, language selection, dedup, metadata, missing/null values. Full local suite 1,765 passed/6 skipped; coverage 91.75/86.61/90.58. Push and inspect cross-platform CI.",
@@ -142,7 +143,7 @@
     "historical task records remain under loop/tasks and loop/reports",
     "historical TASK-004 0.945 result is retained as in-sample evidence but no longer treated as canonical held-out readiness"
   ],
-  "next_action": "Commit and push TASK-027 to release/agentrouter-v0.5-rc1, inspect Linux/Windows/macOS CI and repair failures, then continue the next parity slice.",
+  "next_action": "Commit and push TASK-028 to release/agentrouter-v0.5-rc1, inspect Linux/Windows/macOS CI and repair failures, then continue the next parity slice.",
   "completed_iter26": [
     "TASK-016 verified execution-host states MERGED to RC (PR #7 -> merge commit 5847c22; task branch deleted local+remote). hosts.py gained a readiness state vocabulary (missing/installed/configured/authenticated/authorized/degraded/unknown) plus a per-host remedy; `availability` keeps its exact prior meaning and is now derived from state. hosts list/doctor/show, the setup wizard and the execute refusal all report state + fix; hosts doctor ends with the cheapest concrete fix and exits non-zero only when no real host is ready. REST/MCP gained additive state/remedy and host_state/host_remedy keys. docs: new USER_GUIDE section 8 with the state table and the honesty note on `authorized`.",
     "BUG FIXED: host detection tested the API-key env var for truthiness, so a set-but-blank key (OPENAI_API_KEY='   ') reported available and `execute` would target a host that cannot authenticate. Now degraded/unavailable with a fix-it message, pinned by a parametrised test.",

@@ -2099,6 +2099,33 @@ pub fn normalize_swebench_rows(rows: &[SWEBenchRawRow]) -> Vec<EvaluationCase> {
     out
 }
 
+const LLMROUTERBENCH_MAPPING_NOTE: &str =
+    "Provide a model-mapping file translating LLMRouterBench model keys to registry entries; commercial names never appear in routing logic.";
+
+pub fn llmrouterbench_describe(
+    path: &Path,
+    metadata: &EvaluationDatasetMetadata,
+) -> serde_json::Value {
+    let mut description = describe_adapter(path, metadata, None);
+    description["model_mapping_required"] = serde_json::Value::Bool(true);
+    description["model_mapping_note"] =
+        serde_json::Value::String(LLMROUTERBENCH_MAPPING_NOTE.to_string());
+    description
+}
+
+pub fn llmrouterbench_full_run_status() -> serde_json::Value {
+    serde_json::json!({
+        "status": "SKIPPED_EXTERNAL",
+        "reason": "The full LLMRouterBench run consumes the benchmark's per-model outputs (keyed by commercial model names) and a model-mapping file onto registry entries, then scores router cost/quality. Cloning the repo and supplying the mapping are out of scope for offline CI.",
+        "commands": [
+            "git clone <LLMRouterBench repo> llmrouterbench && cd llmrouterbench",
+            "pip install -r requirements.txt",
+            "# create model_mapping.yaml mapping benchmark model keys -> registry model keys (provider/model_id)",
+            "python -m agentrouter.evaluation.cli run --dataset llmrouterbench --model-mapping model_mapping.yaml"
+        ]
+    })
+}
+
 #[derive(Debug, Deserialize)]
 struct AgentRouterGoldDocument {
     #[serde(default = "default_gold_version")]

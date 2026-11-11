@@ -3,19 +3,20 @@
 ## Current checkpoint — 2026-11-11
 
 PRs #27–#33 and #13 are merged into `release/agentrouter-v0.5-rc1`; RC head is
-`6bd5779` and PR #16 remains open to `main`. TASK-026 Rust workspace passes
-Linux/Windows/macOS and adapter compatibility passes Linux/macOS; Windows is
-still running. Security and website pass. The frozen context-band gate remains
-0.6667 against 0.90.
+`4005a78` and PR #16 remains open to `main`. TASK-027 Rust workspace and
+Python/Rust compatibility pass Linux/Windows/macOS; security and website pass.
+Mutation and broad Python checks are finishing. Frozen context-band accuracy
+0.6667 against 0.90 remains the promotion blocker.
 
-Current local task TASK-027 ports SWE-bench Lite issue-row preparation,
-including duplicate handling, fallback/null IDs, tags, routing ability,
-provenance, and notes. Two focused adapter tests, Rust workspace, Clippy,
-format, Ruff, and full Python suite pass: 1,767 passed, 6 skipped; 92.09% line,
-87.04% branch, and 90.94% combined coverage. Remote downloads/Docker solving,
-other adapter transforms, evaluation runner/CLI/annotation, and many public
-modules remain incomplete in `docs/RUST_PARITY_MATRIX.md`. Human annotations,
-live OpenAI validation, and production credentials are under **Needs Krish** in
+Current local task completes LLMRouterBench adapter parity, covering fixture
+loading, mapping requirements, offline full-run instructions, real-mode skip,
+description, sample, checksum, and the full serialized contract. Its focused
+differential test, Rust workspace, Clippy, format, Ruff, and full Python suite
+pass: 1,768 passed, 6 skipped; 92.09% line, 87.04% branch, and 90.94% combined
+coverage. Remaining adapter transformations, remote runs, evaluation
+runner/CLI/annotation, and many public modules are inventoried in
+`docs/RUST_PARITY_MATRIX.md`. Human annotation, live OpenAI validation, and
+production credentials are recorded under **Needs Krish** in
 `PRODUCTION_STATUS.md`. `AGENT_HANDOFF.md` is authoritative.
 
 ## Historical narrative
