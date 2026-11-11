@@ -130,7 +130,7 @@
     "historical task records remain under loop/tasks and loop/reports",
     "historical TASK-004 0.945 result is retained as in-sample evidence but no longer treated as canonical held-out readiness"
   ],
-  "next_action": "Commit and push the Rust routing evaluator with updated coverage evidence, monitor CI for feedback/provider/routing slices across Linux/Windows/macOS, then continue evaluation and CLI parity while preserving PR #16 frozen-gate hold.",
+  "next_action": "Commit and push full Rust report-file parity with refreshed coverage, monitor its cross-platform CI while porting another public evaluator, and keep PR #16 frozen-gate blocked until independent human results are supplied.",
   "completed_iter26": [
     "TASK-016 verified execution-host states MERGED to RC (PR #7 -> merge commit 5847c22; task branch deleted local+remote). hosts.py gained a readiness state vocabulary (missing/installed/configured/authenticated/authorized/degraded/unknown) plus a per-host remedy; `availability` keeps its exact prior meaning and is now derived from state. hosts list/doctor/show, the setup wizard and the execute refusal all report state + fix; hosts doctor ends with the cheapest concrete fix and exits non-zero only when no real host is ready. REST/MCP gained additive state/remedy and host_state/host_remedy keys. docs: new USER_GUIDE section 8 with the state table and the honesty note on `authorized`.",
     "BUG FIXED: host detection tested the API-key env var for truthiness, so a set-but-blank key (OPENAI_API_KEY='   ') reported available and `execute` would target a host that cannot authenticate. Now degraded/unavailable with a fix-it message, pinned by a parametrised test.",
@@ -210,5 +210,8 @@
   ],
   "completed_iter39": [
     "Added Rust routing evaluation over caller-supplied models with gold constraints and disclosed fallback proxy parity. Full Python suite 1,736 passed/6 skipped; 91.10% line, 85.52% branch, 89.83% combined. Workspace tests, Clippy, format, Ruff, and 16 evaluation differential tests pass; cross-platform CI pending."
+  ],
+  "completed_iter40": [
+    "Completed Rust evaluation report writing for JSON, scorecard, Markdown, failures, holdout failures, and sorted confusion CSVs. Differential coverage verifies exact file order and bytes including CSV quoting. Full Python suite 1,737 passed/6 skipped; 91.12% line, 85.57% branch, 89.86% combined. Full workspace/Clippy/format and 17 evaluation differential tests pass; CI pending."
   ]
 }

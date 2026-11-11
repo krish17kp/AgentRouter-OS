@@ -1772,3 +1772,16 @@ Verification: full Python suite 1,736 passed / 6 skipped; 91.10% line, 85.52%
 branch, and 89.83% combined coverage. Full Rust workspace, Clippy, formatting,
 Ruff, and all 16 evaluation differential tests pass. Cross-platform CI for this
 routing scorer is pending after push.
+
+## Iteration 45 — 2026-11-11 — Complete Rust evaluation report writer
+
+Completed the Rust report directory writer: versioned result JSON, scorecard,
+Markdown, classification failures CSV, frozen-holdout failures CSV, and sorted
+classification/risk confusion CSVs. The differential test checks file order and
+byte-for-byte artifact contents, including CSV escaping for commas, quotes, and
+embedded newlines. `evaluation/reports.py` is now marked Parity.
+
+Verification: full Python suite 1,737 passed / 6 skipped; 91.12% line, 85.57%
+branch, and 89.86% combined coverage. Full Rust workspace tests, Clippy,
+formatting, Ruff, and all 17 evaluation differential tests pass. Cross-platform
+CI for the report writer is pending after push.

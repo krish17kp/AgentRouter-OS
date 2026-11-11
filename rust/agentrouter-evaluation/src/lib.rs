@@ -717,6 +717,186 @@ pub fn render_markdown(result: &serde_json::Value) -> String {
     output
 }
 
+/// Write all report artifacts emitted by Python `evaluation.reports`,
+/// returning the same filename order without including machine-specific paths.
+pub fn write_reports(
+    result: &serde_json::Value,
+    out_dir: &std::path::Path,
+) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    use serde_json::{json, Map, Value};
+    use std::fs;
+
+    fs::create_dir_all(out_dir)?;
+    let mut written = Vec::new();
+    let mut payload = Map::new();
+    payload.insert("report_schema_version".to_owned(), json!(1));
+    if let Some(fields) = result.as_object() {
+        for (key, value) in fields {
+            payload.insert(key.clone(), value.clone());
+        }
+    }
+    write_json_file(out_dir, "result.json", &Value::Object(payload))?;
+    written.push("result.json".to_owned());
+
+    let mut scorecard = Map::new();
+    for key in [
+        "grade_over_100",
+        "grade_of_measured",
+        "dimensions",
+        "release_gates",
+        "release_ready",
+        "context_band_generalization",
+    ] {
+        scorecard.insert(
+            key.to_owned(),
+            result.get(key).cloned().unwrap_or(Value::Null),
+        );
+    }
+    write_json_file(out_dir, "scorecard.json", &Value::Object(scorecard))?;
+    written.push("scorecard.json".to_owned());
+
+    fs::write(out_dir.join("report.md"), render_markdown(result))?;
+    written.push("report.md".to_owned());
+
+    let metrics = result.get("classification").unwrap_or(&Value::Null);
+    let mut csv = vec![csv_record(&[
+        "id".to_owned(),
+        "prompt".to_owned(),
+        "dimension".to_owned(),
+        "expected".to_owned(),
+        "predicted".to_owned(),
+    ])];
+    if let Some(failures) = metrics.get("failures").and_then(Value::as_array) {
+        for failure in failures {
+            if let Some(dimensions) = failure.get("failed").and_then(Value::as_array) {
+                for dimension in dimensions {
+                    let expected = dimension
+                        .get("expected")
+                        .and_then(Value::as_array)
+                        .map(|values| {
+                            values
+                                .iter()
+                                .map(python_string)
+                                .collect::<Vec<_>>()
+                                .join("|")
+                        })
+                        .unwrap_or_default();
+                    let predicted = match dimension.get("predicted") {
+                        Some(Value::Array(values)) => values
+                            .iter()
+                            .map(python_string)
+                            .collect::<Vec<_>>()
+                            .join("|"),
+                        Some(value) => python_string(value),
+                        None => String::new(),
+                    };
+                    csv.push(csv_record(&[
+                        result_value(failure, "id"),
+                        result_value(failure, "prompt"),
+                        result_value(dimension, "dim"),
+                        expected,
+                        predicted,
+                    ]));
+                }
+            }
+        }
+    }
+    fs::write(out_dir.join("failures.csv"), csv.concat())?;
+    written.push("failures.csv".to_owned());
+
+    let generalization = result
+        .get("context_band_generalization")
+        .filter(|value| !value.is_null());
+    let holdout_failures = generalization
+        .and_then(|value| value.get("current_holdout"))
+        .and_then(|value| value.get("failures"))
+        .and_then(Value::as_array);
+    let mut csv = vec![csv_record(&[
+        "id".to_owned(),
+        "category".to_owned(),
+        "expected".to_owned(),
+        "predicted".to_owned(),
+    ])];
+    if let Some(failures) = holdout_failures {
+        for failure in failures {
+            csv.push(csv_record(&[
+                result_value(failure, "id"),
+                result_value(failure, "category"),
+                result_value(failure, "expected"),
+                result_value(failure, "predicted"),
+            ]));
+        }
+    }
+    fs::write(
+        out_dir.join("context_band_holdout_failures.csv"),
+        csv.concat(),
+    )?;
+    written.push("context_band_holdout_failures.csv".to_owned());
+
+    for (key, filename) in [
+        ("confusion_task_type", "confusion_task_type.csv"),
+        ("confusion_risk", "confusion_risk.csv"),
+    ] {
+        if let Some(matrix) = metrics.get(key).and_then(Value::as_object) {
+            fs::write(out_dir.join(filename), confusion_csv(matrix))?;
+            written.push(filename.to_owned());
+        }
+    }
+    Ok(written)
+}
+
+fn write_json_file(
+    out_dir: &std::path::Path,
+    filename: &str,
+    value: &serde_json::Value,
+) -> Result<(), Box<dyn std::error::Error>> {
+    std::fs::write(out_dir.join(filename), serde_json::to_string_pretty(value)?)?;
+    Ok(())
+}
+
+fn csv_record(fields: &[String]) -> String {
+    let mut row = fields
+        .iter()
+        .map(|field| {
+            if field.contains([',', '"', '\r', '\n']) {
+                format!("\"{}\"", field.replace('"', "\"\""))
+            } else {
+                field.clone()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(",");
+    row.push_str("\r\n");
+    row
+}
+
+fn confusion_csv(matrix: &serde_json::Map<String, serde_json::Value>) -> String {
+    use std::collections::BTreeSet;
+
+    let mut labels: BTreeSet<String> = matrix.keys().cloned().collect();
+    for row in matrix.values().filter_map(serde_json::Value::as_object) {
+        labels.extend(row.keys().cloned());
+    }
+    let labels: Vec<_> = labels.into_iter().collect();
+    let mut output = vec![csv_record(
+        &std::iter::once("gold\\pred".to_owned())
+            .chain(labels.iter().cloned())
+            .collect::<Vec<_>>(),
+    )];
+    for gold in &labels {
+        let row = matrix.get(gold).and_then(serde_json::Value::as_object);
+        let mut fields = vec![gold.clone()];
+        fields.extend(labels.iter().map(|predicted| {
+            row.and_then(|row| row.get(predicted))
+                .and_then(serde_json::Value::as_i64)
+                .unwrap_or(0)
+                .to_string()
+        }));
+        output.push(csv_record(&fields));
+    }
+    output.concat()
+}
+
 fn result_value(value: &serde_json::Value, key: &str) -> String {
     value
         .get(key)

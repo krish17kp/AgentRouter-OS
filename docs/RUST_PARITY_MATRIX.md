@@ -62,7 +62,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/metrics.py` | `agentrouter-evaluation::classification_metrics` | Parity |
 | `agentrouter/evaluation/provenance.py` | `agentrouter-evaluation::dataset_quality` | Partial |
 | `agentrouter/evaluation/registry.py` | `agentrouter-evaluation::profile_datasets` | Partial |
-| `agentrouter/evaluation/reports.py` | `agentrouter-evaluation::render_markdown` | Partial |
+| `agentrouter/evaluation/reports.py` | `agentrouter-evaluation::{render_markdown, write_reports}` | Parity |
 | `agentrouter/evaluation/runner.py` | `—` | Not ported |
 | `agentrouter/evaluation/sampling.py` | `agentrouter-evaluation::deterministic_sample` | Parity |
 | `agentrouter/evaluation/schema.py` | `agentrouter-evaluation::EvaluationCase` | Partial |
@@ -102,9 +102,8 @@ release authority until the full set is complete.
 - Context-band model inference is ported but remains disabled in the default
   classifier. The frozen evaluation gate still controls whether learned routing
   can be enabled.
-- The evaluation report Markdown renderer has one exact differential fixture;
-  JSON/scorecard/CSV file writing and report-directory orchestration remain
-  Python-only.
+- Evaluation JSON, scorecard, Markdown, failure/holdout CSV, confusion CSV, and
+  output file ordering all have a Python/Rust differential fixture.
 - Classification-only grading and gate calculation have differential coverage;
   Rust does not invoke the classifier or implement the `measure_all` evaluators.
 - The safety evaluator now classifies and gates cases in Rust with differential

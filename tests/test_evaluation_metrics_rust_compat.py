@@ -17,7 +17,7 @@ from agentrouter.evaluation.grading import grade
 from agentrouter.evaluation.metrics import classification_metrics
 from agentrouter.evaluation.provenance import dataset_quality
 from agentrouter.evaluation.registry import PROFILES, dataset_names, get_adapter
-from agentrouter.evaluation.reports import render_markdown
+from agentrouter.evaluation.reports import render_markdown, write_reports
 from agentrouter.evaluation.sampling import deterministic_sample
 from agentrouter.evaluation.schema import (
     EvaluationCase,
@@ -481,6 +481,108 @@ def test_rust_evaluation_markdown_matches_python():
         check=True,
     )
     assert process.stdout == render_markdown(result)
+
+
+def test_rust_evaluation_report_files_match_python(tmp_path):
+    result = {
+        "environment": {"python": "3.12", "dirty": False},
+        "grade_over_100": 71.25,
+        "grade_of_measured": 82.5,
+        "possible_measured_points": 86.36,
+        "release_ready": False,
+        "n_cases": 12,
+        "dimensions": {
+            "classification": {
+                "weight": 30,
+                "status": "measured",
+                "score": 0.875,
+                "achieved": 26.25,
+            },
+            "routing": {"weight": 25, "status": "pending", "score": None, "achieved": 0},
+        },
+        "release_gates": {"task_type_macro_f1>=0.90": False, "human_review": True},
+        "classification": {
+            "task_type": {"macro_f1": 0.88},
+            "high_risk_recall": 1.0,
+            "tools": {"f1": 0.75},
+            "context": {"accuracy": 0.9},
+            "failures": [
+                {
+                    "id": "case,1",
+                    "prompt": "first line, quoted\nsecond line",
+                    "failed": [
+                        {
+                            "dim": "task_type",
+                            "expected": ["coding", "analysis"],
+                            "predicted": "writing",
+                        },
+                        {
+                            "dim": "tool_needs",
+                            "expected": ["shell", "browser"],
+                            "predicted": ["shell", "mcp"],
+                        },
+                    ],
+                }
+            ],
+            "confusion_task_type": {
+                "writing": {"coding": 1, "writing": 2},
+                "coding": {"writing": 0},
+            },
+            "confusion_risk": {"high": {"low": 1}, "low": {"low": 3}},
+        },
+        "context_band_generalization": {
+            "holdout_sha256": "abc123",
+            "current_holdout": {
+                "accuracy": 0.6667,
+                "accuracy_ci95": [0.5, 0.8],
+                "macro_f1": 0.61,
+                "macro_f1_bootstrap_ci95": [0.4, 0.75],
+                "per_band_recall": {"short": 0.8, "long": 0.5},
+                "failures": [
+                    {
+                        "id": "holdout-1",
+                        "category": "review",
+                        "expected": "high",
+                        "predicted": "low",
+                    }
+                ],
+            },
+            "pre_task004_holdout": {"accuracy": 0.5},
+            "delta": {"accuracy": 0.1667},
+            "limitations": ["small blinded fixture"],
+        },
+    }
+    python_dir = tmp_path / "python"
+    rust_dir = tmp_path / "rust"
+    python_paths = write_reports(result, python_dir)
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_write_reports_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps({"result": result, "out_dir": str(rust_dir)}),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+        check=True,
+    )
+    assert json.loads(process.stdout) == [path.name for path in python_paths]
+    for name in ("report.md", "failures.csv", "context_band_holdout_failures.csv"):
+        assert (rust_dir / name).read_bytes() == (python_dir / name).read_bytes()
+    for name in (
+        "result.json",
+        "scorecard.json",
+        "confusion_task_type.csv",
+        "confusion_risk.csv",
+    ):
+        assert (rust_dir / name).read_bytes() == (python_dir / name).read_bytes()
 
 
 def test_rust_classification_grade_matches_python():
