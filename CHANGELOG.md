@@ -6,6 +6,10 @@ All notable changes to AgentRouter OS. Format loosely follows
 ## [Unreleased]
 
 ### Changed
+- Extend Rust catalog operations with provenance-aware status summaries,
+  sorted generated-catalog listing, and guarded rollback/restore; Python/Rust
+  differentials cover listing and rollback, while restore refuses linked files
+  and concurrent destination replacement.
 - Port deterministic annotation candidate generation and rules/learned/hybrid
   context-band comparison to Rust with Python differential coverage.
 - Match Python text-file newline behavior on Windows for annotation artifacts.

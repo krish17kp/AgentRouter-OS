@@ -126,9 +126,12 @@ release authority until the full set is complete.
   response TTL and media type, and per-key single-flight semantics. It is a
   process-local primitive; the HTTP middleware and server request lifecycle
   still run through Python.
-- Rust catalog metadata now matches Python for provenance reads, status source,
-  fetch and tool-version fields, and sorted deprecation reports. The backup,
-  rollback and restore lifecycle remains Python-only.
+- Rust catalog operations now include provenance reads, freshness summaries,
+  sorted generated-catalog listing and deprecation reports, plus rollback and
+  restore with raw-byte preservation, exclusive backup creation, linked-file
+  refusal and no-clobber restoration. Python-compatible behavior is
+  differentially tested; typed `CatalogError` and all error-message edge cases
+  remain open, so the module is still Partial.
 - Performance scoring and classification/routing timing now run in Rust for
   caller-supplied models and tasks. Seed loading and injected classifier
   behavior remain Python-side; latency values are machine-dependent.

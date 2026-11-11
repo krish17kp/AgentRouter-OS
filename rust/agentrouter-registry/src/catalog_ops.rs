@@ -8,7 +8,7 @@ use chrono::NaiveDate;
 use serde_yaml::Value;
 use unicode_general_category::{get_general_category, GeneralCategory};
 
-use crate::{read_text_nofollow, STALE_AFTER_DAYS};
+use crate::{read_bytes_nofollow, read_text_nofollow, STALE_AFTER_DAYS};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CatalogStatus {
@@ -91,6 +91,123 @@ fn provider_of(path: &Path) -> Result<String, String> {
         return Err("invalid generated catalog provider id".to_string());
     }
     Ok(provider.to_string())
+}
+
+fn validate_provider(provider: &str) -> Result<(), String> {
+    if provider.is_empty()
+        || !provider
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
+        return Err(format!("invalid provider id: {provider:?}"));
+    }
+    Ok(())
+}
+
+fn exists_or_symlink(path: &Path) -> bool {
+    path.exists() || std::fs::symlink_metadata(path).is_ok()
+}
+
+fn rotate_backup(backup: &Path) -> Result<(), String> {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let mut suffix = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| error.to_string())?
+        .as_nanos();
+    loop {
+        let filename = backup
+            .file_name()
+            .and_then(|filename| filename.to_str())
+            .ok_or_else(|| "invalid backup path".to_string())?;
+        let rotated = backup.with_file_name(format!("{filename}.{suffix}"));
+        if !exists_or_symlink(&rotated) {
+            return std::fs::rename(backup, &rotated).map_err(|error| error.to_string());
+        }
+        suffix = suffix.saturating_add(1);
+    }
+}
+
+/// Back up then remove the single generated catalog for `provider`.
+///
+/// Backup creation is exclusive and refuses linked/non-file source paths. A
+/// prior backup is moved to a unique history name before a new backup is made.
+pub fn rollback(reg_dir: &Path, provider: &str) -> Result<Option<PathBuf>, String> {
+    validate_provider(provider)?;
+    let path = reg_dir.join(format!("models.{provider}.generated.yaml"));
+    if !path.exists() {
+        return Ok(None);
+    }
+    let filename = path
+        .file_name()
+        .and_then(|filename| filename.to_str())
+        .ok_or_else(|| "invalid generated catalog path".to_string())?;
+    let backup = path.with_file_name(format!("{filename}.bak"));
+    if exists_or_symlink(&backup) {
+        rotate_backup(&backup)?;
+    }
+
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut backup_file = options
+        .open(&backup)
+        .map_err(|error| format!("cannot create backup {}: {error}", backup.display()))?;
+    let result = (|| {
+        let contents = read_bytes_nofollow(&path).map_err(|error| error.to_string())?;
+        std::io::Write::write_all(&mut backup_file, &contents)
+            .map_err(|error| error.to_string())?;
+        drop(backup_file);
+        std::fs::remove_file(&path).map_err(|error| error.to_string())
+    })();
+    if let Err(error) = result {
+        let _ = std::fs::remove_file(&backup);
+        return Err(error);
+    }
+    Ok(Some(backup))
+}
+
+/// Restore the most recent backup, refusing to overwrite a refreshed catalog.
+pub fn restore(reg_dir: &Path, provider: &str) -> Result<Option<PathBuf>, String> {
+    validate_provider(provider)?;
+    let path = reg_dir.join(format!("models.{provider}.generated.yaml"));
+    let filename = path
+        .file_name()
+        .and_then(|filename| filename.to_str())
+        .ok_or_else(|| "invalid generated catalog path".to_string())?;
+    let backup = path.with_file_name(format!("{filename}.bak"));
+    if !backup.exists() {
+        return Ok(None);
+    }
+    let contents = read_bytes_nofollow(&backup).map_err(|error| error.to_string())?;
+    if exists_or_symlink(&path) {
+        return Err(format!(
+            "{} already exists — remove or roll it back before restoring the backup",
+            path.display()
+        ));
+    }
+    // create_new is an atomic no-clobber operation, including if another
+    // process creates the destination after the existence check above.
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut restored = options.open(&path).map_err(|error| error.to_string())?;
+    if let Err(error) = std::io::Write::write_all(&mut restored, &contents) {
+        drop(restored);
+        let _ = std::fs::remove_file(&path);
+        return Err(error.to_string());
+    }
+    drop(restored);
+    std::fs::remove_file(&backup).map_err(|error| error.to_string())?;
+    Ok(Some(path))
 }
 
 fn parse_iso_date(value: &str) -> Option<NaiveDate> {
@@ -277,5 +394,129 @@ mod tests {
         assert_eq!(status.source_url.as_deref(), Some("https://example.test"));
         assert_eq!(status.fetched_at.as_deref(), Some("2026-11-12T00:00:00Z"));
         assert_eq!(status.tool_version.as_deref(), Some("0.5.0rc1"));
+    }
+
+    #[test]
+    fn rollback_and_restore_preserve_catalog_bytes() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("models.openai.generated.yaml");
+        let original = b"models: [\xff, raw bytes]\n";
+        std::fs::write(&path, original).unwrap();
+
+        let backup = rollback(directory.path(), "openai").unwrap().unwrap();
+        assert!(!path.exists());
+        assert_eq!(std::fs::read(&backup).unwrap(), original);
+        assert_eq!(
+            restore(directory.path(), "openai").unwrap(),
+            Some(path.clone())
+        );
+        assert_eq!(std::fs::read(path).unwrap(), original);
+    }
+
+    #[test]
+    fn rollback_rotates_backup_and_restore_refuses_to_clobber() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("models.openai.generated.yaml");
+        std::fs::write(&path, "first").unwrap();
+        let backup = rollback(directory.path(), "openai").unwrap().unwrap();
+        std::fs::write(&path, "second").unwrap();
+        let second_backup = rollback(directory.path(), "openai").unwrap().unwrap();
+        assert_eq!(std::fs::read(&backup).unwrap(), b"second");
+        let rotated = directory.path().join(format!(
+            "{}.",
+            backup.file_name().unwrap().to_string_lossy()
+        ));
+        assert!(std::fs::read_dir(directory.path())
+            .unwrap()
+            .filter_map(Result::ok)
+            .any(|entry| entry
+                .file_name()
+                .to_string_lossy()
+                .starts_with(rotated.file_name().unwrap().to_string_lossy().as_ref())));
+        assert_eq!(std::fs::read(second_backup).unwrap(), b"second");
+
+        std::fs::write(&path, "refreshed").unwrap();
+        assert!(restore(directory.path(), "openai")
+            .unwrap_err()
+            .contains("already exists"));
+    }
+
+    #[test]
+    fn catalog_file_operations_reject_unsafe_provider_ids() {
+        let directory = tempfile::tempdir().unwrap();
+        assert!(rollback(directory.path(), "../escape")
+            .unwrap_err()
+            .contains("invalid provider"));
+        assert!(restore(directory.path(), "../escape")
+            .unwrap_err()
+            .contains("invalid provider"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rollback_rotates_symlink_backup_without_touching_its_target() {
+        use std::os::unix::fs::symlink;
+
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("models.openai.generated.yaml");
+        let backup = directory.path().join("models.openai.generated.yaml.bak");
+        let outside = directory.path().join("outside.txt");
+        std::fs::write(&path, "generated").unwrap();
+        std::fs::write(&outside, "untouched").unwrap();
+        symlink(&outside, &backup).unwrap();
+
+        rollback(directory.path(), "openai").unwrap();
+        assert_eq!(std::fs::read(&outside).unwrap(), b"untouched");
+        assert_eq!(std::fs::read(&backup).unwrap(), b"generated");
+        assert!(std::fs::read_dir(directory.path())
+            .unwrap()
+            .filter_map(Result::ok)
+            .any(|entry| entry
+                .file_name()
+                .to_string_lossy()
+                .starts_with("models.openai.generated.yaml.bak.")));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rollback_refuses_a_symlink_catalog_source() {
+        use std::os::unix::fs::symlink;
+
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("models.openai.generated.yaml");
+        let outside = directory.path().join("outside.yaml");
+        std::fs::write(&outside, "outside data").unwrap();
+        symlink(&outside, &path).unwrap();
+
+        assert!(rollback(directory.path(), "openai").is_err());
+        assert_eq!(std::fs::read(&outside).unwrap(), b"outside data");
+        assert!(std::fs::symlink_metadata(&path)
+            .unwrap()
+            .file_type()
+            .is_symlink());
+        assert!(!directory
+            .path()
+            .join("models.openai.generated.yaml.bak")
+            .exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn restore_refuses_a_symlink_generated_destination() {
+        use std::os::unix::fs::symlink;
+
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("models.openai.generated.yaml");
+        let backup = directory.path().join("models.openai.generated.yaml.bak");
+        let outside = directory.path().join("outside.yaml");
+        std::fs::write(&outside, "outside data").unwrap();
+        std::fs::write(&backup, "backup data").unwrap();
+        symlink(&outside, &path).unwrap();
+
+        assert!(restore(directory.path(), "openai")
+            .unwrap_err()
+            .contains("already exists"));
+        assert_eq!(std::fs::read(&outside).unwrap(), b"outside data");
+        assert_eq!(std::fs::read(&backup).unwrap(), b"backup data");
     }
 }

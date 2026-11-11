@@ -307,6 +307,12 @@ fn default_auth_model() -> String {
 }
 
 pub(crate) fn read_text_nofollow(path: &Path) -> std::io::Result<String> {
+    let bytes = read_bytes_nofollow(path)?;
+    String::from_utf8(bytes)
+        .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))
+}
+
+pub(crate) fn read_bytes_nofollow(path: &Path) -> std::io::Result<Vec<u8>> {
     let metadata = std::fs::symlink_metadata(path)?;
     if !metadata.file_type().is_file() || metadata.file_type().is_symlink() {
         return Err(std::io::Error::new(
@@ -354,9 +360,9 @@ pub(crate) fn read_text_nofollow(path: &Path) -> std::io::Result<String> {
             ));
         }
     }
-    let mut text = String::new();
-    file.read_to_string(&mut text)?;
-    Ok(text)
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes)?;
+    Ok(bytes)
 }
 
 fn load_yaml(path: &Path) -> Result<serde_yaml::Mapping, RegistryError> {

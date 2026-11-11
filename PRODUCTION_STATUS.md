@@ -4,10 +4,10 @@ Updated: 2026-11-12
 
 ## Definition of done
 
-- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PRs #27–#33 are merged; PR #16 is the sole open PR and remains blocked by the frozen context-band gate (0.6667 < 0.90). TASK-029 through TASK-037 hosted Rust/Python checks pass across Linux/Windows/macOS; security, site, and mutation checks pass. The latest general CI fails only at the unchanged promotion gate; live smoke is skipped without credentials.
+- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PRs #27–#33 are merged; PR #16 is the sole open PR and remains blocked by the frozen context-band gate (0.6667 < 0.90). The 60abded run also exposed one Windows-only catalog-status path-separator assertion, now corrected locally; CI for the correction is pending. Live smoke is skipped without credentials.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md); current gaps are explicit, and only modules with full-module differential tests are marked parity (35 modules meet that bar after TASK-051).
-- [x] Full Python suite: 1,947 passed, 6 skipped; 92.34% line (6,617/7,166), 87.37% branch (1,840/2,106), and 91.21% combined coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; exact evidence is in `docs/COVERAGE_REPORT_2026-11-12.md`.
+- [x] Full Python suite: 1,952 passed, 6 skipped; 92.34% line (6,617/7,166), 87.37% branch (1,840/2,106), and 91.21% combined coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; exact evidence is in `docs/COVERAGE_REPORT_2026-11-12.md`.
 - [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations; the Rust release benchmark now runs the same 10/100/1,000 candidate fleets, with a paired local p50 ratio of 2.70×–3.25× under stated synthetic conditions.
 - [x] Changelog, coverage evidence, and local latency measurements are committed to the release candidate. Candidate package version is now `0.5.0rc1`, with draft release notes in `docs/RELEASE_NOTES_v0.5.0rc1.md`; final `0.5.0` packaging and publication remain blocked on parity and all release gates.
 - [ ] Release candidate promoted to `main` with a tagged release.
@@ -68,7 +68,8 @@ Updated: 2026-11-12
 - [x] TASK-058 verifies the annotation schema's Pydantic integer-string coercion for integral decimals and underscore-separated digits, and rejects fractional/exponent/malformed forms. The focused schema suite passes 37 tests; arbitrary-precision integers remain outside Rust's `i64` contract.
 - [x] TASK-059 closes additional datetime mismatches found by differential checks: reject leap seconds, accept Python-compatible signed numeric timestamp strings while rejecting integer exponent forms, and round timestamp microseconds like Python. The focused schema suite passes 49 cases; an additional 40-value timestamp corpus has zero Python/Rust mismatches.
 - [x] TASK-060 adds Rust fixed-window rate limiting, bounded TTL idempotency caching, and per-key single-flight computation. Seven Rust unit tests and four Python/Rust differential tests pass, including environment configuration and capacity bounds. The HTTP middleware and full Python server lifecycle remain unported, so server limits stay Partial.
-- [x] TASK-061 adds Rust catalog provenance reads, fetched-at/tool-version status fields, and sorted report-only deprecations. Three Rust unit tests and three Python/Rust differential tests pass. Secure rollback/restore and remaining catalog operations stay unported, so `catalog_ops.py` remains Partial.
+- [x] TASK-061 adds Rust catalog provenance reads, fetched-at/tool-version status fields, and sorted report-only deprecations.
+- [ ] TASK-062 extends Rust catalog operations with summaries, generated-catalog listing, rollback, and restore. Differential tests cover Python ordering/summary and rollback round trips; Rust tests cover raw bytes, unsafe providers, linked source/destination/backup refusal, backup rotation, and no-clobber restore. The Rust slice is implemented but still needs the full regression and cross-platform CI; typed Python `CatalogError` compatibility and edge-case error parity remain open, so `catalog_ops.py` remains Partial.
 - [ ] TASK-056 adds the `agentrouter-evaluate` Rust CLI for listing/validating datasets, running fixture profiles, writing/rendering/comparing reports, availability, explicit external prepare blockers, and context-band generalization. Four smoke/differential tests pass. The Rust command does not yet replace the Python `agentrouter evaluate` surface or load real datasets, so CLI module parity remains Partial.
 - [x] PR #31 upgraded bundled SQLite to 3.54.1, replaced `unsafe-libyaml`, and raised the Rust minimum to 1.89; workspace tests, Clippy, security audit, and cross-platform CI passed before merge at `a246cf6`.
 - [x] Website product-truth fixes, font hierarchy/motion redesign, unused shadcn CLI removal, server limits/API tests, and website lint/build CI merged via PR #27. npm build/lint and production dependency audit passed; full npm audit still reports moderate dev-tool advisories.
@@ -81,14 +82,17 @@ Updated: 2026-11-12
 - OpenAI live validation: provide an API key through the documented secret/environment setup and authorize one bounded paid smoke test. No secret should be committed.
 - Production release/deployment: provide hosting/domain/store credentials and approve paid infrastructure/deployment after the local release gates pass; no production deployment has been run.
 
-Latest local checks on 2026-11-12: full Python suite and coverage,
+Latest local checks on 2026-11-12: full Python suite (1,952 passed, 6 skipped)
+and coverage,
 Ruff/format, Rust workspace tests/format/Clippy, Bandit, pip-audit,
 cargo-audit, wheel/sdist build, and clean-wheel install/CLI/bundle smoke pass.
 The seven-gate evaluation reports six pass and context-band fail. PR #16's
 cross-platform Python/Rust, security, mutation, package, API, and site checks
-pass; its promotion-only gate fails on context-band 0.6667 < 0.90, and live
-smoke is skipped without credentials. The full local regression now passes:
-1,947 passed, 6 skipped; 92.34% line, 87.37% branch, and 91.21% combined
+pass; the 60abded Windows full-suite run failed only on native path separator
+formatting in the new catalog status assertion, now corrected locally. Its
+promotion-only gate also fails on context-band 0.6667 < 0.90, and live smoke is
+skipped without credentials. The full local regression now passes:
+1,952 passed, 6 skipped; 92.34% line, 87.37% branch, and 91.21% combined
 coverage. The Rust workspace tests, workspace Clippy, Rust formatting, Ruff,
 and Python formatting pass locally. The annotation schema suite passes 49
 focused differential tests, and the additional timestamp corpus has zero
