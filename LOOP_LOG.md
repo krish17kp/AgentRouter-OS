@@ -1785,3 +1785,20 @@ Verification: full Python suite 1,737 passed / 6 skipped; 91.12% line, 85.57%
 branch, and 89.86% combined coverage. Full Rust workspace tests, Clippy,
 formatting, Ruff, and all 17 evaluation differential tests pass. Cross-platform
 CI for the report writer is pending after push.
+
+## Iteration 46 — 2026-11-11 — Rust CLI platform evaluator scorer
+
+Added the Rust scorer for the expected CLI command/group manifest and a
+Python/Rust differential test against the installed Typer app's discovered
+manifest. The scorer is intentionally marked Partial because dynamic command
+discovery/import validation remains Python runtime behavior.
+
+Windows CI exposed host newline translation in Python's evaluation report
+writer: the Rust report used canonical LF while Python emitted CRLF. Python now
+writes report JSON/Markdown with explicit LF, matching Rust on every OS.
+
+Verification: platform and all 18 evaluation differential tests pass; report
+writer tests pass; full Python suite 1,738 passed / 6 skipped, with 91.12% line,
+85.57% branch, and 89.86% combined coverage. Full Rust workspace, Clippy,
+formatting, Ruff, and Python formatting pass. Cross-platform CI for the newline
+fix is pending after push.

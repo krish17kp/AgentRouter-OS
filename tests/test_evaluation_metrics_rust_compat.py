@@ -10,6 +10,7 @@ import pytest
 
 from agentrouter.evaluation.evaluators import load_seed_models
 from agentrouter.evaluation.evaluators.feedback import evaluate_feedback as evaluate_python_feedback
+from agentrouter.evaluation.evaluators.platform import evaluate_platform as evaluate_python_platform
 from agentrouter.evaluation.evaluators.provider import evaluate_provider as evaluate_python_provider
 from agentrouter.evaluation.evaluators.routing import evaluate_routing as evaluate_python_routing
 from agentrouter.evaluation.evaluators.safety import evaluate_safety as evaluate_python_safety
@@ -775,6 +776,33 @@ def test_rust_routing_evaluator_matches_python_gold_and_proxy_cases():
             "--locked",
             "--bin",
             "evaluation_routing_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+        check=True,
+    )
+    assert json.loads(process.stdout) == expected
+
+
+def test_rust_platform_evaluator_matches_python_cli_manifest():
+    expected = evaluate_python_platform()
+    payload = {
+        "commands": expected["detail"]["commands_found"],
+        "groups": expected["detail"]["groups_found"],
+    }
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_platform_from_json",
             "-p",
             "agentrouter-evaluation",
         ],

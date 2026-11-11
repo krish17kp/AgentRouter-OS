@@ -63,3 +63,7 @@ path = "src/bin/evaluation_routing_from_json.rs"
 [[bin]]
 name = "evaluation_write_reports_from_json"
 path = "src/bin/evaluation_write_reports_from_json.rs"
+
+[[bin]]
+name = "evaluation_platform_from_json"
+path = "src/bin/evaluation_platform_from_json.rs"

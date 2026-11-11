@@ -38,6 +38,8 @@ All notable changes to AgentRouter OS. Format loosely follows
 - Rust now runs the feedback-storage evaluation through an isolated SQLite home, checking decision save/load, feedback insertion, and aggregated stats against Python.
 - Rust now evaluates routing against gold ability/provider/pricing/context constraints or the disclosed recommendation/fallback proxy, using its route implementation and supplied model registry.
 - Rust now writes the full evaluation report directory: versioned result JSON, scorecard, Markdown, failure and holdout CSVs, and confusion matrices.
+- Rust now scores the CLI platform evaluator from supplied command/group manifests; dynamic Typer registration discovery remains in Python.
+- Evaluation report text artifacts now use canonical LF line endings on all operating systems for byte-stable Python/Rust parity.
 - Upgrade bundled SQLite to the patched 3.54.1 release and replace the unmaintained YAML parser with a pure-Rust serde-compatible layer; the Rust minimum is now 1.89.
 
 ### Fixed

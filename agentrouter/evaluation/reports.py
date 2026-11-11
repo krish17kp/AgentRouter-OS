@@ -13,6 +13,12 @@ from pathlib import Path
 REPORT_SCHEMA_VERSION = 1
 
 
+def _write_text_lf(path: Path, text: str) -> None:
+    """Write stable UTF-8 artifacts with canonical LF on every platform."""
+    with path.open("w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
+
+
 def _confusion_csv(path: Path, matrix: dict[str, dict[str, int]]) -> None:
     labels = sorted(set(matrix) | {p for row in matrix.values() for p in row})
     with path.open("w", newline="", encoding="utf-8") as f:
@@ -29,7 +35,7 @@ def write_reports(result: dict, out_dir: Path) -> list[Path]:
     written: list[Path] = []
 
     payload = {"report_schema_version": REPORT_SCHEMA_VERSION, **result}
-    (out_dir / "result.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    _write_text_lf(out_dir / "result.json", json.dumps(payload, indent=2))
     written.append(out_dir / "result.json")
 
     scorecard = {
@@ -40,10 +46,10 @@ def write_reports(result: dict, out_dir: Path) -> list[Path]:
         "release_ready": result.get("release_ready"),
         "context_band_generalization": result.get("context_band_generalization"),
     }
-    (out_dir / "scorecard.json").write_text(json.dumps(scorecard, indent=2), encoding="utf-8")
+    _write_text_lf(out_dir / "scorecard.json", json.dumps(scorecard, indent=2))
     written.append(out_dir / "scorecard.json")
 
-    (out_dir / "report.md").write_text(render_markdown(result), encoding="utf-8")
+    _write_text_lf(out_dir / "report.md", render_markdown(result))
     written.append(out_dir / "report.md")
 
     m = result.get("classification", {})

@@ -484,6 +484,65 @@ pub fn evaluate_routing(
     })
 }
 
+/// Score the command/group manifest using the CLI platform evaluator's fixed
+/// user-facing surface. Discovery of registered commands is supplied by the
+/// runtime adapter, just as Typer performs it in Python.
+pub fn evaluate_platform(commands: &[String], groups: &[String]) -> serde_json::Value {
+    use serde_json::json;
+    use std::collections::BTreeSet;
+
+    const EXPECTED_COMMANDS: [&str; 9] = [
+        "init",
+        "setup",
+        "route",
+        "explain",
+        "feedback",
+        "execute",
+        "stats",
+        "dashboard",
+        "evaluate",
+    ];
+    const EXPECTED_GROUPS: [&str; 7] = [
+        "registry",
+        "providers",
+        "prompt",
+        "hosts",
+        "models",
+        "plugin",
+        "eval",
+    ];
+    let commands_found: BTreeSet<_> = commands.iter().map(String::as_str).collect();
+    let groups_found: BTreeSet<_> = groups.iter().map(String::as_str).collect();
+    let expected: BTreeSet<_> = EXPECTED_COMMANDS
+        .into_iter()
+        .chain(EXPECTED_GROUPS)
+        .collect();
+    let present = expected
+        .iter()
+        .filter(|name| commands_found.contains(**name) || groups_found.contains(**name))
+        .count();
+    let missing: Vec<_> = expected
+        .iter()
+        .filter(|name| !commands_found.contains(**name) && !groups_found.contains(**name))
+        .copied()
+        .collect();
+    let score = if expected.is_empty() {
+        0.0
+    } else {
+        round_to(present as f64 / expected.len() as f64, 4)
+    };
+    json!({
+        "score": score,
+        "detail": {
+            "expected": expected.len(),
+            "present": present,
+            "missing": missing,
+            "commands_found": commands_found,
+            "groups_found": groups_found,
+        }
+    })
+}
+
 fn routing_constraints(
     model: &agentrouter_registry::ModelEntry,
     expectation: &RoutingExpectation,

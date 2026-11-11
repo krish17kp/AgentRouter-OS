@@ -7,7 +7,7 @@ Updated: 2026-11-11
 - [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PRs #30–#33 are merged through RC `019233a`; PR #33 checks passed on Linux, Windows, macOS, Python 3.10–3.13, Rust, security, and mutation jobs. PR #16 is the sole open PR and its unchanged context-band release gate has failed again; finish collecting the remaining matrix checks, then keep main promotion blocked until human evaluation meets the existing threshold.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is now tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md); current gaps are explicit, and only modules with differential tests are marked parity.
-- [x] Full Python suite: 1,737 passed, 6 skipped; 91.12% line and 85.57% branch coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; exact evidence is in `docs/COVERAGE_REPORT_2026-11-11.md`.
+- [x] Full Python suite: 1,738 passed, 6 skipped; 91.12% line (6,527/7,163), 85.57% branch (1,802/2,106), and 89.86% combined coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; exact evidence is in `docs/COVERAGE_REPORT_2026-11-11.md`.
 - [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations; the Rust release benchmark now runs the same 10/100/1,000 candidate fleets, with a paired local p50 ratio of 2.70×–3.25× under stated synthetic conditions.
 - [x] Changelog, coverage evidence, and local latency measurements are committed to the release candidate. Candidate package version is now `0.5.0rc1`, with draft release notes in `docs/RELEASE_NOTES_v0.5.0rc1.md`; final `0.5.0` packaging and publication remain blocked on parity and all release gates.
 - [ ] Release candidate promoted to `main` with a tagged release.
@@ -19,7 +19,7 @@ Updated: 2026-11-11
 - [ ] Rust quota-aware reranking is wired to `route_cli --verify-live`; eight Rust unit tests and ten Python/Rust differential cases cover unsupported/available/error preservation, verified exhaustion, no recommendation, invalid states, Python-compatible Unicode sanitation, and the CLI contract. Production live adapters remain disabled. Full suite is green locally; fresh CI is pending.
 - [ ] Rust doctor quota checks now share `agentrouter-hosts::detect_host`, provider mapping, and the bounded usage state machine; nine diagnostic compatibility tests pass. The full Python suite remains green at 1,720 passed/6 skipped. Overall doctor parity remains partial, and fresh CI is pending.
 - [x] `agentrouter/learning.py` now has a dedicated `agentrouter-learning` Rust crate; nine differential fixtures cover caps, sample thresholds, nullable ratings, exact explanations, and ties-to-even rounding. Route CLI learning-on/off parity remains covered.
-- [ ] `agentrouter/evaluation/metrics.py` and `evaluation/sampling.py` have Rust counterparts with Python differential tests. `evaluation/schema.py`, `evaluation/provenance.py`, and `evaluation/grading.py` are partial. Grading has classification-only scorecard parity; evaluator execution and `measure_all` remain Python-only. Safety, feedback-storage, and report file generation have Python/Rust differential parity. Provider and routing evaluators score supplied model records; default seed loading/custom classifier injection remain Python-only. These slices need cross-platform CI. `evaluation/registry.py` mirrors descriptors and profiles but does not construct adapters. Dataset adapters, platform and performance evaluators, CLI, and runners remain unported. Changes after `7222fe7` need cross-platform CI.
+- [ ] `agentrouter/evaluation/metrics.py` and `evaluation/sampling.py` have Rust counterparts with Python differential tests. `evaluation/schema.py`, `evaluation/provenance.py`, and `evaluation/grading.py` are partial. Grading has classification-only scorecard parity; evaluator execution and `measure_all` remain Python-only. Safety, feedback-storage, and report file generation have Python/Rust differential parity. Provider and routing evaluators score supplied model records; default seed loading/custom classifier injection remain Python-only. The platform scorer accepts supplied command/group manifests; runtime Typer discovery remains Python-only. These slices need cross-platform CI. `evaluation/registry.py` mirrors descriptors and profiles but does not construct adapters. Dataset adapters, performance evaluator, evaluation CLI, and runners remain unported. Changes after `49d2548` need cross-platform CI.
 
 - [x] PR #22 MCP dependency bound merged to release candidate.
 - [x] PR #25 staged Rust migration, registry and provider-status probes merged to release candidate as `99f5b76`; Python remains the shipping authority.
@@ -55,8 +55,10 @@ diagnostic-bundle commit `07eb511` passed Linux/Windows/macOS Python/Rust,
 security scan, mutation, package and API compatibility checks; only the
 promotion-only evaluation gate failed. On `a4d2f79`, cross-platform Rust,
 Python, security, mutation, site, and API jobs passed; the only failed job is
-the unchanged frozen context-band gate (0.6667 < 0.90). The evaluation-metrics
-and report-renderer Rust slices are committed locally and need cross-platform CI.
-Full local Python regression: 1,737 passed, 6 skipped; 91.12% line, 85.57%
-branch, and 89.86% combined coverage. Rust workspace tests pass; Clippy, Rust
-format, Ruff, and Python formatting pass on the report-renderer slice.
+the unchanged frozen context-band gate (0.6667 < 0.90). The evaluation-metrics,
+report-renderer, and platform-scoring Rust slices are committed locally and need
+cross-platform CI. The report-writer Windows failure was CRLF translation in
+Python's `Path.write_text`; Python now writes canonical LF explicitly. The
+full local Python regression passes: 1,738 passed, 6 skipped; 91.12% line,
+85.57% branch, and 89.86% combined coverage. Rust workspace tests pass;
+Clippy, Rust format, Ruff, and Python formatting pass on the current slice.
