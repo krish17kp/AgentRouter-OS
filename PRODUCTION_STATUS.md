@@ -6,7 +6,7 @@ Updated: 2026-11-11
 
 - [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PR #30 merged at `bd98b6b`; PR #31 contains harness parity and dependency hardening and is running refreshed CI after rebasing onto PR #30; PR #32 records additional latency and coverage evidence and depends on PR #31. PR #16 remains blocked by the unchanged context-band gate.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
-- [x] Full Python suite: 1,658 passed, 6 skipped; 90.96% line and 85.09% branch coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; exact evidence is in `docs/COVERAGE_REPORT_2026-11-11.md`.
+- [x] Full Python suite: 1,660 passed, 6 skipped; 90.96% line and 85.09% branch coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; exact evidence is in `docs/COVERAGE_REPORT_2026-11-11.md`.
 - [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations; PR #32 adds a measured local baseline for 10/100/1,000 candidate fleets.
 - [ ] Changelog and coverage evidence are updated in the active release-candidate work. Release version bump and release notes remain pending final parity and all release gates.
 - [ ] Release candidate promoted to `main` with a tagged release.

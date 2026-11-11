@@ -418,7 +418,7 @@ rusqlite 0.41.1 / libsqlite3-sys 0.39.1 (patched SQLite 3.54.1), requiring Rust
 1.89, and switched the YAML-compatible API to patched `noyalib-serde-yaml`
 0.0.60,
 which uses noyalib's pure-Rust parser. The fresh `cargo audit --deny warnings`
-scan reports no advisories across 121 dependencies; workspace tests and
+scan reports no advisories across 160 locked dependencies; workspace tests and
 Clippy pass locally. Declared-minimum and cross-platform CI are still required.
 
 R6 and R7 are deliberately placed after the interface milestones (R4–R5) and
