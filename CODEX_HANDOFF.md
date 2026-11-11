@@ -16,7 +16,7 @@ differential tests, Rust workspace, Clippy, format, and Ruff pass. TASK-035
 adds 14 annotation schema/datetime cases; TASK-036 adds the repository-impact
 signal; TASK-037 completes annotation pack parity. Twelve graph/pack differential
 cases and workspace checks pass locally. The latest Python suite passes:
-1,812 passed, 6 skipped; coverage is 92.15% line, 87.22% branch, and 91.03%
+1,863 passed, 6 skipped; coverage is 92.15% line, 87.22% branch, and 91.03%
 combined. Remaining
 adapter transformations, remote runs, evaluation
 runner/CLI/annotation, and many public modules are inventoried in

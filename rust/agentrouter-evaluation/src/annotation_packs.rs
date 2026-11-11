@@ -122,13 +122,18 @@ impl PythonRandom {
     }
 }
 
+pub fn shuffle_python_seed<T>(values: &mut [T], seed: &str) -> Result<(), String> {
+    let mut rng = PythonRandom::new(seed)?;
+    for i in (1..values.len()).rev() {
+        let j = rng.randbelow(i + 1);
+        values.swap(i, j);
+    }
+    Ok(())
+}
+
 pub fn build_pack(candidates: &[Candidate], seed: &str) -> Result<Vec<Candidate>, String> {
     let mut ordered = candidates.to_vec();
-    let mut rng = PythonRandom::new(seed)?;
-    for i in (1..ordered.len()).rev() {
-        let j = rng.randbelow(i + 1);
-        ordered.swap(i, j);
-    }
+    shuffle_python_seed(&mut ordered, seed)?;
     Ok(ordered
         .into_iter()
         .map(|candidate| Candidate {

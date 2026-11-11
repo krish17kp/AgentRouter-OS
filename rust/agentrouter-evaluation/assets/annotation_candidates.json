@@ -1,0 +1,317 @@
+[
+  [
+    "coding",
+    "small",
+    "Produce a helper that rounds a timestamp down to the nearest minute."
+  ],
+  [
+    "coding",
+    "small",
+    "Give me a one-liner that flattens a list of lists."
+  ],
+  [
+    "coding",
+    "small",
+    "Draft a small class representing an RGB color."
+  ],
+  [
+    "review",
+    "small",
+    "In one line, what signals a risky pull request?"
+  ],
+  [
+    "review",
+    "small",
+    "List two reasons small diffs get reviewed faster."
+  ],
+  [
+    "refactor",
+    "small",
+    "In brief, when is it safe to rename a public symbol?"
+  ],
+  [
+    "refactor",
+    "small",
+    "Name one smell that suggests splitting a function."
+  ],
+  [
+    "documentation",
+    "small",
+    "Propose a heading for the quick-start section."
+  ],
+  [
+    "documentation",
+    "small",
+    "Draft a tagline for a small logging utility."
+  ],
+  [
+    "summarization",
+    "small",
+    "Trim this heading to five words."
+  ],
+  [
+    "summarization",
+    "small",
+    "Give a one-sentence gist of a cron job's purpose."
+  ],
+  [
+    "analysis",
+    "small",
+    "At a high level, contrast polling with webhooks."
+  ],
+  [
+    "analysis",
+    "small",
+    "What is one downside of eager cache warming?"
+  ],
+  [
+    "data-pipeline",
+    "small",
+    "Explain, briefly, what a dead-letter queue is for."
+  ],
+  [
+    "data-pipeline",
+    "small",
+    "In a sentence, what does a feature store provide?"
+  ],
+  [
+    "rag",
+    "small",
+    "What problem does query expansion solve in retrieval?"
+  ],
+  [
+    "rag",
+    "small",
+    "Outline a tiny prompt that cites a single passage."
+  ],
+  [
+    "tool-use",
+    "small",
+    "When is a unit-conversion tool the right call for an agent?"
+  ],
+  [
+    "tool-use",
+    "small",
+    "Sketch the argument schema for a single currency-quote tool."
+  ],
+  [
+    "ambiguous",
+    "small",
+    "Have a look."
+  ],
+  [
+    "ambiguous",
+    "small",
+    "Clean up."
+  ],
+  [
+    "ambiguous",
+    "small",
+    "Sort this."
+  ],
+  [
+    "coding",
+    "existing",
+    "Attach a circuit breaker to the payment gateway wrapper we already ship."
+  ],
+  [
+    "coding",
+    "existing",
+    "Correct the timezone bug in the scheduling module currently in production."
+  ],
+  [
+    "coding",
+    "existing",
+    "Thread a correlation id through the order-processing service that exists today."
+  ],
+  [
+    "review",
+    "existing",
+    "Go over the open merge request and note anything that hurts long-term upkeep."
+  ],
+  [
+    "review",
+    "existing",
+    "Assess the queued fix for edge cases the author probably missed."
+  ],
+  [
+    "refactor",
+    "existing",
+    "Rework the alerts module so its outward behavior stays identical."
+  ],
+  [
+    "refactor",
+    "existing",
+    "Bring the legacy billing widget up to date without changing its public contract."
+  ],
+  [
+    "documentation",
+    "existing",
+    "Write API docs describing what the shipped serializer actually outputs today."
+  ],
+  [
+    "documentation",
+    "existing",
+    "Explain, for operators, the path a job takes through the queue we run now."
+  ],
+  [
+    "summarization",
+    "existing",
+    "Collapse the current on-call playbook into a single printable page."
+  ],
+  [
+    "summarization",
+    "existing",
+    "Pull the key rulings out of the meeting minutes I pasted."
+  ],
+  [
+    "analysis",
+    "existing",
+    "Judge whether the present backoff strategy risks synchronized retries."
+  ],
+  [
+    "analysis",
+    "existing",
+    "Weigh coupling between the current parser and its grammar fixtures."
+  ],
+  [
+    "data-pipeline",
+    "existing",
+    "Track down why rows vanish between the two current ingestion hops."
+  ],
+  [
+    "data-pipeline",
+    "existing",
+    "Align mismatched column types between the live feed and the mart we maintain."
+  ],
+  [
+    "rag",
+    "existing",
+    "Lift retrieval precision on the document index our assistant already queries."
+  ],
+  [
+    "rag",
+    "existing",
+    "Attach source offsets to responses from the retrieval chain we run today."
+  ],
+  [
+    "tool-use",
+    "existing",
+    "Register one more capability into the agent toolbox we currently expose."
+  ],
+  [
+    "tool-use",
+    "existing",
+    "Repair the parameter checks on the existing document-lookup tool."
+  ],
+  [
+    "ambiguous",
+    "existing",
+    "Why is this behaving oddly?"
+  ],
+  [
+    "ambiguous",
+    "existing",
+    "Make this nicer."
+  ],
+  [
+    "coding",
+    "large",
+    "Introduce soft-delete semantics on every entity across the billing platform."
+  ],
+  [
+    "coding",
+    "large",
+    "Roll optimistic concurrency into all mutating endpoints of our storefront backend."
+  ],
+  [
+    "review",
+    "large",
+    "Walk the complete billing engine and surface any newly introduced auth weaknesses."
+  ],
+  [
+    "review",
+    "large",
+    "Vet every schema change in the project for steps that cannot be rolled back."
+  ],
+  [
+    "refactor",
+    "large",
+    "Reorganize a checked-out tree of roughly twelve hundred modules for clarity."
+  ],
+  [
+    "refactor",
+    "large",
+    "Break the tangled import cycles spanning our entire multi-package workspace."
+  ],
+  [
+    "documentation",
+    "large",
+    "Author a full runbook covering every stage of our multi-region rollout."
+  ],
+  [
+    "documentation",
+    "large",
+    "Draft complete developer guides for all public routes in the product surface."
+  ],
+  [
+    "summarization",
+    "large",
+    "Digest a 90k-token bundle of vendor contracts into a risk list."
+  ],
+  [
+    "summarization",
+    "large",
+    "Boil down a decade of release notes into recurring themes."
+  ],
+  [
+    "analysis",
+    "large",
+    "Comb 140k tokens of gateway access logs for anomalous session behavior."
+  ],
+  [
+    "analysis",
+    "large",
+    "Trace the full checkout path end to end and rank where time is lost."
+  ],
+  [
+    "data-pipeline",
+    "large",
+    "Reconstruct the whole transformation DAG behind the analytics dashboards."
+  ],
+  [
+    "data-pipeline",
+    "large",
+    "Certify an entire year-partition of the lakehouse for downstream reporting."
+  ],
+  [
+    "rag",
+    "large",
+    "Architect search across an eight-million-record archive with staleness bounds."
+  ],
+  [
+    "rag",
+    "large",
+    "Anchor every answer in a sprawling internal wiki with traceable citations."
+  ],
+  [
+    "tool-use",
+    "large",
+    "Sequence a many-tool automation covering our full deployment lifecycle."
+  ],
+  [
+    "tool-use",
+    "large",
+    "Coordinate a large fleet of tools across an end-to-end incident response."
+  ],
+  [
+    "ambiguous",
+    "large",
+    "Take care of the whole migration."
+  ],
+  [
+    "ambiguous",
+    "large",
+    "Deal with all of it before launch."
+  ]
+]

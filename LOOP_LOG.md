@@ -2119,3 +2119,12 @@ bytes plus Unicode hash parity. The store module is marked Parity.
 Next: add this test to the cross-platform CI matrix, run workspace/quality and
 full regression/coverage, push, inspect hosted checks, and continue the Rust
 annotation CLI migration.
+
+## 2026-11-11 — TASK-039: Rust annotation candidate generation
+
+Ported the full 63-prompt unlabelled candidate bank and deterministic generator.
+The Rust bank is checked against Python's stable interleaved inventory; seeded
+shuffle reuses the CPython-compatible arbitrary-width integer implementation.
+Fifty differential cases cover the exact bank, five seeds, ten positive,
+zero, and negative slice counts, IDs, provenance source, template scopes, and
+prompt order. The candidate module meets its parity bar.

@@ -18,6 +18,8 @@ All notable changes to AgentRouter OS. Format loosely follows
 - Added Rust annotation artifact persistence for YAML candidates/datasets,
   JSONL labels, sorted JSON manifests, and Python-compatible canonical split
   hashes including Unicode.
+- Added deterministic Rust candidate generation from the reviewed 63-prompt
+  bank, matching Python seeded ordering, IDs, counts, source, and template.
 - Ported deterministic annotation train/dev/private-holdout splits to Rust,
   including cluster preservation and a fail-closed frozen-holdout leakage check.
 - Ported annotation duplicate and leakage guards to Rust, including Python

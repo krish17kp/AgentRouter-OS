@@ -12,7 +12,7 @@ PYTHONPATH=. python -m pytest -q --cov=agentrouter --cov-branch --cov-report=ter
 
 | Measure | Result |
 |---|---:|
-| Python regression | 1,812 passed, 6 skipped |
+| Python regression | 1,863 passed, 6 skipped |
 | Line coverage | 92.15% (6,603 / 7,166 statements) |
 | Branch coverage | 87.22% (1,837 / 2,106 branch outcomes) |
 | Combined coverage reported by pytest-cov | 91.03% |
@@ -28,7 +28,8 @@ AgentRouter gold-adapter parity for metadata, availability, description, all
 165 records, checksum, and seeded sampling; annotation duplicate/leakage and
 split safety differential checks; Rust report-file,
 CLI platform scorer, performance summary, annotation schema/datetime parity,
-graph-impact, full annotation-pack parity, and annotation file/hash parity;
+graph-impact, full annotation-pack parity, annotation file/hash parity, and
+deterministic candidate-generation parity;
 canonical LF report artifacts; Rust Markdown, grading, safety, provider,
 feedback, and routing evaluator differential cases; plus explicit UTF-8
 subprocess decoding alongside learning, quota-routing, doctor,
