@@ -130,46 +130,49 @@ where
     deserializer.deserialize_any(BoolVisitor)
 }
 
-fn pydantic_u32<'de, D>(deserializer: D) -> Result<u32, D::Error>
+fn pydantic_i64<'de, D>(deserializer: D) -> Result<i64, D::Error>
 where
     D: Deserializer<'de>,
 {
     struct IntegerVisitor;
 
     impl<'de> Visitor<'de> for IntegerVisitor {
-        type Value = u32;
+        type Value = i64;
 
         fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
             formatter.write_str("an integer accepted by Pydantic")
         }
 
         fn visit_bool<E>(self, value: bool) -> Result<Self::Value, E> {
-            Ok(u32::from(value))
+            Ok(i64::from(value))
         }
 
         fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
         where
             E: de::Error,
         {
-            u32::try_from(value).map_err(E::custom)
+            Ok(value)
         }
 
         fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
         where
             E: de::Error,
         {
-            u32::try_from(value).map_err(E::custom)
+            i64::try_from(value).map_err(E::custom)
         }
 
         fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
         where
             E: de::Error,
         {
-            if value.is_finite() && value.fract() == 0.0 && (0.0..=u32::MAX as f64).contains(&value)
+            if value.is_finite()
+                && value.fract() == 0.0
+                && value >= i64::MIN as f64
+                && value < -(i64::MIN as f64)
             {
-                Ok(value as u32)
+                Ok(value as i64)
             } else {
-                Err(E::custom("value must be an unsigned 32-bit integer"))
+                Err(E::custom("value must be an integer"))
             }
         }
 
@@ -177,11 +180,36 @@ where
         where
             E: de::Error,
         {
-            value.trim().parse::<u32>().map_err(E::custom)
+            value.trim().parse::<i64>().map_err(E::custom)
         }
     }
 
     deserializer.deserialize_any(IntegerVisitor)
+}
+
+#[derive(Debug)]
+struct PythonInteger(i64);
+
+impl<'de> Deserialize<'de> for PythonInteger {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        pydantic_i64(deserializer).map(Self)
+    }
+}
+
+fn pydantic_integer_map<'de, D>(
+    deserializer: D,
+) -> Result<std::collections::BTreeMap<String, i64>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let parsed = std::collections::BTreeMap::<String, PythonInteger>::deserialize(deserializer)?;
+    Ok(parsed
+        .into_iter()
+        .map(|(key, value)| (key, value.0))
+        .collect())
 }
 
 fn default_candidate_source() -> String {
@@ -525,20 +553,22 @@ impl AdjudicatedItem {
 #[serde(deny_unknown_fields)]
 pub struct DatasetManifest {
     #[serde(default = "default_schema_version")]
-    #[serde(deserialize_with = "pydantic_u32")]
-    pub schema_version: u32,
+    #[serde(deserialize_with = "pydantic_i64")]
+    pub schema_version: i64,
     #[serde(default = "default_manifest_dataset")]
     pub dataset: String,
     pub version: String,
     pub created: String,
     #[serde(default)]
-    pub split_counts: std::collections::BTreeMap<String, u64>,
+    #[serde(deserialize_with = "pydantic_integer_map")]
+    pub split_counts: std::collections::BTreeMap<String, i64>,
     #[serde(default)]
     pub split_sha256: std::collections::BTreeMap<String, String>,
     #[serde(default)]
-    pub category_counts: std::collections::BTreeMap<String, u64>,
-    #[serde(default)]
-    pub band_counts: std::collections::BTreeMap<String, u64>,
+    #[serde(deserialize_with = "pydantic_integer_map")]
+    pub category_counts: std::collections::BTreeMap<String, i64>,
+    #[serde(default, deserialize_with = "pydantic_integer_map")]
+    pub band_counts: std::collections::BTreeMap<String, i64>,
     #[serde(default = "default_true")]
     #[serde(deserialize_with = "pydantic_bool")]
     pub frozen_holdout_untouched: bool,
@@ -548,8 +578,8 @@ pub struct DatasetManifest {
     pub provenance: String,
 }
 
-fn default_schema_version() -> u32 {
-    SCHEMA_VERSION
+fn default_schema_version() -> i64 {
+    i64::from(SCHEMA_VERSION)
 }
 
 fn default_true() -> bool {

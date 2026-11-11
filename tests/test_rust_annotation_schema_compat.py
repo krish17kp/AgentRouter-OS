@@ -214,16 +214,23 @@ def test_rust_annotation_confidence_matches_pydantic_scalar_coercion(confidence)
 
 
 def test_rust_annotation_manifest_matches_pydantic_integer_and_boolean_coercion():
-    for schema_version, untouched in [("1", "yes"), (1.0, 1.0), (True, 1), (1, "off"), (1, 0.0)]:
+    for schema_version, untouched in [
+        ("1", "yes"),
+        (1.0, 1.0),
+        (True, 1),
+        (1, "off"),
+        (1, 0.0),
+        (-2, False),
+    ]:
         value = {
             "schema_version": schema_version,
             "dataset": "agentrouter-context-band-v2",
             "version": "v2.0",
             "created": "2026-11-11T00:00:00Z",
-            "split_counts": {},
+            "split_counts": {"train": "2", "dev": 2.0, "holdout": True},
             "split_sha256": {},
-            "category_counts": {},
-            "band_counts": {},
+            "category_counts": {"coding": -1},
+            "band_counts": {"small": 3},
             "frozen_holdout_untouched": untouched,
             "leakage_report": None,
             "provenance": "",

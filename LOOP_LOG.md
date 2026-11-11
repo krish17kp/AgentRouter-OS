@@ -2223,3 +2223,9 @@ Remaining annotation schema coercions still need a full audit.
 Verified that the evaluation-adapters and server package initializers have no
 public runtime exports. Added Rust package markers and a differential test for
 the empty export contract. Their implementation modules remain unported.
+# TASK-052 — Annotation manifest integer coercion
+
+Aligned manifest schema-version and integer-map parsing with Pydantic, including
+signed counts, numeric strings, booleans, and integral floats. The annotation
+schema differential suite remains 23 passing cases and Clippy passes locally.
+The broader module stays Partial for other edge coercions.
