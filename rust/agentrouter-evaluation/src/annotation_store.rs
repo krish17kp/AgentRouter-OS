@@ -18,6 +18,18 @@ fn mkdir_parent(path: &Path) -> Result<(), String> {
     Ok(())
 }
 
+/// Match Python `Path.write_text(..., encoding="utf-8")` newline translation.
+fn write_python_text(path: &Path, text: &str) -> Result<(), String> {
+    let windows_text;
+    let contents = if cfg!(windows) {
+        windows_text = text.replace('\n', "\r\n");
+        windows_text.as_str()
+    } else {
+        text
+    };
+    std::fs::write(path, contents).map_err(|error| error.to_string())
+}
+
 fn to_python_payload<T: Serialize>(value: &T) -> Result<Value, String> {
     let mut value = serde_json::to_value(value).map_err(|error| error.to_string())?;
     omit_nulls(&mut value);
@@ -151,7 +163,7 @@ pub fn save_candidates(path: &Path, candidates: &[Candidate]) -> Result<(), Stri
         .collect::<Result<Vec<_>, _>>()?;
     let document = json!({"schema": "context-band-candidates", "candidates": candidates});
     let yaml = serde_yaml::to_string(&document).map_err(|error| error.to_string())?;
-    std::fs::write(path, yaml).map_err(|error| error.to_string())
+    write_python_text(path, &yaml)
 }
 
 pub fn load_candidates(path: &Path) -> Result<Vec<Candidate>, String> {
@@ -179,7 +191,7 @@ pub fn save_labels(path: &Path, items: &[ItemLabels]) -> Result<(), String> {
         output.push_str(&python_spaced_json(&value)?);
         output.push('\n');
     }
-    std::fs::write(path, output).map_err(|error| error.to_string())
+    write_python_text(path, &output)
 }
 
 pub fn load_labels(path: &Path) -> Result<Vec<ItemLabels>, String> {
@@ -207,7 +219,7 @@ pub fn save_dataset(path: &Path, items: &[AdjudicatedItem]) -> Result<(), String
         .collect::<Result<Vec<_>, _>>()?;
     let document = json!({"schema": "context-band-dataset", "items": items});
     let yaml = serde_yaml::to_string(&document).map_err(|error| error.to_string())?;
-    std::fs::write(path, yaml).map_err(|error| error.to_string())
+    write_python_text(path, &yaml)
 }
 
 pub fn load_dataset(path: &Path) -> Result<Vec<AdjudicatedItem>, String> {
@@ -230,7 +242,7 @@ pub fn save_manifest(path: &Path, manifest: &DatasetManifest) -> Result<(), Stri
     let value = to_python_payload(manifest)?;
     let mut json = python_ascii_json(&value, true)?;
     json.push('\n');
-    std::fs::write(path, json).map_err(|error| error.to_string())
+    write_python_text(path, &json)
 }
 
 pub fn load_manifest(path: &Path) -> Result<DatasetManifest, String> {
