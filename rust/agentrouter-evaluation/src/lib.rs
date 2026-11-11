@@ -2019,6 +2019,86 @@ pub fn normalize_longbench_rows(rows: &[LongBenchRawRow]) -> Vec<EvaluationCase>
     out
 }
 
+fn missing_swebench_field() -> serde_json::Value {
+    serde_json::Value::String("__AGENTROUTER_MISSING_SWEBENCH_FIELD__".to_string())
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SWEBenchRawRow {
+    #[serde(default)]
+    pub problem_statement: Option<String>,
+    #[serde(default = "missing_swebench_field")]
+    pub instance_id: serde_json::Value,
+    #[serde(default = "missing_swebench_field")]
+    pub repo: serde_json::Value,
+    #[serde(default = "missing_swebench_field")]
+    pub base_commit: serde_json::Value,
+}
+
+fn value_if_present(value: &serde_json::Value, missing_value: &str) -> String {
+    if value.as_str() == Some("__AGENTROUTER_MISSING_SWEBENCH_FIELD__") {
+        missing_value.to_string()
+    } else {
+        python_string(value)
+    }
+}
+
+/// Prepare caller-supplied SWE-bench Lite test rows for classification and
+/// routing evaluation. Docker issue solving remains a separate external run.
+pub fn normalize_swebench_rows(rows: &[SWEBenchRawRow]) -> Vec<EvaluationCase> {
+    let mut out = Vec::new();
+    let mut seen = BTreeSet::new();
+    let mut hashes = BTreeSet::new();
+    for (index, row) in rows.iter().enumerate() {
+        let problem = row.problem_statement.as_deref().unwrap_or_default().trim();
+        if problem.is_empty() || !seen.insert(problem.to_lowercase()) {
+            continue;
+        }
+        let id_value = value_if_present(&row.instance_id, &index.to_string());
+        let repo_tag = value_if_present(&row.repo, "");
+        let repo_note = value_if_present(&row.repo, "None");
+        let base_commit_note = value_if_present(&row.base_commit, "None");
+        let case = EvaluationCase {
+            id: format!("swebench-{id_value}"),
+            dataset: "swebench".to_string(),
+            task: problem.to_string(),
+            dataset_version: Some("lite".to_string()),
+            source: Some("https://www.swebench.com".to_string()),
+            source_split: Some("test".to_string()),
+            language: default_language(),
+            domain: Some("software-engineering".to_string()),
+            tags: vec!["swe-bench".to_string(), "issue".to_string(), repo_tag],
+            paraphrase_group: None,
+            expected: ExpectedClassification {
+                task_types: vec![TaskType::Coding],
+                ..ExpectedClassification::default()
+            },
+            routing: Some(RoutingExpectation {
+                minimum_ability: BTreeMap::from([("coding".to_string(), 7)]),
+                ..RoutingExpectation::default()
+            }),
+            safety: None,
+            context_tokens: None,
+            cost_metadata: BTreeMap::new(),
+            model_outcomes: BTreeMap::new(),
+            provenance: Provenance {
+                method: AnnotationMethod::DatasetNative,
+                reviewer: None,
+                source_license: Some("SWE-bench (MIT code; per-repo licenses apply)".to_string()),
+                source_record_id: Some(id_value),
+                retrieved: None,
+            },
+            review_status: ReviewStatus::Pending,
+            checksum: None,
+            notes: Some(format!("repo={repo_note} base_commit={base_commit_note}")),
+        };
+        if hashes.insert(case.task_hash()) {
+            out.push(case.with_checksum());
+        }
+    }
+    out
+}
+
 #[derive(Debug, Deserialize)]
 struct AgentRouterGoldDocument {
     #[serde(default = "default_gold_version")]

@@ -21,8 +21,8 @@ coverage:
   safety_execution_gateway_branch: 1.00
   policy_enforcement_branch: 1.00
   current: pass_local
-  line: 0.919481
-  branch: 0.868471
+  line: 0.920876
+  branch: 0.870370
   evidence: docs/COVERAGE_REPORT_2026-11-11.md
 
 mutation:

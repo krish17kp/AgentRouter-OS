@@ -12,17 +12,17 @@ PYTHONPATH=. python -m pytest -q --cov=agentrouter --cov-branch --cov-report=ter
 
 | Measure | Result |
 |---|---:|
-| Python regression | 1,766 passed, 6 skipped |
-| Line coverage | 91.95% (6,589 / 7,166 statements) |
-| Branch coverage | 86.85% (1,829 / 2,106 branch outcomes) |
-| Combined coverage reported by pytest-cov | 90.79% |
+| Python regression | 1,767 passed, 6 skipped |
+| Line coverage | 92.09% (6,599 / 7,166 statements) |
+| Branch coverage | 87.04% (1,833 / 2,106 branch outcomes) |
+| Combined coverage reported by pytest-cov | 90.94% |
 | Project line / branch thresholds | 90% / 85% — both passed |
 | CI total-coverage threshold | 80% — passed |
 | Warnings | 1 Starlette/httpx deprecation warning |
 
 Run used Python 3.12.15 on Linux against the local release-candidate worktree,
 including the Rust feedback-learning and evaluation crates. The regression
-includes CLINC150, Banking77, MASSIVE, and LongBench v2 raw-row normalization parity plus shared Rust fixture-adapter
+includes CLINC150, Banking77, MASSIVE, LongBench v2, and SWE-bench raw-row normalization parity plus shared Rust fixture-adapter
 parity for six external datasets plus full
 AgentRouter gold-adapter parity for metadata, availability, description, all
 165 records, checksum, and seeded sampling; Rust report-file,

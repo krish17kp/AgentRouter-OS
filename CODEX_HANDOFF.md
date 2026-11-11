@@ -3,19 +3,19 @@
 ## Current checkpoint — 2026-11-11
 
 PRs #27–#33 and #13 are merged into `release/agentrouter-v0.5-rc1`; RC head is
-`5a0f22c` and PR #16 remains open to `main`. TASK-025 Rust compatibility and
-workspace checks pass Linux/Windows/macOS, with security, website, and mutation
-checks passing. General CI has no code/test failure; frozen context-band
-accuracy 0.6667 against 0.90 remains the promotion blocker.
+`6bd5779` and PR #16 remains open to `main`. TASK-026 Rust workspace passes
+Linux/Windows/macOS and adapter compatibility passes Linux/macOS; Windows is
+still running. Security and website pass. The frozen context-band gate remains
+0.6667 against 0.90.
 
-Current local task TASK-026 ports LongBench v2 row preparation and reporting
-buckets, including token estimation, deduplication, metadata, and missing/null
-semantics. Its differential test, Rust workspace, Clippy, format, Ruff, and full
-Python regression pass: 1,766 passed, 6 skipped; 91.95% line, 86.85% branch,
-and 90.79% combined coverage. Remote downloads/model execution, other adapter
-transforms, evaluation runner/CLI/annotation, and many public modules remain
-incomplete in `docs/RUST_PARITY_MATRIX.md`. Human annotation, live OpenAI
-validation, and production credentials are under **Needs Krish** in
+Current local task TASK-027 ports SWE-bench Lite issue-row preparation,
+including duplicate handling, fallback/null IDs, tags, routing ability,
+provenance, and notes. Two focused adapter tests, Rust workspace, Clippy,
+format, Ruff, and full Python suite pass: 1,767 passed, 6 skipped; 92.09% line,
+87.04% branch, and 90.94% combined coverage. Remote downloads/Docker solving,
+other adapter transforms, evaluation runner/CLI/annotation, and many public
+modules remain incomplete in `docs/RUST_PARITY_MATRIX.md`. Human annotations,
+live OpenAI validation, and production credentials are under **Needs Krish** in
 `PRODUCTION_STATUS.md`. `AGENT_HANDOFF.md` is authoritative.
 
 ## Historical narrative

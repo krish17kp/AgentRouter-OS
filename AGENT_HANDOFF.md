@@ -2,12 +2,12 @@
 
 ## Current checkpoint — 2026-11-11
 
-- Active RC worktree: `release/agentrouter-v0.5-rc1` at `5a0f22c`. PRs #27–#33 and #13 are merged; PR #16 remains open to `main`.
-- TASK-025 is pushed. Rust workspace, Rust 1.89, and non-skipping compatibility pass Linux/Windows/macOS; security, website, and mutation pass. The current general CI run is finishing platform Python tests; its only known failure is the unchanged frozen context-band promotion gate (0.6667 < 0.90).
-- Current local task ports LongBench v2 row preparation and bucket boundaries, preserving context length estimates, row IDs, missing/null metadata, and deduplication. Its differential test, Rust workspace, Clippy, format, Ruff, and full Python regression pass.
-- Latest full Python evidence: 1,766 passed, 6 skipped; 91.95% line (6,589/7,166), 86.85% branch (1,829/2,106), 90.79% combined. See `docs/COVERAGE_REPORT_2026-11-11.md`.
-- The 77-module Rust parity inventory is in `docs/RUST_PARITY_MATRIX.md`; remote downloads, other adapter transformations, evaluation runner/CLI/annotation, most public CLI, HTTP/MCP, plugins/skills, and provider execution remain incomplete. Python remains the shipping authority.
-- Next: commit/push TASK-026, inspect its full CI, repair failures, and continue parity. Do not merge/tag while the frozen release gate fails.
+- Active RC worktree: `release/agentrouter-v0.5-rc1` at `6bd5779`. PRs #27–#33 and #13 are merged; PR #16 remains open to `main`.
+- TASK-026 is pushed. Rust workspace passes Linux/Windows/macOS and Python/Rust compatibility passes Linux/macOS; Windows compatibility and general Python CI are still running. Security and website pass. The unchanged frozen context-band gate (0.6667 < 0.90) remains the promotion blocker.
+- Current local task ports SWE-bench Lite issue-row preparation into Rust, including fallback/null IDs, deduplication, labels, coding routing constraints, provenance, and notes. Its differential test, Rust workspace, Clippy, format, Ruff, and full Python regression pass.
+- Latest Python evidence: 1,767 passed, 6 skipped; 92.09% line (6,599/7,166), 87.04% branch (1,833/2,106), 90.94% combined coverage. See `docs/COVERAGE_REPORT_2026-11-11.md`.
+- The 77-module matrix is in `docs/RUST_PARITY_MATRIX.md`; remote data and Docker execution, other adapter transformations, evaluation runner/CLI/annotation, most public CLI, HTTP/MCP, plugins/skills, and provider execution remain incomplete. Python remains the shipping authority.
+- Next: commit/push TASK-027, inspect all CI, repair failures, and continue parity. Do not merge/tag while the frozen release gate fails.
 - Owner actions are in `PRODUCTION_STATUS.md` under **Needs Krish**: independent human annotation/adjudication, bounded paid OpenAI validation credentials, and production deployment credentials/approval.
 
 ## Historical checkpoint

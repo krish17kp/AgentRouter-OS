@@ -1962,3 +1962,17 @@ CI is finishing. TASK-026 awaits push and CI.
 
 Next: push TASK-026, inspect platform workflows and repair failures, then
 continue remaining evaluation adapters and public module parity.
+
+
+## 2026-11-11 — TASK-027: Rust SWE-bench Lite row preparation
+
+Ported SWE-bench issue-row preparation for routing/classification evaluation,
+including normalized deduplication, fallback/null IDs, repository tags, coding
+expectations, ability threshold 7, provenance, and row notes. Focused SWE-bench
+and LongBench differential tests (2) and Rust workspace/Clippy/format/Ruff pass.
+Full Python suite: 1,767 passed/6 skipped; 92.09% line, 87.04% branch, 90.94%
+combined coverage. TASK-026 Rust workspace and Linux/macOS compatibility pass;
+Windows and general CI are finishing. TASK-027 awaits push and CI.
+
+Next: commit/push TASK-027, inspect cross-platform workflows, fix failures, and
+continue remaining adapters and public modules.
