@@ -30,38 +30,36 @@ impl ImpactSignal {
 }
 
 /// Best-effort graph signal. Missing, unreadable, or invalid JSON files yield
-/// the same text-only fallback as Python; malformed graph entries are ignored.
-pub fn impact_for(prompt: &str, graph_path: impl AsRef<Path>) -> ImpactSignal {
+/// the same text-only fallback as Python; malformed collection shapes error.
+pub fn impact_for(prompt: &str, graph_path: impl AsRef<Path>) -> Result<ImpactSignal, String> {
     let Ok(text) = std::fs::read_to_string(graph_path) else {
-        return ImpactSignal::unavailable();
+        return Ok(ImpactSignal::unavailable());
     };
     let Ok(raw) = serde_json::from_str::<Value>(&text) else {
-        return ImpactSignal::unavailable();
+        return Ok(ImpactSignal::unavailable());
     };
     let Some(object) = raw.as_object() else {
-        return ImpactSignal::unavailable();
+        return Err("graph root must be a JSON object".to_owned());
     };
 
     let mut names = BTreeSet::new();
-    if let Some(nodes) = object.get("nodes").and_then(Value::as_array) {
-        for node in nodes {
-            let Some(node) = node.as_object() else {
+    for node in python_iterable(object.get("nodes"), "nodes")? {
+        let Some(node) = node.as_object() else {
+            continue;
+        };
+        for key in ["name", "id", "label", "file"] {
+            let Some(value) = node.get(key).and_then(Value::as_str) else {
                 continue;
             };
-            for key in ["name", "id", "label", "file"] {
-                let Some(value) = node.get(key).and_then(Value::as_str) else {
-                    continue;
-                };
-                if !value.is_empty() {
-                    let basename = value.rsplit('/').next().unwrap_or(value);
-                    names.insert(
-                        basename
-                            .split('.')
-                            .next()
-                            .unwrap_or(basename)
-                            .to_lowercase(),
-                    );
-                }
+            if !value.is_empty() {
+                let basename = value.rsplit('/').next().unwrap_or(value);
+                names.insert(
+                    basename
+                        .split('.')
+                        .next()
+                        .unwrap_or(basename)
+                        .to_lowercase(),
+                );
             }
         }
     }
@@ -71,22 +69,20 @@ pub fn impact_for(prompt: &str, graph_path: impl AsRef<Path>) -> ImpactSignal {
         .filter(|value| is_truthy(value))
         .or_else(|| object.get("links"));
     let mut adjacency: BTreeMap<String, Vec<String>> = BTreeMap::new();
-    if let Some(edges) = edges.and_then(Value::as_array) {
-        for edge in edges {
-            let Some(edge) = edge.as_object() else {
-                continue;
-            };
-            let (Some(source), Some(target)) = (
-                edge.get("source").and_then(Value::as_str),
-                edge.get("target").and_then(Value::as_str),
-            ) else {
-                continue;
-            };
-            adjacency
-                .entry(source.to_lowercase())
-                .or_default()
-                .push(target.to_lowercase());
-        }
+    for edge in python_iterable(edges, "edges")? {
+        let Some(edge) = edge.as_object() else {
+            continue;
+        };
+        let (Some(source), Some(target)) = (
+            edge.get("source").and_then(Value::as_str),
+            edge.get("target").and_then(Value::as_str),
+        ) else {
+            continue;
+        };
+        adjacency
+            .entry(source.to_lowercase())
+            .or_default()
+            .push(target.to_lowercase());
     }
 
     // Python's expression is explicitly ASCII despite lowercasing matches.
@@ -106,12 +102,12 @@ pub fn impact_for(prompt: &str, graph_path: impl AsRef<Path>) -> ImpactSignal {
         }
     }
     let dependency_reach = reached.len();
-    ImpactSignal {
+    Ok(ImpactSignal {
         available: true,
         matched_nodes: matched.len(),
         dependency_reach,
         feature: (dependency_reach as f64 / 20.0).min(1.0),
-    }
+    })
 }
 
 fn is_truthy(value: &Value) -> bool {
@@ -125,6 +121,23 @@ fn is_truthy(value: &Value) -> bool {
     }
 }
 
-pub fn impact_for_default(prompt: &str) -> ImpactSignal {
+fn python_iterable(value: Option<&Value>, field: &str) -> Result<Vec<Value>, String> {
+    let Some(value) = value.filter(|value| is_truthy(value)) else {
+        return Ok(Vec::new());
+    };
+    match value {
+        Value::Array(values) => Ok(values.clone()),
+        Value::String(value) => Ok(value
+            .chars()
+            .map(|character| Value::String(character.to_string()))
+            .collect()),
+        Value::Object(values) => Ok(values.keys().cloned().map(Value::String).collect()),
+        Value::Null | Value::Bool(_) | Value::Number(_) => {
+            Err(format!("graph {field} must be iterable"))
+        }
+    }
+}
+
+pub fn impact_for_default(prompt: &str) -> Result<ImpactSignal, String> {
     impact_for(prompt, DEFAULT_GRAPH_PATH)
 }

@@ -2144,3 +2144,13 @@ Fixed cross-platform Python text-mode newline translation and pushed
 next unfinished module. PR #16 remains blocked honestly by context-band 0.6667
 < 0.90, and human annotation/live credential/deployment actions stay under
 Needs Krish.
+
+## 2026-11-11 — TASK-041: Rust annotation graph malformed shapes
+
+Matched Python graph JSON behavior for malformed roots and truthy scalar
+collections, while preserving text-only fallback for missing/unreadable/invalid
+JSON. Mapping and string iteration also match Python. Eleven focused differential
+cases, full Python 1,875/6 (92.15% line, 87.22% branch, 91.03% combined), full
+Rust workspace/Clippy/format, Ruff, and diff checks pass. Python's four-entry
+LRU cache remains a known parity gap; the matrix remains Partial for this module.
+Cross-platform CI will run after push.

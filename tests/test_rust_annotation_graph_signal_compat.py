@@ -123,3 +123,29 @@ def test_rust_graph_signal_saturates_at_one(tmp_path):
         encoding="utf-8",
     )
     _assert_parity("audit classifier", graph)
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        [],
+        "not an object",
+        12,
+        {"nodes": 3},
+        {"nodes": [], "edges": 5},
+        {"nodes": [], "links": True},
+    ],
+)
+def test_rust_graph_signal_rejects_malformed_iterable_shapes_like_python(tmp_path, raw):
+    graph = tmp_path / "malformed.json"
+    graph.write_text(json.dumps(raw), encoding="utf-8")
+    with pytest.raises((AttributeError, TypeError)):
+        impact_for("inspect classifier", graph)
+    result = _rust("inspect classifier", graph)
+    assert result.returncode != 0
+
+
+def test_rust_graph_signal_matches_python_mapping_node_iteration(tmp_path):
+    graph = tmp_path / "mapping-nodes.json"
+    graph.write_text(json.dumps({"nodes": {"bad": "ignored key"}}), encoding="utf-8")
+    _assert_parity("inspect classifier", graph)

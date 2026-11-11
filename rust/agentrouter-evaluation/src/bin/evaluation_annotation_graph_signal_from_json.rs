@@ -20,7 +20,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signal = match request.graph_path {
         Some(path) => impact_for(&request.prompt, path),
         None => impact_for_default(&request.prompt),
-    };
+    }
+    .map_err(io::Error::other)?;
     println!("{}", serde_json::to_string(&signal)?);
     Ok(())
 }

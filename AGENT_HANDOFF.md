@@ -2,10 +2,10 @@
 
 ## Current checkpoint — 2026-11-11
 
-- Active RC branch `release/agentrouter-v0.5-rc1`; latest pushed head is `1c88b3c` (Windows newline parity fix). TASK-039 is pushed as `40d5a7f`; TASK-040 annotation comparison is locally complete and undergoing full verification. PR #16 is the sole open PR to `main`.
+- Active RC branch `release/agentrouter-v0.5-rc1`; latest pushed head is `8a4286a` (TASK-040 annotation comparison). TASK-039 (`40d5a7f`) and TASK-040 are pushed; TASK-041 graph-shape parity is locally complete and awaiting push/hosted CI. PR #16 is the sole open PR to `main`.
 - TASK-038’s Windows CI failure found that Python text-mode file writes use CRLF while Rust wrote LF. The Rust store now translates text newlines by platform; new cross-platform CI is running on `1c88b3c`.
-- TASK-039 ports the 63-prompt deterministic candidate bank. TASK-040 ports rules/learned/hybrid comparison, all report metrics, and CPython-seeded bootstrap intervals. Their focused differential suites pass (51 and 5 cases).
-- Latest full Python regression after TASK-040: 1,868 passed, 6 skipped; 92.15% line, 87.22% branch, 91.03% combined coverage. Rust workspace and Clippy pass locally; Ruff and formatting pass.
+- TASK-039 ports the 63-prompt deterministic candidate bank. TASK-040 ports rules/learned/hybrid comparison, all report metrics, and CPython-seeded bootstrap intervals. TASK-041 aligns graph malformed-shape handling; its 11 focused differential cases pass. Python LRU cache parity remains open.
+- Latest full Python regression after TASK-040: 1,875 passed, 6 skipped; 92.15% line, 87.22% branch, 91.03% combined coverage. Rust workspace and Clippy pass locally; Ruff and formatting pass.
 - PR #16 must remain open: the frozen context-band release gate is 0.6667 against 0.90. Do not enable learned routing or alter the gate. Human annotation, bounded OpenAI live smoke credentials, and production deployment credentials remain under **Needs Krish** in `PRODUCTION_STATUS.md`.
 - The 77-module inventory is in `docs/RUST_PARITY_MATRIX.md`; Python remains the shipping authority until all public surfaces reach measured parity and release gates pass. Continue immediately with the next Partial/Not ported module, inspect hosted checks, review every open PR, and update `PRODUCTION_STATUS.md` after each slice.
 
