@@ -2096,3 +2096,14 @@ shapes are not yet mirrored. TASK-035 cross-platform CI is running.
 
 Next: push this slice and inspect hosted checks while continuing annotation
 pack/store/CLI parity work.
+
+## 2026-11-11 — TASK-037: Rust annotation pack basics
+
+Added CPython-compatible arbitrary integer seeding, MT19937, `_randbelow`, and
+shuffle for blinded candidate packs. Added resume filtering, label-free
+progress, order-preserving merge, disagreement-only adjudication packs, and
+CSV export. Differential tests cover six seeds including negative and
+multiword values, duplicate/out-of-pool labels, merge order, disagreement
+filtering, blinding, and quoted CSV fields. The module now meets its full
+contract parity bar. Hosted TASK-035/036 checks are running while this local
+slice is validated.

@@ -3,7 +3,7 @@
 ## Current checkpoint — 2026-11-11
 
 PRs #27–#33 and #13 are merged into `release/agentrouter-v0.5-rc1`; RC head is
-`7d74179`, with TASK-035 local schema work pending push, and PR #16 remains
+`1a2c005`, with TASK-037 local pack work pending push, and PR #16 remains
 open to `main`. Cross-platform Rust/Python checks for TASK-029 through
 TASK-034 pass. The only hosted failure is the frozen gate: context-band
 accuracy 0.6667 against 0.90. The live smoke is skipped without credentials.
@@ -13,7 +13,9 @@ alongside static fixture behavior from the shared adapter base. TASK-030
 completes evaluation provenance parity. Current local task closes evaluation
 schema serialization, hashing/checksum, and invalid-input parity. Focused
 differential tests, Rust workspace, Clippy, format, and Ruff pass. TASK-035
-adds 14 annotation schema/datetime cases. The latest Python suite passes:
+adds 14 annotation schema/datetime cases; TASK-036 adds the repository-impact
+signal; TASK-037 completes annotation pack parity. Twelve graph/pack differential
+cases and workspace checks pass locally. The latest Python suite passes:
 1,796 passed, 6 skipped; coverage is 92.15% line, 87.13% branch, and 91.01%
 combined. Remaining
 adapter transformations, remote runs, evaluation

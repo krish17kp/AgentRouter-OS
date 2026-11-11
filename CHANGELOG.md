@@ -12,6 +12,9 @@ All notable changes to AgentRouter OS. Format loosely follows
 - Added the Rust repository-impact signal with offline differentials for graph
   nodes, edges, fallback behavior, and bounded feature values; malformed graph
   shape and Python cache semantics remain tracked parity work.
+- Added Rust annotation pack ordering, resume filtering, progress, merging,
+  disagreement-only adjudication packs, and CSV export with CPython-compatible
+  seeded shuffling.
 - Ported deterministic annotation train/dev/private-holdout splits to Rust,
   including cluster preservation and a fail-closed frozen-holdout leakage check.
 - Ported annotation duplicate and leakage guards to Rust, including Python

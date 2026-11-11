@@ -2,7 +2,7 @@
 
 ## Current checkpoint — 2026-11-11
 
-- Active RC worktree: `release/agentrouter-v0.5-rc1` at `7d74179`, with TASK-035 local changes pending push. PRs #27–#33 and #13 are merged; PR #16 remains open to `main`.
+- Active RC worktree: `release/agentrouter-v0.5-rc1` at `1a2c005`, with TASK-037 local changes pending push. PRs #27–#33 and #13 are merged; PR #16 remains open to `main`.
 - TASK-028 is pushed. Rust workspace and non-skipping Python/Rust compatibility pass Linux; Windows/macOS and general Python checks are still running. Security and website pass. The unchanged frozen context-band gate (0.6667 < 0.90) remains the promotion blocker.
 - TASK-029 locally completes TwinRouterBench's dynamic-track full-run skip report. The focused differential test, shared adapter tests, full Python suite, Rust workspace, Clippy, format, Ruff, and diff checks pass.
 - TASK-029 has been pushed as `55d5fbd`; hosted Rust and Python/Rust checks pass on Linux, with Windows/macOS and general tests running. TASK-030 is pushed as `d1ba467`; its cross-platform Rust/compatibility runs are in progress.
@@ -13,6 +13,7 @@
 - TASK-031 closes evaluation-schema parity, including serialization, Unicode hashes, checksum copies, and malformed input rejection. TASK-032 is pushed; seven focused adjudication cases, Rust workspace, Clippy, format, Ruff, and diff checks pass. TASK-033 has cross-platform Rust/Python checks; a hosted Ruff format failure is fixed locally. TASK-034 adds split assignment and frozen-holdout leak checks; focused differential tests pass.
 - Latest full regression: 1,796 passed, 6 skipped; coverage is 92.15% line, 87.13% branch, and 91.01% combined, including TASK-035's datetime differential tests.
 - TASK-029 through TASK-034 cross-platform Rust/Python checks pass. Latest hosted CI has only the frozen promotion gate failure (context-band 0.6667 < 0.90); live smoke is skipped without credentials. TASK-035 adds 14 datetime/schema differential checks; Rust workspace, Clippy, format, and Ruff pass locally. Full suite/coverage refresh is running. PR #16 remains blocked by the unchanged gate.
+- TASK-035 `91b038f` is pushed; hosted CI is running, with release-gate failure unchanged. TASK-036 adds a partial Rust graph-impact slice; TASK-037 completes annotation pack parity across eight focused tests, including arbitrary Python integer seeds and CSV edge values. Full workspace, Clippy, format, Ruff, and twelve graph/pack cases pass locally. Latest hosted results are being checked while the next push starts CI.
 - Owner actions are in `PRODUCTION_STATUS.md` under **Needs Krish**: independent human annotation/adjudication, bounded paid OpenAI validation credentials, and production deployment credentials/approval.
 
 ## Historical checkpoint

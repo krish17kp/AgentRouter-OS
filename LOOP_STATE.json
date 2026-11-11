@@ -1,12 +1,12 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-11",
-  "current_phase": "IN_PROGRESS: TASK-035 ports annotation artifact models and Python-compatible datetime parsing/serialization. Fourteen focused differential checks, Rust workspace, Clippy, format, and Ruff pass. Full regression/coverage is running; continue remaining Rust parity after push. Frozen release gate remains 0.6667 < 0.90.",
+  "current_phase": "IN_PROGRESS: TASK-036 graph-impact behavior has a Rust counterpart with four local differentials and remains Partial for Python cache/malformed-shape semantics. TASK-037 ports all annotation pack functions with eight Python/Rust differentials, including arbitrary-width CPython seed parity, and passes local full workspace/Clippy/format/Ruff. Push TASK-037, inspect hosted CI while continuing parity.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
     "main": "PR #16 is the sole open PR against main. Cross-platform Python/Rust, security, site, API, build and mutation checks pass; enforce-release-gate fails honestly at context-band 0.6667 < 0.90. No gate bypass.",
-    "release/agentrouter-v0.5-rc1": "RC at 7d74179; TASK-022 through TASK-034 pushed. TASK-029 through TASK-034 hosted Rust/Python checks pass on Linux, Windows, and macOS. Latest general CI has only the frozen-gate failure; live smoke skipped without credentials. TASK-035 is local pending full suite/coverage and push.",
+    "release/agentrouter-v0.5-rc1": "RC at 1a2c005; TASK-022 through TASK-035 pushed. TASK-035 hosted cross-platform checks are still running; frozen context gate 0.6667 < 0.90 remains and live smoke is skipped without credentials. TASK-036/037 are local pending push.",
     "task/rust-r1-workspace": "PR #25 open against RC; 6ee8d3e passed complete GitHub CI; 32eee6f forced-init push failed Windows compile, file-handle repair awaits remote recheck; SQLite path-race blocker remains; Rust R4 partial and OpenAI execution hardening",
     "task/repo-cleanup-architecture-ponytail": "MERGED to RC (PR #14, merge commit 1ae3155); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/dynamic-skill-discovery": "MERGED to RC (PR #15, merge commit 62d5289); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
@@ -29,8 +29,9 @@
   "repo_sha_at_takeover": "602321af91ff298c0d5b59d6d36c24f845557fc1",
   "canonical_release_ready": false,
   "in_progress": [
-    "2026-11-11 TASK-035: annotation artifact schemas now parse and serialize supported Python datetime forms; 14 focused Python/Rust cases, full workspace, Clippy, format, and Ruff pass. Scalar coercion and full fromisoformat edge grammar remain partial. Refresh full suite/coverage, push, inspect CI, continue remaining annotation and public-module parity.",
-    "Release blockers remain external: independent human annotation/adjudication, bounded OpenAI live validation credentials, and production hosting/deployment credentials. Build offline fixtures and continue all independent work."
+    "2026-11-11 TASK-036: Rust Graphify signal covers node/path extraction, ASCII token matching, neighbors, bounded feature, default graph path, and missing/invalid JSON fallback. Four focused differentials and local workspace/quality checks pass. Remains Partial for Python LRU and malformed root/node exception parity; push with TASK-037 and check hosted CI.",
+    "2026-11-11 TASK-037: Rust annotation packs cover all public operations: CPython arbitrary-width integer seed shuffle, blinding, resume/progress, merge, disagreement selection, adjudication pack, and CSV. Eight focused differentials plus workspace, Clippy, format, Ruff pass. Push and inspect CI, then continue evaluation/annotation CLI and remaining public modules.",
+    "External release work remains: independent human labeling/adjudication, bounded live OpenAI validation credentials, production hosting/deployment credentials."
   ],
   "completed_iter25": [
     "TASK-015 trusted catalogs MERGED to RC (PR #6 -> merge commit 8661629; task branch deleted local+remote). Closes TASK-013's deferred scope: file-level provenance block (provider, source_url, fetched_at UTC, count, tool_version, cli_args) ignored by the registry loader; atomic refresh via tempfile.mkstemp + os.replace; candidate-deprecation reporting on refresh (report-only, never auto-deletes); rollback with non-destructive backup rotation + new `providers restore`; new `providers doctor` that schema-validates every generated catalog and exits 3 only on real corruption (not staleness).",
@@ -122,7 +123,7 @@
     "historical task records remain under loop/tasks and loop/reports",
     "historical TASK-004 0.945 result is retained as in-sample evidence but no longer treated as canonical held-out readiness"
   ],
-  "next_action": "Finish full Python suite/coverage, refresh production and handoff evidence, commit/push TASK-035, inspect its full cross-platform CI, and immediately continue with the next incomplete public Rust module.",
+  "next_action": "Commit and push TASK-037 plus TASK-036 test/evidence corrections; inspect TASK-035/036/037 hosted CI; run full Python suite/coverage; continue Rust evaluation/annotation CLI parity.",
   "completed_iter26": [
     "TASK-016 verified execution-host states MERGED to RC (PR #7 -> merge commit 5847c22; task branch deleted local+remote). hosts.py gained a readiness state vocabulary (missing/installed/configured/authenticated/authorized/degraded/unknown) plus a per-host remedy; `availability` keeps its exact prior meaning and is now derived from state. hosts list/doctor/show, the setup wizard and the execute refusal all report state + fix; hosts doctor ends with the cheapest concrete fix and exits non-zero only when no real host is ready. REST/MCP gained additive state/remedy and host_state/host_remedy keys. docs: new USER_GUIDE section 8 with the state table and the honesty note on `authorized`.",
     "BUG FIXED: host detection tested the API-key env var for truthiness, so a set-but-blank key (OPENAI_API_KEY='   ') reported available and `execute` would target a host that cannot authenticate. Now degraded/unavailable with a fix-it message, pinned by a parametrised test.",
@@ -223,5 +224,8 @@
   ],
   "completed_iter46": [
     "Added Rust Candidate, AnnotatorLabel, ItemLabels, AdjudicatedItem, and DatasetManifest models, defaults, validation, and derived properties. Implemented datetime parsing/normalization for RFC3339 and naive ISO date/time values plus numeric Unix seconds/milliseconds. Fourteen differential cases cover offsets, date-only, microseconds, submicrosecond truncation, timestamps, null, and invalid input. Full Rust workspace tests, Clippy, format, Ruff, and focused compatibility checks pass. Schema remains Partial for Pydantic coercion and untested datetime grammar; full Python suite/coverage is running. Latest hosted checks for 7d74179 pass cross-platform except the unchanged context release gate."
+  ],
+  "completed_iter47": [
+    "Ported the full agentrouter.annotation.packs public behavior. Reproduced CPython arbitrary-width integer seed decomposition, MT19937 and shuffle. Eight Python/Rust cases cover six seeds including negative and >64-bit, filtering/progress, order-preserving merge, disagreement-only adjudication, blinded candidates, CSV escaping, CRLF, bool and confidence formats. The matrix marks module Parity. Evaluation workspace, focused graph/pack differential suite (12 total), Clippy, format, Ruff pass."
   ]
 }

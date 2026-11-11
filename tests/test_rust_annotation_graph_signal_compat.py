@@ -109,3 +109,17 @@ def test_rust_graph_signal_uses_links_when_edges_are_empty(tmp_path):
         encoding="utf-8",
     )
     _assert_parity("Inspect server", empty_edges)
+
+
+def test_rust_graph_signal_saturates_at_one(tmp_path):
+    graph = tmp_path / "wide-graph.json"
+    graph.write_text(
+        json.dumps(
+            {
+                "nodes": [{"id": "classifier"}],
+                "edges": [{"source": "classifier", "target": f"neighbor-{i}"} for i in range(24)],
+            }
+        ),
+        encoding="utf-8",
+    )
+    _assert_parity("audit classifier", graph)

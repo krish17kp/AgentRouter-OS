@@ -6,6 +6,7 @@
 
 pub mod annotation_dedup;
 pub mod annotation_graph_signals;
+pub mod annotation_packs;
 pub mod annotation_schema;
 pub mod annotation_splits;
 
