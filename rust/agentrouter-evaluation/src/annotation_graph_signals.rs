@@ -168,7 +168,7 @@ fn is_truthy(value: &Value) -> bool {
 }
 
 /// Match Python `str.lower()`'s context-sensitive Greek final sigma rule.
-fn python_lowercase(value: &str) -> String {
+pub(crate) fn python_lowercase(value: &str) -> String {
     let characters = value.chars().collect::<Vec<_>>();
     let mut output = String::with_capacity(value.len());
     for (index, character) in characters.iter().copied().enumerate() {

@@ -162,3 +162,15 @@ path = "src/bin/evaluation_annotation_candidates_from_json.rs"
 [[bin]]
 name = "evaluation_annotation_compare_from_json"
 path = "src/bin/evaluation_annotation_compare_from_json.rs"
+
+[[bin]]
+name = "evaluation_context_bands_from_json"
+path = "src/bin/evaluation_context_bands_from_json.rs"
+
+[[bin]]
+name = "evaluation_context_leaks_from_json"
+path = "src/bin/evaluation_context_leaks_from_json.rs"
+
+[[bin]]
+name = "evaluation_context_score_from_json"
+path = "src/bin/evaluation_context_score_from_json.rs"

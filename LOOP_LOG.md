@@ -2175,3 +2175,12 @@ edge, and token identifiers. Thirteen graph differentials pass, including
 bar. Full Python suite: 1,877 passed/6 skipped; coverage 92.15% line, 87.22%
 branch, and 91.03% combined. Full Rust workspace, Clippy, format, Ruff, and diff
 checks pass locally. Cross-platform hosted confirmation starts after push.
+# TASK-044 — Rust context-band evaluation parity
+
+Ported the complete public context-band evaluator, including frozen dataset
+verification, prompt leak detection, scoring, confidence intervals, bootstrap,
+legacy comparison, and release report. Python/Rust differential tests now
+cover exact release report output, caller-supplied predictions, Unicode and
+long-string `SequenceMatcher` behavior, and leak findings. Local focused tests
+and evaluation crate Clippy pass. The frozen 0.6667 score and 0.90 threshold
+remain unchanged; this work does not clear release promotion.

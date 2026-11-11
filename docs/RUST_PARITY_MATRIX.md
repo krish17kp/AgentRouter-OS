@@ -50,7 +50,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/base.py` | `agentrouter-evaluation::{load_adapter_fixture,adapter_availability,sample_adapter_cases,adapter_checksum,describe_adapter}` | Partial |
 | `agentrouter/evaluation/cli.py` | `—` | Not ported |
 | `agentrouter/evaluation/comparison.py` | `agentrouter-evaluation::{compare_results,load_result,write_comparison}` | Parity |
-| `agentrouter/evaluation/context_bands.py` | `—` | Not ported |
+| `agentrouter/evaluation/context_bands.py` | `agentrouter-evaluation::context_bands` | Parity |
 | `agentrouter/evaluation/evaluators/__init__.py` | `—` | Not ported |
 | `agentrouter/evaluation/evaluators/feedback.py` | `agentrouter-evaluation::evaluate_feedback` | Parity |
 | `agentrouter/evaluation/evaluators/performance.py` | `agentrouter-evaluation::{evaluate_performance,summarize_performance}` | Partial |
