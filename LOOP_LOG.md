@@ -1715,3 +1715,18 @@ branch, and 89.76% combined coverage. Full Rust workspace tests and Clippy pass;
 Rust formatting, Ruff, Python formatting, and 12 focused evaluation differential
 tests pass. Cross-platform CI for the preceding report-renderer commit is still
 running; this grading slice needs its own CI run after push.
+
+## Iteration 41 — 2026-11-11 — Rust evaluation safety evaluator
+
+Ported the TASK evaluation safety score using Rust's contract-compatible
+classifier. High risk is determined from the explicit human-approval label or
+an exact high-only expected risk set; unlabeled cases use the classifier proxy
+and are called out in the result. The port reports risk recall, gating score,
+human-approval/auto-execute failures (capped at 20), and the same note as Python.
+Differential cases include a permissive medium/high set and proxy high-risk
+case to protect the scorer's label semantics.
+
+Verification: full Python regression 1,733 passed / 6 skipped; 91.08% line,
+85.42% branch, and 89.79% combined coverage. The full Rust workspace, Clippy,
+format, focused evaluation differential tests, Ruff, and Python formatting pass.
+Cross-platform CI for this safety evaluator remains pending.

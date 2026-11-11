@@ -52,6 +52,7 @@ dependencies = [
 name = "agentrouter-evaluation"
 version = "0.1.0"
 dependencies = [
+ "agentrouter-classifier",
  "agentrouter-core",
  "agentrouter-routing",
  "serde",
