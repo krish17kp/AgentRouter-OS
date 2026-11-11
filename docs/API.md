@@ -21,6 +21,20 @@ The app reads its registry/decision store from `AGENTROUTER_HOME`
 
 Both are generated automatically by FastAPI.
 
+## Browser UI integration
+
+The API is same-origin-only by default. To let an explicitly configured browser
+UI call the local router, set a comma-separated allowlist of exact origins:
+
+```bash
+export AGENTROUTER_CORS_ORIGINS=http://localhost:5173
+```
+
+This enables CORS only for those origins, exposes `X-Request-ID`, and never
+allows browser credentials. Do not use a wildcard. The bundled website sends a
+route only when its build is configured with `VITE_AGENTROUTER_API_URL`; it
+always sends `no_log: true` and has no mechanism for sending an API key.
+
 ## Authentication
 
 Local mode by default (open). If the environment variable `AGENTROUTER_API_KEY`
