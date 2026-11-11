@@ -1,7 +1,7 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-11",
-  "current_phase": "IN_PROGRESS: Dedicated agentrouter-learning Rust crate ports reversible feedback weights and is wired into the route CLI. Three Rust unit tests and nine Python/Rust differential cases pass, including ties-to-even rounding. Full Python regression: 1,720 passed/6 skipped; line 91.0056%, branch 85.2327%; full Rust workspace, Clippy, formatting, Ruff pass. Commit/push, inspect CI, continue parity.",
+  "current_phase": "IN_PROGRESS: Added standalone agentrouter-evaluation Rust metrics crate with Python/Rust differential parity for classification_metrics; full workspace, Clippy, format, Ruff, and Python suite pass. Rust evaluation schema, runners, CLI, adapters, and annotations remain unported. Current commit needs push and CI validation; continue public-module parity.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
@@ -103,12 +103,13 @@
     "graph": "graphifyy 0.9.47; 3623 nodes / 7084 edges / 309 communities from RC d81ad94; graphify-out/ is gitignored and local-only",
     "ci_status_3281c41": "All GitHub workflows passed on 3281c41: CI Python 3.10-3.13 plus Windows/build/API/report, Security, Rust Linux/Windows parity/MSRV, and Critical Mutation Testing. A subsequent route-persistence probe has not yet run in CI.",
     "ci_status_0ac4335": "PR workflows Security, Rust, Mutation failed before creating jobs; GitHub run pages show internal server errors, no code verdict. Prior 3281c41 all green; local route-persistence/init probes pass.",
-    "python_full_latest": "2026-11-11 Linux/Python 3.12.15: 1,720 passed, 6 skipped; line 91.0056% (6,516/7,160); branch 85.2327% (1,795/2,106); combined 89.6935%; 1 Starlette/httpx deprecation warning.",
+    "python_full_latest": "2026-11-11 Linux/Python 3.12.15: 1,721 passed, 6 skipped; line 91.0056% (6,516/7,160); branch 85.2327% (1,795/2,106); combined 89.6935%; 1 Starlette/httpx deprecation warning.",
     "evaluation_latest_2026_11_11": "Grade 98.23/100; 6/7 release gates pass; context_band_accuracy 0.6667 < 0.90 on the frozen 45-case holdout; release-ready NO.",
-    "local_release_checks_2026_11_11": "Python full 1,720 passed/6 skipped; line 91.0056%, branch 85.2327%; Ruff/format, serial Rust workspace tests, Clippy and formatting pass. Feedback-learning parity awaits fresh cross-platform CI.",
+    "local_release_checks_2026_11_11": "Python full 1,721 passed/6 skipped; line 91.0056%, branch 85.2327%; Ruff/format, serial Rust workspace tests, Clippy and formatting pass. Existing commit a4d2f79 passed Python 3.10-3.13, Windows/macOS, Rust, Security, Mutation, API and site CI; only frozen context-band promotion gate failed. Evaluation metric crate CI pending.",
     "rust_usage_rerank": "Eight Rust unit tests and ten Python/Rust differential scenarios pass; full workspace, Clippy, formatting, Ruff and full Python suite pass locally. Fresh cross-platform CI pending.",
     "rust_diagnostics_usage": "Nine focused Rust diagnostics compatibility tests pass, including opt-in usage and credential redaction. Full Rust workspace, Clippy, formatting, Ruff, diff checks, and full Python suite (1,711 passed/6 skipped) pass locally. Cross-platform CI pending.",
-    "rust_learning": "Three Rust unit tests and nine Python/Rust differential cases pass, including decimal ties-to-even. Full Rust workspace, Clippy, formatting, Ruff, and Python regression pass locally. Fresh CI pending."
+    "rust_learning": "Three Rust unit tests and nine Python/Rust differential cases pass, including decimal ties-to-even. Full Rust workspace, Clippy, formatting, Ruff, and Python regression pass locally. Fresh CI pending.",
+    "rust_evaluation_metrics": "Standalone agentrouter-evaluation mirrors agentrouter.evaluation.metrics report aggregation. Offline differential case covers ambiguous labels, skipped dimensions, tools, confusion, high-risk recall, and failures. Full workspace tests, Clippy, format, Ruff, and Python suite pass locally; cross-platform CI pending."
   },
   "release_blockers": [
     "Frozen context-band accuracy 0.6667 remains below unchanged 0.90. Independent human annotation by two annotators plus adjudication under TASK_012_OWNER_ACTIONS.md is required; AI labels cannot substitute.",

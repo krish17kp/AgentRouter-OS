@@ -9,6 +9,7 @@ members = [
     "rust/agentrouter-hosts",
     "rust/agentrouter-usage",
     "rust/agentrouter-learning",
+    "rust/agentrouter-evaluation",
     "rust/agentrouter-storage",
     "rust/agentrouter-cli",
 ]

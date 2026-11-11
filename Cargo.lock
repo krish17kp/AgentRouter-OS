@@ -49,6 +49,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "agentrouter-evaluation"
+version = "0.1.0"
+dependencies = [
+ "agentrouter-routing",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "agentrouter-hosts"
 version = "0.1.0"
 dependencies = [

@@ -1600,3 +1600,21 @@ Verification: Python regression 1,720 passed / 6 skipped; 91.0056% line,
 85.2327% branch, 89.6935% combined. Full Rust workspace tests, Clippy,
 formatting, Ruff, and learning/route differential tests pass. Cross-platform CI
 for the new crate is pending.
+
+## Iteration 34 — 2026-11-11 — Rust evaluation metric aggregation
+
+Added the standalone `agentrouter-evaluation` crate for the pure aggregation
+contract in `agentrouter.evaluation.metrics`. It accepts normalized expected
+label sets and already-produced predictions, then returns the Python-compatible
+accuracy, macro-F1, per-class recall, tool-set scores, confusion matrices,
+high-risk recall, and per-case failures. The deterministic fixture includes
+ambiguous acceptable labels, skipped dimensions, mismatches, exact tool sets,
+and ungraded cases; it does not create or alter evaluation labels.
+
+Verification: full Python regression 1,721 passed / 6 skipped; 91.0056% line,
+85.2327% branch, 89.6935% combined. Rust workspace tests, Clippy, format, Ruff,
+and the Python/Rust metric differential passed. Existing `a4d2f79` CI passed
+the cross-platform Rust/Python, security, and mutation jobs; it failed only the
+unchanged frozen context-band promotion gate. CI for this metrics slice remains
+pending its push. Evaluation schema, datasets, runners, CLI, and annotation
+workflow remain unported.

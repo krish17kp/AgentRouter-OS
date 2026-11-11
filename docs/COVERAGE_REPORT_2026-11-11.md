@@ -12,7 +12,7 @@ PYTHONPATH=. python -m pytest -q --cov=agentrouter --cov-branch --cov-report=ter
 
 | Measure | Result |
 |---|---:|
-| Python regression | 1,720 passed, 6 skipped |
+| Python regression | 1,721 passed, 6 skipped |
 | Line coverage | 91.01% (6,516 / 7,160 statements) |
 | Branch coverage | 85.23% (1,795 / 2,106 branch outcomes) |
 | Combined coverage reported by pytest-cov | 89.69% |
@@ -20,9 +20,10 @@ PYTHONPATH=. python -m pytest -q --cov=agentrouter --cov-branch --cov-report=ter
 | CI total-coverage threshold | 80% — passed |
 | Warnings | 1 Starlette/httpx deprecation warning |
 
-Run used Python 3.12.15 on Linux against RC commit `7714a8d` plus the local
-Rust feedback-learning crate; the regression includes nine learning, ten
-quota-routing, and nine doctor Python/Rust compatibility cases. The
+Run used Python 3.12.15 on Linux against RC commit `a4d2f79` plus the local
+Rust feedback-learning and evaluation-metrics crates; the regression includes
+nine learning, ten quota-routing, nine doctor, and one evaluation-metrics
+Python/Rust compatibility cases. The
 candidate package version is
 `0.5.0rc1`. The six skips are environment-
 dependent; CI is responsible for Windows and macOS confirmation.
