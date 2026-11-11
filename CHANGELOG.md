@@ -6,6 +6,9 @@ All notable changes to AgentRouter OS. Format loosely follows
 ## [Unreleased]
 
 ### Changed
+- Added Rust types and validation for the human annotation artifact schemas;
+  supported datetime forms now normalize to Python-compatible ISO JSON while
+  full scalar coercion and `fromisoformat` edge coverage remain open.
 - Ported deterministic annotation train/dev/private-holdout splits to Rust,
   including cluster preservation and a fail-closed frozen-holdout leakage check.
 - Ported annotation duplicate and leakage guards to Rust, including Python

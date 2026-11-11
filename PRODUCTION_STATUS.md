@@ -4,10 +4,10 @@ Updated: 2026-11-11
 
 ## Definition of done
 
-- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PRs #27–#33 are merged; TASK-022 through TASK-033 are pushed through `3e579da`; TASK-033's hosted Python check failed formatting and the local fix is included with TASK-034. PR #16 is the sole open PR. TASK-029 through TASK-032 Rust/Python checks pass cross-platform. The unchanged frozen context-band gate reports 0.6667 < 0.90, so promotion to main remains blocked.
+- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PRs #27–#33 are merged; PR #16 is the sole open PR and remains blocked by the frozen context-band gate (0.6667 < 0.90). TASK-029 through TASK-034 hosted Rust/Python and cross-platform checks pass; the TASK-033 Ruff correction is included. The latest hosted general CI fails only at the unchanged promotion gate; live smoke is skipped without credentials.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is now tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md); current gaps are explicit, and only modules with full-module differential tests are marked parity (24 modules meet that bar after TASK-034).
-- [x] Full Python suite: 1,779 passed, 6 skipped; 92.10% line (6,600/7,166), 87.08% branch (1,834/2,106), and 90.96% combined coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; exact evidence is in `docs/COVERAGE_REPORT_2026-11-11.md`.
+- [x] Full Python suite: 1,796 passed, 6 skipped; 92.15% line (6,603/7,166), 87.13% branch (1,835/2,106), and 91.01% combined coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; exact evidence is in `docs/COVERAGE_REPORT_2026-11-11.md`.
 - [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations; the Rust release benchmark now runs the same 10/100/1,000 candidate fleets, with a paired local p50 ratio of 2.70×–3.25× under stated synthetic conditions.
 - [x] Changelog, coverage evidence, and local latency measurements are committed to the release candidate. Candidate package version is now `0.5.0rc1`, with draft release notes in `docs/RELEASE_NOTES_v0.5.0rc1.md`; final `0.5.0` packaging and publication remain blocked on parity and all release gates.
 - [ ] Release candidate promoted to `main` with a tagged release.
@@ -42,8 +42,9 @@ Updated: 2026-11-11
 - [x] TASK-030 completes evaluation provenance parity with a Rust environment snapshot; its cross-platform Rust and Python/Rust checks pass.
 - [ ] TASK-031 completes Rust evaluation schema parity for defaults, serialization, hash/checksum methods, and invalid-input validation. Local checks pass; hosted platform compatibility is finishing.
 - [x] TASK-032 ports human annotation resolution and adjudication to Rust. Seven differential cases cover agreement, abstention, unresolved conflicts, and explicit human decisions; the required independent annotator round is still under **Needs Krish**.
-- [ ] TASK-033 ports Python-compatible prompt normalization, near-duplicate similarity, clustering, and leakage reports. Rust and Python/Rust checks pass across Linux/Windows/macOS; the hosted Ruff formatting failure is fixed locally and awaits the next CI run. The frozen holdout remains read-only.
-- [ ] TASK-034 ports deterministic annotation splits, cluster preservation, and fail-closed frozen-holdout leakage checks. Focused default/custom-ratio and leakage differential cases pass; hosted CI is pending.
+- [x] TASK-033 ports Python-compatible prompt normalization, near-duplicate similarity, clustering, and leakage reports. Rust/Python checks pass across Linux/Windows/macOS; Ruff formatting is corrected. The frozen holdout remains read-only.
+- [x] TASK-034 ports deterministic annotation splits, cluster preservation, and fail-closed frozen-holdout leakage checks. Local and cross-platform Rust/Python tests pass.
+- [ ] TASK-035 ports annotation schemas with Python-compatible datetime normalization. Fourteen focused differentials and the Rust workspace, Clippy, format, Ruff checks pass. Scalar coercion and the full `fromisoformat` edge grammar remain incomplete, so the module stays Partial; hosted CI is being checked on the next push.
 - [x] PR #31 upgraded bundled SQLite to 3.54.1, replaced `unsafe-libyaml`, and raised the Rust minimum to 1.89; workspace tests, Clippy, security audit, and cross-platform CI passed before merge at `a246cf6`.
 - [x] Website product-truth fixes, font hierarchy/motion redesign, unused shadcn CLI removal, server limits/API tests, and website lint/build CI merged via PR #27. npm build/lint and production dependency audit passed; full npm audit still reports moderate dev-tool advisories.
 - [x] Benchmark evidence merged via PR #29: 12/12 routing gold scenarios and 15 focused tests; live latency/cost are explicitly not claimed.
@@ -62,7 +63,7 @@ The seven-gate evaluation reports six pass and context-band fail. PR #16's
 cross-platform Python/Rust, security, mutation, package, API, and site checks
 pass; its promotion-only gate fails on context-band 0.6667 < 0.90, and live
 smoke is skipped without credentials. The full local regression now passes:
-1,779 passed, 6 skipped; 92.10% line, 87.08% branch, and 90.96% combined
+1,796 passed, 6 skipped; 92.15% line, 87.13% branch, and 91.01% combined
 coverage. Rust workspace tests, Clippy, Rust format, Ruff, and Python format
 pass on the current Rust adapter work. TASK-022, TASK-023, and TASK-024 Rust workspace and compatibility CI, security, website, and mutation checks pass across platforms. General CI has no code/test failure; the only failure is the unchanged frozen context-band promotion gate. TASK-025 Linux/Windows/macOS Rust compatibility, security, website, and mutation checks pass; broader Python platform checks are finishing. TASK-026 Linux/Windows/macOS Rust workspace and Linux/macOS adapter compatibility pass; Windows compatibility is finishing. TASK-027 Linux/Windows/macOS Rust workspace and compatibility pass; security and website pass. At TASK-028 commit `5767ddc`, Rust workspace and compatibility, security, website, and mutation checks pass; general Python CI is still running. TASK-029 TwinRouterBench status compatibility and full local Python regression pass; its CI awaits push.
 

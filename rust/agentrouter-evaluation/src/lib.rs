@@ -5,6 +5,7 @@
 //! checked offline without running a model or changing evaluation labels.
 
 pub mod annotation_dedup;
+pub mod annotation_schema;
 pub mod annotation_splits;
 
 use std::collections::{BTreeMap, BTreeSet};

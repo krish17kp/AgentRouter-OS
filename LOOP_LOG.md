@@ -2068,3 +2068,17 @@ format, Ruff, and diff checks pass locally. The complete Python suite passes
 
 Next: push TASK-034 and the TASK-033 format repair, inspect CI, refresh full
 suite/coverage evidence, and continue annotation and public-module parity.
+
+## 2026-11-11 — TASK-035: Rust annotation artifact schema
+
+Added Rust artifact types for candidates, annotator labels, item-label sets,
+adjudicated items, and dataset manifests. Differential checks cover defaults,
+derived properties, validation, invalid records, and fourteen timestamp cases.
+Rust now parses supported Python datetime inputs and serializes them in Python's
+ISO form at microsecond precision. The matrix remains Partial until scalar
+coercion and the full `fromisoformat` edge grammar are covered. Workspace,
+Clippy, format, Ruff, and focused compatibility checks pass locally; hosted CI
+and the refreshed complete Python coverage run are being checked.
+
+Next: push the schema slice with refreshed coverage, inspect CI, and continue
+the remaining annotation pipeline and public modules.

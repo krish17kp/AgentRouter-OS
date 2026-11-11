@@ -23,7 +23,7 @@ release authority until the full set is complete.
 | `agentrouter/annotation/dedup.py` | `agentrouter-evaluation::annotation_dedup` | Parity |
 | `agentrouter/annotation/graph_signals.py` | `—` | Not ported |
 | `agentrouter/annotation/packs.py` | `—` | Not ported |
-| `agentrouter/annotation/schema.py` | `—` | Not ported |
+| `agentrouter/annotation/schema.py` | `agentrouter-evaluation::annotation_schema` | Partial |
 | `agentrouter/annotation/splits.py` | `agentrouter-evaluation::annotation_splits` | Parity |
 | `agentrouter/annotation/store.py` | `—` | Not ported |
 | `agentrouter/bundle.py` | `agentrouter-cli::bundle` | Partial |
