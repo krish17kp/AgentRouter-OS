@@ -389,7 +389,7 @@ HTML escaping, absence of interactive controls, and a real loopback HTTP GET/POS
 smoke test. The cross-language storage compatibility test now seeds accepted
 and rejected feedback and caught a Rust
 `acceptance_rate` scale mismatch; the Rust aggregate now matches Python's
-0–1 ratio. The module is ported, but wiring it into a unified user-facing Rust
+0–1 ratio and ties-to-even two-decimal rounding. The module is ported, but wiring it into a unified user-facing Rust
 CLI remains part of the outstanding full CLI migration.
 
 R4 follow-up (2026-11-11, observability slice): added Rust `redact`, recursive

@@ -73,13 +73,14 @@ def test_aggregate_stats_match(seeded_home):
     conn = store.connect(seeded_home)
     conn.executemany(
         "INSERT INTO feedback (decision_id, created_at, rating, note) VALUES (?, ?, ?, ?)",
-        [(1, "now", 5, "good"), (2, "now", 2, "bad")],
+        [(1, "now", rating, "sample") for rating in [4, 3, 3, 3, 3, 3, 3, 3]],
     )
     conn.commit()
     python_stats = store.aggregate_stats(conn)
     rust_stats = json.loads(_run(seeded_home, "aggregate-stats"))
     assert rust_stats == python_stats
-    assert rust_stats["feedback"]["acceptance_rate"] == 0.5
+    assert rust_stats["feedback"]["avg_rating"] == 3.12
+    assert rust_stats["feedback"]["acceptance_rate"] == 0.12
 
 
 def test_load_decision_matches(seeded_home):
