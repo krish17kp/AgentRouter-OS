@@ -18,6 +18,7 @@ All notable changes to AgentRouter OS. Format loosely follows
 - Rust OpenAI Responses adapter slice with a rustls HTTPS transport, redirects disabled, bounded response reads, no automatic retries, and offline contract tests. It is not yet wired into a guarded Rust execution command.
 - Dated routing benchmark report: 12/12 committed gold scenarios and 15 focused benchmark/invariant tests pass; live latency and cost remain unmeasured.
 - macOS Python and Rust CI coverage now passes the configured platform jobs.
+- Rust harness detection now matches the Python module's verified environment markers and conservative fallback behavior across eight differential cases.
 
 ### Fixed
 - Evaluation `prepare --all` tests now use an offline mock and cannot download Hugging Face datasets during CI.
