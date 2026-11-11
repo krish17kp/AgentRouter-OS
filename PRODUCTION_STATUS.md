@@ -6,7 +6,7 @@ Updated: 2026-11-11
 
 - [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
-- [ ] Routing benchmark suite runs and measured results are committed to documentation.
+- [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations.
 - [ ] Changelog, version bump, release notes, full tests, and coverage report are committed.
 - [ ] Release candidate promoted to `main` with a tagged release.
 
