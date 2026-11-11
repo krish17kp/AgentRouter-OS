@@ -83,9 +83,9 @@ The seven-gate evaluation reports six pass and context-band fail. PR #16's
 cross-platform Python/Rust, security, mutation, package, API, and site checks
 pass; its promotion-only gate fails on context-band 0.6667 < 0.90, and live
 smoke is skipped without credentials. The full local regression now passes:
-1,900 passed, 6 skipped; 92.20% line, 87.27% branch, and 91.08% combined
+1,913 passed, 6 skipped; 92.34% line, 87.37% branch, and 91.21% combined
 coverage. The Rust workspace tests, workspace Clippy, Rust formatting, Ruff,
-and Python formatting pass at `681f4ff`. CI at `681f4ff` is in progress; the
+and Python formatting pass at `03baa84`. CI at `03baa84` is in progress; the
 website job is green. PR #16 remains promotion-blocked by the unchanged frozen
 context-band result and the human annotation requirement.
 
