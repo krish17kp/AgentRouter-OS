@@ -27,7 +27,13 @@ def test_resource_samples_report_supported_platform_values(monkeypatch, tmp_path
         SimpleNamespace(RUSAGE_SELF=0, getrusage=lambda _who: SimpleNamespace(ru_maxrss=42)),
     )
     assert soak_module._rss_kb() == 42
-    assert soak_module._open_fds() >= 0
+    # The production sampler intentionally reports -1 outside Linux because
+    # `/proc/<pid>/fd` is not a portable interface.
+    fd_count = soak_module._open_fds()
+    if sys.platform == "linux":
+        assert fd_count >= 0
+    else:
+        assert fd_count == -1
     path = tmp_path / "database"
     path.write_bytes(b"abc")
     assert soak_module._size(path) == 3
