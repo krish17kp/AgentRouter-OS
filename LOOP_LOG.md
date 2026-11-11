@@ -1684,3 +1684,19 @@ formatting, Ruff, and registry/evaluation Python-Rust tests pass locally. The
 cross-platform workflow for commit `6186979` passed its Rust workspace, Python/
 Rust parity, and Rust 1.89 jobs; the current registry addition needs a new CI
 run.
+
+## Iteration 39 — 2026-11-11 — Rust evaluation Markdown renderer
+
+Ported `evaluation.reports.render_markdown` to the Rust evaluation crate. The
+renderer preserves Python dictionary order and formatting for dimensions, gates,
+classification highlights, context-band confidence intervals, and limitations.
+An exact differential fixture covers optional environment fields, pending
+metrics, multiple gates, nested Python-style representations, and the frozen
+holdout section. The module remains Partial because JSON/scorecard/CSV file
+writes and output-directory orchestration are still Python-only.
+
+Verification: the evaluation crate tests and 11 evaluation differential tests
+pass. The first build hit the shared temporary filesystem quota; removing this
+checkout's generated Rust incremental cache freed 700 MB without deleting source
+or dependency artifacts, and a locked rebuild passed. Full workspace and CI
+verification for this slice remain pending.

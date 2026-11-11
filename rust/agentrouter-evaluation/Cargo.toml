@@ -9,7 +9,7 @@ license.workspace = true
 agentrouter-routing = { path = "../agentrouter-routing" }
 agentrouter-core = { path = "../agentrouter-core" }
 serde = { version = "1.0.210", features = ["derive"] }
-serde_json = "1.0.128"
+serde_json = { version = "1.0.128", features = ["preserve_order"] }
 sha2 = "=0.10.9"
 unicode-general-category = "=0.6.0"
 
@@ -32,3 +32,7 @@ path = "src/bin/evaluation_schema_from_json.rs"
 [[bin]]
 name = "evaluation_registry_from_json"
 path = "src/bin/evaluation_registry_from_json.rs"
+
+[[bin]]
+name = "evaluation_report_from_json"
+path = "src/bin/evaluation_report_from_json.rs"

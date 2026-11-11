@@ -84,6 +84,232 @@ pub const ADAPTERS: [AdapterDescriptor; 8] = [
 
 pub const PROFILE_NAMES: [&str; 5] = ["fast", "pr", "nightly", "release", "full"];
 
+/// Render the stable Markdown summary produced by Python
+/// `evaluation.reports.render_markdown`.
+pub fn render_markdown(result: &serde_json::Value) -> String {
+    let mut lines = vec!["# Evaluation report".to_owned(), String::new()];
+    if let Some(environment) = result
+        .get("environment")
+        .and_then(serde_json::Value::as_object)
+    {
+        lines.extend(["## Environment".to_owned(), String::new()]);
+        for (key, value) in environment {
+            lines.push(format!("- **{key}**: {}", python_string(value)));
+        }
+        lines.push(String::new());
+    }
+
+    lines.extend([
+        "## Grade".to_owned(),
+        String::new(),
+        format!(
+            "- **Grade /100 (unmeasured = 0):** {}",
+            result_value(result, "grade_over_100")
+        ),
+        format!(
+            "- **Grade of measured dimensions:** {} (measured {}/100 pts)",
+            result_value(result, "grade_of_measured"),
+            result_value(result, "possible_measured_points")
+        ),
+        format!(
+            "- **Release ready:** {}",
+            if truthy(result.get("release_ready")) {
+                "YES"
+            } else {
+                "NO"
+            }
+        ),
+        format!("- **Cases graded:** {}", result_value(result, "n_cases")),
+        String::new(),
+        "## Dimensions".to_owned(),
+        String::new(),
+        "| dimension | weight | status | score | achieved |".to_owned(),
+        "|---|---|---|---|---|".to_owned(),
+    ]);
+    if let Some(dimensions) = result
+        .get("dimensions")
+        .and_then(serde_json::Value::as_object)
+    {
+        for (name, dimension) in dimensions {
+            let score = dimension
+                .get("score")
+                .filter(|value| !value.is_null())
+                .map(|value| format!("{:.3}", value.as_f64().unwrap_or(0.0)))
+                .unwrap_or_else(|| "-".to_owned());
+            lines.push(format!(
+                "| {name} | {} | {} | {score} | {} |",
+                result_value(dimension, "weight"),
+                result_value(dimension, "status"),
+                result_value(dimension, "achieved")
+            ));
+        }
+    }
+    lines.extend([String::new(), "## Release gates".to_owned(), String::new()]);
+    if let Some(gates) = result
+        .get("release_gates")
+        .and_then(serde_json::Value::as_object)
+    {
+        for (name, ok) in gates {
+            lines.push(format!(
+                "- [{}] {name}",
+                if truthy(Some(ok)) { "PASS" } else { "FAIL" }
+            ));
+        }
+    }
+
+    let metrics = result
+        .get("classification")
+        .unwrap_or(&serde_json::Value::Null);
+    if metrics.as_object().is_some_and(|object| !object.is_empty()) {
+        lines.extend([
+            String::new(),
+            "## Classification highlights".to_owned(),
+            String::new(),
+            format!("- task-type macro F1: {}", metrics["task_type"]["macro_f1"]),
+            format!(
+                "- high-risk recall: {}",
+                result_value(metrics, "high_risk_recall")
+            ),
+            format!("- tool F1: {}", metrics["tools"]["f1"]),
+            format!(
+                "- gold-set context accuracy (in-sample): {}",
+                metrics["context"]["accuracy"]
+            ),
+            format!(
+                "- failed cases: {}",
+                metrics
+                    .get("failures")
+                    .and_then(serde_json::Value::as_array)
+                    .map_or(0, Vec::len)
+            ),
+        ]);
+    }
+
+    if let Some(generalization) = result.get("context_band_generalization") {
+        if !generalization.is_null() {
+            let current = &generalization["current_holdout"];
+            let before = &generalization["pre_task004_holdout"];
+            lines.extend([
+                String::new(),
+                "## Context-band generalization (frozen final holdout)".to_owned(),
+                String::new(),
+                format!(
+                    "- holdout checksum: `{}`",
+                    result_value(generalization, "holdout_sha256")
+                ),
+                format!(
+                    "- current accuracy: {} (95% CI {})",
+                    result_value(current, "accuracy"),
+                    python_repr(&current["accuracy_ci95"])
+                ),
+                format!(
+                    "- current macro-F1: {} (bootstrap 95% CI {})",
+                    result_value(current, "macro_f1"),
+                    python_repr(&current["macro_f1_bootstrap_ci95"])
+                ),
+                format!(
+                    "- per-band recall: {}",
+                    python_repr(&current["per_band_recall"])
+                ),
+                format!(
+                    "- pre-TASK-004 accuracy: {}",
+                    result_value(before, "accuracy")
+                ),
+                format!(
+                    "- accuracy delta: {}",
+                    result_value(&generalization["delta"], "accuracy")
+                ),
+            ]);
+        }
+    }
+
+    lines.extend([String::new(), "## Limitations".to_owned(), String::new()]);
+    if let Some(dimensions) = result
+        .get("dimensions")
+        .and_then(serde_json::Value::as_object)
+    {
+        for (name, dimension) in dimensions {
+            if dimension.get("status").and_then(serde_json::Value::as_str) == Some("pending") {
+                lines.push(format!(
+                    "- `{name}` dimension not yet measured (evaluator pending)."
+                ));
+            }
+        }
+    }
+    if let Some(limitations) = result
+        .get("context_band_generalization")
+        .and_then(|value| value.get("limitations"))
+        .and_then(serde_json::Value::as_array)
+    {
+        for limitation in limitations {
+            lines.push(format!("- {}", python_string(limitation)));
+        }
+    }
+    let mut output = lines.join("\n");
+    output.push('\n');
+    output
+}
+
+fn result_value(value: &serde_json::Value, key: &str) -> String {
+    value
+        .get(key)
+        .map_or_else(|| "None".to_owned(), python_string)
+}
+
+fn python_string(value: &serde_json::Value) -> String {
+    match value {
+        serde_json::Value::Null => "None".to_owned(),
+        serde_json::Value::Bool(true) => "True".to_owned(),
+        serde_json::Value::Bool(false) => "False".to_owned(),
+        serde_json::Value::String(text) => text.clone(),
+        serde_json::Value::Number(number) => number.to_string(),
+        _ => python_repr(value),
+    }
+}
+
+fn python_repr(value: &serde_json::Value) -> String {
+    match value {
+        serde_json::Value::Null => "None".to_owned(),
+        serde_json::Value::Bool(true) => "True".to_owned(),
+        serde_json::Value::Bool(false) => "False".to_owned(),
+        serde_json::Value::String(text) => {
+            format!("'{}'", text.replace('\\', "\\\\").replace('\'', "\\'"))
+        }
+        serde_json::Value::Number(number) => number.to_string(),
+        serde_json::Value::Array(values) => format!(
+            "[{}]",
+            values
+                .iter()
+                .map(python_repr)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        serde_json::Value::Object(values) => format!(
+            "{{{}}}",
+            values
+                .iter()
+                .map(|(key, value)| format!(
+                    "{}: {}",
+                    python_repr(&serde_json::Value::String(key.clone())),
+                    python_repr(value)
+                ))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+    }
+}
+
+fn truthy(value: Option<&serde_json::Value>) -> bool {
+    match value {
+        None | Some(serde_json::Value::Null) | Some(serde_json::Value::Bool(false)) => false,
+        Some(serde_json::Value::Number(number)) => number.as_f64().unwrap_or(0.0) != 0.0,
+        Some(serde_json::Value::String(text)) => !text.is_empty(),
+        Some(serde_json::Value::Array(values)) => !values.is_empty(),
+        Some(serde_json::Value::Object(values)) => !values.is_empty(),
+        Some(serde_json::Value::Bool(true)) => true,
+    }
+}
+
 pub fn profile_datasets(profile: &str) -> Result<&'static [&'static str], String> {
     match profile {
         "fast" | "pr" => Ok(&DATASET_NAMES[..1]),

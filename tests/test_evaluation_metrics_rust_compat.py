@@ -11,6 +11,7 @@ import pytest
 from agentrouter.evaluation.metrics import classification_metrics
 from agentrouter.evaluation.provenance import dataset_quality
 from agentrouter.evaluation.registry import PROFILES, dataset_names, get_adapter
+from agentrouter.evaluation.reports import render_markdown
 from agentrouter.evaluation.sampling import deterministic_sample
 from agentrouter.evaluation.schema import (
     EvaluationCase,
@@ -408,3 +409,62 @@ def test_rust_evaluation_registry_and_profiles_match_python():
         check=True,
     )
     assert json.loads(process.stdout) == expected
+
+
+def test_rust_evaluation_markdown_matches_python():
+    result = {
+        "environment": {"python": "3.12", "dirty": False},
+        "grade_over_100": 71.25,
+        "grade_of_measured": 82.5,
+        "possible_measured_points": 86.36,
+        "release_ready": False,
+        "n_cases": 12,
+        "dimensions": {
+            "classification": {
+                "weight": 25,
+                "status": "measured",
+                "score": 0.875,
+                "achieved": 21.875,
+            },
+            "routing": {"weight": 20, "status": "pending", "score": None, "achieved": 0},
+        },
+        "release_gates": {"task_type_macro_f1>=0.90": False, "human_review": True},
+        "classification": {
+            "task_type": {"macro_f1": 0.88},
+            "high_risk_recall": 1.0,
+            "tools": {"f1": 0.75},
+            "context": {"accuracy": 0.9},
+            "failures": [{"id": "case-1"}],
+        },
+        "context_band_generalization": {
+            "holdout_sha256": "abc123",
+            "current_holdout": {
+                "accuracy": 0.6667,
+                "accuracy_ci95": [0.5, 0.8],
+                "macro_f1": 0.61,
+                "macro_f1_bootstrap_ci95": [0.4, 0.75],
+                "per_band_recall": {"short": 0.8, "long": 0.5},
+            },
+            "pre_task004_holdout": {"accuracy": 0.5},
+            "delta": {"accuracy": 0.1667},
+            "limitations": ["small blinded fixture"],
+        },
+    }
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_report_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps(result),
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=True,
+    )
+    assert process.stdout == render_markdown(result)
