@@ -1,5 +1,36 @@
 # Known Limitations
 
+## Current migration and release limits (2026-11-10)
+
+- Python is still the shipping router. Rust R4 has route, SQLite,
+  stored-decision, prompt, and feedback compatibility probes, but no complete
+  public Rust CLI/HTTP/MCP replacement. R5–R13 remain open.
+- Pushed parent `6ee8d3e` passed GitHub CI, Rust Linux/Windows parity,
+  Security, and critical mutation testing (0.9837 overall, 0.9844
+  safety/policy/execution, zero unreviewed survivors). The current Rust
+  forced-init slice awaits its own remote checks.
+  The older mutation-status section below is historical.
+- The Rust init probe uses directory-handle-relative seed writes and rejects
+  existing linked SQLite targets. SQLite still canonicalizes and reopens the
+  database by path; a concurrent leaf or ancestor swap can redirect that open.
+  Linux's proc-fd path helps after a swap before connect, but is not a complete
+  race-safe SQLite strategy. This is an R4 production blocker.
+- Rust provider-status parity is a new probe, not full `providers` CLI parity.
+  Windows CI has not checked the current Win32 link-count implementation.
+- The frozen context-band release gate remains 0.6667 < 0.90. The 63-candidate
+  two-human annotation/adjudication round is not complete. Synthetic or AI
+  labels cannot be submitted as human labels.
+- OpenAI Responses API text execution is default-off and requires provider
+  opt-in, a ready API host, an auto-approval decision and `execute --yes`.
+  No paid live request or deployment has been validated.
+- Route price caps now reject non-finite and negative values. Registry prices
+  remain unmeasured for bundled seed models, so a valid cap still excludes
+  those models rather than assuming they are under budget.
+- The controls-boundary mutation repair passed on `6ee8d3e` with zero
+  unreviewed survivors.
+
+## Historical limitations and studies
+
 ## Route controls (Phase P3)
 
 - `--max-price` excludes every seed model today because seeds carry no
@@ -17,7 +48,7 @@
 - P5 measured model profiles need benchmark inference. Current ability scores have
   `ability_source: curated`, not benchmark-derived evidence.
 
-## Mutation score awaits the first Linux CI result (TASK-010)
+## Historical mutation setup (TASK-010)
 
 - Windows + Python 3.13 did not produce a valid score. `mutmut` 2.4 encountered console encoding
   and test-baseline issues, mutmut 3.x supports Linux/WSL rather than native Windows, and mutatest

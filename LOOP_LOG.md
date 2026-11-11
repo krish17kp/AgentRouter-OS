@@ -1,5 +1,76 @@
 # LOOP_LOG
 
+## 2026-11-10 — Rust R4 forced initialization
+
+- Prior pushed `6ee8d3e` passed GitHub Python 3.10–3.13/Windows CI, Rust
+  Linux/Windows parity, Security, and critical mutation testing (0.9837
+  overall, 0.9844 safety/policy/execution, 0 unreviewed survivors).
+- Added Rust `init --force` compatibility: edited config/models are backed up
+  before reseeding, with Python/Rust output and bytes compared. Independent
+  security review reproduced symlinked-registry and hard-linked-seed writes
+  outside the home, plus a linked SQLite database escape. Seed writes now use
+  no-follow directory handles and atomic replacement; existing linked
+  database/WAL/SHM/journal paths are rejected. Ten focused tests cover the
+  escapes, POSIX modes, and ordinary parity. SQLite still reopens the DB by
+  path and can be redirected by a concurrent swap; production R4 work remains.
+  Full Python regression passed 1,366 tests with 3 skips; new-head CI remains.
+- Python remains shipping. Rust R4 is partial, R5–R13 pending. Context-band
+  accuracy remains 0.6667 < unchanged 0.90; the real-human annotation round
+  is still external.
+- First forced-init push `32eee6f` failed Windows Rust compilation because a
+  capability metadata method was unavailable. The repair reads link count
+  through a standard file handle. Linux now tests database/WAL/SHM placement
+  after the original home path is swapped before SQLite connects. SQLite's
+  later path resolution remains a production blocker; remote recheck pending.
+
+## 2026-11-10 — Rust R4 registry inspection
+
+- Pushed `eda4c7a` passed GitHub Python/Windows CI, Rust Linux/Windows parity,
+  Security, and critical mutation testing. Mutation scored 0.9837 overall,
+  0.9844 safety/policy/execution, 0.9815 routing, 0 unreviewed survivors.
+- Added Rust `registry list` probe with JSON/table output, provider and active
+  filters, malformed-registry failure, and a non-skipping CI parity suite.
+  Independent review found that Rust accepted non-finite ability confidence,
+  zero context/output size, and negative prices that Python rejects.
+  Repaired the shared Rust registry loader with Pydantic-equivalent numeric
+  and ISO-date checks before any routing surface consumes a model.
+- Nineteen focused Python/Rust parity cases pass, including invalid catalog
+  fields. Rust 1.75 workspace tests, Clippy, formatting, and Ruff pass. Full
+  Python regression passed 1,357 tests, 3 skipped. New-head CI remains.
+- Python remains shipping; R4 is partial. Context-band accuracy remains
+  0.6667 < unchanged 0.90, pending two real human annotators/adjudication.
+- First `e4b06e2` CI: Ubuntu Rust parity, Rust workspace and MSRV passed.
+  Windows parity failed because the active-filter test rewrote seed YAML
+  with the platform default encoding, creating non-UTF-8 bytes that the Rust
+  loader correctly rejects. Added explicit UTF-8 to the fixture; all 19
+  focused parity cases pass again and Windows CI must recheck.
+
+## 2026-11-09 — Rust R4 configured routing and controls
+
+- Added Rust route-probe loading of configured scoring weights, pricing policy,
+  and the feedback-learning switch; applied the ported hard controls before
+  scoring and kept their exclusion reasons in the decision trail.
+- Differential tests compare Rust and Python for configured routes, feedback
+  learning on/off, vendor/model/host/price/stability/availability/tool
+  controls, no-eligible routes, malformed config, and unknown controls.
+  A real mismatch exposed credential discovery using `AGENTROUTER_HOME`;
+  Rust now checks the user's home, as Python does.
+- Independent review found a non-finite price-cap bypass (also present in
+  Python) and a missing-home fallback to the current directory in Rust host
+  detection. Both were repaired with fail-closed checks and regression tests.
+- Local full regression: 1,338 Python tests passed, 3 skipped. Rust 1.75
+  workspace tests, Clippy with warnings denied, and formatting passed.
+  `git diff --check` and Ruff passed. This is a partial R4 probe, not a
+  production Rust CLI. Remote checks on recent preceding heads failed
+  before job creation with GitHub internal server errors; inspect new CI.
+- Release evaluation remains 6/7, context-band accuracy 0.6667 < 0.90;
+  human annotation remains external under `TASK_012_OWNER_ACTIONS.md`.
+- The first CI run on `4157fd2` passed Python, Windows, Rust parity, and
+  Security, but mutation failed with three new `controls.apply_controls`
+  survivors. Reproduced each in a fresh archive and added `0.0`/`0.5`
+  accepted-cap boundary tests plus exact rejection-message assertions; all
+  three targeted mutants are now killed. A new full mutation run is required.
+
 ## Iteration 31 — 2026-09-10 — Release-gate preparation + TASK-019 resume
 
 **Goal:** two coordinated tracks. Track A: verify (never fabricate) that the
@@ -1390,3 +1461,32 @@ score and release-branch GitHub checks are also pending. Current state lives in
   write_generated_registry + deprecation reconciliation on refresh (report-only).
 - **Next:** TASK-013 follow-up (provenance block + deprecation), then Phase 3
   priority #3 (verified execution-host states).
+
+## 2026-11-09 — Rust R4 and OpenAI execution hardening
+
+- PR #25 branch `task/rust-r1-workspace` advanced to `3281c41`; no RC/main
+  merge, release, paid call, or deployment.
+- OpenAI execution rechecks credential availability immediately before the
+  request. Hermetic tests cover opt-in, safety and host gates, target drift,
+  malformed responses, HTTP method/headers, output limits, and sanitized
+  output. Rust probes cover feedback, stored-decision JSON, and prompt
+  regeneration with Python/Rust differential checks.
+- Local full Python suite: 1,300 passed, 3 skipped. Rust 1.75 workspace tests,
+  Clippy, formatting, Ruff, Bandit, dependency audit, wheel/sdist build passed.
+  Mutation gate passed locally: 0.9836 overall, 0.9843 safety/policy/execution,
+  0 unreviewed survivors. Nine newly reviewed survivors are equivalent under
+  Python/Typer/urllib semantics; one stale allowance was removed.
+- Release evaluation unchanged: 6/7 gates, context-band 0.6667 < 0.90.
+  Remote checks for `3281c41` are running. Next: inspect/repair CI and
+  continue Rust R4; human annotation remains external.
+- Follow-up: every GitHub check on `3281c41` passed, including Python
+  3.10–3.13, Windows, Rust Linux/Windows parity, Rust 1.75, security,
+  build/API compatibility, and critical mutation (0.9836 overall, 0.9843
+  safety/policy/execution, all five gates green). Added a Rust route
+  persistence probe; Python reads its SQLite decision back unchanged.
+  This follow-up is locally verified and will get a separate CI run.
+- The `0ac4335` pull-request workflows for Security, Rust and mutation failed
+  before creating jobs; GitHub run pages reported internal server errors.
+  This is no code/test verdict. A non-forced Rust `init` probe was added and
+  locally matched Python seed bytes, SQLite schema, and idempotent messages.
+  Next push will trigger fresh CI.

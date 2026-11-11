@@ -1,69 +1,68 @@
-//! Strict, offline YAML registry loader for AgentRouter OS.
-//!
-//! Mirrors the Python registry's required fields, defaults, provider reference
-//! checks, duplicate-key rejection and non-fatal unresolved fallback warnings.
-//! The Python implementation remains authoritative during the migration.
+//! Rust port of `agentrouter/registry.py` + the registry-entry models from
+//! `agentrouter/schema.py`. Field names, YAML shapes, and error conditions
+//! mirror the Python module exactly — this is the contract the Python/Rust
+//! compatibility test in `tests/` checks against the real seed registries.
 
-use std::collections::{BTreeMap, HashSet};
-use std::fs;
-use std::path::Path;
+use std::collections::{HashMap, HashSet};
+use std::io::Read;
+use std::path::{Path, PathBuf};
 
-use agentrouter_core::PricingTier;
+use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+pub use agentrouter_core::PricingTier;
+pub mod catalog_ops;
+
+pub const STALE_AFTER_DAYS: i64 = 90;
+const OVERRIDES_FILE: &str = "ability_overrides.yaml";
+
+/// Mirrors `agentrouter.registry.RegistryError` — the CLI maps this to exit
+/// code 3. One variant per distinct Python `RegistryError(f"...")` site so
+/// callers can match on failure kind without string-parsing the message.
 #[derive(Debug, Error)]
 pub enum RegistryError {
-    #[error("could not read registry file: {0}")]
-    Io(#[from] std::io::Error),
-    #[error("invalid registry YAML: {0}")]
-    Yaml(#[from] serde_yaml::Error),
-    #[error("{0}")]
-    Invalid(String),
+    #[error("Registry file not found: {0} (run: agentrouter init)")]
+    NotFound(PathBuf),
+    #[error("Invalid YAML in {0}: {1}")]
+    InvalidYaml(PathBuf, String),
+    #[error("{0}: expected a mapping at top level")]
+    NotAMapping(PathBuf),
+    #[error("{path}: providers[{index}] invalid: {reason}")]
+    InvalidProvider {
+        path: PathBuf,
+        index: usize,
+        reason: String,
+    },
+    #[error("{0}: no providers defined")]
+    NoProviders(PathBuf),
+    #[error("{path}: model '{model}' invalid: {reason}")]
+    InvalidModel {
+        path: PathBuf,
+        model: String,
+        reason: String,
+    },
+    #[error("{path}: model '{model}' references unknown provider '{provider}'")]
+    UnknownProvider {
+        path: PathBuf,
+        model: String,
+        provider: String,
+    },
+    #[error("{0}: no models defined")]
+    NoModels(PathBuf),
+    #[error("{path}: duplicate model '{key}'")]
+    DuplicateModel { path: PathBuf, key: String },
+    #[error("{0}: expected an 'overrides' mapping of model key -> scores")]
+    OverridesNotAMapping(PathBuf),
+    #[error("{path}: override for '{key}' invalid: {reason}")]
+    InvalidOverride {
+        path: PathBuf,
+        key: String,
+        reason: String,
+    },
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct Provider {
-    pub id: String,
-    pub adapter: String,
-    #[serde(default = "default_auth")]
-    pub auth_model: String,
-    #[serde(default)]
-    pub supports_execution: bool,
-    #[serde(default)]
-    pub exec_command: Vec<String>,
-}
-
-fn default_auth() -> String {
-    "none".to_owned()
-}
-
-#[derive(Debug, Deserialize)]
-struct ProvidersFile {
-    #[serde(default)]
-    providers: Vec<Provider>,
-}
-
-pub fn parse_providers(yaml: &str) -> Result<BTreeMap<String, Provider>, RegistryError> {
-    let parsed: ProvidersFile = serde_yaml::from_str(yaml)?;
-    let mut providers = BTreeMap::new();
-    // Keep Python's duplicate-provider behavior: later definitions replace
-    // earlier ones. Model identifiers, in contrast, MUST be unique.
-    for provider in parsed.providers {
-        providers.insert(provider.id.clone(), provider);
-    }
-    if providers.is_empty() {
-        return Err(RegistryError::Invalid("no providers defined".to_owned()));
-    }
-    Ok(providers)
-}
-
-pub fn load_providers(path: impl AsRef<Path>) -> Result<BTreeMap<String, Provider>, RegistryError> {
-    parse_providers(&fs::read_to_string(path)?)
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum LatencyTier {
     Fast,
@@ -71,7 +70,7 @@ pub enum LatencyTier {
     Slow,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DeprecationStatus {
     Active,
@@ -79,58 +78,54 @@ pub enum DeprecationStatus {
     Retired,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ReleaseChannel {
-    #[default]
     Stable,
     Preview,
     Experimental,
     Deprecated,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SnapshotType {
     Pinned,
     Alias,
-    #[default]
     Unknown,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AbilitySource {
     Official,
     Benchmark,
     Curated,
-    #[default]
     Heuristic,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecutionMode {
-    #[default]
     Cli,
     Api,
     Manual,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Ability {
-    pub coding: i32,
-    pub reasoning: i32,
-    pub writing: i32,
+    pub coding: u8,
+    pub reasoning: u8,
+    pub writing: u8,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ExecutionTarget {
     pub host: String,
     pub host_model_id: String,
-    #[serde(default)]
+    #[serde(default = "default_execution_mode")]
     pub execution_mode: ExecutionMode,
     #[serde(default)]
     pub command_template: Option<Vec<String>>,
@@ -146,43 +141,42 @@ pub struct ExecutionTarget {
     pub supports_shell: bool,
 }
 
+fn default_execution_mode() -> ExecutionMode {
+    ExecutionMode::Cli
+}
+
 fn default_true() -> bool {
     true
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+/// Mirrors `schema.ModelEntry`. `vendor` defaults to `provider` (the Python
+/// `_default_vendor` validator) via [`ModelEntry::vendor`] rather than a
+/// serde default, since the default depends on another field's value.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ModelEntry {
     pub provider: String,
     #[serde(default)]
-    pub vendor: Option<String>,
+    vendor: Option<String>,
     pub model_id: String,
-    #[serde(default)]
     pub display_name: Option<String>,
-    #[serde(default)]
     pub family: Option<String>,
-    #[serde(default)]
+    #[serde(default = "default_release_channel")]
     pub release_channel: ReleaseChannel,
-    #[serde(default)]
+    #[serde(default = "default_snapshot_type")]
     pub snapshot_type: SnapshotType,
-    pub context_window: u64,
-    #[serde(default)]
-    pub max_input_tokens: Option<u64>,
-    pub max_output_tokens: u64,
+    pub context_window: u32,
+    pub max_input_tokens: Option<u32>,
+    pub max_output_tokens: u32,
     pub pricing_tier: PricingTier,
     pub latency_tier: LatencyTier,
-    #[serde(default)]
     pub input_price_per_million: Option<f64>,
-    #[serde(default)]
     pub output_price_per_million: Option<f64>,
-    #[serde(default)]
     pub pricing_basis: Option<String>,
-    #[serde(default)]
     pub pricing_effective_date: Option<String>,
     pub ability: Ability,
-    #[serde(default)]
+    #[serde(default = "default_ability_source")]
     pub ability_source: AbilitySource,
-    #[serde(default)]
     pub ability_confidence: Option<f64>,
     pub tool_support: Vec<String>,
     pub vision_support: bool,
@@ -201,264 +195,587 @@ pub struct ModelEntry {
     pub fallback: Vec<String>,
     #[serde(default)]
     pub execution_targets: Vec<ExecutionTarget>,
-    #[serde(default)]
     pub notes: Option<String>,
-    #[serde(default)]
     pub source: Option<String>,
-    #[serde(default)]
     pub source_url_or_identifier: Option<String>,
-    #[serde(default)]
+    /// ISO `YYYY-MM-DD`, kept as a string field (matching the raw YAML
+    /// scalar) and parsed on demand in [`ModelEntry::last_updated_date`] —
+    /// avoids pulling a YAML-date serde adapter in for one staleness check.
     pub last_updated: Option<String>,
-    #[serde(default)]
     pub last_verified: Option<String>,
 }
 
+fn default_release_channel() -> ReleaseChannel {
+    ReleaseChannel::Stable
+}
+fn default_snapshot_type() -> SnapshotType {
+    SnapshotType::Unknown
+}
+fn default_ability_source() -> AbilitySource {
+    AbilitySource::Heuristic
+}
+
 impl ModelEntry {
+    /// Enforce the Pydantic `Field` constraints from `schema.ModelEntry`.
+    /// Serde's primitive types alone allow zero sizes and non-finite floats.
+    fn validate(&self) -> Result<(), String> {
+        if self.context_window == 0 {
+            return Err("context_window must be greater than 0".to_string());
+        }
+        if self.max_input_tokens == Some(0) {
+            return Err("max_input_tokens must be greater than 0".to_string());
+        }
+        if self.max_output_tokens == 0 {
+            return Err("max_output_tokens must be greater than 0".to_string());
+        }
+        for (name, score) in [
+            ("ability.coding", self.ability.coding),
+            ("ability.reasoning", self.ability.reasoning),
+            ("ability.writing", self.ability.writing),
+        ] {
+            if score > 10 {
+                return Err(format!("{name} must be at most 10"));
+            }
+        }
+        for (name, price) in [
+            ("input_price_per_million", self.input_price_per_million),
+            ("output_price_per_million", self.output_price_per_million),
+        ] {
+            if price.is_some_and(|value| !value.is_finite() || value < 0.0) {
+                return Err(format!("{name} must be finite and non-negative"));
+            }
+        }
+        if self
+            .ability_confidence
+            .is_some_and(|value| !value.is_finite() || !(0.0..=1.0).contains(&value))
+        {
+            return Err("ability_confidence must be finite and between 0 and 1".to_string());
+        }
+        for (name, date) in [
+            (
+                "pricing_effective_date",
+                self.pricing_effective_date.as_ref(),
+            ),
+            ("last_updated", self.last_updated.as_ref()),
+            ("last_verified", self.last_verified.as_ref()),
+        ] {
+            if date.is_some_and(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d").is_err()) {
+                return Err(format!("{name} must be an ISO date"));
+            }
+        }
+        Ok(())
+    }
+
+    pub fn vendor(&self) -> &str {
+        self.vendor.as_deref().unwrap_or(&self.provider)
+    }
+
     pub fn key(&self) -> String {
         format!("{}/{}", self.provider, self.model_id)
     }
 
     pub fn vendor_key(&self) -> String {
-        format!(
-            "{}/{}",
-            self.vendor.as_deref().unwrap_or(&self.provider),
-            self.model_id
-        )
+        format!("{}/{}", self.vendor(), self.model_id)
     }
 
     pub fn name(&self) -> &str {
         self.display_name.as_deref().unwrap_or(&self.model_id)
     }
+
+    pub fn last_updated_date(&self) -> Option<NaiveDate> {
+        self.last_updated
+            .as_deref()
+            .and_then(|s| NaiveDate::parse_from_str(s, "%Y-%m-%d").ok())
+    }
 }
 
-#[derive(Debug, Deserialize)]
-struct ModelsFile {
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Provider {
+    pub id: String,
+    pub adapter: String,
+    #[serde(default = "default_auth_model")]
+    pub auth_model: String,
     #[serde(default)]
-    models: Vec<ModelEntry>,
+    pub supports_execution: bool,
+    #[serde(default)]
+    pub exec_command: Vec<String>,
 }
 
-fn validate_date(date: &str) -> bool {
-    let bytes = date.as_bytes();
-    if bytes.len() != 10 || bytes[4] != b'-' || bytes[7] != b'-' {
-        return false;
+fn default_auth_model() -> String {
+    "none".to_string()
+}
+
+pub(crate) fn read_text_nofollow(path: &Path) -> std::io::Result<String> {
+    let metadata = std::fs::symlink_metadata(path)?;
+    if !metadata.file_type().is_file() || metadata.file_type().is_symlink() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "linked or non-file registry path",
+        ));
     }
-    if !bytes
-        .iter()
-        .enumerate()
-        .all(|(i, b)| i == 4 || i == 7 || b.is_ascii_digit())
+    #[cfg(windows)]
     {
-        return false;
+        use std::os::windows::fs::MetadataExt;
+        if metadata.file_attributes() & 0x400 != 0 {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "linked registry path",
+            ));
+        }
     }
-    let year: u32 = date[0..4].parse().unwrap_or(0);
-    let month: u32 = date[5..7].parse().unwrap_or(0);
-    let day: u32 = date[8..10].parse().unwrap_or(0);
-    if year == 0 {
-        return false;
-    }
-    let leap = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
-    let max_day = match month {
-        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
-        4 | 6 | 9 | 11 => 30,
-        2 if leap => 29,
-        2 => 28,
-        _ => return false,
-    };
-    (1..=max_day).contains(&day)
-}
-
-fn validate_model(model: &ModelEntry) -> Result<(), RegistryError> {
-    let invalid =
-        |detail: &str| RegistryError::Invalid(format!("model '{}': {}", model.key(), detail));
-    if model.context_window == 0 {
-        return Err(invalid("context_window must be positive"));
-    }
-    if model.max_output_tokens == 0 {
-        return Err(invalid("max_output_tokens must be positive"));
-    }
-    if model.max_input_tokens == Some(0) {
-        return Err(invalid("max_input_tokens must be positive"));
-    }
-    if [
-        model.ability.coding,
-        model.ability.reasoning,
-        model.ability.writing,
-    ]
-    .iter()
-    .any(|v| !(0..=10).contains(v))
+    let mut options = std::fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(unix)]
     {
-        return Err(invalid("ability scores must be between 0 and 10"));
+        use std::os::unix::fs::OpenOptionsExt;
+        options.custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
     }
-    if let Some(confidence) = model.ability_confidence {
-        if !confidence.is_finite() || !(0.0..=1.0).contains(&confidence) {
-            return Err(invalid("ability_confidence must be between 0 and 1"));
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        options.custom_flags(0x0020_0000); // FILE_FLAG_OPEN_REPARSE_POINT
+    }
+    let mut file = options.open(path)?;
+    let opened = file.metadata()?;
+    if !opened.is_file() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "linked or non-file registry path",
+        ));
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        if opened.file_attributes() & 0x400 != 0 {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "linked registry path",
+            ));
         }
     }
-    for (name, value) in [
-        ("input_price_per_million", model.input_price_per_million),
-        ("output_price_per_million", model.output_price_per_million),
-    ] {
-        if let Some(price) = value {
-            if !price.is_finite() || price < 0.0 {
-                return Err(invalid(&format!("{name} must be nonnegative")));
-            }
-        }
-    }
-    for (name, value) in [
-        ("last_updated", model.last_updated.as_deref()),
-        ("last_verified", model.last_verified.as_deref()),
-        (
-            "pricing_effective_date",
-            model.pricing_effective_date.as_deref(),
-        ),
-    ] {
-        if let Some(date) = value {
-            if !validate_date(date) {
-                return Err(invalid(&format!("{name} must be a valid ISO date")));
-            }
-        }
-    }
-    Ok(())
+    let mut text = String::new();
+    file.read_to_string(&mut text)?;
+    Ok(text)
 }
 
-/// Python-compatible load_models subset: no staleness warning here.
-/// Staleness, generated registries, and ability overrides belong in
-/// load_all_models, a separate R2 milestone still to be implemented.
-pub fn parse_models(
-    yaml: &str,
-    providers: &BTreeMap<String, Provider>,
+fn load_yaml(path: &Path) -> Result<serde_yaml::Mapping, RegistryError> {
+    if !path.exists() {
+        return Err(RegistryError::NotFound(path.to_path_buf()));
+    }
+    let text = read_text_nofollow(path)
+        .map_err(|e| RegistryError::InvalidYaml(path.to_path_buf(), e.to_string()))?;
+    let value: serde_yaml::Value = serde_yaml::from_str(&text)
+        .map_err(|e| RegistryError::InvalidYaml(path.to_path_buf(), e.to_string()))?;
+    value
+        .as_mapping()
+        .cloned()
+        .ok_or_else(|| RegistryError::NotAMapping(path.to_path_buf()))
+}
+
+fn seq_field(map: &serde_yaml::Mapping, key: &str) -> Vec<serde_yaml::Value> {
+    map.get(serde_yaml::Value::String(key.to_string()))
+        .and_then(|v| v.as_sequence().cloned())
+        .unwrap_or_default()
+}
+
+pub fn load_providers(path: &Path) -> Result<HashMap<String, Provider>, RegistryError> {
+    let data = load_yaml(path)?;
+    let mut providers = HashMap::new();
+    for (i, raw) in seq_field(&data, "providers").into_iter().enumerate() {
+        let p: Provider =
+            serde_yaml::from_value(raw).map_err(|e| RegistryError::InvalidProvider {
+                path: path.to_path_buf(),
+                index: i,
+                reason: e.to_string(),
+            })?;
+        providers.insert(p.id.clone(), p);
+    }
+    if providers.is_empty() {
+        return Err(RegistryError::NoProviders(path.to_path_buf()));
+    }
+    Ok(providers)
+}
+
+/// Returns `(models, warnings)` — unresolved fallbacks warn, bad fields fail,
+/// matching `agentrouter.registry.load_models` exactly.
+pub fn load_models(
+    path: &Path,
+    providers: &HashMap<String, Provider>,
 ) -> Result<(Vec<ModelEntry>, Vec<String>), RegistryError> {
-    let parsed: ModelsFile = serde_yaml::from_str(yaml)?;
-    if parsed.models.is_empty() {
-        return Err(RegistryError::Invalid("no models defined".to_owned()));
+    let data = load_yaml(path)?;
+    let mut models = Vec::new();
+    for raw in seq_field(&data, "models") {
+        let fallback_id = raw
+            .as_mapping()
+            .and_then(|m| m.get(serde_yaml::Value::String("model_id".to_string())))
+            .and_then(|v| v.as_str())
+            .unwrap_or("<unknown>")
+            .to_string();
+        let m: ModelEntry =
+            serde_yaml::from_value(raw).map_err(|e| RegistryError::InvalidModel {
+                path: path.to_path_buf(),
+                model: fallback_id.clone(),
+                reason: e.to_string(),
+            })?;
+        m.validate().map_err(|reason| RegistryError::InvalidModel {
+            path: path.to_path_buf(),
+            model: fallback_id,
+            reason,
+        })?;
+        if !providers.contains_key(&m.provider) {
+            return Err(RegistryError::UnknownProvider {
+                path: path.to_path_buf(),
+                model: m.model_id.clone(),
+                provider: m.provider.clone(),
+            });
+        }
+        models.push(m);
+    }
+    if models.is_empty() {
+        return Err(RegistryError::NoModels(path.to_path_buf()));
     }
 
-    let mut models = Vec::with_capacity(parsed.models.len());
     let mut seen = HashSet::new();
-    for mut model in parsed.models {
-        validate_model(&model)?;
-        if !providers.contains_key(&model.provider) {
-            return Err(RegistryError::Invalid(format!(
-                "model '{}' references unknown provider '{}'",
-                model.model_id, model.provider
-            )));
+    for m in &models {
+        if !seen.insert(m.key()) {
+            return Err(RegistryError::DuplicateModel {
+                path: path.to_path_buf(),
+                key: m.key(),
+            });
         }
-        let key = model.key();
-        if !seen.insert(key.clone()) {
-            return Err(RegistryError::Invalid(format!("duplicate model '{key}'")));
-        }
-        // Pydantic's model_validator defaults vendor to provider on load.
-        if model.vendor.is_none() {
-            model.vendor = Some(model.provider.clone());
-        }
-        models.push(model);
     }
 
     let known_ids: HashSet<&str> = models.iter().map(|m| m.model_id.as_str()).collect();
-    let warnings = models
-        .iter()
-        .flat_map(|m| {
-            m.fallback
-                .iter()
-                .filter(|fb| !known_ids.contains(fb.as_str()))
-                .map(move |fb| {
-                    format!(
-                        "model '{}': fallback '{}' does not resolve to a known model_id",
-                        m.model_id, fb
-                    )
-                })
-        })
-        .collect();
+    let mut warnings = Vec::new();
+    for m in &models {
+        for fb in &m.fallback {
+            if !known_ids.contains(fb.as_str()) {
+                warnings.push(format!(
+                    "model '{}': fallback '{}' does not resolve to a known model_id",
+                    m.model_id, fb
+                ));
+            }
+        }
+    }
     Ok((models, warnings))
 }
 
-pub fn load_models(
-    path: impl AsRef<Path>,
-    providers: &BTreeMap<String, Provider>,
+/// Manual `models.yaml` + any `models.*.generated.yaml`, then curated
+/// `ability_overrides.yaml` on top. Matches
+/// `agentrouter.registry.load_all_models` field-for-field, including the
+/// "manual entries win on key collision" and staleness-aggregate-warning
+/// behavior.
+pub fn load_all_models(
+    reg_dir: &Path,
+    providers: &HashMap<String, Provider>,
 ) -> Result<(Vec<ModelEntry>, Vec<String>), RegistryError> {
-    parse_models(&fs::read_to_string(path)?, providers)
+    let (mut models, mut warnings) = load_models(&reg_dir.join("models.yaml"), providers)?;
+    let mut seen: HashSet<String> = models.iter().map(|m| m.key()).collect();
+
+    let mut generated: Vec<PathBuf> = std::fs::read_dir(reg_dir)
+        .map(|entries| {
+            entries
+                .filter_map(|e| e.ok())
+                .map(|e| e.path())
+                .filter(|p| {
+                    p.file_name()
+                        .and_then(|n| n.to_str())
+                        .map(|n| n.starts_with("models.") && n.ends_with(".generated.yaml"))
+                        .unwrap_or(false)
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    generated.sort();
+
+    for gen_path in generated {
+        let (gen_models, gen_warnings) = load_models(&gen_path, providers)?;
+        warnings.extend(gen_warnings);
+        for m in gen_models {
+            let key = m.key();
+            if seen.contains(&key) {
+                warnings.push(format!(
+                    "{}: '{}' shadowed by manual models.yaml",
+                    gen_path.file_name().unwrap().to_string_lossy(),
+                    key
+                ));
+                continue;
+            }
+            seen.insert(key);
+            models.push(m);
+        }
+    }
+
+    apply_ability_overrides(reg_dir, &mut models, &mut warnings)?;
+
+    let stale_cutoff = chrono::Local::now().date_naive() - chrono::Duration::days(STALE_AFTER_DAYS);
+    let stale: Vec<String> = models
+        .iter()
+        .filter(|m| {
+            m.last_updated_date()
+                .map(|d| d < stale_cutoff)
+                .unwrap_or(false)
+        })
+        .map(|m| m.key())
+        .collect();
+    if !stale.is_empty() {
+        warnings.push(format!(
+            "{} model(s) have last_updated older than {} days (e.g. {}) - consider 'agentrouter providers refresh' or updating models.yaml",
+            stale.len(),
+            STALE_AFTER_DAYS,
+            stale[0]
+        ));
+    }
+
+    Ok((models, warnings))
+}
+
+fn apply_ability_overrides(
+    reg_dir: &Path,
+    models: &mut [ModelEntry],
+    warnings: &mut Vec<String>,
+) -> Result<(), RegistryError> {
+    let path = reg_dir.join(OVERRIDES_FILE);
+    if !path.exists() {
+        return Ok(());
+    }
+    let data = load_yaml(&path)?;
+    let overrides = data
+        .get(serde_yaml::Value::String("overrides".to_string()))
+        .and_then(|v| v.as_mapping())
+        .ok_or_else(|| RegistryError::OverridesNotAMapping(path.clone()))?
+        .clone();
+
+    let mut by_key: HashMap<String, usize> = HashMap::new();
+    for (i, m) in models.iter().enumerate() {
+        by_key.insert(m.key(), i);
+    }
+
+    for (key_val, scores) in overrides {
+        let key = key_val.as_str().unwrap_or_default().to_string();
+        let Some(&i) = by_key.get(&key) else {
+            warnings.push(format!(
+                "{}: '{}' does not match any loaded model - ignored",
+                OVERRIDES_FILE, key
+            ));
+            continue;
+        };
+        let current = &models[i].ability;
+        let mut merged = serde_yaml::Mapping::new();
+        merged.insert("coding".into(), (current.coding as i64).into());
+        merged.insert("reasoning".into(), (current.reasoning as i64).into());
+        merged.insert("writing".into(), (current.writing as i64).into());
+        if let Some(score_map) = scores.as_mapping() {
+            for (k, v) in score_map {
+                merged.insert(k.clone(), v.clone());
+            }
+        } else if !scores.is_null() {
+            return Err(RegistryError::InvalidOverride {
+                path: path.clone(),
+                key,
+                reason: "expected a mapping of ability scores".to_string(),
+            });
+        }
+        let ability: Ability =
+            serde_yaml::from_value(serde_yaml::Value::Mapping(merged)).map_err(|e| {
+                RegistryError::InvalidOverride {
+                    path: path.clone(),
+                    key: key.clone(),
+                    reason: e.to_string(),
+                }
+            })?;
+        models[i].ability = ability;
+    }
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
 
-    const PROVIDERS: &str = include_str!("../../../agentrouter/seeds/providers.yaml");
-    const MODELS: &str = include_str!("../../../agentrouter/seeds/models.yaml");
+    fn write(dir: &Path, name: &str, contents: &str) -> PathBuf {
+        let path = dir.join(name);
+        let mut f = std::fs::File::create(&path).unwrap();
+        f.write_all(contents.as_bytes()).unwrap();
+        path
+    }
 
-    fn sample() -> String {
-        r#"models:
-  - provider: openai
-    model_id: sample
-    context_window: 12345
-    max_output_tokens: 1024
-    pricing_tier: low
-    latency_tier: fast
-    ability: {coding: 8, reasoning: 7, writing: 6}
-    tool_support: []
+    const PROVIDERS_YAML: &str = r#"
+providers:
+  - id: anthropic
+    adapter: anthropic
+    auth_model: api-key
+"#;
+
+    const MODEL_YAML_TEMPLATE: &str = r#"
+models:
+  - provider: anthropic
+    model_id: claude-test
+    context_window: 100000
+    max_output_tokens: 4096
+    pricing_tier: high
+    latency_tier: medium
+    ability: { coding: 8, reasoning: 8, writing: 8 }
+    tool_support: [tool-use]
     vision_support: false
     deprecation_status: active
-"#
-        .to_owned()
+"#;
+
+    #[test]
+    fn load_providers_rejects_empty() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = write(dir.path(), "providers.yaml", "providers: []\n");
+        assert!(matches!(
+            load_providers(&path),
+            Err(RegistryError::NoProviders(_))
+        ));
     }
 
     #[test]
-    fn seed_files_load_with_no_unresolved_fallbacks() {
-        let providers = parse_providers(PROVIDERS).unwrap();
-        let (models, warnings) = parse_models(MODELS, &providers).unwrap();
-        assert!(!models.is_empty());
-        assert!(warnings.is_empty(), "{warnings:?}");
-        assert!(models.iter().all(|m| m.vendor.is_some()));
-        assert!(providers.values().all(|p| !p.supports_execution));
+    fn load_providers_missing_file_fails_closed() {
+        let dir = tempfile::tempdir().unwrap();
+        let err = load_providers(&dir.path().join("nope.yaml")).unwrap_err();
+        assert!(matches!(err, RegistryError::NotFound(_)));
     }
 
     #[test]
-    fn missing_context_window_and_unknown_fields_fail_closed() {
-        let providers = parse_providers(PROVIDERS).unwrap();
-        let missing = sample().replace("    context_window: 12345\n", "");
-        assert!(parse_models(&missing, &providers)
-            .unwrap_err()
-            .to_string()
-            .contains("context_window"));
-        let unknown = sample().replace(
-            "    model_id: sample",
-            "    surprise_field: 1\n    model_id: sample",
+    fn load_models_vendor_defaults_to_provider() {
+        let dir = tempfile::tempdir().unwrap();
+        let ppath = write(dir.path(), "providers.yaml", PROVIDERS_YAML);
+        let providers = load_providers(&ppath).unwrap();
+        let mpath = write(dir.path(), "models.yaml", MODEL_YAML_TEMPLATE);
+        let (models, warnings) = load_models(&mpath, &providers).unwrap();
+        assert_eq!(models.len(), 1);
+        assert_eq!(models[0].vendor(), "anthropic");
+        assert_eq!(models[0].key(), "anthropic/claude-test");
+        assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn load_models_unknown_provider_fails() {
+        let dir = tempfile::tempdir().unwrap();
+        let providers = HashMap::new();
+        let mpath = write(dir.path(), "models.yaml", MODEL_YAML_TEMPLATE);
+        let err = load_models(&mpath, &providers).unwrap_err();
+        assert!(matches!(err, RegistryError::UnknownProvider { .. }));
+    }
+
+    #[test]
+    fn load_models_duplicate_key_fails() {
+        let dir = tempfile::tempdir().unwrap();
+        let providers =
+            load_providers(&write(dir.path(), "providers.yaml", PROVIDERS_YAML)).unwrap();
+        let entry = MODEL_YAML_TEMPLATE
+            .trim_start()
+            .trim_start_matches("models:\n")
+            .to_string();
+        let doubled = format!("models:\n{entry}{entry}");
+        let mpath = write(dir.path(), "models.yaml", &doubled);
+        let err = load_models(&mpath, &providers).unwrap_err();
+        assert!(matches!(err, RegistryError::DuplicateModel { .. }));
+    }
+
+    #[test]
+    fn load_models_unresolved_fallback_warns_not_fails() {
+        let dir = tempfile::tempdir().unwrap();
+        let providers =
+            load_providers(&write(dir.path(), "providers.yaml", PROVIDERS_YAML)).unwrap();
+        let yaml = MODEL_YAML_TEMPLATE.replace(
+            "deprecation_status: active",
+            "deprecation_status: active\n    fallback: [does-not-exist]",
         );
-        assert!(parse_models(&unknown, &providers).is_err());
-    }
-
-    #[test]
-    fn rejects_invalid_provider_duplicate_model_and_bounds() {
-        let providers = parse_providers(PROVIDERS).unwrap();
-        assert!(parse_models(&sample().replace("openai", "not-installed"), &providers).is_err());
-        assert!(
-            parse_models(&(sample() + &sample().replace("models:\n", "")), &providers).is_err()
-        );
-        assert!(parse_models(&sample().replace("12345", "0"), &providers).is_err());
-        assert!(parse_models(&sample().replace("coding: 8", "coding: 11"), &providers).is_err());
-        assert!(parse_models(&sample().replace("low", "not-a-tier"), &providers).is_err());
-    }
-
-    #[test]
-    fn warns_but_loads_unresolved_fallback_and_defaults_vendor() {
-        let providers = parse_providers(PROVIDERS).unwrap();
-        let yaml = sample().replace(
-            "    model_id: sample",
-            "    model_id: sample\n    fallback: [future-model]",
-        );
-        let (models, warnings) = parse_models(&yaml, &providers).unwrap();
-        assert_eq!(models[0].vendor.as_deref(), Some("openai"));
-        assert_eq!(models[0].key(), "openai/sample");
-        assert_eq!(models[0].name(), "sample");
+        let mpath = write(dir.path(), "models.yaml", &yaml);
+        let (models, warnings) = load_models(&mpath, &providers).unwrap();
+        assert_eq!(models.len(), 1);
         assert_eq!(warnings.len(), 1);
-        assert!(warnings[0].contains("future-model"));
+        assert!(warnings[0].contains("does-not-exist"));
     }
 
     #[test]
-    fn dates_validate_gregorian_days() {
-        assert!(validate_date("2026-07-14"));
-        assert!(validate_date("2024-02-29"));
-        assert!(!validate_date("2026-02-29"));
-        assert!(!validate_date("2026-13-01"));
-        assert!(!validate_date("2026-01-00"));
+    fn unknown_field_is_rejected() {
+        let dir = tempfile::tempdir().unwrap();
+        let providers =
+            load_providers(&write(dir.path(), "providers.yaml", PROVIDERS_YAML)).unwrap();
+        let yaml = MODEL_YAML_TEMPLATE.replace(
+            "deprecation_status: active",
+            "deprecation_status: active\n    bogus_field: nope",
+        );
+        let mpath = write(dir.path(), "models.yaml", &yaml);
+        let err = load_models(&mpath, &providers).unwrap_err();
+        assert!(matches!(err, RegistryError::InvalidModel { .. }));
+    }
+
+    #[test]
+    fn schema_constraints_reject_zero_and_non_finite_values() {
+        let dir = tempfile::tempdir().unwrap();
+        let providers =
+            load_providers(&write(dir.path(), "providers.yaml", PROVIDERS_YAML)).unwrap();
+        for (old, new) in [
+            ("context_window: 100000", "context_window: 0"),
+            ("max_output_tokens: 4096", "max_output_tokens: 0"),
+            ("coding: 8", "coding: 11"),
+            (
+                "pricing_tier: high",
+                "pricing_tier: high\n    input_price_per_million: -.inf",
+            ),
+            (
+                "pricing_tier: high",
+                "pricing_tier: high\n    ability_confidence: .nan",
+            ),
+        ] {
+            let path = write(
+                dir.path(),
+                "models.yaml",
+                &MODEL_YAML_TEMPLATE.replace(old, new),
+            );
+            assert!(matches!(
+                load_models(&path, &providers),
+                Err(RegistryError::InvalidModel { .. })
+            ));
+        }
+    }
+
+    #[test]
+    fn manual_entry_wins_over_generated_on_key_collision() {
+        let dir = tempfile::tempdir().unwrap();
+        let providers =
+            load_providers(&write(dir.path(), "providers.yaml", PROVIDERS_YAML)).unwrap();
+        write(dir.path(), "models.yaml", MODEL_YAML_TEMPLATE);
+        write(
+            dir.path(),
+            "models.anthropic.generated.yaml",
+            &MODEL_YAML_TEMPLATE.replace("max_output_tokens: 4096", "max_output_tokens: 1"),
+        );
+        let (models, warnings) = load_all_models(dir.path(), &providers).unwrap();
+        assert_eq!(models.len(), 1);
+        assert_eq!(models[0].max_output_tokens, 4096);
+        assert!(warnings.iter().any(|w| w.contains("shadowed")));
+    }
+
+    #[test]
+    fn ability_overrides_merge_and_ignore_unknown_keys() {
+        let dir = tempfile::tempdir().unwrap();
+        let providers =
+            load_providers(&write(dir.path(), "providers.yaml", PROVIDERS_YAML)).unwrap();
+        write(dir.path(), "models.yaml", MODEL_YAML_TEMPLATE);
+        write(
+            dir.path(),
+            "ability_overrides.yaml",
+            "overrides:\n  anthropic/claude-test: { coding: 10 }\n  anthropic/missing: { coding: 1 }\n",
+        );
+        let (models, warnings) = load_all_models(dir.path(), &providers).unwrap();
+        assert_eq!(models[0].ability.coding, 10);
+        assert_eq!(models[0].ability.reasoning, 8);
+        assert!(warnings.iter().any(|w| w.contains("missing")));
+    }
+
+    #[test]
+    fn real_seed_registries_load_without_error() {
+        let reg_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../agentrouter/seeds");
+        let providers = load_providers(&reg_dir.join("providers.yaml")).unwrap();
+        let (models, _warnings) = load_all_models(&reg_dir, &providers).unwrap();
+        assert!(!models.is_empty());
     }
 }
