@@ -4,6 +4,8 @@ import json
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from agentrouter import plugins
 
 
@@ -221,3 +223,69 @@ def test_rust_ownership_state_validation_matches_python(tmp_path):
         {"states": [{"plugin": plugin.name, "state_raw": raw} for raw in states]}
     )["states"]
     assert [item["accepted"] for item in actual] == expected
+
+
+def _rust_plugin_list() -> subprocess.CompletedProcess[str]:
+    repository = Path(__file__).resolve().parents[1]
+    return subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "-p",
+            "agentrouter-cli",
+            "--bin",
+            "agentrouter",
+            "--",
+            "plugin",
+            "list",
+        ],
+        cwd=repository,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+        check=False,
+    )
+
+
+def _expected_plugin_list() -> str:
+    return "".join(
+        f"{plugin.name:<12} [{plugins.status(plugin)}]  {plugin.description}\n"
+        for plugin in plugins.PLUGINS.values()
+    )
+
+
+def test_rust_plugin_list_matches_python_for_absent_and_present_files(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path))
+    absent = _rust_plugin_list()
+    assert absent.returncode == 0, absent.stderr
+    assert absent.stdout == _expected_plugin_list()
+
+    plugin = plugins.get_plugin("codex")
+    destination = plugins.dest_root(plugin) / plugin.files[0].dest
+    destination.parent.mkdir(parents=True)
+    destination.write_text("existing user file", encoding="utf-8")
+    present = _rust_plugin_list()
+    assert present.returncode == 0, present.stderr
+    assert present.stdout == _expected_plugin_list()
+
+
+def test_rust_plugin_list_reports_linked_destinations_as_blocked(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path))
+    plugin = plugins.get_plugin("claude-code")
+    destination = plugins.dest_root(plugin) / plugin.files[0].dest
+    destination.parent.mkdir(parents=True)
+    outside = tmp_path / "outside.md"
+    outside.write_text("leave unchanged", encoding="utf-8")
+    try:
+        destination.symlink_to(outside)
+    except OSError:
+        pytest.skip("symlink creation is unavailable")
+
+    process = _rust_plugin_list()
+    assert process.returncode == 0, process.stderr
+    assert process.stdout == _expected_plugin_list()
+    assert "[blocked]" in process.stdout
+    assert outside.read_text(encoding="utf-8") == "leave unchanged"

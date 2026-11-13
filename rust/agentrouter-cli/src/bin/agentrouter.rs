@@ -13,7 +13,7 @@ use std::process::Command;
 use agentrouter_registry::{load_all_models, load_providers, ModelEntry};
 
 fn usage() -> &'static str {
-    "usage: agentrouter <init|route|explain|feedback|execute|stats|prompt|registry|providers|hosts|models|doctor|server|mcp|dashboard|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  execute <decision-id> [--yes] [--dry-run]\n  stats [--json]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  server [--host HOST] [--port PORT]\n  mcp (stdio server)\n  dashboard [port]\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
+    "usage: agentrouter <init|route|explain|feedback|execute|stats|prompt|registry|providers|hosts|models|doctor|server|mcp|dashboard|plugin|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  execute <decision-id> [--yes] [--dry-run]\n  stats [--json]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  server [--host HOST] [--port PORT]\n  mcp (stdio server)\n  dashboard [port]\n  plugin list\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
 }
 
 fn home() -> Result<PathBuf, String> {
@@ -667,6 +667,50 @@ fn mcp(home: &Path, args: &[String]) -> Result<i32, String> {
         .map_err(|error| error.to_string())
 }
 
+fn plugin_list() -> Result<i32, String> {
+    let override_root = env::var_os("AGENTROUTER_PLUGIN_ROOT").map(PathBuf::from);
+    #[cfg(windows)]
+    let user_home = env::var_os("USERPROFILE").or_else(|| env::var_os("HOME"));
+    #[cfg(not(windows))]
+    let user_home = env::var_os("HOME");
+    let home = user_home.map(PathBuf::from);
+    if override_root.is_none() && home.is_none() {
+        return Err(
+            "Set AGENTROUTER_PLUGIN_ROOT or HOME to locate plugin destinations.".to_owned(),
+        );
+    }
+    for plugin in agentrouter_cli::plugins::known_plugins() {
+        let root =
+            agentrouter_cli::plugins::dest_root(plugin, override_root.as_deref(), home.as_deref())?;
+        println!(
+            "{:<12} [{}]  {}",
+            plugin.name,
+            agentrouter_cli::plugins::status(plugin, &root),
+            plugin.description
+        );
+    }
+    Ok(0)
+}
+
+fn plugin(args: &[String]) -> Result<i32, String> {
+    if args
+        .iter()
+        .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
+    {
+        println!("Usage: agentrouter plugin list");
+        return Ok(0);
+    }
+    match args {
+        [command] if command == "list" => plugin_list(),
+        [command] if matches!(command.as_str(), "install" | "uninstall" | "doctor") => Err(
+            format!(
+                "Rust agentrouter plugin {command} is not migrated yet; use the Python CLI for this operation."
+            ),
+        ),
+        _ => Err("usage: agentrouter plugin list".to_owned()),
+    }
+}
+
 fn run() -> Result<i32, String> {
     let mut args = env::args().skip(1);
     let Some(command) = args.next() else {
@@ -692,6 +736,9 @@ fn run() -> Result<i32, String> {
             .status()
             .map_err(|error| error.to_string())?;
         return Ok(status.code().unwrap_or(1));
+    }
+    if command == "plugin" {
+        return plugin(&tail);
     }
 
     let home = home()?;

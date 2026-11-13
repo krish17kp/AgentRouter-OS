@@ -154,6 +154,107 @@ pub fn dest_root(
         .fold(home.to_path_buf(), |path, part| path.join(part)))
 }
 
+/// Read-only install-state summary for `agentrouter plugin list`.
+///
+/// A destination is considered installed when its path exists, matching
+/// Python's display summary. A linked or uninspectable path is `blocked` so a
+/// status command never follows a link or hides a safety finding.
+pub fn status(plugin: &PluginSpec, root: &Path) -> &'static str {
+    let metadata = match std::fs::symlink_metadata(root) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return "not-installed",
+        Err(_) => return "blocked",
+    };
+    if super::is_link_or_reparse(&metadata) || !metadata.is_dir() {
+        return "blocked";
+    }
+    let root_file = match super::open_safe_home(root) {
+        Ok(file) => file,
+        Err(_) => return "blocked",
+    };
+    let root_dir = cap_std::fs::Dir::from_std_file(root_file);
+    let mut present = 0;
+    for file in plugin.files {
+        match safe_path_exists(&root_dir, file.dest) {
+            Ok(true) => present += 1,
+            Ok(false) => {}
+            Err(_) => return "blocked",
+        }
+    }
+    if present == plugin.files.len() {
+        "installed"
+    } else if present > 0 {
+        "partial"
+    } else {
+        "not-installed"
+    }
+}
+
+fn safe_path_exists(root: &cap_std::fs::Dir, relative: &str) -> Result<bool, String> {
+    let parts = safe_relative(relative, "plugin destination")?;
+    let Some((filename, directories)) = parts.split_last() else {
+        return Ok(false);
+    };
+    let mut parent = root
+        .try_clone()
+        .map_err(|error| format!("could not inspect plugin root: {error}"))?;
+    for part in directories {
+        let file = open_existing_directory(&parent, part)?;
+        let Some(file) = file else {
+            return Ok(false);
+        };
+        parent = cap_std::fs::Dir::from_std_file(file);
+    }
+    let metadata = match parent.symlink_metadata(filename) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(error) => return Err(format!("could not inspect plugin destination: {error}")),
+    };
+    if cap_metadata_is_link_or_reparse(&metadata) {
+        return Err("plugin destination contains a link or reparse point".to_owned());
+    }
+    Ok(true)
+}
+
+fn open_existing_directory(
+    parent: &cap_std::fs::Dir,
+    name: &str,
+) -> Result<Option<std::fs::File>, String> {
+    let parent_file = parent
+        .try_clone()
+        .map_err(|error| format!("could not inspect plugin destination: {error}"))?
+        .into_std_file();
+    let mut options = fs_at::OpenOptions::default();
+    options.read(true).follow(false);
+    let opened = match options.open_dir_at(&parent_file, Path::new(name)) {
+        Ok(opened) => opened,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(format!("could not inspect plugin directory: {error}")),
+    };
+    let metadata = opened
+        .metadata()
+        .map_err(|error| format!("could not inspect plugin directory: {error}"))?;
+    if super::is_link_or_reparse(&metadata) {
+        return Err("plugin destination contains a link or reparse point".to_owned());
+    }
+    Ok(Some(opened))
+}
+
+fn cap_metadata_is_link_or_reparse(metadata: &cap_std::fs::Metadata) -> bool {
+    if metadata.file_type().is_symlink() {
+        return true;
+    }
+    #[cfg(windows)]
+    {
+        use cap_std::fs::MetadataExt;
+        metadata.file_attributes() & 0x400 != 0
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
+}
+
 /// Validate the JSON ownership-record shape without claiming any filesystem
 /// path. Callers must still open the record without following links and verify
 /// its digest/inode before using these claims to mutate a destination.
@@ -408,5 +509,34 @@ mod tests {
         for state in invalid {
             assert!(validate_state_data(plugin, &state).is_err(), "{state}");
         }
+    }
+
+    #[test]
+    fn status_reports_missing_and_present_destinations() {
+        let plugin = get_plugin("codex").unwrap();
+        let temporary = tempfile::tempdir().unwrap();
+        let root = temporary.path().join(plugin.name);
+        assert_eq!(status(plugin, &root), "not-installed");
+        std::fs::create_dir_all(&root).unwrap();
+        assert_eq!(status(plugin, &root), "not-installed");
+        std::fs::write(root.join("AGENTS.md"), "user file").unwrap();
+        assert_eq!(status(plugin, &root), "installed");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn status_fails_closed_on_linked_destinations() {
+        use std::os::unix::fs::symlink;
+
+        let plugin = get_plugin("claude-code").unwrap();
+        let temporary = tempfile::tempdir().unwrap();
+        let root = temporary.path().join(plugin.name);
+        let destination = root.join("skills/agentrouter/SKILL.md");
+        std::fs::create_dir_all(destination.parent().unwrap()).unwrap();
+        let outside = temporary.path().join("outside.md");
+        std::fs::write(&outside, "leave unchanged").unwrap();
+        symlink(&outside, &destination).unwrap();
+        assert_eq!(status(plugin, &root), "blocked");
+        assert_eq!(std::fs::read_to_string(outside).unwrap(), "leave unchanged");
     }
 }

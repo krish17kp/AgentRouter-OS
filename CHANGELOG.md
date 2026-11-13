@@ -35,6 +35,10 @@ All notable changes to AgentRouter OS. Format loosely follows
   dispositions, destination and backup paths, digests, and file/directory
   identities. This validates untrusted JSON only; it does not read or trust a
   record from disk until the no-follow filesystem reader is ported.
+- Add a read-only Rust `agentrouter plugin list` command with Python-compatible
+  installed/partial/not-installed summaries and fail-closed link/reparse-point
+  handling. Plugin install, uninstall, and doctor remain on the Python CLI
+  until their transaction and diagnostic behavior is ported.
 
 ### Fixed
 - Add Rust OpenAPI canonicalization and bounded `$ref` validation with stable,
