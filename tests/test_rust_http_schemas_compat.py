@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -30,6 +31,16 @@ ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(shutil.which("cargo") is None, reason="cargo not on PATH")
 
 
+def _cargo_env() -> dict[str, str]:
+    """Keep repeated subprocess probes within small CI/container disk quotas."""
+    return {
+        **os.environ,
+        "CARGO_BUILD_JOBS": "1",
+        "CARGO_PROFILE_DEV_DEBUG": "0",
+        "CARGO_INCREMENTAL": "0",
+    }
+
+
 def _rust(kind: str, request: dict) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [
@@ -46,6 +57,7 @@ def _rust(kind: str, request: dict) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         text=True,
         encoding="utf-8",
+        env=_cargo_env(),
         cwd=ROOT,
         timeout=120,
         check=False,
@@ -68,6 +80,30 @@ def _rust_response(kind: str, response: dict) -> subprocess.CompletedProcess[str
         capture_output=True,
         text=True,
         encoding="utf-8",
+        env=_cargo_env(),
+        cwd=ROOT,
+        timeout=120,
+        check=False,
+    )
+
+
+def _rust_service(home: Path, kind: str, request: dict | None = None):
+    return subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "-p",
+            "agentrouter-api",
+            "--bin",
+            "api_service_from_json",
+        ],
+        input=json.dumps({"kind": kind, "home": str(home), "request": request or {}}),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env=_cargo_env(),
         cwd=ROOT,
         timeout=120,
         check=False,
@@ -251,3 +287,127 @@ def test_rust_http_request_schema_rejects_invalid_pydantic_coercions(kind, paylo
     process = _rust(kind, payload)
     assert process.returncode != 0
     assert process.stdout == ""
+
+
+def test_rust_api_service_list_models_matches_python(home):
+    from agentrouter.server import service
+
+    expected = service.list_models()
+    process = _rust_service(home, "list_models")
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == expected
+
+
+def test_rust_api_service_list_hosts_matches_python(home):
+    from agentrouter.server import service
+
+    expected = service.list_hosts()
+    process = _rust_service(home, "list_hosts")
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == expected
+
+
+def test_rust_api_service_classification_matches_python(home):
+    from agentrouter.server import service
+
+    payload = {
+        "task": "review this Python repository for security issues",
+        "context_tokens": 4096,
+        "risk": "high",
+        "tools": ["filesystem"],
+    }
+    expected = service.classify_task(
+        payload["task"],
+        context_tokens=payload["context_tokens"],
+        risk=payload["risk"],
+        tools=payload["tools"],
+    )
+    process = _rust_service(home, "classify", payload)
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == expected
+
+
+def test_rust_api_service_route_preview_matches_python(home):
+    from agentrouter.server import service
+
+    payload = {
+        "task": "write a short guide to the project",
+        "context_tokens": None,
+        "risk": None,
+        "tools": None,
+        "prefer": None,
+        "no_log": True,
+    }
+    expected = service.route_task(**payload)
+    process = _rust_service(home, "route", payload)
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == expected
+
+
+def test_rust_api_service_persists_decisions_and_preview_matches_python(home):
+    from agentrouter.server import service
+
+    rust_home = home / "rust-home"
+    rust_home.mkdir()
+    shutil.copytree(home / "registry", rust_home / "registry")
+    payload = {
+        "task": "review this repository for security issues",
+        "context_tokens": None,
+        "risk": None,
+        "tools": None,
+        "prefer": None,
+        "no_log": False,
+    }
+
+    python_route = service.route_task(**payload)
+    rust_route_process = _rust_service(rust_home, "route", payload)
+    assert rust_route_process.returncode == 0, rust_route_process.stderr
+    rust_route = json.loads(rust_route_process.stdout)
+    assert rust_route == python_route
+
+    decision_id = python_route["decision_id"]
+    python_decision = service.get_decision(decision_id)
+    rust_decision_process = _rust_service(rust_home, "decision", {"decision_id": decision_id})
+    assert rust_decision_process.returncode == 0, rust_decision_process.stderr
+    rust_decision = json.loads(rust_decision_process.stdout)
+    assert rust_decision.pop("created_at")
+    assert python_decision.pop("created_at")
+    assert rust_decision == python_decision
+
+    python_preview = service.execute_dry_run(decision_id)
+    rust_preview_process = _rust_service(rust_home, "dry_run", {"decision_id": decision_id})
+    assert rust_preview_process.returncode == 0, rust_preview_process.stderr
+    assert json.loads(rust_preview_process.stdout) == python_preview
+
+    feedback = {"decision_id": decision_id, "rating": 5, "note": None}
+    python_feedback = service.save_feedback(**feedback)
+    rust_feedback_process = _rust_service(rust_home, "feedback", feedback)
+    assert rust_feedback_process.returncode == 0, rust_feedback_process.stderr
+    assert json.loads(rust_feedback_process.stdout) == python_feedback
+
+
+@pytest.mark.parametrize(
+    ("kind", "payload", "expected"),
+    [
+        ("decision", {"decision_id": "d_99999"}, None),
+        (
+            "feedback",
+            {"decision_id": "d_99999", "rating": 4, "note": None},
+            False,
+        ),
+        ("dry_run", {"decision_id": "d_99999"}, None),
+    ],
+)
+def test_rust_api_service_missing_record_behavior_matches_python(home, kind, payload, expected):
+    from agentrouter.server import service
+
+    if kind == "decision":
+        actual = service.get_decision(payload["decision_id"])
+    elif kind == "feedback":
+        actual = service.save_feedback(**payload)
+    else:
+        actual = service.execute_dry_run(payload["decision_id"])
+    process = _rust_service(home, kind, payload)
+    assert process.returncode == 0, process.stderr
+    assert actual == expected
+    assert json.loads(process.stdout) == expected

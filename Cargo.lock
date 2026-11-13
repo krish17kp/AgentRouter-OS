@@ -6,7 +6,12 @@ version = 4
 name = "agentrouter-api"
 version = "0.1.0"
 dependencies = [
+ "agentrouter-classifier",
  "agentrouter-core",
+ "agentrouter-hosts",
+ "agentrouter-registry",
+ "agentrouter-routing",
+ "agentrouter-storage",
  "serde",
  "serde_json",
 ]

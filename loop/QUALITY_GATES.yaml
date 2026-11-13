@@ -1,13 +1,13 @@
 # Machine-readable desired thresholds and current evidence for AgentRouter OS.
 version: 2
-updated: 2026-11-11
+updated: 2026-11-13
 canonical_release_ready: false
 
 testing:
   mandatory_tests_pass:
     required: true
     current: pass_local
-    last_full_baseline_passed: 1720
+    last_full_baseline_passed: 2003
   unexplained_failures:
     required: 0
     current: 0
@@ -21,9 +21,9 @@ coverage:
   safety_execution_gateway_branch: 1.00
   policy_enforcement_branch: 1.00
   current: pass_local
-  line: 0.920876
-  branch: 0.870370
-  evidence: docs/COVERAGE_REPORT_2026-11-11.md
+  line: 0.924645
+  branch: 0.876068
+  evidence: docs/COVERAGE_REPORT_2026-11-13.md
 
 mutation:
   overall_min: 0.85
@@ -81,7 +81,7 @@ static_quality:
 security:
   bandit_clean_or_justified: pass_local
   pip_audit_clean_or_mitigated: pass_local
-  secret_scan_clean: pass_on_previous_pushed_rc_pending_current_change
+  secret_scan_clean: pass_on_d2e3e10_pending_current_change
   plugin_permission_audit_pass: pass_PR_13
 
 packaging:
@@ -93,9 +93,9 @@ packaging:
 
 platforms:
   windows_local_green: pending
-  github_linux_green: pass_rc_ab986_pending_gold_adapter_slice
-  github_windows_green: pass_rc_ab986_pending_gold_adapter_slice
-  github_macos_green: pass_rc_ab986_pending_gold_adapter_slice
+  github_linux_green: pass_on_d2e3e10_pending_service_slice
+  github_windows_green: pass_on_d2e3e10_pending_service_slice
+  github_macos_green: pass_on_d2e3e10_pending_service_slice
 
 open:
   - id: context_band_generalization
@@ -103,12 +103,9 @@ open:
     reason: >-
       frozen held-out accuracy 0.6667 is below the unchanged 0.90 threshold; decision A
       proved a dataset ceiling (rules 0.6667 / learned 0.6889 / hybrid 0.6444 all fail)
-  - id: mutation_score
-    blocking: true
-    reason: real mutmut 3.6.0 score awaits the first Linux GitHub Actions run
   - id: release_branch_ci
     blocking: true
-    reason: current local bundle/privacy changes still need fresh cross-platform GitHub checks
+    reason: TASK-067 service differential suite and its updated Rust/Python matrix need hosted cross-platform confirmation
 
 historical_corrections:
   - claim: context_band_accuracy_0.945_release_ready

@@ -6,6 +6,11 @@ All notable changes to AgentRouter OS. Format loosely follows
 ## [Unreleased]
 
 ### Changed
+- Port the HTTP service business layer to `agentrouter-api` for model/host
+  listing, classification, routing, decision lookup, feedback, and dry-run
+  previews. It depends directly on routing, host, registry, classifier, and
+  storage crates rather than the CLI; HTTP serving, middleware, and request
+  lifecycle remain Python-owned.
 - Extend `agentrouter-api` with typed and passthrough response models, plus
   Pydantic-compatible boolean and integer coercion for supported Rust ranges.
 - Add an `agentrouter-api` Rust crate for classify, route, feedback and dry-run

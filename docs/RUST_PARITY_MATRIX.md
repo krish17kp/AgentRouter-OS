@@ -86,7 +86,7 @@ release authority until the full set is complete.
 | `agentrouter/server/app.py` | `—` | Not ported |
 | `agentrouter/server/limits.py` | `agentrouter-cli::limits` | Partial |
 | `agentrouter/server/schemas.py` | `agentrouter-api::{schemas,responses}` | Partial |
-| `agentrouter/server/service.py` | `—` | Not ported |
+| `agentrouter/server/service.py` | `agentrouter-api::service` | Partial |
 | `agentrouter/store.py` | `agentrouter-storage` | Partial |
 | `agentrouter/taxonomy.py` | `agentrouter-policy::taxonomy` | Parity |
 | `agentrouter/usage.py` | `agentrouter-usage::{check_usage,apply_live_verification}` | Partial |
@@ -145,6 +145,12 @@ release authority until the full set is complete.
   engine-owned fields. Differential checks cover supported Pydantic boolean and
   integer coercions; Python's unbounded integer range, middleware and the server
   lifecycle remain unported, so the HTTP schema module is Partial.
+- Rust API service functions now match Python model and host listings,
+  classification, no-log and persisted routing, decision lookup, nullable-note
+  feedback, and dry-run previews using committed local registries and SQLite.
+  FastAPI endpoints, middleware, observability hooks, request lifecycle, and
+  the full context-token integer range remain Python-only, so service parity is
+  Partial.
 - Performance scoring and classification/routing timing now run in Rust for
   caller-supplied models and tasks. Seed loading and injected classifier
   behavior remain Python-side; latency values are machine-dependent.

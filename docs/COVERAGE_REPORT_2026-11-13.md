@@ -13,7 +13,7 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 1,995 passed, 4 skipped |
+| Python regression | 2,003 passed, 4 skipped |
 | Line coverage | 92.46% (6,626 / 7,166 statements) |
 | Branch coverage | 87.61% (1,845 / 2,106 branch outcomes) |
 | Combined coverage reported by pytest-cov | 91.36% |
@@ -30,13 +30,15 @@ boolean and integer coercion, underscore-separated and integral-decimal
 integer strings, underscore datetime separators, numeric Unix timestamp
 rounding, leap-second rejection, and invalid-input rejection. An additional
 40-value Python/Rust timestamp corpus has no output or acceptance mismatch.
-The release suite also exercises the Rust HTTP schemas against Pydantic for
-request bounds, supported scalar coercions, typed response fields, defaults,
-unknown-field handling, and passthrough of stored engine response fields.
-Python's unbounded integer range, middleware, and the Rust server lifecycle
-remain partial. The release suite also exercises Rust fixed-window rate limiting,
-idempotency cache expiry, and response replay fields against Python server
-primitives.
+The release suite also exercises the Rust HTTP request/response schemas against
+Pydantic for request bounds, supported scalar coercions, typed response fields,
+defaults, unknown-field handling, and passthrough of stored engine response
+fields. Forty-three Python/Rust service differential cases cover model/host
+listing, classification, route previews and persistence, stored decisions,
+feedback, and dry-run behavior. Python's unbounded integer range, middleware,
+and the Rust server lifecycle remain partial. The release suite also exercises
+Rust fixed-window rate limiting, idempotency cache expiry, and response replay
+fields against Python server primitives.
 Catalog operation checks compare provenance, freshness summaries, sorted
 generated-catalog listing, deprecations, and rollback/restore against Python;
 Rust safety checks cover linked paths and no-clobber restoration. The Rust SDK

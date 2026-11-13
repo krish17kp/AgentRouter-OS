@@ -294,6 +294,17 @@ pub fn record_feedback(
     rating: i64,
     note: &str,
 ) -> rusqlite::Result<bool> {
+    record_feedback_with_note(conn, decision_id_str, rating, Some(note))
+}
+
+/// Optional-note variant for the HTTP API, where omitted and empty notes have
+/// distinct JSON/SQLite meaning.
+pub fn record_feedback_with_note(
+    conn: &Connection,
+    decision_id_str: &str,
+    rating: i64,
+    note: Option<&str>,
+) -> rusqlite::Result<bool> {
     if !(1..=5).contains(&rating) {
         return Ok(false);
     }
@@ -345,6 +356,15 @@ mod tests {
             })
             .unwrap();
         assert_eq!((rating, note.as_str()), (4, "worked"));
+        assert!(record_feedback_with_note(&conn, &id, 3, None).unwrap());
+        let note: Option<String> = conn
+            .query_row(
+                "SELECT note FROM feedback ORDER BY id DESC LIMIT 1",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(note, None);
     }
 
     #[test]
