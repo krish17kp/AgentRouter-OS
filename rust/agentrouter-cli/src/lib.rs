@@ -26,7 +26,7 @@ pub mod bundle;
 pub mod dashboard;
 pub mod diagnostics;
 pub mod harness;
-pub mod limits;
+pub use agentrouter_limits as limits;
 pub mod observability;
 pub mod openai;
 pub mod sdk;

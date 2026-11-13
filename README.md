@@ -502,6 +502,8 @@ See [ROADMAP.md](ROADMAP.md) and [MILESTONES.md](MILESTONES.md) for the full bre
 | [integrations/README.md](integrations/README.md) | Install the skill into any agent host |
 | [CLI_SPEC.md](CLI_SPEC.md) | Full command specification and flags |
 | [ROUTING_RULES.md](ROUTING_RULES.md) | Scoring, classification, risk, fallback logic |
+| [docs/API.md](docs/API.md) | Local HTTP API endpoints, auth, CORS, and errors |
+| [docs/RUST_HTTP_SERVER.md](docs/RUST_HTTP_SERVER.md) | Rust HTTP migration preview and current limits |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Components, request lifecycle, data flow |
 | [docs/architecture](docs/architecture/README.md) | Target architecture diagrams (orchestration, agents, control plane) |
 | [MODEL_REGISTRY_SCHEMA.md](MODEL_REGISTRY_SCHEMA.md) | Model entry schema (source of truth) |

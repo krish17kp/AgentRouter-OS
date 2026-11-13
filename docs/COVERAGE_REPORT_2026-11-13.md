@@ -13,7 +13,7 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 2,003 passed, 4 skipped |
+| Python regression | 2,007 passed, 4 skipped |
 | Line coverage | 92.46% (6,626 / 7,166 statements) |
 | Branch coverage | 87.61% (1,845 / 2,106 branch outcomes) |
 | Combined coverage reported by pytest-cov | 91.36% |
@@ -35,10 +35,12 @@ Pydantic for request bounds, supported scalar coercions, typed response fields,
 defaults, unknown-field handling, and passthrough of stored engine response
 fields. Forty-three Python/Rust service differential cases cover model/host
 listing, classification, route previews and persistence, stored decisions,
-feedback, and dry-run behavior. Python's unbounded integer range, middleware,
-and the Rust server lifecycle remain partial. The release suite also exercises
-Rust fixed-window rate limiting, idempotency cache expiry, and response replay
-fields against Python server primitives.
+feedback, and dry-run behavior. Live Rust HTTP process checks cover routes,
+auth/CORS, request IDs, rate limiting, replay, and exact Python/Rust response
+parity for model/host listing, classification, and route preview. The full
+unbounded Python integer range and exact FastAPI error and lifecycle behavior
+remain partial. Rust fixed-window rate limiting, idempotency cache expiry, and
+response replay fields are also compared with the Python server primitives.
 Catalog operation checks compare provenance, freshness summaries, sorted
 generated-catalog listing, deprecations, and rollback/restore against Python;
 Rust safety checks cover linked paths and no-clobber restoration. The Rust SDK

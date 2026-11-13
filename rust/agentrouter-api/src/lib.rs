@@ -2,4 +2,5 @@
 mod pydantic;
 pub mod responses;
 pub mod schemas;
+pub mod server;
 pub mod service;

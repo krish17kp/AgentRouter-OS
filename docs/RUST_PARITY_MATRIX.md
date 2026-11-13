@@ -83,8 +83,8 @@ release authority until the full set is complete.
 | `agentrouter/schema.py` | `agentrouter-core + agentrouter-registry` | Partial |
 | `agentrouter/sdk.py` | `agentrouter-cli::sdk` | Partial |
 | `agentrouter/server/__init__.py` | `agentrouter-evaluation::package_markers::SERVER_PUBLIC_EXPORTS` | Parity |
-| `agentrouter/server/app.py` | `—` | Not ported |
-| `agentrouter/server/limits.py` | `agentrouter-cli::limits` | Partial |
+| `agentrouter/server/app.py` | `agentrouter-api::server` + `agentrouter-api-server` | Partial |
+| `agentrouter/server/limits.py` | `agentrouter-limits` (re-exported as `agentrouter_cli::limits`) | Partial |
 | `agentrouter/server/schemas.py` | `agentrouter-api::{schemas,responses}` | Partial |
 | `agentrouter/server/service.py` | `agentrouter-api::service` | Partial |
 | `agentrouter/store.py` | `agentrouter-storage` | Partial |

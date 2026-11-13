@@ -16,6 +16,8 @@ pub const IDEMPOTENCY_TTL_ENV: &str = "AGENTROUTER_IDEMPOTENCY_TTL";
 pub const DEFAULT_WINDOW: i128 = 60;
 pub const DEFAULT_IDEMPOTENCY_TTL: i128 = 300;
 pub const MAX_ENTRIES: usize = 10_000;
+/// Aggregate response-body memory retained by an idempotency cache.
+pub const MAX_CACHE_BYTES: usize = 16 * 1024 * 1024;
 
 pub const RATE_EXEMPT_PATHS: [&str; 2] = ["/health", "/ready"];
 
@@ -177,6 +179,7 @@ pub struct CachedResponse {
 struct CacheState {
     values: HashMap<String, (f64, CachedResponse)>,
     insertion_order: VecDeque<String>,
+    total_bytes: usize,
 }
 
 struct FlightEntry {
@@ -256,7 +259,9 @@ impl IdempotencyCache {
             .get(key)
             .is_some_and(|(stored_at, _)| now - stored_at > self.ttl() as f64);
         if expired {
-            state.values.remove(key);
+            if let Some((_, response)) = state.values.remove(key) {
+                state.total_bytes = state.total_bytes.saturating_sub(response.body.len());
+            }
             state.insertion_order.retain(|candidate| candidate != key);
             return None;
         }
@@ -268,28 +273,49 @@ impl IdempotencyCache {
     }
 
     pub fn put_at(&self, key: &str, response: CachedResponse, now: f64) {
+        let response_bytes = response.body.len();
+        if response_bytes > MAX_CACHE_BYTES {
+            return;
+        }
         let mut state = lock(&self.state);
-        if !state.values.contains_key(key) && state.values.len() >= MAX_ENTRIES {
+        if let Some((_, previous)) = state.values.remove(key) {
+            state.total_bytes = state.total_bytes.saturating_sub(previous.body.len());
+            state.insertion_order.retain(|candidate| candidate != key);
+        }
+
+        let needs_cleanup = state.values.len() >= MAX_ENTRIES
+            || state.total_bytes.saturating_add(response_bytes) > MAX_CACHE_BYTES;
+        if needs_cleanup {
             let ttl = self.ttl() as f64;
-            state
-                .values
-                .retain(|_, (stored_at, _)| now - *stored_at <= ttl);
+            let mut retained_bytes: usize = 0;
+            state.values.retain(|_, (stored_at, cached)| {
+                let keep = now - *stored_at <= ttl;
+                if keep {
+                    retained_bytes = retained_bytes.saturating_add(cached.body.len());
+                }
+                keep
+            });
+            state.total_bytes = retained_bytes;
             let live_keys: std::collections::HashSet<String> =
                 state.values.keys().cloned().collect();
             state
                 .insertion_order
                 .retain(|candidate| live_keys.contains(candidate));
-            while state.values.len() >= MAX_ENTRIES {
-                if let Some(oldest) = state.insertion_order.pop_front() {
-                    state.values.remove(&oldest);
-                } else {
-                    break;
-                }
-            }
-            state.insertion_order.push_back(key.to_owned());
-        } else if !state.values.contains_key(key) {
-            state.insertion_order.push_back(key.to_owned());
         }
+
+        while state.values.len() >= MAX_ENTRIES
+            || state.total_bytes.saturating_add(response_bytes) > MAX_CACHE_BYTES
+        {
+            let Some(oldest) = state.insertion_order.pop_front() else {
+                break;
+            };
+            if let Some((_, removed)) = state.values.remove(&oldest) {
+                state.total_bytes = state.total_bytes.saturating_sub(removed.body.len());
+            }
+        }
+
+        state.insertion_order.push_back(key.to_owned());
+        state.total_bytes = state.total_bytes.saturating_add(response_bytes);
         state.values.insert(key.to_owned(), (now, response));
     }
 
@@ -420,5 +446,23 @@ mod tests {
         assert_eq!(lock(&cache.state).values.len(), MAX_ENTRIES);
         assert_eq!(cache.get_at("key-0", 0.0), None);
         assert_eq!(cache.get_at("key-1", 0.0), Some(response(200, b"ok")));
+    }
+
+    #[test]
+    fn idempotency_cache_stays_within_aggregate_body_limit() {
+        let cache = IdempotencyCache::new(Some(60));
+        let body = vec![b'x'; MAX_CACHE_BYTES / 2];
+        cache.put("first", response(200, &body));
+        let second_body = vec![b'y'; MAX_CACHE_BYTES / 2 + 1];
+        cache.put("second", response(200, &second_body));
+        assert!(lock(&cache.state).total_bytes <= MAX_CACHE_BYTES);
+        assert_eq!(cache.get("first"), None);
+        assert_eq!(
+            cache.get("second").map(|cached| cached.body.len()),
+            Some(second_body.len())
+        );
+
+        cache.put("too-large", response(200, &vec![b'x'; MAX_CACHE_BYTES + 1]));
+        assert_eq!(cache.get("too-large"), None);
     }
 }

@@ -6,6 +6,13 @@ All notable changes to AgentRouter OS. Format loosely follows
 ## [Unreleased]
 
 ### Changed
+- Add an Axum local HTTP server slice with versioned service routes, canonical
+  OpenAPI output, graceful shutdown, request IDs, optional API-key auth,
+  explicit-origin CORS, and bounded rate/idempotency middleware. The Python API
+  remains the release authority until full contract parity and all release
+  gates pass.
+- Share Rust rate-limit and idempotency primitives between the CLI and HTTP
+  server, including a 16 MiB aggregate cached-response limit.
 - Port the HTTP service business layer to `agentrouter-api` for model/host
   listing, classification, routing, decision lookup, feedback, and dry-run
   previews. It depends directly on routing, host, registry, classifier, and

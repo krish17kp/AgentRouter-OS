@@ -21,6 +21,10 @@ The app reads its registry/decision store from `AGENTROUTER_HOME`
 
 Both are generated automatically by FastAPI.
 
+The Rust server can be run separately as a migration preview; it is not the
+supported release backend yet. See [Rust HTTP server migration preview](RUST_HTTP_SERVER.md)
+for its launch and protection details.
+
 ## Browser UI integration
 
 The API is same-origin-only by default. To let an explicitly configured browser

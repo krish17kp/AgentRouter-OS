@@ -10,20 +10,44 @@ use serde_json::{json, Value};
 
 use crate::schemas::{ClassifyRequest, DryRunRequest, FeedbackRequest, RouteRequest};
 
-fn load_registry(home: &Path) -> Result<Vec<ModelEntry>, String> {
+#[derive(Debug)]
+pub enum ServiceError {
+    Validation(String),
+    Registry(String),
+    Internal(String),
+}
+
+impl std::fmt::Display for ServiceError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Validation(message) | Self::Registry(message) | Self::Internal(message) => {
+                formatter.write_str(message)
+            }
+        }
+    }
+}
+
+impl std::error::Error for ServiceError {}
+
+fn load_registry(home: &Path) -> Result<Vec<ModelEntry>, ServiceError> {
     let registry = home.join("registry");
-    let providers = load_providers(&registry.join("providers.yaml")).map_err(|e| e.to_string())?;
-    let (models, _warnings) = load_all_models(&registry, &providers).map_err(|e| e.to_string())?;
+    let providers = load_providers(&registry.join("providers.yaml"))
+        .map_err(|error| ServiceError::Registry(error.to_string()))?;
+    let (models, _warnings) = load_all_models(&registry, &providers)
+        .map_err(|error| ServiceError::Registry(error.to_string()))?;
     Ok(models)
 }
 
-fn classifier_options(request: &ClassifyRequest) -> Result<ClassifyOptions, String> {
-    request.validate().map_err(|error| error.to_string())?;
+fn classifier_options(request: &ClassifyRequest) -> Result<ClassifyOptions, ServiceError> {
+    request
+        .validate()
+        .map_err(|error| ServiceError::Validation(error.to_string()))?;
     let context_tokens = request
         .context_tokens
         .map(|tokens| {
-            u32::try_from(tokens)
-                .map_err(|_| "context_tokens exceeds Rust classifier range".to_string())
+            u32::try_from(tokens).map_err(|_| {
+                ServiceError::Validation("context_tokens exceeds Rust classifier range".to_string())
+            })
         })
         .transpose()?;
     Ok(ClassifyOptions {
@@ -34,13 +58,13 @@ fn classifier_options(request: &ClassifyRequest) -> Result<ClassifyOptions, Stri
     })
 }
 
-pub fn classify_task(request: &ClassifyRequest) -> Result<Value, String> {
+pub fn classify_task(request: &ClassifyRequest) -> Result<Value, ServiceError> {
     let options = classifier_options(request)?;
     let result = classify(&request.task, &options);
-    serde_json::to_value(result).map_err(|error| error.to_string())
+    serde_json::to_value(result).map_err(|error| ServiceError::Internal(error.to_string()))
 }
 
-pub fn list_models(home: &Path) -> Result<Vec<Value>, String> {
+pub fn list_models(home: &Path) -> Result<Vec<Value>, ServiceError> {
     let mut models = load_registry(home)?;
     models.sort_by(|left, right| {
         left.vendor()
@@ -217,10 +241,11 @@ fn route_service_payload(
     models: &[ModelEntry],
     classification: &Classification,
     prefer: Option<&str>,
-) -> Result<Value, String> {
+) -> Result<Value, ServiceError> {
     let result: RouteResult =
         agentrouter_routing::route(models, classification, Weights::default(), prefer);
-    let result_json = serde_json::to_value(result).map_err(|error| error.to_string())?;
+    let result_json =
+        serde_json::to_value(result).map_err(|error| ServiceError::Internal(error.to_string()))?;
     let recommendation = &result_json["recommendation"];
     let target = recommendation
         .get("model")
@@ -236,10 +261,10 @@ fn route_service_payload(
     let mut payload = json!({"classification": classification});
     let object = payload
         .as_object_mut()
-        .ok_or_else(|| "route payload must be a JSON object".to_string())?;
-    let result_object = result_json
-        .as_object()
-        .ok_or_else(|| "routing engine returned a non-object result".to_string())?;
+        .ok_or_else(|| ServiceError::Internal("route payload must be a JSON object".to_string()))?;
+    let result_object = result_json.as_object().ok_or_else(|| {
+        ServiceError::Internal("routing engine returned a non-object result".to_string())
+    })?;
     for (key, value) in result_object {
         object.insert(key.clone(), value.clone());
     }
@@ -250,8 +275,10 @@ fn route_service_payload(
     Ok(payload)
 }
 
-pub fn route_task(home: &Path, request: &RouteRequest) -> Result<Value, String> {
-    request.validate().map_err(|error| error.to_string())?;
+pub fn route_task(home: &Path, request: &RouteRequest) -> Result<Value, ServiceError> {
+    request
+        .validate()
+        .map_err(|error| ServiceError::Validation(error.to_string()))?;
     let models = load_registry(home)?;
     let options = classifier_options(&request.classify)?;
     let classification = classify(&request.classify.task, &options);
@@ -264,16 +291,17 @@ pub fn route_task(home: &Path, request: &RouteRequest) -> Result<Value, String> 
     let decision_id = if request.no_log {
         None
     } else {
-        let connection = agentrouter_storage::connect(home).map_err(|error| error.to_string())?;
+        let connection = agentrouter_storage::connect(home)
+            .map_err(|error| ServiceError::Internal(error.to_string()))?;
         Some(
             agentrouter_storage::save_decision(&connection, &request.classify.task, &payload)
-                .map_err(|error| error.to_string())?,
+                .map_err(|error| ServiceError::Internal(error.to_string()))?,
         )
     };
     let mut response = payload;
-    let object = response
-        .as_object_mut()
-        .ok_or_else(|| "route pipeline returned a non-object payload".to_string())?;
+    let object = response.as_object_mut().ok_or_else(|| {
+        ServiceError::Internal("route pipeline returned a non-object payload".to_string())
+    })?;
     object.insert(
         "task".to_string(),
         Value::String(request.classify.task.clone()),
@@ -285,25 +313,35 @@ pub fn route_task(home: &Path, request: &RouteRequest) -> Result<Value, String> 
     Ok(response)
 }
 
-pub fn get_decision(home: &Path, decision_id: &str) -> Result<Option<Value>, String> {
-    let connection = agentrouter_storage::connect(home).map_err(|error| error.to_string())?;
-    agentrouter_storage::load_decision(&connection, decision_id).map_err(|error| error.to_string())
+pub fn get_decision(home: &Path, decision_id: &str) -> Result<Option<Value>, ServiceError> {
+    let connection = agentrouter_storage::connect(home)
+        .map_err(|error| ServiceError::Internal(error.to_string()))?;
+    agentrouter_storage::load_decision(&connection, decision_id)
+        .map_err(|error| ServiceError::Internal(error.to_string()))
 }
 
-pub fn save_feedback(home: &Path, request: &FeedbackRequest) -> Result<bool, String> {
-    request.validate().map_err(|error| error.to_string())?;
-    let connection = agentrouter_storage::connect(home).map_err(|error| error.to_string())?;
+pub fn save_feedback(home: &Path, request: &FeedbackRequest) -> Result<bool, ServiceError> {
+    request
+        .validate()
+        .map_err(|error| ServiceError::Validation(error.to_string()))?;
+    let connection = agentrouter_storage::connect(home)
+        .map_err(|error| ServiceError::Internal(error.to_string()))?;
     agentrouter_storage::record_feedback_with_note(
         &connection,
         &request.decision_id,
         request.rating,
         request.note.as_deref(),
     )
-    .map_err(|error| error.to_string())
+    .map_err(|error| ServiceError::Internal(error.to_string()))
 }
 
-pub fn execute_dry_run(home: &Path, request: &DryRunRequest) -> Result<Option<Value>, String> {
-    request.validate().map_err(|error| error.to_string())?;
+pub fn execute_dry_run(
+    home: &Path,
+    request: &DryRunRequest,
+) -> Result<Option<Value>, ServiceError> {
+    request
+        .validate()
+        .map_err(|error| ServiceError::Validation(error.to_string()))?;
     let Some(payload) = get_decision(home, &request.decision_id)? else {
         return Ok(None);
     };
