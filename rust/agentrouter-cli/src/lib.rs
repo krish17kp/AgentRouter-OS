@@ -23,6 +23,7 @@ use agentrouter_routing::RouteResult;
 use serde_json::{json, Value};
 
 pub mod bundle;
+pub mod contract;
 pub mod dashboard;
 pub mod diagnostics;
 pub mod execution;

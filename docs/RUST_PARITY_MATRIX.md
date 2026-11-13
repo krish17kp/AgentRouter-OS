@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-14 (TASK-082–091). This inventory covers every Python source module under
+Updated: 2026-11-14 (TASK-082–092). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -31,7 +31,7 @@ release authority until the full set is complete.
 | `agentrouter/classifier.py` | `agentrouter-classifier` | Parity |
 | `agentrouter/cli.py` | `agentrouter-cli::bin::agentrouter` plus command modules | Partial |
 | `agentrouter/context_model.py` | `agentrouter-classifier::context_model` | Parity |
-| `agentrouter/contract.py` | `—` | Not ported |
+| `agentrouter/contract.py` | `agentrouter-cli::contract::{canonicalize,dumps}` | Partial |
 | `agentrouter/controls.py` | `agentrouter-policy::controls` | Parity |
 | `agentrouter/dashboard.py` | `agentrouter-cli::dashboard` | Parity |
 | `agentrouter/diagnostics.py` | `agentrouter-cli::diagnostics` | Partial |
@@ -98,6 +98,14 @@ release authority until the full set is complete.
 - The Python modules marked **Partial** and **Not ported** remain production
   responsibilities. The CLI, HTTP, MCP, plugin/skill, evaluation/annotation,
   diagnostic-bundle, and reliability surfaces still have Rust contract gaps.
+- Rust contract tooling currently matches Python's recursive OpenAPI
+  canonicalization rules for sorted object keys, order-insensitive schema/tag
+  lists, schema branches, and parameters, and emits two-space Unicode JSON with
+  a final newline. It also checks local `$ref` targets, reports external,
+  missing, and cyclic references, and applies the same 200,000-node budget.
+  Differential fixtures cover the live document and invalid reference cases.
+  Baseline loading, symlink/hardlink-safe artifact export, manifest provenance,
+  semantic compatibility classification, and CLI integration remain Python-only.
 - The Rust MCP process implements the five Python tools and stdio lifecycle;
   protocol/tool and result differentials cover all five. The unified CLI now
   runs this stdio server in-process with the selected AgentRouter home. Broader

@@ -6,6 +6,11 @@ All notable changes to AgentRouter OS. Format loosely follows
 ## [Unreleased]
 
 ### Fixed
+- Add Rust OpenAPI canonicalization and bounded `$ref` validation with stable,
+  Unicode-preserving JSON output and Python differential fixtures for the live
+  document, order-insensitive fields, missing/external references, and cycles.
+  Full compatibility analysis and contract file management remain on the
+  Python release path.
 - Make Python catalog rollback and restore refuse symlinked catalog inputs,
   matching the Rust no-follow and no-clobber safeguards. Add typed Rust catalog
   failures and differential checks for Python-compatible exception categories,
