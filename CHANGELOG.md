@@ -16,6 +16,8 @@ All notable changes to AgentRouter OS. Format loosely follows
 - Match FastAPI's field-level 422 messages for HTTP request validation and
   escape the OpenAPI title's em dash in the canonical JSON for cross-platform
   byte-stable serving.
+- Run all TypeScript SDK operations against the Rust HTTP process as part of
+  the Linux, Windows, and macOS Rust compatibility matrix.
 - Port the HTTP service business layer to `agentrouter-api` for model/host
   listing, classification, routing, decision lookup, feedback, and dry-run
   previews. It depends directly on routing, host, registry, classifier, and

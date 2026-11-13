@@ -5,7 +5,8 @@
  * client that builds a well-formed request the server rejects — a body shape the
  * app 422s would still pass a recorded-transport test. So every operation the
  * capability manifest claims is driven here over loopback against the genuine
- * ASGI app, started by scripts/serve_for_parity.py in a throwaway home.
+ * API app, started by scripts/serve_for_parity.py in a throwaway home. Python
+ * is the default; CI also selects the Rust server to verify client parity.
  *
  * No external network, no credentials, no paid calls.
  *

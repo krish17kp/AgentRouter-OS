@@ -143,14 +143,17 @@ release authority until the full set is complete.
 - The Rust API crate now ports classify, route, feedback and dry-run request
   bounds, typed response models, and passthrough envelopes that preserve
   engine-owned fields. Differential checks cover supported Pydantic boolean and
-  integer coercions; Python's unbounded integer range, middleware and the server
-  lifecycle remain unported, so the HTTP schema module is Partial.
+  integer coercions and field-level 422 responses; Python's unbounded integer
+  range, some docs behavior, and parts of the server lifecycle remain unported,
+  so the HTTP schema module is Partial. The TypeScript SDK exercises all
+  manifest operations against the Rust process in the cross-platform CI job.
 - Rust API service functions now match Python model and host listings,
   classification, no-log and persisted routing, decision lookup, nullable-note
   feedback, and dry-run previews using committed local registries and SQLite.
-  FastAPI endpoints, middleware, observability hooks, request lifecycle, and
-  the full context-token integer range remain Python-only, so service parity is
-  Partial.
+  Rust now serves those functions over Axum, and the TypeScript SDK drives every
+  manifest operation against that process. FastAPI middleware/observability
+  edge cases and the full context-token integer range remain open, so service
+  parity is Partial.
 - Performance scoring and classification/routing timing now run in Rust for
   caller-supplied models and tasks. Seed loading and injected classifier
   behavior remain Python-side; latency values are machine-dependent.

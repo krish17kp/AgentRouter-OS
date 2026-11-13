@@ -26,6 +26,21 @@ cargo run --locked -p agentrouter-api --bin agentrouter-api-server -- \
 The process handles Ctrl-C with graceful shutdown. It does not execute model or
 host commands. `/v1/execute/dry-run` only returns a preview.
 
+## Check the TypeScript client
+
+The repository test harness can run the TypeScript SDK against either server.
+To exercise the Rust process after building the workspace:
+
+```bash
+npm ci --prefix sdk/typescript
+AGENTROUTER_REQUIRE_LIVE=1 AGENTROUTER_PARITY_SERVER=rust \
+  AGENTROUTER_PYTHON=python npm test --prefix sdk/typescript
+```
+
+The harness initializes an isolated temporary registry, launches the compiled
+Rust API on loopback, and exercises every operation in the SDK capability
+manifest. Rust CI runs this check on Linux, Windows, and macOS.
+
 ## Local protections
 
 - `/v1/*` is open unless `AGENTROUTER_API_KEY` is set; then requests need a

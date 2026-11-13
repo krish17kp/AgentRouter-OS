@@ -81,7 +81,7 @@ static_quality:
 security:
   bandit_clean_or_justified: pass_local
   pip_audit_clean_or_mitigated: pass_local
-  secret_scan_clean: pass_on_b6d812c_pending_followup
+  secret_scan_clean: pass_on_2358ef3_pending_TASK070
   plugin_permission_audit_pass: pass_PR_13
 
 packaging:
@@ -93,9 +93,9 @@ packaging:
 
 platforms:
   windows_local_green: pending
-  github_linux_green: pass_on_b6d812c_pending_followup
-  github_windows_green: failed_on_b6d812c_openapi_unicode_fix_pending
-  github_macos_green: pass_on_b6d812c_pending_followup
+  github_linux_green: pass_on_2358ef3_pending_TASK070
+  github_windows_green: pending_2358ef3_TASK069_fix_and_TASK070_matrix
+  github_macos_green: pass_on_2358ef3_pending_TASK070
 
 open:
   - id: context_band_generalization
@@ -105,7 +105,7 @@ open:
       proved a dataset ceiling (rules 0.6667 / learned 0.6889 / hybrid 0.6444 all fail)
   - id: release_branch_ci
     blocking: true
-    reason: TASK-069 OpenAPI Unicode and field-validation parity fixes need hosted confirmation; frozen context-band remains 0.6667 below the unchanged 0.90 gate
+    reason: TASK-070 adds the TypeScript SDK to the three-platform Rust matrix; TASK-069 Windows fix needs confirmation and frozen context-band remains 0.6667 below the unchanged 0.90 gate
 
 historical_corrections:
   - claim: context_band_accuracy_0.945_release_ready

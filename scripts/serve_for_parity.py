@@ -1,15 +1,17 @@
-"""Serve the real AgentRouter app on loopback so a non-Python SDK can be tested against it.
+"""Serve the real AgentRouter API on loopback for cross-language SDK tests.
 
 The TypeScript parity suite can assert the requests its client *builds*, but not
 that the server accepts them — a body the real app rejects would still pass a
 recorded-transport test. This script closes that gap by starting the genuine
-ASGI app in a throwaway home and printing the URL, so Node can drive it over
-loopback.
+Python (default) or Rust API server in a throwaway home and printing the URL,
+so Node can drive it over loopback.
 
 Usage (from Node, not by hand):
 
     python scripts/serve_for_parity.py
     # stdout, first line: PARITY_SERVER_URL=http://127.0.0.1:<port>
+
+    AGENTROUTER_PARITY_SERVER=rust python scripts/serve_for_parity.py
 
 Serves until terminated. Loopback only, on an ephemeral port, against a fresh
 temporary AGENTROUTER_HOME — no external network, no credentials, no paid calls,
@@ -22,13 +24,18 @@ import atexit
 import os
 import shutil
 import signal
+import socket
+import subprocess
 import sys
 import tempfile
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 _HOME_PREFIX = "agentrouter-parity-"
 _STALE_AFTER_SECONDS = 3600
+_RUST_SERVER: subprocess.Popen[bytes] | None = None
 
 
 def _sweep_stale_homes() -> None:
@@ -48,7 +55,7 @@ def _sweep_stale_homes() -> None:
             continue
 
 
-def _serve(home: Path) -> int:
+def _initialize_home(home: Path) -> int:
     os.environ["AGENTROUTER_HOME"] = str(home)
     # Auth off: parity covers the authenticated path in the Python suite, where
     # the key can be set without leaking it into a child process's environment.
@@ -61,6 +68,12 @@ def _serve(home: Path) -> int:
     result = CliRunner().invoke(cli_app, ["init"])
     if result.exit_code != 0:
         print(f"agentrouter init failed: {result.output}", file=sys.stderr)
+        return 1
+    return 0
+
+
+def _serve_python(home: Path) -> int:
+    if _initialize_home(home) != 0:
         return 1
 
     import uvicorn
@@ -84,6 +97,86 @@ def _serve(home: Path) -> int:
     return 0
 
 
+def _serve_rust(home: Path) -> int:
+    global _RUST_SERVER
+
+    if _initialize_home(home) != 0:
+        return 1
+
+    executable_name = "agentrouter-api-server.exe" if os.name == "nt" else "agentrouter-api-server"
+    executable = Path(__file__).resolve().parents[1] / "target" / "debug" / executable_name
+    if not executable.is_file():
+        print(
+            f"Rust API server binary is missing: {executable}; build the workspace first",
+            file=sys.stderr,
+        )
+        return 1
+
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        port = listener.getsockname()[1]
+
+    environment = os.environ.copy()
+    environment.pop("AGENTROUTER_API_KEY", None)
+    _RUST_SERVER = subprocess.Popen(
+        [str(executable), "--bind", f"127.0.0.1:{port}", "--home", str(home)],
+        cwd=Path(__file__).resolve().parents[1],
+        env=environment,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+
+    url = f"http://127.0.0.1:{port}"
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        if _RUST_SERVER.poll() is not None:
+            error = (
+                _RUST_SERVER.stderr.read().decode("utf-8", errors="replace")
+                if _RUST_SERVER.stderr
+                else ""
+            )
+            print(f"Rust API server exited during startup: {error}", file=sys.stderr)
+            return 1
+        try:
+            with urllib.request.urlopen(f"{url}/health", timeout=0.25):
+                print(f"PARITY_SERVER_URL={url}", flush=True)
+                return _RUST_SERVER.wait()
+        except (OSError, urllib.error.URLError):
+            time.sleep(0.1)
+
+    print("Rust API server did not become ready within 30 seconds", file=sys.stderr)
+    return 1
+
+
+def _stop_rust_server() -> None:
+    global _RUST_SERVER
+    if _RUST_SERVER is None:
+        return
+    if _RUST_SERVER.poll() is None:
+        _RUST_SERVER.terminate()
+        try:
+            _RUST_SERVER.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            _RUST_SERVER.kill()
+            _RUST_SERVER.wait(timeout=5)
+    if _RUST_SERVER.stderr:
+        _RUST_SERVER.stderr.close()
+    _RUST_SERVER = None
+
+
+def _serve(home: Path) -> int:
+    implementation = os.environ.get("AGENTROUTER_PARITY_SERVER", "python").lower()
+    if implementation == "python":
+        return _serve_python(home)
+    if implementation == "rust":
+        return _serve_rust(home)
+    print(
+        "AGENTROUTER_PARITY_SERVER must be 'python' or 'rust'",
+        file=sys.stderr,
+    )
+    return 2
+
+
 def main() -> int:
     """Serve until terminated, and take the throwaway home with us on the way out.
 
@@ -98,6 +191,7 @@ def main() -> int:
     home = Path(tempfile.mkdtemp(prefix="agentrouter-parity-"))
 
     def cleanup(*_args: object) -> None:
+        _stop_rust_server()
         shutil.rmtree(home, ignore_errors=True)
 
     atexit.register(cleanup)
