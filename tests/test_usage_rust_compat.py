@@ -50,6 +50,86 @@ def _rust_apply(models, classification, status) -> dict:
     return json.loads(result.stdout)
 
 
+def _rust_check(provider: str, live: bool) -> dict:
+    result = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "usage_cli",
+            "--",
+            provider,
+            str(live).lower(),
+        ],
+        cwd="rust/agentrouter-usage",
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=True,
+    )
+    return json.loads(result.stdout)
+
+
+def _rust_check_with_status(provider: str, status: dict) -> dict:
+    request = {
+        "provider": provider,
+        "live": True,
+        "timeout_seconds": 1.0,
+        "adapter": status,
+    }
+    result = subprocess.run(
+        ["cargo", "run", "--quiet", "--locked", "--bin", "usage_check_from_json"],
+        cwd="rust/agentrouter-usage",
+        input=json.dumps(request),
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=True,
+    )
+    return json.loads(result.stdout)
+
+
+def test_usage_check_status_matches_python_without_live_adapter():
+    provider = "fixture-provider"
+    usage.unregister_live_check(provider)
+    for live in (False, True):
+        expected = usage.check_usage(provider, live=live).as_dict()
+        assert _rust_check(provider, live) == expected
+
+
+@pytest.mark.parametrize(
+    "state",
+    [usage.UNKNOWN, usage.UNSUPPORTED, usage.AVAILABLE, usage.EXHAUSTED, usage.ERROR, "invalid"],
+)
+def test_usage_check_normalizes_registered_status_like_python(state):
+    provider = "fixture-provider"
+    fixture = usage.UsageStatus(
+        provider=provider,
+        state=state,
+        detail="quota\x1b ready\u00a0\u200b" + ("x" * 220),
+        remaining=0.0 if state == usage.EXHAUSTED else None,
+        reset_at="2030-01-02T03:04:05Z" if state == usage.EXHAUSTED else None,
+        checked_at=123.0,
+        source="live",
+    )
+    usage.register_live_check(provider, lambda _timeout: fixture)
+    try:
+        expected = usage.check_usage(provider, live=True).as_dict()
+    finally:
+        usage.unregister_live_check(provider)
+
+    actual = _rust_check_with_status(provider, fixture.as_dict())
+    if state == "invalid":
+        assert {key: value for key, value in actual.items() if key != "checked_at"} == {
+            key: value for key, value in expected.items() if key != "checked_at"
+        }
+        assert isinstance(actual["checked_at"], (int, float))
+    else:
+        assert actual == expected
+
+
 @pytest.mark.parametrize(
     "state", [usage.UNSUPPORTED, usage.AVAILABLE, usage.ERROR, usage.EXHAUSTED]
 )

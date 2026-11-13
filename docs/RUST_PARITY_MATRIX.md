@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-13 (TASK-082). This inventory covers every Python source module under
+Updated: 2026-11-13 (TASK-082–083). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -124,6 +124,12 @@ release authority until the full set is complete.
   startup/shutdown, arbitrary Python request factories, or complete transport
   exception naming; those Python harness and CLI contracts remain Partial. See
   [`RUST_RELIABILITY.md`](RUST_RELIABILITY.md) for the supported surface.
+- Rust quota status normalization and one-step exhausted-model reranking are
+  compared with Python for all declared states, Unicode sanitization, invalid
+  states, missing recommendations, and ranking output. Python reports an
+  adapter exception's class name, while Rust currently reports a caught panic
+  as `panic`; this error-detail mismatch keeps `usage.py` Partial. No real
+  provider quota adapters are registered in either implementation.
 - The historical classifier and routing-gold evaluator, report rendering, and
   artifact writing are implemented in Rust and differentially checked against
   the full checked-in gold sets. Python's typed `GoldError` surface and exact

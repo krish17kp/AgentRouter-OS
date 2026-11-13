@@ -13,7 +13,7 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 2,073 passed, 5 skipped |
+| Python regression | 2,081 passed, 5 skipped |
 | Line coverage | 92.51% (6,641 / 7,179 statements) |
 | Branch coverage | 87.63% (1,849 / 2,110 branch outcomes) |
 | Combined coverage reported by pytest-cov | 91.40% |
@@ -78,3 +78,10 @@ compare request URL/body/limits and success/error behavior, including validation
 provider failures, refusal, malformed output, and oversized responses. A local
 loopback redirect test confirms Python also refuses redirects before any second
 request can receive credentials.
+Another delayed loopback test confirms the configured request timeout remains
+active even with the no-redirect opener.
+
+Quota status compatibility compares Python and Rust for default and unsupported
+states, all valid registered result states, invalid-state handling, and
+Unicode/control-character sanitization. These fixtures exercise the adapter
+extension seam without registering or calling a real provider.

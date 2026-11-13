@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import threading
+import time
 from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.error import HTTPError, URLError
@@ -399,6 +400,32 @@ def test_openai_request_does_not_follow_redirects_or_forward_credentials():
             openai_adapter._open_url(request, timeout=2)
         assert error.value.code == 302
         assert RedirectHandler.visited == ["/responses"]
+    finally:
+        server.shutdown()
+        server.server_close()
+        worker.join(timeout=2)
+
+
+def test_openai_request_retains_the_configured_timeout():
+    class SlowHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            time.sleep(0.2)
+            try:
+                self.send_response(200)
+                self.end_headers()
+            except BrokenPipeError:
+                pass
+
+        def log_message(self, *_args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), SlowHandler)
+    worker = threading.Thread(target=server.serve_forever, daemon=True)
+    worker.start()
+    try:
+        request = Request(f"http://127.0.0.1:{server.server_port}/slow")
+        with pytest.raises((URLError, TimeoutError)):
+            openai_adapter._open_url(request, timeout=0.03)
     finally:
         server.shutdown()
         server.server_close()
