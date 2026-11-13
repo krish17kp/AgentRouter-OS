@@ -114,10 +114,11 @@ release authority until the full set is complete.
   response status additions/removals/refinements, and summary/description
   changes, plus inline request/response schema type, field-presence/requiredness,
   array-item, enum/const, numeric/size bound, pattern, format, default, and
-  `additionalProperties` changes. Schema `$ref` traversal is bounded and
-  handles local aliases, missing/external references, and recursive schemas
-  with Python-compatible results. It intentionally omits union/nullability
-  analysis and parameter schemas. It is not suitable as a compatibility gate.
+  `additionalProperties` changes, and matching operation-parameter schemas.
+  Schema `$ref` traversal is bounded and handles local aliases,
+  missing/external references, and recursive schemas with Python-compatible
+  results. It intentionally omits union/nullability analysis. It is not
+  suitable as a compatibility gate.
   Symlink/hardlink-safe artifact export, manifest provenance, the full semantic
   compatibility checker, and CLI integration remain Python-only.
 - The Rust MCP process implements the five Python tools and stdio lifecycle;

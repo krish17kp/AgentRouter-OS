@@ -248,7 +248,13 @@ pub fn diff_contracts_surface(old: &Value, new: &Value) -> Result<Value, String>
                 &location,
                 &mut changes,
             );
-            diff_parameters(old_operation, new_operation, &location, &mut changes);
+            diff_parameters(
+                old_operation,
+                new_operation,
+                &location,
+                &mut schema_context,
+                &mut changes,
+            )?;
 
             let old_id = old_operation.get("operationId");
             let new_id = new_operation.get("operationId");
@@ -547,8 +553,9 @@ fn diff_parameters(
     old_operation: &Map<String, Value>,
     new_operation: &Map<String, Value>,
     location: &str,
+    context: &mut SchemaDiffContext<'_>,
     changes: &mut Vec<SurfaceChange>,
-) {
+) -> Result<(), String> {
     let before = parameter_index(old_operation);
     let after = parameter_index(new_operation);
     let parameter_location = format!("{location}.parameters");
@@ -580,30 +587,39 @@ fn diff_parameters(
     for key in before.keys().filter(|key| after.contains_key(*key)) {
         let was_required = before[key].get("required").is_some_and(python_truthy);
         let is_required = after[key].get("required").is_some_and(python_truthy);
-        if was_required == is_required {
-            continue;
+        if was_required != is_required {
+            let became_required = is_required;
+            add_surface_change(
+                changes,
+                if became_required {
+                    "breaking"
+                } else {
+                    "additive"
+                },
+                if became_required {
+                    "parameter_became_required"
+                } else {
+                    "parameter_became_optional"
+                },
+                format!("{parameter_location}.{}", key.1),
+                if became_required {
+                    "optional -> required"
+                } else {
+                    "required -> optional"
+                },
+            );
         }
-        let became_required = is_required;
-        add_surface_change(
+        diff_inline_schema(
+            before[key].get("schema"),
+            after[key].get("schema"),
+            &format!("{parameter_location}.{}", key.1),
+            true,
+            context,
+            0,
             changes,
-            if became_required {
-                "breaking"
-            } else {
-                "additive"
-            },
-            if became_required {
-                "parameter_became_required"
-            } else {
-                "parameter_became_optional"
-            },
-            format!("{parameter_location}.{}", key.1),
-            if became_required {
-                "optional -> required"
-            } else {
-                "required -> optional"
-            },
-        );
+        )?;
     }
+    Ok(())
 }
 
 fn parameter_index(

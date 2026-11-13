@@ -774,3 +774,59 @@ def test_rust_schema_reference_comparison_matches_python(
     old = document(old_components, old_schema)
     new = document(new_components, new_schema)
     assert _rust_surface_diff(old, new) == diff_contracts(old, new).as_dict()
+
+
+@pytest.mark.parametrize(
+    (
+        "old_schema",
+        "new_schema",
+        "old_components",
+        "new_components",
+        "old_required",
+        "new_required",
+    ),
+    [
+        ({"type": "string"}, {"type": "integer"}, {}, {}, False, False),
+        (
+            {"type": "string"},
+            {"type": "string", "pattern": "^[a-z]+$"},
+            {},
+            {},
+            False,
+            False,
+        ),
+        (
+            {"type": "string", "enum": ["basic", "pro"]},
+            {"type": "string", "enum": ["basic"]},
+            {},
+            {},
+            False,
+            False,
+        ),
+        (None, {"type": "string"}, {}, {}, False, False),
+        (
+            {"$ref": "#/components/schemas/Query"},
+            {"$ref": "#/components/schemas/Query"},
+            {"Query": {"type": "string"}},
+            {"Query": {"type": "integer"}},
+            False,
+            False,
+        ),
+        ({"type": "string"}, {"type": "integer"}, {}, {}, False, True),
+    ],
+)
+def test_rust_parameter_schema_matches_python(
+    old_schema, new_schema, old_components, new_components, old_required, new_required
+):
+    def document(schema, components, required):
+        parameter = {"name": "q", "in": "query", "required": required}
+        if schema is not None:
+            parameter["schema"] = schema
+        return {
+            "components": {"schemas": components},
+            "paths": {"/query": {"get": {"parameters": [parameter]}}},
+        }
+
+    old = document(old_schema, old_components, old_required)
+    new = document(new_schema, new_components, new_required)
+    assert _rust_surface_diff(old, new) == diff_contracts(old, new).as_dict()

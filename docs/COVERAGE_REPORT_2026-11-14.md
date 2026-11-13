@@ -13,7 +13,7 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 2,186 passed, 5 skipped |
+| Python regression | 2,192 passed, 5 skipped |
 | Line coverage | 92.73% (6,706 / 7,232 statements) |
 | Branch coverage | 88.21% (1,886 / 2,138 branch outcomes) |
 | Combined coverage reported by pytest-cov | 91.70% |
@@ -27,15 +27,16 @@ capacity boundaries, portable JSON integer and non-finite-number validation,
 Python/Rust storage round trips and snapshots, Python/Rust dashboard HTML,
 OpenAPI canonicalization, and baseline-trust comparisons, plus the existing
 evaluation, API, CLI, and safety suites. Rust
-workspace tests and strict Clippy were run separately. This run adds forty
+workspace tests and strict Clippy were run separately. This run adds forty-six
 Python/Rust OpenAPI surface-diff cases for version/server/path/method changes,
 operation metadata and authentication, parameter presence/requiredness,
 request/response media types, body requiredness, response statuses, and
 documented semantics; inline schema coverage now includes type, field presence
 and requiredness, array items, enum/const, bounds, patterns, formats, defaults,
-and `additionalProperties`. Reference fixtures cover local aliases, nested
-refs, missing targets, recursive schemas, and sibling behavior. The Rust slice
-is not the full compatibility analyzer.
+and `additionalProperties`, plus matching operation-parameter schemas.
+Reference fixtures cover local aliases, nested refs, missing targets, recursive
+schemas, and sibling behavior. The Rust slice is not the full compatibility
+analyzer.
 Five skips are
 environment-dependent; Windows and macOS results come from hosted CI. Coverage
 does not replace mutation, cross-platform, security, parity, or frozen
