@@ -6,7 +6,7 @@
 use std::path::Path;
 use std::sync::Mutex;
 
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{params, types::Type, Connection, OptionalExtension};
 use serde_json::Value;
 
 const SCHEMA: &str = "
@@ -117,6 +117,50 @@ fn decision_id(rowid: i64) -> String {
     format!("d_{rowid:05}")
 }
 
+fn parse_payload(payload_json: &str, column: usize) -> rusqlite::Result<Value> {
+    serde_json::from_str(payload_json).map_err(|error| {
+        rusqlite::Error::FromSqlConversionFailure(column, Type::Text, Box::new(error))
+    })
+}
+
+/// Parse the public ID argument the same way Python's `int(value)` does for
+/// ordinary decimal ID strings. Python strips `d_` when present but also
+/// accepts bare numbers, signs, surrounding whitespace, and digit separators.
+fn parse_decision_rowid(value: &str) -> Option<i64> {
+    let value = value.strip_prefix("d_").unwrap_or(value).trim();
+    let bytes = value.as_bytes();
+    if bytes.is_empty() {
+        return None;
+    }
+
+    let mut normalized = String::with_capacity(value.len());
+    let mut index = 0;
+    if matches!(bytes[0], b'+' | b'-') {
+        normalized.push(bytes[0] as char);
+        index += 1;
+    }
+    let mut previous_was_digit = false;
+    let mut saw_digit = false;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'0'..=b'9' => {
+                normalized.push(bytes[index] as char);
+                previous_was_digit = true;
+                saw_digit = true;
+            }
+            b'_' if previous_was_digit && bytes.get(index + 1).is_some_and(u8::is_ascii_digit) => {
+                previous_was_digit = false;
+            }
+            _ => return None,
+        }
+        index += 1;
+    }
+    if !saw_digit || !previous_was_digit {
+        return None;
+    }
+    normalized.parse().ok()
+}
+
 pub fn save_decision(conn: &Connection, task: &str, payload: &Value) -> rusqlite::Result<String> {
     let _guard = WRITE_LOCK.lock().unwrap();
     let now = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Micros, true);
@@ -150,10 +194,9 @@ pub fn recent_decisions(conn: &Connection, n: i64) -> rusqlite::Result<Vec<Value
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
 
-    Ok(rows
-        .into_iter()
+    rows.into_iter()
         .map(|(rowid, created_at, task, payload_json, user)| {
-            let p: Value = serde_json::from_str(&payload_json).unwrap_or(Value::Null);
+            let p = parse_payload(&payload_json, 3)?;
             let rec = p.get("recommendation").cloned().unwrap_or(Value::Null);
             let model = rec
                 .get("model")
@@ -165,7 +208,7 @@ pub fn recent_decisions(conn: &Connection, n: i64) -> rusqlite::Result<Vec<Value
                 .and_then(|c| c.get("risk"))
                 .cloned()
                 .unwrap_or(Value::Null);
-            serde_json::json!({
+            Ok(serde_json::json!({
                 "decision_id": decision_id(rowid),
                 "created_at": created_at,
                 "task": task,
@@ -173,9 +216,9 @@ pub fn recent_decisions(conn: &Connection, n: i64) -> rusqlite::Result<Vec<Value
                 "score": rec.get("score").cloned().unwrap_or(Value::Null),
                 "risk": risk,
                 "user": user.unwrap_or_else(|| "unknown".to_string()),
-            })
+            }))
         })
-        .collect())
+        .collect()
 }
 
 /// Telemetry aggregates: decision counts, risk/model/tier distributions, feedback.
@@ -193,7 +236,7 @@ pub fn aggregate_stats(
         .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
         .collect::<rusqlite::Result<Vec<_>>>()?;
     for (payload_json, user) in rows {
-        let p: Value = serde_json::from_str(&payload_json).unwrap_or(Value::Null);
+        let p = parse_payload(&payload_json, 0)?;
         let risk = p
             .get("classification")
             .and_then(|c| c.get("risk"))
@@ -270,10 +313,7 @@ fn round_ratio_hundredths(numerator: i64, denominator: i64) -> f64 {
 }
 
 pub fn load_decision(conn: &Connection, decision_id_str: &str) -> rusqlite::Result<Option<Value>> {
-    let Some(rowid_str) = decision_id_str.strip_prefix("d_") else {
-        return Ok(None);
-    };
-    let Ok(rowid) = rowid_str.parse::<i64>() else {
+    let Some(rowid) = parse_decision_rowid(decision_id_str) else {
         return Ok(None);
     };
     let row: Option<(String, String, String, Option<String>)> = conn
@@ -286,7 +326,7 @@ pub fn load_decision(conn: &Connection, decision_id_str: &str) -> rusqlite::Resu
     let Some((created_at, task, payload_json, user)) = row else {
         return Ok(None);
     };
-    let mut payload: Value = serde_json::from_str(&payload_json).unwrap();
+    let mut payload = parse_payload(&payload_json, 2)?;
     if let Value::Object(map) = &mut payload {
         map.insert("created_at".to_string(), Value::String(created_at));
         map.insert("task".to_string(), Value::String(task));
@@ -390,6 +430,37 @@ mod tests {
         let conn = connect(dir.path()).unwrap();
         assert!(load_decision(&conn, "d_99999").unwrap().is_none());
         assert!(load_decision(&conn, "not-an-id").unwrap().is_none());
+    }
+
+    #[test]
+    fn load_accepts_python_integer_id_forms() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = connect(dir.path()).unwrap();
+        save_decision(&conn, "task", &json!({"value": "kept"})).unwrap();
+
+        for supplied_id in ["1", "d_1", "+1", " 1 ", "d_0_01"] {
+            let loaded = load_decision(&conn, supplied_id).unwrap().unwrap();
+            assert_eq!(loaded["decision_id"], supplied_id);
+            assert_eq!(loaded["value"], "kept");
+        }
+        for invalid_id in ["", "_1", "1_", "d__1", "1.0"] {
+            assert!(load_decision(&conn, invalid_id).unwrap().is_none());
+        }
+    }
+
+    #[test]
+    fn malformed_persisted_json_is_an_error_for_every_payload_reader() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = connect(dir.path()).unwrap();
+        conn.execute(
+            "INSERT INTO decisions (created_at, task, payload, user) VALUES ('now', 'task', '{', NULL)",
+            [],
+        )
+        .unwrap();
+
+        assert!(recent_decisions(&conn, 10).is_err());
+        assert!(aggregate_stats(&conn, None).is_err());
+        assert!(load_decision(&conn, "d_00001").is_err());
     }
 
     #[test]

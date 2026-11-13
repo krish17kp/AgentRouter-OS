@@ -24,6 +24,9 @@ All notable changes to AgentRouter OS. Format loosely follows
   connections from attempting the same column addition.
 - Reconcile idempotency cache byte accounting when replacing a key and verify
   exact byte and entry-capacity boundaries with mutation-focused tests.
+- Match Python decision-ID parsing for decimal strings and signs in the Rust
+  store, fail closed on malformed stored JSON, and verify bidirectional saves,
+  pricing-tier aggregates, and SQLite snapshots against the shared database.
 
 ### Changed
 - Refuse redirects in the Python OpenAI Responses adapter so credentials cannot

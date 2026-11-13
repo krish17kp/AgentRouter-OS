@@ -10,6 +10,7 @@
 //!   aggregate-stats                     -> JSON object
 //!   load <decision_id>                  -> JSON object or null
 //!   feedback <decision_id> <rating> <note> -> JSON bool
+//!   snapshot <destination>              -> JSON bool
 
 use std::path::PathBuf;
 
@@ -40,7 +41,10 @@ fn main() {
             println!("{}", serde_json::to_string(&d).unwrap());
         }
         "aggregate-stats" => {
-            let stats = aggregate_stats(&conn, None).unwrap();
+            let tier_by_key = args.next().map(|raw| {
+                serde_json::from_str::<std::collections::HashMap<String, String>>(&raw).unwrap()
+            });
+            let stats = aggregate_stats(&conn, tier_by_key.as_ref()).unwrap();
             println!("{}", serde_json::to_string(&stats).unwrap());
         }
         "load" => {
@@ -58,6 +62,11 @@ fn main() {
             let note = args.next().unwrap_or_default();
             let recorded = record_feedback(&conn, &id, rating, &note).unwrap();
             println!("{}", serde_json::to_string(&recorded).unwrap());
+        }
+        "snapshot" => {
+            let destination = PathBuf::from(args.next().expect("destination"));
+            snapshot(&home, &destination).unwrap();
+            println!("true");
         }
         other => panic!("unknown op {other}"),
     }
