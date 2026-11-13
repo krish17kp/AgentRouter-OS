@@ -17,6 +17,8 @@ All notable changes to AgentRouter OS. Format loosely follows
   store output.
 - Make doctor database checks read-only and report safe, actionable errors for
   empty and corrupt database files, with matching Python/Rust classifications.
+- Cap the Python idempotency cache at 16 MiB of response bodies, matching the
+  Rust cache and evicting oldest responses as needed.
 
 ### Changed
 - Refuse redirects in the Python OpenAI Responses adapter so credentials cannot

@@ -91,6 +91,26 @@ def test_idempotency_cache_bounded(monkeypatch):
     assert len(c._store) <= 3  # oldest-first eviction keeps it bounded
 
 
+def test_idempotency_cache_bounds_aggregate_body_bytes(monkeypatch):
+    monkeypatch.setattr(limits_mod, "MAX_CACHE_BYTES", 5)
+    clock = FakeClock()
+    cache = IdempotencyCache(ttl=5, clock=clock.time)
+    cache.put("first", CachedResponse(200, b"1234", None))
+    cache.put("second", CachedResponse(200, b"567", None))
+
+    assert cache.get("first") is None  # oldest entry evicted to satisfy the byte cap
+    assert cache.get("second").body == b"567"
+    assert cache._total_bytes == 3
+
+    cache.put("oversized", CachedResponse(200, b"123456", None))
+    assert cache.get("oversized") is None
+    assert cache.get("second").body == b"567"
+
+    clock.advance(6)
+    assert cache.get("second") is None
+    assert cache._total_bytes == 0
+
+
 def test_rate_limiter_bounded(monkeypatch):
     monkeypatch.setattr(limits_mod, "MAX_ENTRIES", 3)
     rl = RateLimiter(limit=100, window=10_000, clock=FakeClock().time)

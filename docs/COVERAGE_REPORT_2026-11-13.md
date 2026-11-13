@@ -13,10 +13,10 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 2,103 passed, 5 skipped |
-| Line coverage | 92.53% (6,661 / 7,199 statements) |
-| Branch coverage | 87.62% (1,854 / 2,116 branch outcomes) |
-| Combined coverage reported by pytest-cov | 91.41% |
+| Python regression | 2,104 passed, 5 skipped |
+| Line coverage | 92.50% (6,674 / 7,215 statements) |
+| Branch coverage | 87.61% (1,859 / 2,122 branch outcomes) |
+| Combined coverage reported by pytest-cov | 91.39% |
 | Project line / branch thresholds | 90% / 85% — both passed |
 | CI total-coverage threshold | 80% — passed |
 | Warnings | 1 Starlette/httpx deprecation warning |
@@ -96,3 +96,8 @@ populated pages, escaped user values, truncated task text, and missing optional
 user aggregates. A live Rust dashboard response is also compared byte-for-byte
 with Python's rendered SQLite statistics and recent decisions; write methods
 are refused without changing the decision log.
+
+Python and Rust bound idempotency response bodies to 16 MiB in aggregate,
+evict old entries under pressure, and leave a single oversized response
+uncached. The Python server-limit tests and Rust cache capacity tests cover the
+memory bound while preserving successful response replay and TTL behavior.

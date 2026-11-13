@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-13 (TASK-082–087). This inventory covers every Python source module under
+Updated: 2026-11-13 (TASK-082–088). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -165,9 +165,10 @@ release authority until the full set is complete.
   checks. The platform evaluator matches scoring for a caller-supplied CLI
   command/group manifest; runtime Typer command discovery remains Python-only.
 - The Rust limits module matches fixed-window rate checks, retry-after values,
-  response TTL and media type, and per-key single-flight semantics. It is a
-  process-local primitive; the HTTP middleware and server request lifecycle
-  still run through Python.
+  response TTL and media type, bounded response-body retention, and per-key
+  single-flight behavior. Rust Axum applies the limits in its HTTP middleware.
+  Python exposes asyncio flight-lock methods while Rust provides a synchronous
+  keyed computation seam, so the public module remains Partial.
 - Rust catalog operations include provenance reads, freshness summaries,
   sorted generated-catalog listing and deprecation reports, plus rollback and
   restore with raw-byte preservation, exclusive backup creation, linked-file

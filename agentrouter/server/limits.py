@@ -29,6 +29,9 @@ DEFAULT_IDEMPOTENCY_TTL = 300
 # ponytail: bound both stores so a client spraying unique keys can't exhaust memory.
 # Flat cap + oldest-first eviction; swap for an LRU only if a real workload needs it.
 MAX_ENTRIES = 10_000
+# A flood of unique responses must not turn the idempotency cache into unbounded
+# memory retention; larger replies are served but not retained for replay.
+MAX_CACHE_BYTES = 16 * 1024 * 1024
 
 # Liveness/readiness probes must never be throttled.
 RATE_EXEMPT_PATHS = frozenset({"/health", "/ready"})
@@ -110,6 +113,7 @@ class IdempotencyCache:
         self._clock = clock
         self._lock = threading.Lock()
         self._store: dict[str, tuple[float, CachedResponse]] = {}
+        self._total_bytes = 0
         # Per-key single-flight locks. `get` and `put` are each atomic, but the
         # window BETWEEN them was not: concurrent requests carrying the same key
         # all missed the cache, all ran the work, and all persisted. Measured at
@@ -151,19 +155,41 @@ class IdempotencyCache:
             ts, resp = item
             if now - ts > self.ttl:
                 del self._store[key]
+                self._total_bytes = max(0, self._total_bytes - len(resp.body))
                 return None
             return resp
 
     def put(self, key: str, resp: CachedResponse) -> None:
+        response_bytes = len(resp.body)
+        if response_bytes > MAX_CACHE_BYTES:
+            return
         with self._lock:
-            if key not in self._store and len(self._store) >= MAX_ENTRIES:
-                self._evict_locked()
+            previous = self._store.pop(key, None)
+            if previous is not None:
+                self._total_bytes = max(0, self._total_bytes - len(previous[1].body))
+            if (
+                len(self._store) >= MAX_ENTRIES
+                or self._total_bytes + response_bytes > MAX_CACHE_BYTES
+            ):
+                self._evict_locked(required_bytes=response_bytes)
+            while (
+                len(self._store) >= MAX_ENTRIES
+                or self._total_bytes + response_bytes > MAX_CACHE_BYTES
+            ):
+                oldest = next(iter(self._store))
+                _, removed = self._store.pop(oldest)
+                self._total_bytes = max(0, self._total_bytes - len(removed.body))
             self._store[key] = (self._clock(), resp)
+            self._total_bytes += response_bytes
 
-    def _evict_locked(self) -> None:
-        """Drop expired entries; if still at cap, drop oldest-inserted."""
+    def _evict_locked(self, required_bytes: int = 0) -> None:
+        """Drop expired entries, then oldest ones until the new entry fits."""
         now, ttl = self._clock(), self.ttl
         for k in [k for k, (ts, _) in self._store.items() if now - ts > ttl]:
             del self._store[k]
-        while len(self._store) >= MAX_ENTRIES:
-            self._store.pop(next(iter(self._store)))
+        self._total_bytes = sum(len(response.body) for _, response in self._store.values())
+        while (
+            len(self._store) >= MAX_ENTRIES or self._total_bytes + required_bytes > MAX_CACHE_BYTES
+        ):
+            _, removed = self._store.pop(next(iter(self._store)))
+            self._total_bytes -= len(removed.body)
