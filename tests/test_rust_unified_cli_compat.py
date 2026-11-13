@@ -8,12 +8,14 @@ import shutil
 import signal
 import socket
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 
 import pytest
+import yaml
 
 from agentrouter.annotation import candidates as candidate_mod
 from agentrouter.annotation import store
@@ -316,6 +318,102 @@ def test_unified_server_starts_http_api_and_shuts_down(tmp_path, unified_binary)
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait(timeout=5)
+
+
+def test_unified_execute_revalidates_safety_and_requires_confirmation(tmp_path, unified_binary):
+    home = tmp_path / "agentrouter-home"
+    initialized = _run(unified_binary, "init", home=home)
+    assert initialized.returncode == 0, initialized.stderr
+    routed = _run(
+        unified_binary,
+        "route",
+        "write a short haiku about routers",
+        "--save",
+        "--json",
+        home=home,
+    )
+    assert routed.returncode == 0, routed.stderr
+    payload = json.loads(routed.stdout)
+    provider_file = home / "registry" / "providers.yaml"
+    provider_data = yaml.safe_load(provider_file.read_text(encoding="utf-8"))
+    provider = next(
+        item
+        for item in provider_data["providers"]
+        if item["id"] == payload["recommendation"]["provider"]
+    )
+    marker = tmp_path / "must-not-exist"
+    provider["supports_execution"] = True
+    provider["exec_command"] = [
+        sys.executable,
+        "-c",
+        f"from pathlib import Path; Path({str(marker)!r}).touch()",
+    ]
+    provider_file.write_text(yaml.safe_dump(provider_data), encoding="utf-8")
+
+    preview = _run(
+        unified_binary, "execute", payload["decision_id"], "--dry-run", "--yes", home=home
+    )
+    assert preview.returncode == 0, preview.stderr
+    assert "Dry run: nothing executed." in preview.stdout
+    assert not marker.exists()
+
+    unconfirmed = _run(unified_binary, "execute", payload["decision_id"], home=home)
+    assert unconfirmed.returncode == 2
+    assert "--yes" in unconfirmed.stdout
+    assert not marker.exists()
+
+    approved = _run(unified_binary, "execute", payload["decision_id"], "--yes", home=home)
+    assert approved.returncode == 0, approved.stderr
+    assert marker.exists()
+
+
+def test_unified_execute_never_runs_high_risk_decisions(tmp_path, unified_binary):
+    home = tmp_path / "agentrouter-home"
+    initialized = _run(unified_binary, "init", home=home)
+    assert initialized.returncode == 0, initialized.stderr
+    routed = _run(
+        unified_binary,
+        "route",
+        "rotate the production auth credentials and deploy",
+        "--save",
+        "--json",
+        home=home,
+    )
+    assert routed.returncode == 0, routed.stderr
+    payload = json.loads(routed.stdout)
+    assert payload["classification"]["risk"] == "high"
+    provider_file = home / "registry" / "providers.yaml"
+    provider_data = yaml.safe_load(provider_file.read_text(encoding="utf-8"))
+    for provider in provider_data["providers"]:
+        provider["supports_execution"] = True
+        provider["exec_command"] = [sys.executable, "-c", "print('MUST_NOT_RUN')"]
+    provider_file.write_text(yaml.safe_dump(provider_data), encoding="utf-8")
+
+    blocked = _run(unified_binary, "execute", payload["decision_id"], "--yes", home=home)
+    assert blocked.returncode == 2
+    assert "Execution blocked" in blocked.stderr
+    assert "MUST_NOT_RUN" not in blocked.stdout
+
+    # Tampering with the persisted gate must also fail closed after a route.
+    import sqlite3
+
+    database = sqlite3.connect(home / "agentrouter.db")
+    row = database.execute(
+        "SELECT payload FROM decisions WHERE id = ?",
+        (int(payload["decision_id"].split("_")[1]),),
+    ).fetchone()
+    tampered = json.loads(row[0])
+    tampered["gates"]["auto_execute_allowed"] = True
+    database.execute(
+        "UPDATE decisions SET payload = ? WHERE id = ?",
+        (json.dumps(tampered), int(payload["decision_id"].split("_")[1])),
+    )
+    database.commit()
+    database.close()
+    changed_gate = _run(unified_binary, "execute", payload["decision_id"], "--yes", home=home)
+    assert changed_gate.returncode == 2
+    assert "safety gate changed" in changed_gate.stderr
+    assert "MUST_NOT_RUN" not in changed_gate.stdout
 
 
 def test_unknown_or_unported_command_fails_with_usage(unified_binary):

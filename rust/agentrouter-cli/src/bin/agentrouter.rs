@@ -13,7 +13,7 @@ use std::process::Command;
 use agentrouter_registry::{load_all_models, load_providers, ModelEntry};
 
 fn usage() -> &'static str {
-    "usage: agentrouter <init|route|explain|feedback|stats|prompt|registry|providers|hosts|models|doctor|server|mcp|dashboard|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  stats [--json]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  server [--host HOST] [--port PORT]\n  mcp (stdio server)\n  dashboard [port]\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
+    "usage: agentrouter <init|route|explain|feedback|execute|stats|prompt|registry|providers|hosts|models|doctor|server|mcp|dashboard|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  execute <decision-id> [--yes] [--dry-run]\n  stats [--json]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  server [--host HOST] [--port PORT]\n  mcp (stdio server)\n  dashboard [port]\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
 }
 
 fn home() -> Result<PathBuf, String> {
@@ -780,6 +780,7 @@ fn run() -> Result<i32, String> {
             _ => Err("usage: agentrouter models <list [--available]|show KEY>".to_owned()),
         },
         "doctor" => run_sibling("doctor_cli", with_home(&home, tail)),
+        "execute" => agentrouter_cli::execution::run(&home, &tail),
         "server" => server(&home, &tail),
         "mcp" => mcp(&home, &tail),
         "dashboard" => run_sibling("dashboard_cli", with_home(&home, tail)),

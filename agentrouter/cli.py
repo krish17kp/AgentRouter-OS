@@ -1377,6 +1377,11 @@ def _execute(decision_id: str, *, yes: bool, dry_run: bool):
             )
             return
 
+    if legacy_opt_in and dry_run:
+        typer.echo(f"Would run (provider {provider.id}): {provider.exec_command}")
+        typer.echo("Dry run: nothing executed.")
+        raise typer.Exit(0)
+
     if provider is None or not provider.supports_execution or not provider.exec_command:
         typer.echo(f"Execution is not enabled for provider '{rec['provider']}'.", err=True)
         typer.echo(

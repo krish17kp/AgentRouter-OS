@@ -47,6 +47,11 @@ All notable changes to AgentRouter OS. Format loosely follows
 - Connect the unified CLI to the Rust HTTP API server and stdio MCP server,
   preserving the local API's host/port controls, shared data home, inherited
   API-key settings, and MCP's standard input/output transport.
+- Add a safety-gated Rust `execute` command for opted-in provider commands,
+  local host commands, and the bounded OpenAI Responses API path. Stored gates
+  are recomputed, high-risk decisions remain blocked, `--yes` is required, and
+  `--dry-run` never executes. The Python reference now enforces that same
+  dry-run guarantee for legacy provider commands.
 - Extend the unified Rust CLI with local telemetry summaries and generated
   provider-catalog doctor, rollback, and restore operations. Rust/Python
   command checks cover saved feedback aggregates, reversible catalog changes,

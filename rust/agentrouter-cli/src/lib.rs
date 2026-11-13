@@ -25,6 +25,7 @@ use serde_json::{json, Value};
 pub mod bundle;
 pub mod dashboard;
 pub mod diagnostics;
+pub mod execution;
 pub mod harness;
 pub use agentrouter_limits as limits;
 pub mod observability;

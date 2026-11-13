@@ -113,6 +113,24 @@ def test_execute_requires_yes(home):
     assert "--yes" in r.output
 
 
+def test_legacy_provider_dry_run_never_executes_even_with_yes(home, tmp_path, capfd):
+    from agentrouter.cli import app
+
+    payload = _route(LOW_RISK_TASK)
+    marker = tmp_path / "must-not-exist"
+    provider = payload["recommendation"]["provider"]
+    _enable_execution(
+        home,
+        provider,
+        [sys.executable, "-c", f"from pathlib import Path; Path({str(marker)!r}).touch()"],
+    )
+    result = runner.invoke(app, ["execute", payload["decision_id"], "--yes", "--dry-run"])
+    assert result.exit_code == 0, result.output
+    assert "Dry run: nothing executed." in result.output
+    capfd.readouterr()
+    assert not marker.exists()
+
+
 def test_low_risk_executes_end_to_end(home, capfd):
     from agentrouter.cli import app
 

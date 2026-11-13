@@ -13,10 +13,10 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 2,048 passed, 5 skipped |
-| Line coverage | 92.49% (6,628 / 7,166 statements) |
-| Branch coverage | 87.61% (1,845 / 2,106 branch outcomes) |
-| Combined coverage reported by pytest-cov | 91.38% |
+| Python regression | 2,051 passed, 5 skipped |
+| Line coverage | 92.50% (6,632 / 7,170 statements) |
+| Branch coverage | 87.62% (1,847 / 2,108 branch outcomes) |
+| Combined coverage reported by pytest-cov | 91.39% |
 | Project line / branch thresholds | 90% / 85% — both passed |
 | CI total-coverage threshold | 80% — passed |
 | Warnings | 1 Starlette/httpx deprecation warning |
@@ -62,6 +62,9 @@ protocol version, capabilities, all five tool schemas, and structured outputs.
 The Rust provider-refresh slice is checked against Python for all OpenAI
 family prefixes, OpenRouter model metadata and price tiers, offline payload
 filtering, and skipped-entry warnings.
+The unified execution command is checked for explicit confirmation, provider
+opt-in, absolute dry-run behavior, high-risk refusal, and rejection of a
+tampered persisted safety gate. The Python CLI has the same dry-run guarantee.
 Reliability checks compare load and soak result schemas, run the Rust load
 runner against a live Python loopback server, confirm unique request IDs, and
 verify redirect refusal without timing thresholds.

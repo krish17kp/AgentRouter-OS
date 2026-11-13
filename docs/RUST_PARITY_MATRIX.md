@@ -103,6 +103,12 @@ release authority until the full set is complete.
   runs this stdio server in-process with the selected AgentRouter home. Broader
   cross-version lifecycle/error and command-line behavior remain under
   compatibility review, so the module is Partial.
+- The unified CLI now exposes safety-gated `execute` for configured provider
+  argv, available local host commands, and OpenAI text requests. It recomputes
+  the recorded classification gate, refuses high-risk and tampered decisions,
+  and runs commands without a shell. OpenAI live validation and broader
+  cross-platform execution error parity remain open, so the CLI and adapter
+  modules remain Partial.
 - Rust provider refresh converts and filters OpenRouter/OpenAI catalogs,
   performs fixed-endpoint HTTPS retrieval with header-only keys, reports
   report-only deprecations, and atomically writes generated catalogs without
