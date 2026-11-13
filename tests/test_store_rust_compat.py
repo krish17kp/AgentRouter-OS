@@ -12,7 +12,9 @@ Rust compatibility tests' convention.
 
 from __future__ import annotations
 
+import getpass
 import json
+import os
 import shutil
 import sqlite3
 import subprocess
@@ -199,10 +201,16 @@ def test_current_user_matches_python_environment_precedence(seeded_home, monkeyp
     assert json.loads(_run(seeded_home, "current-user")) == store.current_user()
 
 
-def test_current_user_matches_python_os_account_fallback(seeded_home, monkeypatch):
+def test_current_user_matches_python_fallback(seeded_home, monkeypatch):
+    # Windows' getpass implementation has no pwd database fallback. Preserve
+    # USERNAME there so this still checks Rust's lowest-priority env fallback;
+    # Unix clears every env candidate and checks the actual account database.
+    windows_username = getpass.getuser() if os.name == "nt" else None
     with monkeypatch.context() as environment:
         for name in ("AGENTROUTER_USER", "LOGNAME", "USER", "LNAME", "USERNAME"):
             environment.delenv(name, raising=False)
+        if windows_username is not None:
+            environment.setenv("USERNAME", windows_username)
         expected = store.current_user()
         actual = json.loads(_run(seeded_home, "current-user"))
 
