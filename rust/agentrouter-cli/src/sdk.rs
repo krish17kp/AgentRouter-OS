@@ -40,6 +40,29 @@ impl std::fmt::Display for ClientError {
 
 impl std::error::Error for ClientError {}
 
+fn api_error(status_code: u16, text: String) -> ClientError {
+    let parsed = serde_json::from_str::<Value>(&text).ok();
+    let error = parsed
+        .as_ref()
+        .and_then(|value| value.get("error"))
+        .and_then(Value::as_object);
+    let code = error
+        .and_then(|value| value.get("code"))
+        .and_then(Value::as_str)
+        .unwrap_or("error")
+        .to_owned();
+    let message = error
+        .and_then(|value| value.get("message"))
+        .and_then(Value::as_str)
+        .unwrap_or(&text)
+        .to_owned();
+    ClientError::Api(AgentRouterError {
+        status_code,
+        code,
+        message,
+    })
+}
+
 /// Remove null fields while retaining explicit false and zero values.
 pub fn clean(fields: impl IntoIterator<Item = (String, Value)>) -> Value {
     Value::Object(
@@ -86,34 +109,19 @@ impl AgentRouterClient {
         };
         match response {
             Ok(response) => {
+                let status = response.status();
                 let text = response
                     .into_string()
                     .map_err(|error| ClientError::Transport(error.to_string()))?;
+                if !(200..300).contains(&status) {
+                    return Err(api_error(status, text));
+                }
                 serde_json::from_str(&text)
                     .map_err(|error| ClientError::Transport(error.to_string()))
             }
             Err(ureq::Error::Status(status, response)) => {
                 let text = response.into_string().unwrap_or_default();
-                let parsed = serde_json::from_str::<Value>(&text).ok();
-                let error = parsed
-                    .as_ref()
-                    .and_then(|value| value.get("error"))
-                    .and_then(Value::as_object);
-                let code = error
-                    .and_then(|value| value.get("code"))
-                    .and_then(Value::as_str)
-                    .unwrap_or("error")
-                    .to_owned();
-                let message = error
-                    .and_then(|value| value.get("message"))
-                    .and_then(Value::as_str)
-                    .unwrap_or(&text)
-                    .to_owned();
-                Err(ClientError::Api(AgentRouterError {
-                    status_code: status,
-                    code,
-                    message,
-                }))
+                Err(api_error(status, text))
             }
             Err(ureq::Error::Transport(error)) => Err(ClientError::Transport(error.to_string())),
         }
@@ -141,18 +149,46 @@ impl AgentRouterClient {
             .ok_or_else(|| ClientError::Transport("expected a JSON array".into()))
     }
 
-    pub fn classify(&self, task: &str, options: Value) -> Result<Value, ClientError> {
-        let mut fields = Map::new();
-        fields.insert("task".into(), json!(task));
-        merge_clean(&mut fields, options);
-        self.request("POST", "/v1/classify", Some(Value::Object(fields)))
+    pub fn classify(
+        &self,
+        task: &str,
+        context_tokens: Option<i64>,
+        risk: Option<&str>,
+        tools: Option<&[String]>,
+    ) -> Result<Value, ClientError> {
+        self.request(
+            "POST",
+            "/v1/classify",
+            Some(clean([
+                ("task".into(), json!(task)),
+                ("context_tokens".into(), json!(context_tokens)),
+                ("risk".into(), json!(risk)),
+                ("tools".into(), json!(tools)),
+            ])),
+        )
     }
 
-    pub fn route(&self, task: &str, options: Value) -> Result<Value, ClientError> {
-        let mut fields = Map::new();
-        fields.insert("task".into(), json!(task));
-        merge_clean(&mut fields, options);
-        self.request("POST", "/v1/route", Some(Value::Object(fields)))
+    pub fn route(
+        &self,
+        task: &str,
+        prefer: Option<&str>,
+        context_tokens: Option<i64>,
+        risk: Option<&str>,
+        tools: Option<&[String]>,
+        no_log: bool,
+    ) -> Result<Value, ClientError> {
+        self.request(
+            "POST",
+            "/v1/route",
+            Some(clean([
+                ("task".into(), json!(task)),
+                ("prefer".into(), json!(prefer)),
+                ("context_tokens".into(), json!(context_tokens)),
+                ("risk".into(), json!(risk)),
+                ("tools".into(), json!(tools)),
+                ("no_log".into(), json!(no_log)),
+            ])),
+        )
     }
 
     pub fn get_decision(&self, decision_id: &str) -> Result<Value, ClientError> {
@@ -185,17 +221,6 @@ impl AgentRouterClient {
             "/v1/execute/dry-run",
             Some(json!({"decision_id": decision_id})),
         )
-    }
-}
-
-fn merge_clean(fields: &mut Map<String, Value>, options: Value) {
-    if let Some(options) = options.as_object() {
-        fields.extend(
-            options
-                .iter()
-                .filter(|(_, value)| !value.is_null())
-                .map(|(key, value)| (key.clone(), value.clone())),
-        );
     }
 }
 
@@ -260,10 +285,7 @@ mod tests {
         let (url, server) = serve_once("200 OK", r#"{"decision_id":"d_1"}"#);
         let client = AgentRouterClient::new(Some(&url), Some("secret"), None);
         let result = client
-            .route(
-                "write docs",
-                json!({"prefer": null, "context_tokens": 0, "no_log": false}),
-            )
+            .route("write docs", None, Some(0), None, None, false)
             .unwrap();
         assert_eq!(result["decision_id"], "d_1");
         let request = server.join().unwrap();
@@ -292,5 +314,63 @@ mod tests {
             }) if code == "not_found" && message == "missing"
         ));
         server.join().unwrap();
+    }
+
+    #[test]
+    fn client_does_not_forward_api_keys_through_redirects() {
+        let target = TcpListener::bind("127.0.0.1:0").unwrap();
+        let target_address = target.local_addr().unwrap();
+        target.set_nonblocking(true).unwrap();
+        let forwarded = thread::spawn(move || {
+            for _ in 0..40 {
+                match target.accept() {
+                    Ok((mut stream, _)) => {
+                        let mut request = [0; 2048];
+                        let _ = stream.read(&mut request);
+                        let body = r#"{"status":"leaked"}"#;
+                        let _ = write!(
+                            stream,
+                            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                            body.len()
+                        );
+                        return true;
+                    }
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        thread::sleep(Duration::from_millis(5));
+                    }
+                    Err(error) => panic!("redirect target listener failed: {error}"),
+                }
+            }
+            false
+        });
+
+        let redirect = TcpListener::bind("127.0.0.1:0").unwrap();
+        let redirect_address = redirect.local_addr().unwrap();
+        let redirect_server = thread::spawn(move || {
+            let (mut stream, _) = redirect.accept().unwrap();
+            let mut request = [0; 2048];
+            let _ = stream.read(&mut request);
+            write!(
+                stream,
+                "HTTP/1.1 302 Found\r\nLocation: http://{target_address}/leak\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+            )
+            .unwrap();
+        });
+
+        let url = format!("http://{redirect_address}");
+        let client = AgentRouterClient::new(Some(&url), Some("secret"), None);
+        let result = client.health();
+        assert!(
+            matches!(
+                &result,
+                Err(ClientError::Api(AgentRouterError {
+                    status_code: 302,
+                    ..
+                }))
+            ),
+            "unexpected redirect response: {result:?}"
+        );
+        redirect_server.join().unwrap();
+        assert!(!forwarded.join().unwrap());
     }
 }
