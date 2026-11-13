@@ -31,7 +31,7 @@ release authority until the full set is complete.
 | `agentrouter/classifier.py` | `agentrouter-classifier` | Parity |
 | `agentrouter/cli.py` | `agentrouter-cli::bin::agentrouter` plus command modules | Partial |
 | `agentrouter/context_model.py` | `agentrouter-classifier::context_model` | Parity |
-| `agentrouter/contract.py` | `agentrouter-cli::contract::{canonicalize,dumps}` | Partial |
+| `agentrouter/contract.py` | `agentrouter-cli::contract::{canonicalize,dumps,validate_refs,load_baseline}` | Partial |
 | `agentrouter/controls.py` | `agentrouter-policy::controls` | Parity |
 | `agentrouter/dashboard.py` | `agentrouter-cli::dashboard` | Parity |
 | `agentrouter/diagnostics.py` | `agentrouter-cli::diagnostics` | Partial |
@@ -103,9 +103,12 @@ release authority until the full set is complete.
   lists, schema branches, and parameters, and emits two-space Unicode JSON with
   a final newline. It also checks local `$ref` targets, reports external,
   missing, and cyclic references, and applies the same 200,000-node budget.
-  Differential fixtures cover the live document and invalid reference cases.
-  Baseline loading, symlink/hardlink-safe artifact export, manifest provenance,
-  semantic compatibility classification, and CLI integration remain Python-only.
+  The baseline loader reads the committed artifact, preserves Python's missing,
+  malformed, non-OpenAPI, and untrusted-reference failure states, and applies
+  the same traversal limit. Differential fixtures cover the live document,
+  invalid references, and baseline failures. Symlink/hardlink-safe artifact
+  export, manifest provenance, semantic compatibility classification, and CLI
+  integration remain Python-only.
 - The Rust MCP process implements the five Python tools and stdio lifecycle;
   protocol/tool and result differentials cover all five. The unified CLI now
   runs this stdio server in-process with the selected AgentRouter home. Broader

@@ -1,16 +1,141 @@
 //! Deterministic OpenAPI JSON canonicalization shared with `agentrouter.contract`.
 //!
-//! This is the first Rust contract-tooling slice. It intentionally implements
-//! only canonicalization and serialization; compatibility classification and
-//! safe artifact export remain owned by Python until their full contracts are
-//! ported and differentially checked.
+//! Rust contract-tooling slices for canonicalization, reference validation,
+//! stable serialization, and trusted-baseline loading. Semantic compatibility
+//! classification and safe artifact export remain Python-owned until their
+//! complete contracts are ported and differentially checked.
 
 use serde_json::{Map, Value};
 use std::collections::{BTreeSet, HashSet};
+use std::fmt;
 use std::fmt::Write as _;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 const ORDER_INSENSITIVE: &[&str] = &["required", "enum", "tags"];
 const MAX_EXPANDED_NODES: usize = 200_000;
+const CONTRACT_VERSION: &str = "v1";
+const CONTRACT_EXPORT_COMMAND: &str = "agentrouter contract export";
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BaselineErrorKind {
+    Missing,
+    Unreadable,
+    TooDeep,
+    NotOpenApi,
+    InvalidReferences,
+    TooLarge,
+}
+
+impl BaselineErrorKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Missing => "missing",
+            Self::Unreadable => "unreadable",
+            Self::TooDeep => "too_deep",
+            Self::NotOpenApi => "not_openapi",
+            Self::InvalidReferences => "invalid_references",
+            Self::TooLarge => "too_large",
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct BaselineError {
+    pub kind: BaselineErrorKind,
+    message: String,
+}
+
+impl BaselineError {
+    fn new(kind: BaselineErrorKind, message: impl Into<String>) -> Self {
+        Self {
+            kind,
+            message: message.into(),
+        }
+    }
+}
+
+impl fmt::Display for BaselineError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for BaselineError {}
+
+/// Return the committed OpenAPI artifact path for a repository root.
+pub fn baseline_path(root: &Path) -> PathBuf {
+    root.join("contracts")
+        .join("http")
+        .join(CONTRACT_VERSION)
+        .join("openapi.json")
+}
+
+/// Read and validate the committed OpenAPI baseline. Missing, malformed,
+/// structurally invalid, oversized, or untrusted files always fail closed.
+pub fn load_baseline_file(path: &Path) -> Result<Value, BaselineError> {
+    let text = match fs::read_to_string(path) {
+        Ok(text) => text,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Err(BaselineError::new(
+                BaselineErrorKind::Missing,
+                format!(
+                    "no committed contract at {}; run `{CONTRACT_EXPORT_COMMAND}` and commit it",
+                    path.display()
+                ),
+            ));
+        }
+        Err(error) => {
+            return Err(BaselineError::new(
+                BaselineErrorKind::Unreadable,
+                format!("{}: unreadable contract: {error}", path.display()),
+            ));
+        }
+    };
+    let document: Value = serde_json::from_str(&text).map_err(|error| {
+        let kind = if error.to_string().contains("recursion limit exceeded") {
+            BaselineErrorKind::TooDeep
+        } else {
+            BaselineErrorKind::Unreadable
+        };
+        let message = if kind == BaselineErrorKind::TooDeep {
+            format!("{}: nested too deeply to parse safely", path.display())
+        } else {
+            format!("{}: unreadable contract: {error}", path.display())
+        };
+        BaselineError::new(kind, message)
+    })?;
+    if !document.is_object() || document.get("paths").is_none() {
+        return Err(BaselineError::new(
+            BaselineErrorKind::NotOpenApi,
+            format!("{}: not an OpenAPI document (no 'paths')", path.display()),
+        ));
+    }
+    let invalid = validate_refs(&document)
+        .map_err(|error| BaselineError::new(BaselineErrorKind::TooLarge, error))?;
+    if !invalid.is_empty() {
+        let details = invalid
+            .iter()
+            .take(5)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join(", ");
+        return Err(BaselineError::new(
+            BaselineErrorKind::InvalidReferences,
+            format!(
+                "{}: {} unusable $ref(s) — the contract cannot be trusted as a baseline: {details}",
+                path.display(),
+                invalid.len()
+            ),
+        ));
+    }
+    Ok(document)
+}
+
+/// Load the committed OpenAPI baseline under a repository root.
+pub fn load_baseline(root: &Path) -> Result<Value, BaselineError> {
+    load_baseline_file(&baseline_path(root))
+}
 
 /// Recursively normalize object keys and the OpenAPI arrays whose order is not
 /// semantically meaningful, matching Python's `contract._canonical` behavior.
