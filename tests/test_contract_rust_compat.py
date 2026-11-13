@@ -13,6 +13,7 @@ from agentrouter.contract import (
     BaselineMissing,
     ContractError,
     _canonical,
+    build_manifest,
     canonical_openapi,
     contract_paths,
     diff_contracts,
@@ -241,6 +242,120 @@ def _rust_surface_diff(old: dict, new: dict) -> dict:
     process = _rust_surface_diff_process(old, new)
     assert process.returncode == 0, process.stderr
     return json.loads(process.stdout)
+
+
+def _rust_export_process(
+    root: Path, document: dict, generated_at: str
+) -> subprocess.CompletedProcess[str]:
+    repository = Path(__file__).resolve().parents[1]
+    return subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "-p",
+            "agentrouter-cli",
+            "--bin",
+            "contract_export_from_json",
+        ],
+        cwd=repository,
+        input=json.dumps(
+            {"root": str(root), "document": document, "generated_at": generated_at},
+            ensure_ascii=False,
+        ),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+        check=False,
+    )
+
+
+def test_rust_contract_export_matches_python_artifact_and_manifest(tmp_path):
+    document = {
+        "openapi": "3.1.0",
+        "info": {"title": "AgentRouter 🧭", "version": "0.5"},
+        "servers": [{"url": "/"}],
+        "paths": {
+            "/route": {"get": {"responses": {}}, "x-extra": {}},
+            "/classify": {"post": {}, "get": {}},
+        },
+    }
+    generated_at = "2026-11-14T00:00:00+00:00"
+
+    class RenderedApp:
+        def openapi(self):
+            return document
+
+    expected_document = canonical_openapi(RenderedApp())
+    process = _rust_export_process(tmp_path, document, generated_at)
+    assert process.returncode == 0, process.stderr
+    result = json.loads(process.stdout)
+    openapi_path = Path(result["path"])
+    manifest_path = openapi_path.with_name("manifest.json")
+    assert result["document"] == expected_document
+    assert openapi_path.read_text(encoding="utf-8") == dumps(expected_document)
+
+    actual_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    expected_manifest = build_manifest(expected_document, generated_at=generated_at, root=tmp_path)
+    assert actual_manifest.keys() == expected_manifest.keys()
+    assert actual_manifest["generation_tool"].startswith("agentrouter-cli ")
+    for field, value in expected_manifest.items():
+        if field != "generation_tool":
+            assert actual_manifest[field] == value
+
+
+def test_rust_contract_export_refuses_a_symlink_target(tmp_path):
+    document = {"openapi": "3.1.0", "info": {"title": "API", "version": "1"}, "paths": {}}
+    generated_at = "2026-11-14T00:00:00+00:00"
+    openapi_path = tmp_path / "contracts" / "http" / "v1" / "openapi.json"
+    openapi_path.parent.mkdir(parents=True)
+    victim = tmp_path / "victim.json"
+    victim.write_text("keep me", encoding="utf-8")
+
+    try:
+        openapi_path.symlink_to(victim)
+    except OSError:
+        pytest.skip("symlink creation is unavailable")
+    symlink_result = _rust_export_process(tmp_path, document, generated_at)
+    assert symlink_result.returncode != 0
+    assert "symlink" in symlink_result.stderr
+    assert victim.read_text(encoding="utf-8") == "keep me"
+
+
+def test_rust_contract_export_refuses_a_hardlink_target(tmp_path):
+    document = {"openapi": "3.1.0", "info": {"title": "API", "version": "1"}, "paths": {}}
+    generated_at = "2026-11-14T00:00:00+00:00"
+    openapi_path = tmp_path / "contracts" / "http" / "v1" / "openapi.json"
+    openapi_path.parent.mkdir(parents=True)
+    victim = tmp_path / "victim.json"
+    victim.write_text("keep me", encoding="utf-8")
+    try:
+        openapi_path.hardlink_to(victim)
+    except OSError:
+        pytest.skip("hardlinks are unsupported")
+    hardlink_result = _rust_export_process(tmp_path, document, generated_at)
+    assert hardlink_result.returncode != 0
+    assert "hardlink" in hardlink_result.stderr
+    assert victim.read_text(encoding="utf-8") == "keep me"
+
+
+def test_rust_contract_export_refuses_a_symlinked_contract_directory(tmp_path):
+    document = {"openapi": "3.1.0", "info": {"title": "API", "version": "1"}, "paths": {}}
+    generated_at = "2026-11-14T00:00:00+00:00"
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    contracts = tmp_path / "contracts"
+    try:
+        contracts.symlink_to(outside, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlink creation is unavailable")
+
+    process = _rust_export_process(tmp_path, document, generated_at)
+    assert process.returncode != 0
+    assert "refusing to write" in process.stderr
+    assert not list(outside.iterdir())
 
 
 @pytest.mark.parametrize(

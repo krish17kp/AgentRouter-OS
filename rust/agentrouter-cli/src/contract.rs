@@ -20,6 +20,8 @@ const MAX_REF_DEPTH: usize = 64;
 const MAX_SCHEMA_COMPARE_DEPTH: usize = 128;
 const CONTRACT_VERSION: &str = "v1";
 const CONTRACT_EXPORT_COMMAND: &str = "agentrouter contract export";
+const CONTRACT_OPENAPI_FILE: &str = "openapi.json";
+const CONTRACT_MANIFEST_FILE: &str = "manifest.json";
 const HTTP_METHODS: &[&str] = &[
     "get", "put", "post", "delete", "patch", "head", "options", "trace",
 ];
@@ -70,12 +72,175 @@ impl fmt::Display for BaselineError {
 
 impl std::error::Error for BaselineError {}
 
+/// Return the OpenAPI and provenance paths under a repository root.
+pub fn contract_paths(root: &Path) -> (PathBuf, PathBuf) {
+    let base = root.join("contracts").join("http").join(CONTRACT_VERSION);
+    (
+        base.join(CONTRACT_OPENAPI_FILE),
+        base.join(CONTRACT_MANIFEST_FILE),
+    )
+}
+
 /// Return the committed OpenAPI artifact path for a repository root.
 pub fn baseline_path(root: &Path) -> PathBuf {
-    root.join("contracts")
-        .join("http")
-        .join(CONTRACT_VERSION)
-        .join("openapi.json")
+    contract_paths(root).0
+}
+
+/// Detach, normalize, and canonicalize a rendered OpenAPI document.
+///
+/// A caller supplies the document rendered by its HTTP framework. This mirrors
+/// Python's `canonical_openapi`: the environment-dependent default server entry
+/// is removed while a real mount prefix remains in the artifact.
+pub fn canonical_openapi_document(document: &Value) -> Result<Value, String> {
+    let Some(object) = document.as_object() else {
+        return Err("OpenAPI document must be an object".to_owned());
+    };
+    let mut canonical = Value::Object(object.clone());
+    let object = canonical.as_object_mut().expect("object was just checked");
+    if object.get("servers").is_some_and(|servers| {
+        servers.is_null() || servers == &json!([]) || servers == &json!([{"url": "/"}])
+    }) {
+        object.remove("servers");
+    }
+    canonicalize(&mut canonical);
+    Ok(canonical)
+}
+
+/// Build provenance for an exported contract. `generated_at` and `root` are
+/// injectable so Python/Rust checks can use deterministic fixtures.
+pub fn build_manifest(document: &Value, generated_at: Option<&str>, root: Option<&Path>) -> Value {
+    let unknown = || Value::String("unknown".to_owned());
+    let field = |object: Option<&Map<String, Value>>, name: &str| {
+        object
+            .and_then(|object| object.get(name))
+            .cloned()
+            .unwrap_or_else(unknown)
+    };
+    let info = document.get("info").and_then(Value::as_object);
+    let operation_count = document
+        .get("paths")
+        .and_then(Value::as_object)
+        .into_iter()
+        .flat_map(Map::values)
+        .filter_map(Value::as_object)
+        .flat_map(Map::keys)
+        .filter(|method| HTTP_METHODS.contains(&method.as_str()))
+        .count();
+    let generated_at = generated_at.map(str::to_owned).unwrap_or_else(|| {
+        use chrono::{SecondsFormat, Utc};
+        let now = Utc::now();
+        let precision = if now.timestamp_subsec_micros() == 0 {
+            SecondsFormat::Secs
+        } else {
+            SecondsFormat::Micros
+        };
+        now.to_rfc3339_opts(precision, false)
+    });
+    json!({
+        "product_version": agentrouter_core::package_version(),
+        "contract_version": CONTRACT_VERSION,
+        "openapi_version": field(document.as_object(), "openapi"),
+        "api_title": field(info, "title"),
+        "api_version": field(info, "version"),
+        "generation_command": CONTRACT_EXPORT_COMMAND,
+        "generation_tool": format!("agentrouter-cli {}", env!("CARGO_PKG_VERSION")),
+        "source_commit": source_commit(root),
+        "generated_at": generated_at,
+        "operation_count": operation_count,
+    })
+}
+
+/// Write the canonical OpenAPI artifact and its provenance manifest under a
+/// repository root. Directory handles pin the destination beneath the
+/// canonical root; file writes use atomic replacement after refusing links.
+pub fn export_contract(
+    root: &Path,
+    document: &Value,
+    generated_at: Option<&str>,
+) -> Result<(PathBuf, Value), String> {
+    let canonical = canonical_openapi_document(document)?;
+    let (openapi_path, manifest_path) = contract_paths(root);
+    let (resolved_root, parent) = open_contract_parent(root)?;
+    let manifest = build_manifest(&canonical, generated_at, Some(&resolved_root));
+    let openapi_text = dumps(&canonical).map_err(|error| error.to_string())?;
+    let manifest_text = dumps(&manifest).map_err(|error| error.to_string())?;
+    safe_write_contract_artifact(&parent, CONTRACT_OPENAPI_FILE, &openapi_path, &openapi_text)?;
+    safe_write_contract_artifact(
+        &parent,
+        CONTRACT_MANIFEST_FILE,
+        &manifest_path,
+        &manifest_text,
+    )?;
+    Ok((openapi_path, canonical))
+}
+
+fn source_commit(root: Option<&Path>) -> String {
+    let mut command = std::process::Command::new("git");
+    command.args(["rev-parse", "HEAD"]);
+    if let Some(root) = root {
+        command.current_dir(root);
+    }
+    command
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .and_then(|output| String::from_utf8(output.stdout).ok())
+        .map(|commit| commit.trim().to_owned())
+        .filter(|commit| !commit.is_empty())
+        .unwrap_or_else(|| "unknown".to_owned())
+}
+
+fn open_contract_parent(root: &Path) -> Result<(PathBuf, cap_std::fs::Dir), String> {
+    std::fs::create_dir_all(root)
+        .map_err(|error| format!("refusing to write under {}: {error}", root.display()))?;
+    let resolved_root = std::fs::canonicalize(root)
+        .map_err(|error| format!("refusing to write under {}: {error}", root.display()))?;
+    let root_file = super::open_safe_home(&resolved_root)
+        .map_err(|error| format!("refusing to write under {}: {error}", root.display()))?;
+    let contracts = super::open_directory_child(&root_file, Path::new("contracts"))
+        .map_err(|error| format!("refusing to write under {}: {error}", root.display()))?;
+    let http = super::open_directory_child(&contracts, Path::new("http"))
+        .map_err(|error| format!("refusing to write under {}: {error}", root.display()))?;
+    let version = super::open_directory_child(&http, Path::new(CONTRACT_VERSION))
+        .map_err(|error| format!("refusing to write under {}: {error}", root.display()))?;
+    Ok((resolved_root, cap_std::fs::Dir::from_std_file(version)))
+}
+
+fn safe_write_contract_artifact(
+    parent: &cap_std::fs::Dir,
+    name: &str,
+    path: &Path,
+    text: &str,
+) -> Result<(), String> {
+    match parent.symlink_metadata(name) {
+        Ok(metadata) => {
+            if metadata.file_type().is_symlink() {
+                return Err(format!(
+                    "refusing to write through a symlink: {}",
+                    path.display()
+                ));
+            }
+            if !metadata.is_file() {
+                return Err(format!(
+                    "refusing to write non-file contract target: {}",
+                    path.display()
+                ));
+            }
+            if super::has_multiple_links(parent, name, &metadata)
+                .map_err(|error| format!("refusing to write {}: {error}", path.display()))?
+            {
+                return Err(format!(
+                    "refusing to write through a hardlink: {}",
+                    path.display()
+                ));
+            }
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(format!("refusing to write {}: {error}", path.display())),
+    }
+    let mut bytes = text.as_bytes();
+    super::atomic_replace(parent, Path::new(name), &mut bytes, None)
+        .map_err(|error| format!("refusing to write {}: {error}", path.display()))
 }
 
 /// Read and validate the committed OpenAPI baseline. Missing, malformed,

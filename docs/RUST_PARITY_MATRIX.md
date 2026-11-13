@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-14 (TASK-082–102). This inventory covers every Python source module under
+Updated: 2026-11-14 (TASK-082–103). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -122,8 +122,11 @@ release authority until the full set is complete.
   `allOf` conjunction direction, payload changes, and branch ordering have
   Python differential coverage. It remains a partial surface probe, not the
   full semantic compatibility checker or a release gate.
-  Symlink/hardlink-safe artifact export, manifest provenance, the full semantic
-  compatibility checker, and CLI integration remain Python-only.
+  Rust export now canonicalizes an input document, records product/API/source
+  provenance and operation count, and safely writes both artifacts with pinned
+  directory handles and atomic replacement. Symlink and hard-link targets are
+  refused. The full semantic compatibility checker and the unified CLI command
+  remain Python-only.
 - The Rust MCP process implements the five Python tools and stdio lifecycle;
   protocol/tool and result differentials cover all five. The unified CLI now
   runs this stdio server in-process with the selected AgentRouter home. Broader

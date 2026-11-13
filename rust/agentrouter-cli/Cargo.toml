@@ -81,6 +81,10 @@ name = "contract_surface_diff_from_json"
 path = "src/bin/contract_surface_diff_from_json.rs"
 
 [[bin]]
+name = "contract_export_from_json"
+path = "src/bin/contract_export_from_json.rs"
+
+[[bin]]
 name = "observability_cli"
 path = "src/bin/observability_cli.rs"
 

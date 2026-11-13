@@ -20,6 +20,12 @@ All notable changes to AgentRouter OS. Format loosely follows
   `anyOf`/`oneOf` alternatives, `allOf` conjunction direction, and branch-order
   independence now match Python in differential fixtures. The probe remains
   partial and is not a compatibility gate.
+- Add Rust OpenAPI document canonicalization, provenance manifest generation,
+  and safe artifact export. It removes only default root-server noise, records
+  the source commit and operation count, pins destination directories, atomically
+  replaces artifacts, and refuses symlinked or hard-linked targets. Python/Rust
+  fixtures compare canonical bytes and manifest fields. The unified
+  `agentrouter contract export` command remains to be integrated.
 
 ### Fixed
 - Add Rust OpenAPI canonicalization and bounded `$ref` validation with stable,
