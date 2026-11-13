@@ -149,6 +149,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "agentrouter-reliability"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "serde",
+ "serde_json",
+ "ureq",
+]
+
+[[package]]
 name = "agentrouter-routing"
 version = "0.1.0"
 dependencies = [

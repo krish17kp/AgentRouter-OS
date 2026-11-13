@@ -1,0 +1,17 @@
+[package]
+name = "agentrouter-reliability"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Loopback load and soak reporting for AgentRouter OS"
+
+[dependencies]
+libc = "0.2"
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = "1.0.128"
+ureq = { version = "=2.10.1", default-features = false, features = ["tls"] }
+
+[[bin]]
+name = "reliability_from_json"
+path = "src/bin/reliability_from_json.rs"

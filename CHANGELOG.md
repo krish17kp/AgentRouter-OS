@@ -28,6 +28,9 @@ All notable changes to AgentRouter OS. Format loosely follows
   metadata, with Python/Rust comparisons for full model records, price tiers,
   payload filtering, and skipped-entry warnings. Network refresh and generated
   catalog writes remain Python-owned.
+- Add a Rust reliability crate for bounded loopback load runs and soak reports,
+  with Python/Rust checks for result summaries and request-ID handling. The
+  Python server lifecycle and arbitrary request factory remain Python-owned.
 - Port the HTTP service business layer to `agentrouter-api` for model/host
   listing, classification, routing, decision lookup, feedback, and dry-run
   previews. It depends directly on routing, host, registry, classifier, and

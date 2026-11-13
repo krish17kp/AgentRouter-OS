@@ -76,9 +76,9 @@ release authority until the full set is complete.
 | `agentrouter/prompts.py` | `agentrouter-cli::generate_prompt` | Parity |
 | `agentrouter/refresh.py` | `agentrouter-registry::refresh` | Partial |
 | `agentrouter/registry.py` | `agentrouter-registry` | Parity |
-| `agentrouter/reliability/__init__.py` | `—` | Not ported |
-| `agentrouter/reliability/harness.py` | `—` | Not ported |
-| `agentrouter/reliability/soak.py` | `—` | Not ported |
+| `agentrouter/reliability/__init__.py` | `agentrouter-reliability` | Partial |
+| `agentrouter/reliability/harness.py` | `agentrouter-reliability::{LoadSpec,LoadOutcome,run_load}` | Partial |
+| `agentrouter/reliability/soak.py` | `agentrouter-reliability::{Sample,SoakResult,soak}` | Partial |
 | `agentrouter/safety.py` | `agentrouter-policy` | Parity |
 | `agentrouter/schema.py` | `agentrouter-core + agentrouter-registry` | Partial |
 | `agentrouter/sdk.py` | `agentrouter-cli::sdk` | Partial |
@@ -97,8 +97,7 @@ release authority until the full set is complete.
   shipped Rust source, but that does not make unported Python behavior complete.
 - The Python modules marked **Partial** and **Not ported** remain production
   responsibilities. The CLI, HTTP, MCP, plugin/skill, evaluation/annotation,
-  diagnostic-bundle, and reliability surfaces still need their Rust contract
-  implementations and differential tests.
+  diagnostic-bundle, and reliability surfaces still have Rust contract gaps.
 - The Rust MCP process implements the five Python tools and stdio lifecycle;
   protocol/tool and result differentials cover all five. It is not wired into
   the unified Rust CLI, and the broader cross-version MCP lifecycle/error
@@ -107,6 +106,11 @@ release authority until the full set is complete.
   filters supplied offline payloads with Python differentials. Live HTTP
   retrieval, key handling, deprecation checks, atomic generated-file writes,
   and the `providers refresh` CLI are not ported, so the module is Partial.
+- Rust reliability currently summarizes load/soak results and drives bounded
+  HTTP load against an already-running server. It does not yet own server
+  startup/shutdown, arbitrary Python request factories, or complete transport
+  exception naming; those Python harness and CLI contracts remain Partial. See
+  [`RUST_RELIABILITY.md`](RUST_RELIABILITY.md) for the supported surface.
 - Rust `Classification` now rejects unknown fields and has round-trip and
   rejection checks against Pydantic. Python's unbounded integer and scalar
   coercion behavior is not fully represented by the Rust integer/serde types,

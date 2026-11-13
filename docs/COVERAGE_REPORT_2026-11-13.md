@@ -13,7 +13,7 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 2,026 passed, 5 skipped |
+| Python regression | 2,031 passed, 5 skipped |
 | Line coverage | 92.49% (6,628 / 7,166 statements) |
 | Branch coverage | 87.61% (1,845 / 2,106 branch outcomes) |
 | Combined coverage reported by pytest-cov | 91.38% |
@@ -62,3 +62,6 @@ protocol version, capabilities, all five tool schemas, and structured outputs.
 The Rust provider-refresh slice is checked against Python for all OpenAI
 family prefixes, OpenRouter model metadata and price tiers, offline payload
 filtering, and skipped-entry warnings.
+Reliability checks compare load and soak result schemas, run the Rust load
+runner against a live Python loopback server, confirm unique request IDs, and
+verify redirect refusal without timing thresholds.
