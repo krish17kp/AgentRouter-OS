@@ -4,10 +4,10 @@ Updated: 2026-11-14
 
 ## Definition of done
 
-- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PR #16 is the sole open PR; all other historical PRs are merged or documented as superseded/closed. On `5251a1b`, hosted Rust workspace and Python/Rust compatibility pass on Linux/Windows/macOS; Python 3.10–3.13, Windows/macOS, API compatibility, build smoke, security, website, and mutation checks also pass. The unchanged frozen release gate fails at 0.6667 < 0.90; live smoke is skipped without credentials.
+- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PR #16 is the sole open PR; all other historical PRs are merged or documented as superseded/closed. At `2fe81da`, hosted Rust workspace and Python/Rust compatibility pass on Linux/Windows/macOS; the `c49c836` rerun is in progress. Python 3.10–3.13, Windows/macOS, API compatibility, build smoke, security, website, and mutation checks passed on prior candidate commits. The unchanged frozen release gate fails at 0.6667 < 0.90; live smoke is skipped without credentials.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md); current gaps are explicit, and 40 modules currently meet the full-module differential bar. TASK-089–091 closed the Python/Rust storage contract with shared-database and concurrency evidence.
-- [x] Full Python suite: 2,211 passed, 5 skipped; 92.83% statement (6,715/7,234), 88.63% branch (1,895/2,138), and 91.87% combined coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; evidence is in `docs/COVERAGE_REPORT_2026-11-14.md`.
+- [x] Full Python suite: 2,213 passed, 5 skipped; 92.83% statement (6,715/7,234), 88.63% branch (1,895/2,138), and 91.87% combined coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; evidence is in `docs/COVERAGE_REPORT_2026-11-14.md`.
 - [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations; the Rust release benchmark now runs the same 10/100/1,000 candidate fleets, with a paired local p50 ratio of 2.70×–3.25× under stated synthetic conditions.
 - [x] Changelog, coverage evidence, and local latency measurements are committed to the release candidate. Candidate package version is now `0.5.0rc1`, with draft release notes in `docs/RELEASE_NOTES_v0.5.0rc1.md`; final `0.5.0` packaging and publication remain blocked on parity and all release gates.
 - [ ] Release candidate promoted to `main` with a tagged release.
@@ -126,14 +126,15 @@ Updated: 2026-11-14
 - OpenAI live validation: provide `OPENAI_API_KEY` through a local environment or a protected secret store and authorize one bounded Responses API smoke request, which may incur usage charges. Offline request/response fixtures are ready; no key is stored in the repository.
 - Production release/deployment: after the local and hosted release gates pass, provide the production hosting/domain credentials and authorize any paid infrastructure and deployment. The Rust server is loopback-only and no production deployment has run.
 
-Latest full local verification: Python 3.12 passes 2,211 tests with 5 skips
+Latest full local verification: Python 3.12 passes 2,213 tests with 5 skips
 at 92.83% statement, 88.63% branch, and 91.87% combined coverage. The Rust workspace,
 strict Clippy, Ruff, formatting, 29 focused storage compatibility and
-concurrency checks, 70 focused contract compatibility checks, and three plugin
-inventory/path compatibility checks pass locally.
-On `5251a1b`, hosted Rust workspace and Python/Rust compatibility pass on
-Linux, Windows, and macOS. Python 3.10–3.13 and Windows/macOS jobs, security,
-website, and mutation checks pass. The unchanged
+concurrency checks, 70 focused contract compatibility checks, and six plugin
+inventory/path/ownership/list compatibility checks pass locally. Hosted Rust
+workspace and Python/Rust compatibility pass on Linux, Windows, and macOS at
+`2fe81da`; the `c49c836` matrix is running.
+Python 3.10–3.13 and Windows/macOS jobs, security, website, and mutation checks
+pass on prior candidate commits. The unchanged
 release gate still fails at 0.6667 against 0.90; live smoke skips without
 credentials. PR #16 remains promotion-blocked by the frozen context-band
 result and required independent human annotations. Evidence is in
@@ -143,3 +144,12 @@ PR #16 was reviewed against its release contract and code standards: no
 separate implementation defect was identified in the reviewed diff, but the
 PR is not releasable. Its immutable context-band accuracy is 0.6667 against the
 unchanged 0.90 threshold; required independent human annotation is still open.
+
+Historical PR audit: all merged PRs through #33 are present on the release
+candidate. Closed PR #21 has no remaining file diff; its venv-pinned hook fix is
+already present in the candidate. Closed PR #26 has only an obsolete Rust R1/R2
+verification paragraph and a Cargo manifest newline relative to the candidate;
+its registry implementation is already present. Closed draft PR #1 adds Python
+unit tests only; current execution, routing-control, host-state, safety, and
+mutation suites cover those behaviors, so the old test branch is not merged as
+code. PR #16 remains the sole open PR.

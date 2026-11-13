@@ -13,7 +13,7 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 2,211 passed, 5 skipped |
+| Python regression | 2,213 passed, 5 skipped |
 | Statement coverage | 92.83% (6,715 / 7,234 statements) |
 | Branch coverage | 88.63% (1,895 / 2,138 branch outcomes) |
 | Combined coverage reported by pytest-cov | 91.87% |
@@ -27,9 +27,10 @@ capacity boundaries, portable JSON integer and non-finite-number validation,
 Python/Rust storage round trips and snapshots, Python/Rust dashboard HTML,
 OpenAPI canonicalization, baseline-trust comparisons, and canonical Rust
 contract export with provenance and safe-write refusals, plus Rust plugin
-inventory, destination-root, portable path-validation, and ownership-record
-shape checks, plus the existing evaluation, API, CLI, and safety suites. Rust workspace tests and strict
-Clippy were run separately. The contract compatibility suite has 70 Python/Rust
+inventory, destination-root, portable path-validation, ownership-record shape,
+and read-only `plugin list` checks, plus the existing evaluation, API, CLI, and
+safety suites. Rust workspace tests and strict Clippy were run separately. The
+contract compatibility suite has 70 Python/Rust
 cases in total, including canonicalization, reference validation, and baseline
 loading. Surface-diff cases cover version/server/path/method changes, operation
 metadata and authentication, parameter presence/requiredness, request/response
