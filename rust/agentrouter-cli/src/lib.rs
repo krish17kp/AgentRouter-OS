@@ -29,6 +29,7 @@ pub mod harness;
 pub use agentrouter_limits as limits;
 pub mod observability;
 pub mod openai;
+pub mod providers;
 pub mod sdk;
 
 /// Mirrors `safety._CHECKLISTS` + `safety.gates_for`.

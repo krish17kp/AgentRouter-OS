@@ -188,6 +188,31 @@ def test_provider_catalog_rollback_is_reversible(tmp_path, unified_binary):
     assert "[FAIL ] fixture" in broken.stdout
 
 
+def test_provider_refresh_preflight_is_offline_and_hides_provider_credentials(
+    tmp_path, unified_binary, monkeypatch
+):
+    home = tmp_path / "agentrouter-home"
+    initialized = _run(unified_binary, "init", home=home)
+    assert initialized.returncode == 0, initialized.stderr
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    unsupported = _run(unified_binary, "providers", "refresh", "cursor", home=home)
+    assert unsupported.returncode == 2
+    assert "not refreshable" in unsupported.stderr
+    assert "openrouter, openai" in unsupported.stderr
+
+    missing_key = _run(unified_binary, "providers", "refresh", "openai", home=home)
+    assert missing_key.returncode == 1
+    assert "OPENAI_API_KEY" in missing_key.stdout + missing_key.stderr
+    assert "registry was NOT modified" in missing_key.stderr
+    assert not (home / "registry" / "models.openai.generated.yaml").exists()
+
+    invalid_limit = _run(
+        unified_binary, "providers", "refresh", "openrouter", "--limit", "0", home=home
+    )
+    assert invalid_limit.returncode == 2
+
+
 def test_unknown_or_unported_command_fails_with_usage(unified_binary):
     result = _run(unified_binary, "plugin")
     assert result.returncode == 2

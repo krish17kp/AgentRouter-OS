@@ -102,10 +102,13 @@ release authority until the full set is complete.
   protocol/tool and result differentials cover all five. It is not wired into
   the unified Rust CLI, and the broader cross-version MCP lifecycle/error
   contract remains under compatibility review, so the module is Partial.
-- Rust provider refresh currently converts OpenRouter/OpenAI model records and
-  filters supplied offline payloads with Python differentials. Live HTTP
-  retrieval, key handling, deprecation checks, atomic generated-file writes,
-  and the `providers refresh` CLI are not ported, so the module is Partial.
+- Rust provider refresh converts and filters OpenRouter/OpenAI catalogs,
+  performs fixed-endpoint HTTPS retrieval with header-only keys, reports
+  report-only deprecations, and atomically writes generated catalogs without
+  touching the manual registry. Offline model and payload conversion, bounded
+  transport, and generated-file behavior have Rust tests. Full exception and
+  CLI-output parity plus live OpenAI visibility validation remain outstanding,
+  so the module is Partial.
 - Rust reliability currently summarizes load/soak results and drives bounded
   HTTP load against an already-running server. It does not yet own server
   startup/shutdown, arbitrary Python request factories, or complete transport

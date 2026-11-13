@@ -28,6 +28,9 @@ cap-std = "=3.4.4"
 fs_at = "=0.2.1"
 chrono = { version = "0.4.38", default-features = false, features = ["clock"] }
 
+[dev-dependencies]
+tempfile = "=3.13.0"
+
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "=0.59.0", features = ["Win32_Foundation", "Win32_Storage_FileSystem"] }
 

@@ -24,10 +24,11 @@ All notable changes to AgentRouter OS. Format loosely follows
   supported entry point while Rust integration parity continues.
 - Exercise the Python SDK against the Rust HTTP process for authenticated
   requests, routing, feedback, decision lookup, and dry-run responses.
-- Add offline Rust provider-catalog mapping for OpenRouter and OpenAI family
-  metadata, with Python/Rust comparisons for full model records, price tiers,
-  payload filtering, and skipped-entry warnings. Network refresh and generated
-  catalog writes remain Python-owned.
+- Add Rust provider-catalog conversion and bounded live refresh for OpenRouter
+  and OpenAI, with Python/Rust comparisons for model records, price tiers,
+  filtering, warnings, and catalog persistence. Redirects are disabled, API
+  keys stay in request headers, response bodies are capped, and manual model
+  registries remain untouched.
 - Add a Rust reliability crate for bounded loopback load runs and soak reports,
   with Python/Rust checks for result summaries and request-ID handling. The
   Python server lifecycle and arbitrary request factory remain Python-owned.

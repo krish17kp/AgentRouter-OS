@@ -13,7 +13,7 @@ use std::process::Command;
 use agentrouter_registry::{load_all_models, load_providers, ModelEntry};
 
 fn usage() -> &'static str {
-    "usage: agentrouter <init|route|explain|feedback|stats|prompt|registry|providers|hosts|models|doctor|dashboard|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  stats [--json]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  dashboard [port]\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
+    "usage: agentrouter <init|route|explain|feedback|stats|prompt|registry|providers|hosts|models|doctor|dashboard|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  stats [--json]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  dashboard [port]\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
 }
 
 fn home() -> Result<PathBuf, String> {
@@ -486,6 +486,136 @@ fn providers_doctor(home: &Path) -> Result<i32, String> {
     }
 }
 
+fn providers_refresh(home: &Path, args: &[String]) -> Result<i32, String> {
+    let mut provider = None;
+    let mut limit = 25_usize;
+    let mut match_id = None;
+    let mut dry_run = false;
+    let mut rest = args.iter();
+    while let Some(arg) = rest.next() {
+        match arg.as_str() {
+            "--limit" => {
+                limit = rest
+                    .next()
+                    .ok_or("--limit needs a positive integer")?
+                    .parse::<usize>()
+                    .map_err(|_| "--limit needs a positive integer")?;
+                if limit == 0 {
+                    return Err("--limit needs a positive integer".to_owned());
+                }
+            }
+            "--match" => match_id = Some(rest.next().ok_or("--match needs text")?.clone()),
+            "--dry-run" => dry_run = true,
+            value if !value.starts_with('-') && provider.is_none() => {
+                provider = Some(value.to_owned())
+            }
+            _ => {
+                return Err(
+                    "usage: agentrouter providers refresh [openrouter|openai] [--limit N] [--match TEXT] [--dry-run]"
+                        .to_owned(),
+                )
+            }
+        }
+    }
+    let provider = provider.unwrap_or_else(|| "openrouter".to_owned());
+    let supported = ["openrouter", "openai"];
+    if !supported.contains(&provider.as_str()) {
+        eprintln!("Provider '{provider}' is not refreshable in this build.");
+        eprintln!(
+            "Why: only these adapters have live refresh: {}.",
+            supported.join(", ")
+        );
+        eprintln!(
+            "Next: agentrouter providers refresh openrouter, or edit {} by hand.",
+            home.join("registry").join("models.yaml").display()
+        );
+        return Ok(2);
+    }
+    let registry = home.join("registry");
+    if !registry.is_dir() {
+        eprintln!("Registry directory not found: {}", registry.display());
+        eprintln!("Why: refresh writes next to your manual registry.");
+        eprintln!("Next: run agentrouter init first.");
+        return Ok(3);
+    }
+    let key_env = if provider == "openai" {
+        "OPENAI_API_KEY"
+    } else {
+        "OPENROUTER_API_KEY"
+    };
+    let key_present = env::var(key_env).is_ok_and(|key| !key.is_empty());
+    if key_present {
+        println!("auth: using {key_env} from environment");
+    } else if provider == "openrouter" {
+        println!("auth: no {key_env} set - using the public catalog endpoint");
+    } else {
+        println!("auth: no {key_env} set");
+    }
+    let result = match agentrouter_cli::providers::fetch_catalog(
+        &provider,
+        limit,
+        match_id.as_deref(),
+    ) {
+        Ok(result) => result,
+        Err(error) => {
+            eprintln!("Refresh failed: {error}");
+            eprintln!(
+                "Why: the live catalog could not be fetched or parsed; your registry was NOT modified."
+            );
+            eprintln!(
+                "Next: check your network, retry later, or keep using the manual registry (models.yaml) - routing works without refresh."
+            );
+            return Ok(1);
+        }
+    };
+    for warning in &result.warnings {
+        eprintln!("warning: {warning}");
+    }
+    println!("Fetched {} models from {}:", result.entries.len(), provider);
+    for entry in &result.entries {
+        println!(
+            "  {:<52} ctx {:>9}  {}",
+            entry.key(),
+            entry.context_window,
+            format!("{:?}", entry.pricing_tier).to_lowercase()
+        );
+    }
+    let previous = agentrouter_cli::providers::previous_model_ids(&registry, &provider);
+    let current = result
+        .entries
+        .iter()
+        .map(|entry| entry.model_id.clone())
+        .collect::<std::collections::HashSet<_>>();
+    let deprecations = agentrouter_registry::catalog_ops::deprecations(&previous, &current);
+    if !deprecations.is_empty() {
+        println!(
+            "\n{} candidate deprecation(s) — in the previous generated catalog but not in this fetch (reported only; nothing is deleted):",
+            deprecations.len()
+        );
+        for model_id in &deprecations {
+            println!("  {model_id}");
+        }
+    }
+    if dry_run {
+        println!("\nDry run - nothing written.");
+        return Ok(0);
+    }
+    let path = agentrouter_cli::providers::write_generated_catalog(
+        &registry,
+        &provider,
+        result.source_url,
+        &result.entries,
+        limit,
+        match_id.as_deref(),
+    )?;
+    println!("\nWrote {}", path.display());
+    println!(
+        "Manual models.yaml is untouched and wins on collision. Delete models.{provider}.generated.yaml to revert."
+    );
+    println!("Next: agentrouter registry list");
+    Ok(0)
+}
+
 fn run() -> Result<i32, String> {
     let mut args = env::args().skip(1);
     let Some(command) = args.next() else {
@@ -571,6 +701,7 @@ fn run() -> Result<i32, String> {
                 [home.to_string_lossy().into_owned()],
             ),
             Some("doctor") if tail.len() == 1 => providers_doctor(&home),
+            Some("refresh") => providers_refresh(&home, &tail[1..]),
             Some("rollback") if tail.len() == 2 => providers_rollback(&home, &tail[1]),
             Some("restore") if tail.len() == 2 => providers_restore(&home, &tail[1]),
             _ => Err(
