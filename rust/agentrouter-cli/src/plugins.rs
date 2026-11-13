@@ -241,17 +241,14 @@ fn open_existing_directory(
 }
 
 fn cap_metadata_is_link_or_reparse(metadata: &cap_std::fs::Metadata) -> bool {
-    if metadata.file_type().is_symlink() {
-        return true;
-    }
     #[cfg(windows)]
     {
         use cap_std::fs::MetadataExt;
-        metadata.file_attributes() & 0x400 != 0
+        metadata.file_type().is_symlink() || metadata.file_attributes() & 0x400 != 0
     }
     #[cfg(not(windows))]
     {
-        false
+        metadata.file_type().is_symlink()
     }
 }
 

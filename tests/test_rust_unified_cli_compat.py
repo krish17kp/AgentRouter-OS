@@ -417,7 +417,7 @@ def test_unified_execute_never_runs_high_risk_decisions(tmp_path, unified_binary
 
 
 def test_unknown_or_unported_command_fails_with_usage(unified_binary):
-    result = _run(unified_binary, "plugin")
+    result = _run(unified_binary, "unknown-command")
     assert result.returncode == 2
     assert "not-yet-ported" in result.stderr
     assert "dataset" in result.stderr
