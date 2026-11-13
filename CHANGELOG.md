@@ -35,6 +35,10 @@ All notable changes to AgentRouter OS. Format loosely follows
   artifact writers, to the Rust evaluation crate. Full gold-set differential
   tests preserve the historical diagnostic scope; canonical release gates are
   unchanged.
+- Add Rust `dataset` commands for blinded annotation packs, resumable human
+  labeling, progress/export, disagreement-only adjudication, leakage-checked
+  split builds, and development-set comparison. The command records only
+  explicit human input and does not generate labels.
 - Port the HTTP service business layer to `agentrouter-api` for model/host
   listing, classification, routing, decision lookup, feedback, and dry-run
   previews. It depends directly on routing, host, registry, classifier, and

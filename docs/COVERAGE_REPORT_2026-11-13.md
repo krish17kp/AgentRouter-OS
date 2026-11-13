@@ -13,7 +13,7 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 2,035 passed, 5 skipped |
+| Python regression | 2,039 passed, 5 skipped |
 | Line coverage | 92.49% (6,628 / 7,166 statements) |
 | Branch coverage | 87.61% (1,845 / 2,106 branch outcomes) |
 | Combined coverage reported by pytest-cov | 91.38% |

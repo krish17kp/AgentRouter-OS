@@ -38,7 +38,7 @@ fn runtime_environment(root: &Path) -> Value {
 }
 
 fn usage() -> &'static str {
-    "usage: agentrouter-evaluate <legacy-gold|routing-gold|list-datasets|validate-dataset|run|report|compare|prepare|status|context-band-generalization> [options]"
+    "usage: agentrouter-evaluate <legacy-gold|routing-gold|dataset|list-datasets|validate-dataset|run|report|compare|prepare|status|context-band-generalization> [options]"
 }
 
 fn parse_flag(args: &mut impl Iterator<Item = String>, flag: &str) -> Result<String, String> {
@@ -345,6 +345,7 @@ fn run() -> Result<i32, String> {
     match command.as_str() {
         "legacy-gold" => legacy_gold(args),
         "routing-gold" => routing_gold(args),
+        "dataset" => agentrouter_evaluation::annotation_cli::run(args),
         "list-datasets" => {
             let json_output = args.any(|arg| arg == "--json");
             list_datasets(json_output)

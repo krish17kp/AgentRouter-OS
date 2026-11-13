@@ -6,6 +6,7 @@
 
 pub mod annotation_api;
 pub mod annotation_candidates;
+pub mod annotation_cli;
 pub mod annotation_compare;
 pub mod annotation_dedup;
 pub mod annotation_graph_signals;

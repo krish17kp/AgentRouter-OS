@@ -18,7 +18,7 @@ release authority until the full set is complete.
 | `agentrouter/annotation/__init__.py` | `agentrouter-evaluation::annotation_api` | Parity |
 | `agentrouter/annotation/adjudicate.py` | `agentrouter-evaluation::{annotation_needs_adjudication,resolve_annotation}` | Parity |
 | `agentrouter/annotation/candidates.py` | `agentrouter-evaluation::annotation_candidates` | Parity |
-| `agentrouter/annotation/cli.py` | `—` | Not ported |
+| `agentrouter/annotation/cli.py` | `agentrouter-evaluation::annotation_cli` (`agentrouter-evaluate dataset`) | Partial |
 | `agentrouter/annotation/compare.py` | `agentrouter-evaluation::annotation_compare` | Parity |
 | `agentrouter/annotation/dedup.py` | `agentrouter-evaluation::annotation_dedup` | Parity |
 | `agentrouter/annotation/graph_signals.py` | `agentrouter-evaluation::annotation_graph_signals` | Parity |
