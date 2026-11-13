@@ -14,7 +14,7 @@ release authority until the full set is complete.
 | Python module | Rust counterpart | Status |
 |---|---|---|
 | `agentrouter/__init__.py` | `agentrouter-core::package_version` | Parity |
-| `agentrouter/__main__.py` | `—` | Not ported |
+| `agentrouter/__main__.py` | `agentrouter-cli::bin::agentrouter` | Partial |
 | `agentrouter/annotation/__init__.py` | `agentrouter-evaluation::annotation_api` | Parity |
 | `agentrouter/annotation/adjudicate.py` | `agentrouter-evaluation::{annotation_needs_adjudication,resolve_annotation}` | Parity |
 | `agentrouter/annotation/candidates.py` | `agentrouter-evaluation::annotation_candidates` | Parity |
@@ -29,7 +29,7 @@ release authority until the full set is complete.
 | `agentrouter/bundle.py` | `agentrouter-cli::bundle` | Partial |
 | `agentrouter/catalog_ops.py` | `agentrouter-registry::catalog_ops` | Partial |
 | `agentrouter/classifier.py` | `agentrouter-classifier` | Parity |
-| `agentrouter/cli.py` | `agentrouter-cli probes` | Partial |
+| `agentrouter/cli.py` | `agentrouter-cli::bin::agentrouter` plus command modules | Partial |
 | `agentrouter/context_model.py` | `agentrouter-classifier::context_model` | Parity |
 | `agentrouter/contract.py` | `—` | Not ported |
 | `agentrouter/controls.py` | `agentrouter-policy::controls` | Parity |

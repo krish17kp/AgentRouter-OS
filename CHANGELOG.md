@@ -39,6 +39,10 @@ All notable changes to AgentRouter OS. Format loosely follows
   labeling, progress/export, disagreement-only adjudication, leakage-checked
   split builds, and development-set comparison. The command records only
   explicit human input and does not generate labels.
+- Add a unified Rust `agentrouter` executable that dispatches migrated init,
+  route, explain, feedback, prompt, registry, provider status, host/model
+  inspection, doctor, dashboard, and dataset commands. Python CLI commands
+  without Rust implementations remain explicit migration gaps.
 - Port the HTTP service business layer to `agentrouter-api` for model/host
   listing, classification, routing, decision lookup, feedback, and dry-run
   previews. It depends directly on routing, host, registry, classifier, and
