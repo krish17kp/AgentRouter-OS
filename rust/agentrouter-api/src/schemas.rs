@@ -16,7 +16,7 @@ pub const MAX_PREFER_CHARS: usize = 200;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ClassifyRequest {
     pub task: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::pydantic::optional_i64")]
     pub context_tokens: Option<i64>,
     #[serde(default)]
     pub risk: Option<Level>,
@@ -62,6 +62,7 @@ pub struct RouteRequest {
     #[serde(default)]
     pub prefer: Option<String>,
     #[serde(default)]
+    #[serde(deserialize_with = "crate::pydantic::boolean")]
     pub no_log: bool,
 }
 
@@ -85,6 +86,7 @@ impl RouteRequest {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FeedbackRequest {
     pub decision_id: String,
+    #[serde(deserialize_with = "crate::pydantic::i64")]
     pub rating: i64,
     #[serde(default)]
     pub note: Option<String>,

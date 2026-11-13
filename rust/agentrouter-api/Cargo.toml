@@ -14,3 +14,7 @@ serde_json = "1.0.128"
 [[bin]]
 name = "api_request_from_json"
 path = "src/bin/api_request_from_json.rs"
+
+[[bin]]
+name = "api_response_from_json"
+path = "src/bin/api_response_from_json.rs"

@@ -85,7 +85,7 @@ release authority until the full set is complete.
 | `agentrouter/server/__init__.py` | `agentrouter-evaluation::package_markers::SERVER_PUBLIC_EXPORTS` | Parity |
 | `agentrouter/server/app.py` | `—` | Not ported |
 | `agentrouter/server/limits.py` | `agentrouter-cli::limits` | Partial |
-| `agentrouter/server/schemas.py` | `agentrouter-api::schemas` | Partial |
+| `agentrouter/server/schemas.py` | `agentrouter-api::{schemas,responses}` | Partial |
 | `agentrouter/server/service.py` | `—` | Not ported |
 | `agentrouter/store.py` | `agentrouter-storage` | Partial |
 | `agentrouter/taxonomy.py` | `agentrouter-policy::taxonomy` | Parity |
@@ -140,10 +140,11 @@ release authority until the full set is complete.
   optional API-key header, timeout configuration and structured HTTP errors.
   The local HTTP server and end-to-end client/server contract remain
   Python-only; redirects are disabled so a key cannot be forwarded elsewhere.
-- The Rust API crate now validates classify, route, feedback and dry-run
-  requests against the Python field bounds. Request coercion, response
-  passthrough types, middleware and server lifecycle remain unported, so the
-  HTTP schema module is Partial.
+- The Rust API crate now ports classify, route, feedback and dry-run request
+  bounds, typed response models, and passthrough envelopes that preserve
+  engine-owned fields. Differential checks cover supported Pydantic boolean and
+  integer coercions; Python's unbounded integer range, middleware and the server
+  lifecycle remain unported, so the HTTP schema module is Partial.
 - Performance scoring and classification/routing timing now run in Rust for
   caller-supplied models and tasks. Seed loading and injected classifier
   behavior remain Python-side; latency values are machine-dependent.

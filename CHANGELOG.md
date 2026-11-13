@@ -6,6 +6,8 @@ All notable changes to AgentRouter OS. Format loosely follows
 ## [Unreleased]
 
 ### Changed
+- Extend `agentrouter-api` with typed and passthrough response models, plus
+  Pydantic-compatible boolean and integer coercion for supported Rust ranges.
 - Add an `agentrouter-api` Rust crate for classify, route, feedback and dry-run
   request validation, with Python/Rust checks for valid payloads, ignored extra
   fields, and field bounds.
