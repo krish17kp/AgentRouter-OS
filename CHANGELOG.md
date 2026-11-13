@@ -6,6 +6,9 @@ All notable changes to AgentRouter OS. Format loosely follows
 ## [Unreleased]
 
 ### Changed
+- Add an `agentrouter-api` Rust crate for classify, route, feedback and dry-run
+  request validation, with Python/Rust checks for valid payloads, ignored extra
+  fields, and field bounds.
 - Make Rust classification deserialization reject unknown fields like the
   Python Pydantic schema, with a cross-language round-trip and rejection test.
 - Add the Rust local-service SDK client for health, readiness, models, hosts,

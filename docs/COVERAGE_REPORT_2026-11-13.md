@@ -13,7 +13,7 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 1,960 passed, 4 skipped |
+| Python regression | 1,973 passed, 4 skipped |
 | Line coverage | 92.45% (6,625 / 7,166 statements) |
 | Branch coverage | 87.56% (1,844 / 2,106 branch outcomes) |
 | Combined coverage reported by pytest-cov | 91.34% |
@@ -30,8 +30,12 @@ boolean and integer coercion, underscore-separated and integral-decimal
 integer strings, underscore datetime separators, numeric Unix timestamp
 rounding, leap-second rejection, and invalid-input rejection. An additional
 40-value Python/Rust timestamp corpus has no output or acceptance mismatch.
-The release suite also exercises Rust fixed-window rate limiting, idempotency
-cache expiry, and response replay fields against the Python server primitives.
+The release suite also exercises the new Rust HTTP request-schema crate against
+Pydantic for supported bounds, defaults, and unknown-field behavior. Scalar
+coercion, response passthrough types, middleware, and the Rust server lifecycle
+remain partial. The release suite also exercises Rust fixed-window rate limiting,
+idempotency cache expiry, and response replay fields against the Python server
+primitives.
 Catalog operation checks compare provenance, freshness summaries, sorted
 generated-catalog listing, deprecations, and rollback/restore against Python;
 Rust safety checks cover linked paths and no-clobber restoration. The Rust SDK

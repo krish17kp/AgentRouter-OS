@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "rust/agentrouter-core",
+    "rust/agentrouter-api",
     "rust/agentrouter-registry",
     "rust/agentrouter-classifier",
     "rust/agentrouter-policy",

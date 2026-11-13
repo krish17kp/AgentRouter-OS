@@ -4,10 +4,10 @@ Updated: 2026-11-13
 
 ## Definition of done
 
-- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PRs #27–#33 are merged; PR #16 is the sole open PR and remains blocked by the frozen context-band gate (0.6667 < 0.90). Catalog and SDK platform checks pass through `4307c8e`; only the frozen promotion gate fails and live smoke skips without credentials.
+- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PRs #27–#33 are merged; PR #16 is the sole open PR and remains blocked by the frozen context-band gate (0.6667 < 0.90). All completed jobs for pushed head `ca6a0d0` pass except the promotion gate; live smoke skips without credentials. TASK-065 is locally green and awaits hosted checks after push.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md); current gaps are explicit, and only modules with full-module differential tests are marked parity (35 modules meet that bar after TASK-051).
-- [x] Full Python suite: 1,960 passed, 4 skipped; 92.45% line (6,625/7,166), 87.56% branch (1,844/2,106), and 91.34% combined coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; exact evidence is in `docs/COVERAGE_REPORT_2026-11-13.md`.
+- [x] Full Python suite: 1,973 passed, 4 skipped; 92.45% line (6,625/7,166), 87.56% branch (1,844/2,106), and 91.34% combined coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; exact evidence is in `docs/COVERAGE_REPORT_2026-11-13.md`.
 - [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations; the Rust release benchmark now runs the same 10/100/1,000 candidate fleets, with a paired local p50 ratio of 2.70×–3.25× under stated synthetic conditions.
 - [x] Changelog, coverage evidence, and local latency measurements are committed to the release candidate. Candidate package version is now `0.5.0rc1`, with draft release notes in `docs/RELEASE_NOTES_v0.5.0rc1.md`; final `0.5.0` packaging and publication remain blocked on parity and all release gates.
 - [ ] Release candidate promoted to `main` with a tagged release.
@@ -72,6 +72,7 @@ Updated: 2026-11-13
 - [x] TASK-062 extends Rust catalog operations with summaries, generated-catalog listing, rollback, and restore. Eight Python/Rust compatibility tests, nine focused Rust tests, and the expanded full Python suite pass; workspace tests, Clippy, Ruff, and formatting pass locally. Linux/macOS/Windows CI passes on `998efa2`; typed Python `CatalogError` and remaining error-shape parity keep the module Partial.
 - [x] TASK-063 adds the Rust local-service SDK client for all Python SDK endpoints, with typed request options, optional API-key auth, null-field cleanup, structured HTTP errors and redirects disabled. Three local HTTP fixture tests and Linux/macOS/Windows Rust/Python CI pass; complete client/server end-to-end parity remains open because the Rust server is not yet ported.
 - [x] TASK-064 makes Rust classification deserialization reject unknown fields like Pydantic and adds a direct JSON round-trip/rejection probe; the Python/Rust schema differential test passes. Unbounded Python integer and scalar coercion parity remain open, so `schema.py` stays Partial.
+- [x] TASK-065 adds Rust classify, route, feedback and dry-run HTTP request schemas with field-bound validation. Three Rust tests, 13 Python/Rust compatibility cases, the full Python regression, Rust workspace tests, and workspace Clippy pass locally; field coercion, response passthrough types, HTTP middleware and the server lifecycle remain open, so `server/schemas.py` stays Partial. Hosted checks are pending.
 - [ ] TASK-056 adds the `agentrouter-evaluate` Rust CLI for listing/validating datasets, running fixture profiles, writing/rendering/comparing reports, availability, explicit external prepare blockers, and context-band generalization. Four smoke/differential tests pass. The Rust command does not yet replace the Python `agentrouter evaluate` surface or load real datasets, so CLI module parity remains Partial.
 - [x] PR #31 upgraded bundled SQLite to 3.54.1, replaced `unsafe-libyaml`, and raised the Rust minimum to 1.89; workspace tests, Clippy, security audit, and cross-platform CI passed before merge at `a246cf6`.
 - [x] Website product-truth fixes, font hierarchy/motion redesign, unused shadcn CLI removal, server limits/API tests, and website lint/build CI merged via PR #27. npm build/lint and production dependency audit passed; full npm audit still reports moderate dev-tool advisories.
@@ -94,12 +95,15 @@ pass; the 60abded Windows full-suite run failed only on native path separator
 formatting in the new catalog status assertion, now corrected locally. Its
 promotion-only gate also fails on context-band 0.6667 < 0.90, and live smoke is
 skipped without credentials. The full local regression now passes:
-1,960 passed, 4 skipped; 92.45% line, 87.56% branch, and 91.34% combined
+1,973 passed, 4 skipped; 92.45% line, 87.56% branch, and 91.34% combined
 coverage. The Rust workspace tests, workspace Clippy, Rust formatting, Ruff,
 and Python formatting pass locally. The annotation schema suite passes 49
 focused differential tests, and the additional timestamp corpus has zero
-mismatches. Hosted cross-platform CI for the latest pushed head is green across
-Linux, Windows, and macOS; release promotion remains held by the frozen gate.
+mismatches. Hosted checks for pushed head `ca6a0d0` pass across Linux, Windows,
+and macOS, including Python/Rust compatibility, security scan, mutation,
+package, and site jobs; its promotion gate fails only on the frozen
+context-band score, and live smoke skips without credentials. TASK-065 is a
+later local change and awaits hosted checks after push.
 PR #16 remains promotion-blocked by the unchanged frozen
 context-band result and the human annotation requirement.
 
