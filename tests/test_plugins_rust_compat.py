@@ -282,7 +282,7 @@ def test_rust_ownership_state_disk_reader_matches_python(tmp_path):
     assert rust_read()["accepted"] is False
 
 
-def _rust_plugin_list() -> subprocess.CompletedProcess[str]:
+def _rust_plugin_command(*args: str) -> subprocess.CompletedProcess[str]:
     repository = Path(__file__).resolve().parents[1]
     return subprocess.run(
         [
@@ -295,8 +295,7 @@ def _rust_plugin_list() -> subprocess.CompletedProcess[str]:
             "--bin",
             "agentrouter",
             "--",
-            "plugin",
-            "list",
+            *args,
         ],
         cwd=repository,
         capture_output=True,
@@ -305,6 +304,14 @@ def _rust_plugin_list() -> subprocess.CompletedProcess[str]:
         timeout=120,
         check=False,
     )
+
+
+def _rust_plugin_list() -> subprocess.CompletedProcess[str]:
+    return _rust_plugin_command("plugin", "list")
+
+
+def _rust_plugin_doctor() -> subprocess.CompletedProcess[str]:
+    return _rust_plugin_command("plugin", "doctor", "--json")
 
 
 def _expected_plugin_list() -> str:
@@ -345,4 +352,53 @@ def test_rust_plugin_list_reports_linked_destinations_as_blocked(tmp_path, monke
     assert process.returncode == 0, process.stderr
     assert process.stdout == _expected_plugin_list()
     assert "[blocked]" in process.stdout
+    assert outside.read_text(encoding="utf-8") == "leave unchanged"
+
+
+def test_rust_plugin_doctor_matches_python_through_install_and_corrupt_state(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path))
+
+    def assert_doctor_matches_python(expected_code):
+        findings = plugins.diagnose_all()
+        expected = {"status": plugins.worst_status(findings), "findings": findings}
+        process = _rust_plugin_doctor()
+        assert process.returncode == expected_code, process.stderr
+        assert json.loads(process.stdout) == expected
+
+    assert_doctor_matches_python(2)
+    plugin = plugins.get_plugin("codex")
+    destination = plugins.dest_root(plugin) / plugin.files[0].dest
+    destination.parent.mkdir(parents=True)
+    destination.write_bytes(plugins._src_bytes(plugin.files[0].src))
+    assert_doctor_matches_python(2)
+
+    destination.write_text("user-authored plugin guidance", encoding="utf-8")
+    assert_doctor_matches_python(2)
+
+    destination.unlink()
+    plugins.install(plugin)
+    plugins.install(plugins.get_plugin("claude-code"))
+    assert_doctor_matches_python(0)
+
+    plugins._state_path(plugins.dest_root(plugin), plugin).write_bytes(b"corrupt state")
+    assert_doctor_matches_python(1)
+
+
+def test_rust_plugin_doctor_matches_python_for_unsafe_destinations(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path))
+    plugin = plugins.get_plugin("claude-code")
+    destination = plugins.dest_root(plugin) / plugin.files[0].dest
+    destination.parent.mkdir(parents=True)
+    outside = tmp_path / "outside.md"
+    outside.write_text("leave unchanged", encoding="utf-8")
+    try:
+        destination.symlink_to(outside)
+    except OSError:
+        pytest.skip("symlink creation is unavailable")
+
+    findings = plugins.diagnose_all()
+    expected = {"status": plugins.worst_status(findings), "findings": findings}
+    process = _rust_plugin_doctor()
+    assert process.returncode == 1, process.stderr
+    assert json.loads(process.stdout) == expected
     assert outside.read_text(encoding="utf-8") == "leave unchanged"

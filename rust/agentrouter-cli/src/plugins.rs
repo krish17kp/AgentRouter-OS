@@ -11,6 +11,9 @@ use std::time::SystemTime;
 
 use sha2::Digest;
 
+const CLAUDE_SOURCE: &str = "claude-code/agentrouter/SKILL.md";
+const CODEX_SOURCE: &str = "codex/AGENTS.md";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PluginFile {
     pub src: &'static str,
@@ -195,6 +198,289 @@ pub fn status(plugin: &PluginSpec, root: &Path) -> &'static str {
     }
 }
 
+/// Diagnose plugin installation state without changing host files.
+pub fn diagnose(plugin: &PluginSpec, root: &Path) -> Vec<serde_json::Value> {
+    let mut findings = Vec::new();
+    let host_parent_exists = match root.parent().map(path_entry_exists) {
+        Some(Ok(exists)) => exists,
+        Some(Err(_)) | None => {
+            findings.push(diagnose_failure(plugin));
+            return findings;
+        }
+    };
+    let root_exists = match path_entry_exists(root) {
+        Ok(exists) => exists,
+        Err(_) => {
+            findings.push(diagnose_failure(plugin));
+            return findings;
+        }
+    };
+    if !host_parent_exists && !root_exists {
+        findings.push(serde_json::json!({
+            "plugin": plugin.name,
+            "check": "host-root",
+            "status": "attention",
+            "summary": format!("the host directory {} does not exist yet", root.display()),
+            "remedy": format!("it is created on install: agentrouter plugin install {}", plugin.name),
+        }));
+    }
+
+    let transaction = format!(".agentrouter-state/{}.txn.json", plugin.name);
+    match relative_entry_exists(root, &transaction) {
+        Ok(true) => findings.push(serde_json::json!({
+            "plugin": plugin.name,
+            "check": "transaction",
+            "status": "attention",
+            "summary": "a previous install or uninstall did not finish",
+            "remedy": format!("re-run it to recover: agentrouter plugin install {}", plugin.name),
+        })),
+        Ok(false) => {}
+        Err(_) => {
+            findings.push(diagnose_failure(plugin));
+            return findings;
+        }
+    }
+
+    let state_relative = format!(".agentrouter-state/{}.json", plugin.name);
+    let state_exists = match relative_entry_exists(root, &state_relative) {
+        Ok(exists) => exists,
+        Err(_) => {
+            findings.push(diagnose_failure(plugin));
+            return findings;
+        }
+    };
+    let state = match read_state(root, plugin) {
+        Ok(state) => state,
+        Err(_) if state_exists => {
+            let state_path = root
+                .join(".agentrouter-state")
+                .join(format!("{}.json", plugin.name));
+            findings.push(serde_json::json!({
+                "plugin": plugin.name,
+                "check": "ownership",
+                "status": "blocked",
+                "summary": "the ownership record is unusable (PluginError)",
+                "remedy": format!(
+                    "AgentRouter will not delete files it cannot prove it owns. Remove {} only if you are content to manage these files by hand afterwards.",
+                    state_path.display()
+                ),
+            }));
+            return findings;
+        }
+        Err(_) => {
+            findings.push(diagnose_failure(plugin));
+            return findings;
+        }
+    };
+
+    for file in plugin.files {
+        if let Err(error) = check_link_components(root, file.dest) {
+            findings.push(serde_json::json!({
+                "plugin": plugin.name,
+                "check": "destination",
+                "status": "blocked",
+                "summary": format!("cannot inspect the destination: {error}"),
+                "remedy": "resolve the path above, then re-run this check",
+            }));
+            return findings;
+        }
+    }
+
+    for file in plugin.files {
+        let destination = root.join(file.dest);
+        let state_entry = state
+            .as_ref()
+            .and_then(|loaded| loaded.value.get("files"))
+            .and_then(serde_json::Value::as_object)
+            .and_then(|files| files.get(file.dest));
+        let expected = match bundled_contents(file.src) {
+            Some(bytes) => bytes,
+            None => {
+                findings.push(diagnose_failure(plugin));
+                return findings;
+            }
+        };
+        let expected_digest = format!("{:x}", sha2::Sha256::digest(expected));
+        let action = match read_relative_file(root, file.dest) {
+            Ok(None) => "create",
+            Ok(Some(actual)) => {
+                let actual_digest = format!("{:x}", sha2::Sha256::digest(&actual.bytes));
+                let owned = state_entry.is_some_and(|entry| {
+                    matches!(
+                        entry.get("disposition").and_then(serde_json::Value::as_str),
+                        Some("created" | "replaced")
+                    ) && entry
+                        .get("installed_sha256")
+                        .and_then(serde_json::Value::as_str)
+                        == Some(actual_digest.as_str())
+                        && entry.get("installed_identity")
+                            == Some(&serde_json::json!([actual.identity.0, actual.identity.1]))
+                });
+                if owned && actual_digest == expected_digest {
+                    "skip (identical, managed)"
+                } else if actual.bytes == expected {
+                    "adopt identical legacy installation (managed)"
+                } else {
+                    "overwrite (backup first)"
+                }
+            }
+            Err(_) => "blocked (not a safe regular file)",
+        };
+        let (severity, summary, remedy) = diagnosis_for_action(action, plugin.name);
+        findings.push(serde_json::json!({
+            "plugin": plugin.name,
+            "check": "file",
+            "status": severity,
+            "dest": destination,
+            "summary": summary,
+            "remedy": remedy,
+        }));
+    }
+    findings
+}
+
+fn diagnose_failure(plugin: &PluginSpec) -> serde_json::Value {
+    serde_json::json!({
+        "plugin": plugin.name,
+        "check": "diagnose",
+        "status": "blocked",
+        "summary": "the check itself failed (PluginError)",
+        "remedy": "this is a bug in the diagnostic; report it",
+    })
+}
+
+fn diagnosis_for_action(action: &str, plugin_name: &str) -> (&'static str, String, Option<String>) {
+    match action {
+        "create" => (
+            "attention",
+            "not installed".to_owned(),
+            Some(format!("run: agentrouter plugin install {plugin_name}")),
+        ),
+        "skip (identical, managed)" => (
+            "ok",
+            "installed and unmodified".to_owned(),
+            None,
+        ),
+        "adopt identical legacy installation (managed)" => (
+            "attention",
+            "an identical copy is already here but is not recorded as ours".to_owned(),
+            Some(format!(
+                "it is byte-for-byte the shipped file, so adopting it changes nothing on disk: agentrouter plugin install {plugin_name} --adopt-identical"
+            )),
+        ),
+        "overwrite (backup first)" => (
+            "attention",
+            "a different file is at this path — either your edit of ours, or your own".to_owned(),
+            Some(format!(
+                "it is left alone. To install the shipped version over it: agentrouter plugin install {plugin_name} --force  (the existing file is backed up)"
+            )),
+        ),
+        _ => (
+            "blocked",
+            "the destination is not a plain file (link, reparse point, or extra hard link)"
+                .to_owned(),
+            Some("inspect it yourself and move it aside; AgentRouter will not write through it".to_owned()),
+        ),
+    }
+}
+
+fn bundled_contents(source: &str) -> Option<&'static [u8]> {
+    match source {
+        CLAUDE_SOURCE => Some(include_bytes!(
+            "../../../agentrouter/integrations/claude-code/agentrouter/SKILL.md"
+        )),
+        CODEX_SOURCE => Some(include_bytes!(
+            "../../../agentrouter/integrations/codex/AGENTS.md"
+        )),
+        _ => None,
+    }
+}
+
+fn path_entry_exists(path: &Path) -> Result<bool, String> {
+    match std::fs::symlink_metadata(path) {
+        Ok(_) => Ok(true),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(format!(
+            "could not check whether {} exists: {error}",
+            path.display()
+        )),
+    }
+}
+
+fn check_link_components(root: &Path, relative: &str) -> Result<(), String> {
+    let parts = safe_relative(relative, "plugin destination")?;
+    let mut current = root.to_path_buf();
+    check_component(&current)?;
+    for part in parts {
+        current.push(part);
+        check_component(&current)?;
+    }
+    Ok(())
+}
+
+fn check_component(path: &Path) -> Result<(), String> {
+    match std::fs::symlink_metadata(path) {
+        Ok(metadata) if super::is_link_or_reparse(&metadata) => Err(format!(
+            "unsafe destination contains a link or reparse point: {}",
+            path.display()
+        )),
+        Ok(_) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(format!("could not inspect {}: {error}", path.display())),
+    }
+}
+
+fn relative_entry_exists(root: &Path, relative: &str) -> Result<bool, String> {
+    let parts = safe_relative(relative, "plugin destination")?;
+    let Some((filename, directories)) = parts.split_last() else {
+        return Ok(false);
+    };
+    let root_file = match std::fs::symlink_metadata(root) {
+        Ok(metadata) if !super::is_link_or_reparse(&metadata) && metadata.is_dir() => {
+            super::open_safe_home(root)?
+        }
+        Ok(_) => return Err("plugin root is not a safe directory".to_owned()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(error) => return Err(format!("could not inspect plugin root: {error}")),
+    };
+    let mut parent = cap_std::fs::Dir::from_std_file(root_file);
+    for part in directories {
+        let Some(directory) = open_existing_directory(&parent, part)? else {
+            return Ok(false);
+        };
+        parent = cap_std::fs::Dir::from_std_file(directory);
+    }
+    match parent.symlink_metadata(filename) {
+        Ok(_) => Ok(true),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(format!("could not inspect plugin path: {error}")),
+    }
+}
+
+fn read_relative_file(root: &Path, relative: &str) -> Result<Option<VerifiedFile>, String> {
+    let parts = safe_relative(relative, "plugin destination")?;
+    let Some((filename, directories)) = parts.split_last() else {
+        return Ok(None);
+    };
+    let root_file = match std::fs::symlink_metadata(root) {
+        Ok(metadata) if !super::is_link_or_reparse(&metadata) && metadata.is_dir() => {
+            super::open_safe_home(root)?
+        }
+        Ok(_) => return Err("plugin root is not a safe directory".to_owned()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(format!("could not inspect plugin root: {error}")),
+    };
+    let mut parent = cap_std::fs::Dir::from_std_file(root_file);
+    for part in directories {
+        let Some(directory) = open_existing_directory(&parent, part)? else {
+            return Ok(None);
+        };
+        parent = cap_std::fs::Dir::from_std_file(directory);
+    }
+    let path = root.join(relative);
+    read_verified_file_at(&parent, filename, &path)
+}
+
 fn safe_path_exists(root: &cap_std::fs::Dir, relative: &str) -> Result<bool, String> {
     let parts = safe_relative(relative, "plugin destination")?;
     let Some((filename, directories)) = parts.split_last() else {
@@ -293,17 +579,17 @@ pub fn read_state(root: &Path, plugin: &PluginSpec) -> Result<Option<LoadedState
     let state_dir = cap_std::fs::Dir::from_std_file(state_dir);
     let filename = format!("{}.json", plugin.name);
     let path = root.join(".agentrouter-state").join(&filename);
-    let Some(raw) = read_verified_file_at(&state_dir, &filename, &path)? else {
+    let Some(verified) = read_verified_file_at(&state_dir, &filename, &path)? else {
         return Ok(None);
     };
-    let value: serde_json::Value = serde_json::from_slice(&raw).map_err(|_| {
+    let value: serde_json::Value = serde_json::from_slice(&verified.bytes).map_err(|_| {
         format!(
             "plugin ownership state is invalid; refusing to continue: {}",
             path.display()
         )
     })?;
     validate_state_data(plugin, &value)?;
-    let sha256 = format!("{:x}", sha2::Sha256::digest(&raw));
+    let sha256 = format!("{:x}", sha2::Sha256::digest(&verified.bytes));
     Ok(Some(LoadedState { value, sha256 }))
 }
 
@@ -311,7 +597,7 @@ fn read_verified_file_at(
     parent: &cap_std::fs::Dir,
     name: &str,
     path: &Path,
-) -> Result<Option<Vec<u8>>, String> {
+) -> Result<Option<VerifiedFile>, String> {
     let before = match parent.symlink_metadata(name) {
         Ok(metadata) => metadata,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
@@ -437,7 +723,16 @@ fn read_verified_file_at(
             path.display()
         ));
     }
-    Ok(Some(raw))
+    Ok(Some(VerifiedFile {
+        bytes: raw,
+        identity: opened_fingerprint.identity,
+    }))
+}
+
+#[derive(Debug)]
+struct VerifiedFile {
+    bytes: Vec<u8>,
+    identity: (u64, u64),
 }
 
 #[derive(Debug, PartialEq, Eq)]

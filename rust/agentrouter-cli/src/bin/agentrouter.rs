@@ -13,7 +13,7 @@ use std::process::Command;
 use agentrouter_registry::{load_all_models, load_providers, ModelEntry};
 
 fn usage() -> &'static str {
-    "usage: agentrouter <init|route|explain|feedback|execute|stats|prompt|registry|providers|hosts|models|doctor|server|mcp|dashboard|plugin|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  execute <decision-id> [--yes] [--dry-run]\n  stats [--json]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  server [--host HOST] [--port PORT]\n  mcp (stdio server)\n  dashboard [port]\n  plugin list\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
+    "usage: agentrouter <init|route|explain|feedback|execute|stats|prompt|registry|providers|hosts|models|doctor|server|mcp|dashboard|plugin|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  execute <decision-id> [--yes] [--dry-run]\n  stats [--json]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  server [--host HOST] [--port PORT]\n  mcp (stdio server)\n  dashboard [port]\n  plugin <list|doctor [--json]>\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
 }
 
 fn home() -> Result<PathBuf, String> {
@@ -667,10 +667,18 @@ fn mcp(home: &Path, args: &[String]) -> Result<i32, String> {
         .map_err(|error| error.to_string())
 }
 
-fn plugin_list() -> Result<i32, String> {
+fn plugin_roots() -> Result<Vec<(&'static agentrouter_cli::plugins::PluginSpec, PathBuf)>, String> {
     let override_root = env::var_os("AGENTROUTER_PLUGIN_ROOT").map(PathBuf::from);
     #[cfg(windows)]
-    let user_home = env::var_os("USERPROFILE").or_else(|| env::var_os("HOME"));
+    let user_home = env::var_os("USERPROFILE")
+        .or_else(|| {
+            let drive = env::var_os("HOMEDRIVE")?;
+            let path = env::var_os("HOMEPATH")?;
+            let mut joined = PathBuf::from(drive);
+            joined.push(path);
+            Some(joined.into_os_string())
+        })
+        .or_else(|| env::var_os("HOME"));
     #[cfg(not(windows))]
     let user_home = env::var_os("HOME");
     let home = user_home.map(PathBuf::from);
@@ -679,9 +687,21 @@ fn plugin_list() -> Result<i32, String> {
             "Set AGENTROUTER_PLUGIN_ROOT or HOME to locate plugin destinations.".to_owned(),
         );
     }
-    for plugin in agentrouter_cli::plugins::known_plugins() {
-        let root =
-            agentrouter_cli::plugins::dest_root(plugin, override_root.as_deref(), home.as_deref())?;
+    agentrouter_cli::plugins::known_plugins()
+        .iter()
+        .map(|plugin| {
+            let root = agentrouter_cli::plugins::dest_root(
+                plugin,
+                override_root.as_deref(),
+                home.as_deref(),
+            )?;
+            Ok((plugin, root))
+        })
+        .collect()
+}
+
+fn plugin_list() -> Result<i32, String> {
+    for (plugin, root) in plugin_roots()? {
         println!(
             "{:<12} [{}]  {}",
             plugin.name,
@@ -692,17 +712,88 @@ fn plugin_list() -> Result<i32, String> {
     Ok(0)
 }
 
+fn plugin_doctor(as_json: bool) -> Result<i32, String> {
+    let roots = plugin_roots()?;
+    let findings = roots
+        .iter()
+        .flat_map(|(plugin, root)| agentrouter_cli::plugins::diagnose(plugin, root))
+        .collect::<Vec<_>>();
+    let overall = if findings
+        .iter()
+        .any(|finding| finding.get("status").and_then(serde_json::Value::as_str) == Some("blocked"))
+    {
+        "blocked"
+    } else if findings.iter().any(|finding| {
+        finding.get("status").and_then(serde_json::Value::as_str) == Some("attention")
+    }) {
+        "attention"
+    } else {
+        "ok"
+    };
+    if as_json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "status": overall,
+                "findings": findings,
+            }))
+            .map_err(|error| error.to_string())?
+        );
+    } else {
+        for (plugin, root) in &roots {
+            println!(
+                "{}: {}  (root: {})",
+                plugin.name,
+                agentrouter_cli::plugins::status(plugin, root),
+                root.display()
+            );
+            for finding in findings.iter().filter(|finding| {
+                finding.get("plugin").and_then(serde_json::Value::as_str) == Some(plugin.name)
+            }) {
+                let status = finding
+                    .get("status")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or("blocked");
+                let mark = match status {
+                    "ok" => "OK  ",
+                    "attention" => "NOTE",
+                    _ => "STOP",
+                };
+                let location = finding
+                    .get("dest")
+                    .or_else(|| finding.get("check"))
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or("diagnose");
+                println!("  [{mark}] {location}");
+                if let Some(summary) = finding.get("summary").and_then(serde_json::Value::as_str) {
+                    println!("         {summary}");
+                }
+                if let Some(remedy) = finding.get("remedy").and_then(serde_json::Value::as_str) {
+                    println!("         -> {remedy}");
+                }
+            }
+        }
+    }
+    match overall {
+        "blocked" => Ok(1),
+        "attention" => Ok(2),
+        _ => Ok(0),
+    }
+}
+
 fn plugin(args: &[String]) -> Result<i32, String> {
     if args
         .iter()
         .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
     {
-        println!("Usage: agentrouter plugin list");
+        println!("Usage: agentrouter plugin <list|doctor [--json]>");
         return Ok(0);
     }
     match args {
         [command] if command == "list" => plugin_list(),
-        [command] if matches!(command.as_str(), "install" | "uninstall" | "doctor") => Err(
+        [command] if command == "doctor" => plugin_doctor(false),
+        [command, flag] if command == "doctor" && flag == "--json" => plugin_doctor(true),
+        [command] if matches!(command.as_str(), "install" | "uninstall") => Err(
             format!(
                 "Rust agentrouter plugin {command} is not migrated yet; use the Python CLI for this operation."
             ),

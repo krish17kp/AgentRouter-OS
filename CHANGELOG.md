@@ -37,11 +37,15 @@ All notable changes to AgentRouter OS. Format loosely follows
   record from disk until the no-follow filesystem reader is ported.
 - Add a read-only Rust `agentrouter plugin list` command with Python-compatible
   installed/partial/not-installed summaries and fail-closed link/reparse-point
-  handling. Plugin install, uninstall, and doctor remain on the Python CLI
-  until their transaction and diagnostic behavior is ported.
+  handling. Plugin install and uninstall remain on the Python CLI until their
+  filesystem transaction behavior is ported.
 - Add a Rust no-follow ownership-state reader that pins the plugin root and
   private state directory, rejects links, hard links, unstable reads, and
   invalid claims, and returns the validated record with its SHA-256 digest.
+- Add read-only Rust `agentrouter plugin doctor` text and `--json` reports with
+  Python-compatible findings for missing, unmanaged, managed, corrupt-state,
+  and unsafe linked destinations. Plugin install and uninstall transactions
+  remain on the Python CLI.
 
 ### Fixed
 - Add Rust OpenAPI canonicalization and bounded `$ref` validation with stable,
