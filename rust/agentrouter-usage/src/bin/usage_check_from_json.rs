@@ -3,7 +3,9 @@
 use std::io::Read;
 use std::time::Duration;
 
-use agentrouter_usage::{check_usage, register_live_check, UsageStatus};
+use agentrouter_usage::{
+    check_usage, register_live_check, register_live_check_result, LiveCheckError, UsageStatus,
+};
 use serde_json::Value;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -24,7 +26,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(Value::as_f64)
         .unwrap_or(5.0);
 
-    if let Some(value) = request.get("adapter") {
+    if let Some(value) = request.get("adapter_error") {
+        let exception_type = value
+            .get("exception_type")
+            .and_then(Value::as_str)
+            .unwrap_or("Exception")
+            .to_owned();
+        register_live_check_result(&provider, move |_timeout| {
+            Err(LiveCheckError::new(exception_type.clone()))
+        });
+    } else if let Some(value) = request.get("adapter") {
         let fixture: UsageStatus = serde_json::from_value(value.clone())?;
         let result = fixture.clone();
         register_live_check(&provider, move |_timeout| result.clone());

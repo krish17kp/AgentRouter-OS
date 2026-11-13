@@ -10,6 +10,8 @@ All notable changes to AgentRouter OS. Format loosely follows
   matching the Rust no-follow and no-clobber safeguards. Add typed Rust catalog
   failures and differential checks for Python-compatible exception categories,
   malformed input, date parsing, sanitization, backup history, and missing paths.
+- Preserve Python adapter exception classes in Rust quota-check results through
+  typed failures, without returning provider error messages to users.
 
 ### Changed
 - Refuse redirects in the Python OpenAI Responses adapter so credentials cannot

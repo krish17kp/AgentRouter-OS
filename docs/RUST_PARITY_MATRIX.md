@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-13 (TASK-082–084). This inventory covers every Python source module under
+Updated: 2026-11-13 (TASK-082–085). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -89,7 +89,7 @@ release authority until the full set is complete.
 | `agentrouter/server/service.py` | `agentrouter-api::service` | Partial |
 | `agentrouter/store.py` | `agentrouter-storage` | Partial |
 | `agentrouter/taxonomy.py` | `agentrouter-policy::taxonomy` | Parity |
-| `agentrouter/usage.py` | `agentrouter-usage::{check_usage,apply_live_verification}` | Partial |
+| `agentrouter/usage.py` | `agentrouter-usage::{check_usage,apply_live_verification}` | Parity |
 
 ## Release interpretation
 
@@ -126,10 +126,12 @@ release authority until the full set is complete.
   [`RUST_RELIABILITY.md`](RUST_RELIABILITY.md) for the supported surface.
 - Rust quota status normalization and one-step exhausted-model reranking are
   compared with Python for all declared states, Unicode sanitization, invalid
-  states, missing recommendations, and ranking output. Python reports an
-  adapter exception's class name, while Rust currently reports a caught panic
-  as `panic`; this error-detail mismatch keeps `usage.py` Partial. No real
-  provider quota adapters are registered in either implementation.
+  states, missing recommendations, ranking output, timeout, and typed adapter
+  errors. Rust adapters can return `LiveCheckError` with the source exception
+  class name, matching Python's safe error detail without exposing provider
+  messages. Panics remain isolated as `panic`. No real provider quota adapters
+  are registered in either implementation, so both report `unsupported` for
+  live checks until a provider adapter is deliberately added.
 - The historical classifier and routing-gold evaluator, report rendering, and
   artifact writing are implemented in Rust and differentially checked against
   the full checked-in gold sets. Python's typed `GoldError` surface and exact

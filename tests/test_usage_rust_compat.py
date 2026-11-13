@@ -91,6 +91,25 @@ def _rust_check_with_status(provider: str, status: dict) -> dict:
     return json.loads(result.stdout)
 
 
+def _rust_check_with_error(provider: str, exception_type: str) -> dict:
+    request = {
+        "provider": provider,
+        "live": True,
+        "timeout_seconds": 1.0,
+        "adapter_error": {"exception_type": exception_type},
+    }
+    result = subprocess.run(
+        ["cargo", "run", "--quiet", "--locked", "--bin", "usage_check_from_json"],
+        cwd="rust/agentrouter-usage",
+        input=json.dumps(request),
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=True,
+    )
+    return json.loads(result.stdout)
+
+
 def test_usage_check_status_matches_python_without_live_adapter():
     provider = "fixture-provider"
     usage.unregister_live_check(provider)
@@ -128,6 +147,32 @@ def test_usage_check_normalizes_registered_status_like_python(state):
         assert isinstance(actual["checked_at"], (int, float))
     else:
         assert actual == expected
+
+
+@pytest.mark.parametrize("exception_type", ["TimeoutError", "ConnectionError", "ValueError"])
+def test_usage_check_preserves_python_adapter_exception_class(exception_type):
+    provider = "fixture-provider"
+    exception = {
+        "TimeoutError": TimeoutError,
+        "ConnectionError": ConnectionError,
+        "ValueError": ValueError,
+    }[exception_type]
+
+    def fail(_timeout: float) -> usage.UsageStatus:
+        raise exception("sensitive provider error detail")
+
+    usage.register_live_check(provider, fail)
+    try:
+        expected = usage.check_usage(provider, live=True).as_dict()
+    finally:
+        usage.unregister_live_check(provider)
+
+    actual = _rust_check_with_error(provider, exception_type)
+    assert {key: value for key, value in actual.items() if key != "checked_at"} == {
+        key: value for key, value in expected.items() if key != "checked_at"
+    }
+    assert actual["detail"] == f"live check failed ({exception_type})"
+    assert "sensitive provider error detail" not in actual["detail"]
 
 
 @pytest.mark.parametrize(

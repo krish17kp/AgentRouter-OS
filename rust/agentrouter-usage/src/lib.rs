@@ -111,7 +111,21 @@ fn normalize_adapter_status(status: UsageStatus) -> UsageStatus {
     }
 }
 
-type LiveCheckFn = std::sync::Arc<dyn Fn(f64) -> UsageStatus + Send + Sync + 'static>;
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LiveCheckError {
+    pub exception_type: String,
+}
+
+impl LiveCheckError {
+    pub fn new(exception_type: impl Into<String>) -> Self {
+        Self {
+            exception_type: exception_type.into(),
+        }
+    }
+}
+
+type LiveCheckFn =
+    std::sync::Arc<dyn Fn(f64) -> Result<UsageStatus, LiveCheckError> + Send + Sync + 'static>;
 
 fn live_checks() -> &'static Mutex<HashMap<String, LiveCheckFn>> {
     static CELL: OnceLock<Mutex<HashMap<String, LiveCheckFn>>> = OnceLock::new();
@@ -123,6 +137,15 @@ fn live_checks() -> &'static Mutex<HashMap<String, LiveCheckFn>> {
 pub fn register_live_check(
     provider: &str,
     fn_: impl Fn(f64) -> UsageStatus + Send + Sync + 'static,
+) {
+    register_live_check_result(provider, move |timeout| Ok(fn_(timeout)));
+}
+
+/// Register a check that can preserve the source exception class in its
+/// bounded failure result, matching Python's `type(exc).__name__` contract.
+pub fn register_live_check_result(
+    provider: &str,
+    fn_: impl Fn(f64) -> Result<UsageStatus, LiveCheckError> + Send + Sync + 'static,
 ) {
     live_checks()
         .lock()
@@ -184,7 +207,16 @@ pub fn check_usage(provider: &str, live: bool, timeout: Duration) -> UsageStatus
             checked_at: Some(now_epoch_secs()),
             source: "live".to_string(),
         },
-        Ok(Ok(status)) => normalize_adapter_status(status),
+        Ok(Ok(Err(error))) => UsageStatus {
+            provider: provider.to_string(),
+            state: ERROR.to_string(),
+            detail: format!("live check failed ({})", error.exception_type),
+            remaining: None,
+            reset_at: None,
+            checked_at: Some(now_epoch_secs()),
+            source: "live".to_string(),
+        },
+        Ok(Ok(Ok(status))) => normalize_adapter_status(status),
     }
 }
 
@@ -344,6 +376,20 @@ mod tests {
         let s = check_usage("panics", true, Duration::from_secs(5));
         unregister_live_check("panics");
         assert_eq!(s.state, ERROR);
+        assert_eq!(s.detail, "live check failed (panic)");
+    }
+
+    #[test]
+    fn typed_adapter_error_preserves_the_python_exception_class() {
+        register_live_check_result("typed-error", |_timeout| {
+            Err(LiveCheckError::new("TimeoutError"))
+        });
+        let status = check_usage("typed-error", true, Duration::from_secs(5));
+        unregister_live_check("typed-error");
+        assert_eq!(status.state, ERROR);
+        assert_eq!(status.detail, "live check failed (TimeoutError)");
+        assert_eq!(status.source, "live");
+        assert!(status.checked_at.is_some());
     }
 
     #[test]
