@@ -520,3 +520,72 @@ def test_rollback_does_not_follow_planted_symlink_backup():
             assert outside.read_text() == "PRISTINE"
         finally:
             outside.unlink(missing_ok=True)
+
+
+@pytest.mark.skipif(
+    __import__("sys").platform == "win32", reason="symlink creation needs elevated perms on Windows"
+)
+def test_rollback_refuses_a_symlink_catalog_source():
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        reg = root / "registry"
+        reg.mkdir()
+        outside = root / "outside.yaml"
+        outside.write_text("outside data")
+        path = reg / "models.openrouter.generated.yaml"
+        path.symlink_to(outside)
+
+        with pytest.raises(OSError):
+            catalog_ops.rollback(reg, "openrouter")
+
+        assert outside.read_text() == "outside data"
+        assert path.is_symlink()
+        assert not (reg / "models.openrouter.generated.yaml.bak").exists()
+
+
+@pytest.mark.skipif(
+    __import__("sys").platform == "win32", reason="symlink creation needs elevated perms on Windows"
+)
+def test_restore_refuses_a_symlink_backup():
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        reg = root / "registry"
+        reg.mkdir()
+        outside = root / "outside.yaml"
+        outside.write_text("outside data")
+        backup = reg / "models.openrouter.generated.yaml.bak"
+        backup.symlink_to(outside)
+
+        with pytest.raises(OSError):
+            catalog_ops.restore(reg, "openrouter")
+
+        assert outside.read_text() == "outside data"
+        assert backup.is_symlink()
+        assert not (reg / "models.openrouter.generated.yaml").exists()
+
+
+@pytest.mark.skipif(
+    __import__("sys").platform == "win32", reason="symlink creation needs elevated perms on Windows"
+)
+def test_restore_refuses_a_dangling_symlink_destination():
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.TemporaryDirectory() as d:
+        reg = Path(d)
+        path = reg / "models.openrouter.generated.yaml"
+        path.symlink_to(reg / "missing-target.yaml")
+        backup = reg / "models.openrouter.generated.yaml.bak"
+        backup.write_text("backup data")
+
+        with pytest.raises(FileExistsError):
+            catalog_ops.restore(reg, "openrouter")
+
+        assert backup.read_text() == "backup data"
+        assert path.is_symlink()

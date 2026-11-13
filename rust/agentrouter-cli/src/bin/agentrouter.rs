@@ -460,7 +460,8 @@ fn providers_doctor(home: &Path) -> Result<i32, String> {
             .and_then(|name| name.strip_prefix("models."))
             .and_then(|name| name.strip_suffix(".generated.yaml"))
             .unwrap_or("unknown");
-        let status = agentrouter_registry::catalog_ops::read_status(&path, today);
+        let status = agentrouter_registry::catalog_ops::read_status(&path, today)
+            .map_err(|error| error.to_string());
         let models =
             agentrouter_registry::load_models(&path, &providers).map_err(|error| error.to_string());
         match (status, models) {

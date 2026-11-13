@@ -4,9 +4,9 @@ Updated: 2026-11-13
 
 ## Definition of done
 
-- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PRs #27–#33 are merged; PR #16 is the sole open PR. At pushed head `1ee5c17`, the completed cross-platform Python/Rust compatibility, Python-version, Rust workspace, security, and site checks passed. The critical-module mutation jobs found two untested timeout mutants in the Python OpenAI adapter; a delayed loopback regression test now kills both locally. The unchanged frozen release gate remains 0.6667 < 0.90; live smoke skips without credentials. Hosted confirmation of the latest fixes is pending.
+- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PRs #27–#33 are merged; PR #16 is the sole open PR. On pushed head `7c5e06e`, the Python 3.10–3.13 suite, Windows/macOS Python tests, all three Rust workspace and Python/Rust compatibility matrices, critical-module mutation checks, security scan, build smoke, and site checks passed. The unchanged frozen release gate remains 0.6667 < 0.90, and live smoke skips without credentials.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
-- [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md); current gaps are explicit, and only modules with full-module differential tests are marked parity (36 modules meet that bar after TASK-082).
+- [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md); current gaps are explicit, and only modules with full-module differential tests are marked parity (37 modules meet that bar after TASK-084).
 - [x] Full Python suite: 2,081 passed, 5 skipped; 92.51% line (6,641/7,179), 87.63% branch (1,849/2,110), and 91.40% combined coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; evidence is in `docs/COVERAGE_REPORT_2026-11-13.md`.
 - [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations; the Rust release benchmark now runs the same 10/100/1,000 candidate fleets, with a paired local p50 ratio of 2.70×–3.25× under stated synthetic conditions.
 - [x] Changelog, coverage evidence, and local latency measurements are committed to the release candidate. Candidate package version is now `0.5.0rc1`, with draft release notes in `docs/RELEASE_NOTES_v0.5.0rc1.md`; final `0.5.0` packaging and publication remain blocked on parity and all release gates.
@@ -91,6 +91,7 @@ Updated: 2026-11-13
 - [x] TASK-081 adds Rust `agentrouter execute` with stored-classification gate recomputation, provider opt-in, explicit confirmation, dry-run behavior, shell-free argv execution, host readiness and route-change checks, and a bounded no-retry OpenAI Responses request. Rust integration checks prove that high-risk and gate-tampered decisions never run; Python tests also pin the dry-run contract. The 2,051-test suite, full Rust workspace tests, strict Clippy, formatting, Ruff, and configured Bandit pass locally. Hosted confirmation and OpenAI live validation remain open.
 - [x] TASK-082 adds 20 offline Python/Rust OpenAI adapter differential cases for request construction, credential privacy, bounded limits, validation errors, provider failures, refusals, malformed responses, and oversized bodies. Python now refuses redirects like Rust, verified against a loopback 302 endpoint. A direct legacy-provider dry-run test kills the three reported execution mutants. The hosted mutation campaign then found two mutants that removed the network timeout; the added delayed-endpoint check kills both locally. OpenAI adapter contract parity is covered; hosted confirmation of the final timeout checks is pending.
 - [x] TASK-083 adds direct Python/Rust `check_usage` comparisons for no-live and unsupported states, all registered status states, invalid-state fail-closed behavior, and Unicode/control-character sanitization. The Rust status probe is fixture-only and makes no network calls. The usage module remains Partial because Python exception type details have no equivalent in Rust panic recovery; quota-aware route behavior remains safety-gated and no live adapters are enabled. The 2,081-test full Python suite passes with the adapter timeout regression included; the usage crate tests and full-workspace strict Clippy pass.
+- [x] TASK-084 completes generated-catalog operation parity: typed Rust errors expose Python-compatible exception categories, and Python now uses no-follow byte reads plus exclusive no-clobber restoration. Differential cases cover malformed YAML/UTF-8, provider errors, restore collisions, Python-compatible date/sanitization behavior, missing/non-directory listings, backup history, and linked-file refusal. The full Python suite passes with 2,094 passed and 5 skipped; coverage is 92.52% line, 87.65% branch, and 91.42% combined. All Rust workspace tests, strict workspace Clippy, 57 focused catalog tests, Ruff, Bandit, and formatting pass locally. Hosted confirmation is pending push.
 - [ ] TASK-056 adds the `agentrouter-evaluate` Rust CLI for listing/validating datasets, running fixture profiles, writing/rendering/comparing reports, availability, explicit external prepare blockers, and context-band generalization. Four smoke/differential tests pass. The Rust command does not yet replace the Python `agentrouter evaluate` surface or load real datasets, so CLI module parity remains Partial.
 - [x] PR #31 upgraded bundled SQLite to 3.54.1, replaced `unsafe-libyaml`, and raised the Rust minimum to 1.89; workspace tests, Clippy, security audit, and cross-platform CI passed before merge at `a246cf6`.
 - [x] Website product-truth fixes, font hierarchy/motion redesign, unused shadcn CLI removal, server limits/API tests, and website lint/build CI merged via PR #27. npm build/lint and production dependency audit passed; full npm audit still reports moderate dev-tool advisories.
@@ -103,15 +104,14 @@ Updated: 2026-11-13
 - OpenAI live validation: provide `OPENAI_API_KEY` through a local environment or a protected secret store and authorize one bounded Responses API smoke request, which may incur usage charges. Offline request/response fixtures are ready; no key is stored in the repository.
 - Production release/deployment: after the local and hosted release gates pass, provide the production hosting/domain credentials and authorize any paid infrastructure and deployment. The Rust server is loopback-only and no production deployment has run.
 
-Latest local checks for TASK-083: Python 3.12 passes 2,081 tests with 5 skipped
-at 92.51% line, 87.63% branch, and 91.40% combined coverage. The full Rust
-workspace tests, usage crate fixtures, and strict workspace Clippy pass. Ruff,
-Bandit, Rust formatting, and the focused adapter/usage compatibility tests pass.
-All five execution and
-OpenAI timeout mutants previously reported by CI are killed in local targeted
-runs. Coverage evidence is in `docs/COVERAGE_REPORT_2026-11-13.md`. Hosted
-confirmation is pending push. The latest completed release gate still fails at 0.6667
-against the unchanged 0.90 threshold, and live smoke skips without credentials.
+Latest full verification for TASK-084: Python 3.12 passes 2,094 tests with 5
+skipped at 92.52% line, 87.65% branch, and 91.42% combined coverage. All Rust
+workspace tests and strict Clippy pass. The 57 focused catalog tests, Ruff,
+Bandit, and formatting pass. Evidence is in
+`docs/COVERAGE_REPORT_2026-11-13.md`. The latest hosted checks on `7c5e06e`
+pass all cross-platform Python/Rust, mutation, scan, build, and site jobs. The
+unchanged release gate still fails at 0.6667 against 0.90; live smoke skips
+without credentials.
 PR #16 remains promotion-blocked by the unchanged frozen
 context-band result and the human annotation requirement.
 

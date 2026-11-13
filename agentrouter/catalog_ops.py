@@ -32,7 +32,12 @@ from pathlib import Path
 
 import yaml
 
-from .registry import STALE_AFTER_DAYS, _read_text_nofollow, _safe_load_yaml
+from .registry import (
+    STALE_AFTER_DAYS,
+    _read_bytes_nofollow,
+    _read_text_nofollow,
+    _safe_load_yaml,
+)
 
 GENERATED_GLOB = "models.*.generated.yaml"
 
@@ -248,29 +253,37 @@ def rollback(reg_dir: Path, provider: str) -> Path | None:
     fd = _create_exclusive(backup)
     try:
         with os.fdopen(fd, "wb") as f:
-            f.write(path.read_bytes())
+            f.write(_read_bytes_nofollow(path))
+        path.unlink()
     except BaseException:
         backup.unlink(missing_ok=True)
         raise
-    path.unlink()
     return backup
 
 
 def restore(reg_dir: Path, provider: str) -> Path | None:
-    """Reverse the most recent ``rollback``: move ``.bak`` back over the generated file.
+    """Reverse the most recent ``rollback`` by restoring the ``.bak`` bytes.
 
     Returns the restored path, or None if there is no ``.bak`` to restore from.
-    Refuses to clobber a generated file that already exists (re-refreshed since
-    the rollback) — remove or roll it back first.
+    Refuses linked backups and refuses to clobber a generated file that already
+    exists (re-refreshed since the rollback) — remove or roll it back first.
     """
     _validate_provider(provider)
     backup = reg_dir / f"models.{provider}.generated.yaml.bak"
     if not backup.exists():
         return None
+    contents = _read_bytes_nofollow(backup)
     path = reg_dir / f"models.{provider}.generated.yaml"
-    if path.exists():
+    if path.exists() or path.is_symlink():
         raise FileExistsError(
             f"{path} already exists — remove or roll it back before restoring the backup"
         )
-    shutil.move(str(backup), str(path))  # os.rename semantics: replaces, never follows
+    fd = _create_exclusive(path)
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(contents)
+    except BaseException:
+        path.unlink(missing_ok=True)
+        raise
+    backup.unlink()
     return path

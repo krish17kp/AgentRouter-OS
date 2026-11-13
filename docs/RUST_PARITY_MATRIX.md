@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-13 (TASK-082–083). This inventory covers every Python source module under
+Updated: 2026-11-13 (TASK-082–084). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -27,7 +27,7 @@ release authority until the full set is complete.
 | `agentrouter/annotation/splits.py` | `agentrouter-evaluation::annotation_splits` | Parity |
 | `agentrouter/annotation/store.py` | `agentrouter-evaluation::annotation_store` | Parity |
 | `agentrouter/bundle.py` | `agentrouter-cli::bundle` | Partial |
-| `agentrouter/catalog_ops.py` | `agentrouter-registry::catalog_ops` | Partial |
+| `agentrouter/catalog_ops.py` | `agentrouter-registry::catalog_ops` | Parity |
 | `agentrouter/classifier.py` | `agentrouter-classifier` | Parity |
 | `agentrouter/cli.py` | `agentrouter-cli::bin::agentrouter` plus command modules | Partial |
 | `agentrouter/context_model.py` | `agentrouter-classifier::context_model` | Parity |
@@ -166,12 +166,15 @@ release authority until the full set is complete.
   response TTL and media type, and per-key single-flight semantics. It is a
   process-local primitive; the HTTP middleware and server request lifecycle
   still run through Python.
-- Rust catalog operations now include provenance reads, freshness summaries,
+- Rust catalog operations include provenance reads, freshness summaries,
   sorted generated-catalog listing and deprecation reports, plus rollback and
   restore with raw-byte preservation, exclusive backup creation, linked-file
-  refusal and no-clobber restoration. Python-compatible behavior is
-  differentially tested; typed `CatalogError` and all error-message edge cases
-  remain open, so the module is still Partial.
+  refusal and no-clobber restoration. Typed Rust failures expose Python's
+  `CatalogError`, `ValueError`, `FileExistsError`, and `OSError` categories.
+  Differential tests cover malformed YAML and UTF-8, mapping validation,
+  Python date formats and summary sanitization, non-directory listings,
+  backup rotation, restore collisions, and linked-file refusal. Python now
+  applies the same no-follow and exclusive-write safeguards.
 - The Rust SDK client covers Python endpoint paths, payload cleanup, an
   optional API-key header, timeout configuration and structured HTTP errors.
   The local HTTP server and end-to-end client/server contract remain

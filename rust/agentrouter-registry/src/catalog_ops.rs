@@ -2,13 +2,73 @@
 //! Mirrors the read-only subset of `agentrouter.catalog_ops`.
 
 use std::collections::HashSet;
+use std::io;
 use std::path::{Path, PathBuf};
 
 use chrono::NaiveDate;
 use serde_yaml::Value;
+use thiserror::Error;
 use unicode_general_category::{get_general_category, GeneralCategory};
 
 use crate::{read_bytes_nofollow, read_text_nofollow, STALE_AFTER_DAYS};
+
+pub const GENERATED_GLOB: &str = "models.*.generated.yaml";
+
+/// Typed failures corresponding to Python's public catalog-operation errors.
+#[derive(Debug, Error)]
+pub enum CatalogOpsError {
+    #[error("invalid provider id: {provider:?}")]
+    InvalidProvider { provider: String },
+    #[error("invalid generated catalog provider id")]
+    InvalidProviderName,
+    #[error("invalid generated catalog path: {0}")]
+    InvalidCatalogPath(PathBuf),
+    #[error("{path}: cannot read file: {detail}")]
+    ReadCatalog { path: String, detail: String },
+    #[error("{path}: not valid UTF-8: {detail}")]
+    InvalidUtf8 { path: String, detail: String },
+    #[error("{path}: invalid YAML: {detail}")]
+    InvalidYaml { path: String, detail: String },
+    #[error("{path}: expected a mapping at the top level")]
+    NotAMapping { path: String },
+    #[error("{0} already exists — remove or roll it back before restoring the backup")]
+    AlreadyExists(PathBuf),
+    #[error("{0}")]
+    Io(#[from] io::Error),
+    #[error("cannot create backup {path}: {source}")]
+    CreateBackup {
+        path: PathBuf,
+        #[source]
+        source: io::Error,
+    },
+}
+
+impl CatalogOpsError {
+    /// Stable Python exception category for compatibility checks and clients.
+    pub fn python_error_kind(&self) -> &'static str {
+        match self {
+            Self::InvalidProvider { .. } => "ValueError",
+            Self::InvalidProviderName
+            | Self::InvalidCatalogPath(_)
+            | Self::ReadCatalog { .. }
+            | Self::InvalidUtf8 { .. }
+            | Self::InvalidYaml { .. }
+            | Self::NotAMapping { .. } => "CatalogError",
+            Self::AlreadyExists(_) => "FileExistsError",
+            Self::Io(error) => io_python_error_kind(error),
+            Self::CreateBackup { source, .. } => io_python_error_kind(source),
+        }
+    }
+}
+
+fn io_python_error_kind(error: &io::Error) -> &'static str {
+    match error.kind() {
+        io::ErrorKind::NotFound => "FileNotFoundError",
+        io::ErrorKind::PermissionDenied => "PermissionError",
+        io::ErrorKind::AlreadyExists => "FileExistsError",
+        _ => "OSError",
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CatalogStatus {
@@ -74,32 +134,37 @@ fn sanitize(value: &str) -> String {
         .collect()
 }
 
-fn provider_of(path: &Path) -> Result<String, String> {
+fn provider_of(path: &Path) -> Result<String, CatalogOpsError> {
     let name = path
         .file_name()
         .and_then(|name| name.to_str())
-        .ok_or_else(|| format!("invalid generated catalog path: {}", path.display()))?;
-    let provider = name
-        .strip_prefix("models.")
-        .and_then(|name| name.strip_suffix(".generated.yaml"))
-        .ok_or_else(|| "invalid generated catalog name".to_string())?;
+        .ok_or_else(|| CatalogOpsError::InvalidCatalogPath(path.to_path_buf()))?;
+    // Python extracts this with `path.name[7:-15]`, then validates the result.
+    let chars: Vec<char> = name.chars().collect();
+    let provider: String = chars
+        .iter()
+        .skip(7)
+        .take(chars.len().saturating_sub(22))
+        .collect();
     if provider.is_empty()
         || !provider
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
     {
-        return Err("invalid generated catalog provider id".to_string());
+        return Err(CatalogOpsError::InvalidProviderName);
     }
-    Ok(provider.to_string())
+    Ok(provider)
 }
 
-fn validate_provider(provider: &str) -> Result<(), String> {
+fn validate_provider(provider: &str) -> Result<(), CatalogOpsError> {
     if provider.is_empty()
         || !provider
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
     {
-        return Err(format!("invalid provider id: {provider:?}"));
+        return Err(CatalogOpsError::InvalidProvider {
+            provider: provider.to_owned(),
+        });
     }
     Ok(())
 }
@@ -108,21 +173,21 @@ fn exists_or_symlink(path: &Path) -> bool {
     path.exists() || std::fs::symlink_metadata(path).is_ok()
 }
 
-fn rotate_backup(backup: &Path) -> Result<(), String> {
+fn rotate_backup(backup: &Path) -> Result<(), CatalogOpsError> {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     let mut suffix = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map_err(|error| error.to_string())?
+        .map_err(|error| io::Error::other(error.to_string()))?
         .as_nanos();
     loop {
         let filename = backup
             .file_name()
             .and_then(|filename| filename.to_str())
-            .ok_or_else(|| "invalid backup path".to_string())?;
+            .ok_or_else(|| CatalogOpsError::InvalidCatalogPath(backup.to_path_buf()))?;
         let rotated = backup.with_file_name(format!("{filename}.{suffix}"));
         if !exists_or_symlink(&rotated) {
-            return std::fs::rename(backup, &rotated).map_err(|error| error.to_string());
+            return std::fs::rename(backup, &rotated).map_err(CatalogOpsError::Io);
         }
         suffix = suffix.saturating_add(1);
     }
@@ -132,7 +197,7 @@ fn rotate_backup(backup: &Path) -> Result<(), String> {
 ///
 /// Backup creation is exclusive and refuses linked/non-file source paths. A
 /// prior backup is moved to a unique history name before a new backup is made.
-pub fn rollback(reg_dir: &Path, provider: &str) -> Result<Option<PathBuf>, String> {
+pub fn rollback(reg_dir: &Path, provider: &str) -> Result<Option<PathBuf>, CatalogOpsError> {
     validate_provider(provider)?;
     let path = reg_dir.join(format!("models.{provider}.generated.yaml"));
     if !path.exists() {
@@ -141,7 +206,7 @@ pub fn rollback(reg_dir: &Path, provider: &str) -> Result<Option<PathBuf>, Strin
     let filename = path
         .file_name()
         .and_then(|filename| filename.to_str())
-        .ok_or_else(|| "invalid generated catalog path".to_string())?;
+        .ok_or_else(|| CatalogOpsError::InvalidCatalogPath(path.clone()))?;
     let backup = path.with_file_name(format!("{filename}.bak"));
     if exists_or_symlink(&backup) {
         rotate_backup(&backup)?;
@@ -156,13 +221,15 @@ pub fn rollback(reg_dir: &Path, provider: &str) -> Result<Option<PathBuf>, Strin
     }
     let mut backup_file = options
         .open(&backup)
-        .map_err(|error| format!("cannot create backup {}: {error}", backup.display()))?;
+        .map_err(|error| CatalogOpsError::CreateBackup {
+            path: backup.clone(),
+            source: error,
+        })?;
     let result = (|| {
-        let contents = read_bytes_nofollow(&path).map_err(|error| error.to_string())?;
-        std::io::Write::write_all(&mut backup_file, &contents)
-            .map_err(|error| error.to_string())?;
+        let contents = read_bytes_nofollow(&path)?;
+        std::io::Write::write_all(&mut backup_file, &contents)?;
         drop(backup_file);
-        std::fs::remove_file(&path).map_err(|error| error.to_string())
+        std::fs::remove_file(&path).map_err(CatalogOpsError::Io)
     })();
     if let Err(error) = result {
         let _ = std::fs::remove_file(&backup);
@@ -172,23 +239,20 @@ pub fn rollback(reg_dir: &Path, provider: &str) -> Result<Option<PathBuf>, Strin
 }
 
 /// Restore the most recent backup, refusing to overwrite a refreshed catalog.
-pub fn restore(reg_dir: &Path, provider: &str) -> Result<Option<PathBuf>, String> {
+pub fn restore(reg_dir: &Path, provider: &str) -> Result<Option<PathBuf>, CatalogOpsError> {
     validate_provider(provider)?;
     let path = reg_dir.join(format!("models.{provider}.generated.yaml"));
     let filename = path
         .file_name()
         .and_then(|filename| filename.to_str())
-        .ok_or_else(|| "invalid generated catalog path".to_string())?;
+        .ok_or_else(|| CatalogOpsError::InvalidCatalogPath(path.clone()))?;
     let backup = path.with_file_name(format!("{filename}.bak"));
     if !backup.exists() {
         return Ok(None);
     }
-    let contents = read_bytes_nofollow(&backup).map_err(|error| error.to_string())?;
+    let contents = read_bytes_nofollow(&backup)?;
     if exists_or_symlink(&path) {
-        return Err(format!(
-            "{} already exists — remove or roll it back before restoring the backup",
-            path.display()
-        ));
+        return Err(CatalogOpsError::AlreadyExists(path));
     }
     // create_new is an atomic no-clobber operation, including if another
     // process creates the destination after the existence check above.
@@ -199,14 +263,20 @@ pub fn restore(reg_dir: &Path, provider: &str) -> Result<Option<PathBuf>, String
         use std::os::unix::fs::OpenOptionsExt;
         options.mode(0o600);
     }
-    let mut restored = options.open(&path).map_err(|error| error.to_string())?;
+    let mut restored = options.open(&path).map_err(|error| {
+        if error.kind() == io::ErrorKind::AlreadyExists {
+            CatalogOpsError::AlreadyExists(path.clone())
+        } else {
+            CatalogOpsError::Io(error)
+        }
+    })?;
     if let Err(error) = std::io::Write::write_all(&mut restored, &contents) {
         drop(restored);
         let _ = std::fs::remove_file(&path);
-        return Err(error.to_string());
+        return Err(CatalogOpsError::Io(error));
     }
     drop(restored);
-    std::fs::remove_file(&backup).map_err(|error| error.to_string())?;
+    std::fs::remove_file(&backup)?;
     Ok(Some(path))
 }
 
@@ -253,28 +323,33 @@ fn parse_iso_date(value: &str) -> Option<NaiveDate> {
     }
 }
 
-pub fn read_status(path: &Path, today: NaiveDate) -> Result<CatalogStatus, String> {
+pub fn read_status(path: &Path, today: NaiveDate) -> Result<CatalogStatus, CatalogOpsError> {
     let provider = provider_of(path)?;
     let text = read_text_nofollow(path).map_err(|error| {
-        format!(
-            "{}: cannot read file: {error}",
-            sanitize(&path.to_string_lossy())
-        )
+        let path = sanitize(&path.to_string_lossy());
+        if error.kind() == io::ErrorKind::InvalidData {
+            CatalogOpsError::InvalidUtf8 {
+                path,
+                detail: error.to_string(),
+            }
+        } else {
+            CatalogOpsError::ReadCatalog {
+                path,
+                detail: error.to_string(),
+            }
+        }
     })?;
-    let raw: Value = serde_yaml::from_str(&text).map_err(|error| {
-        format!(
-            "{}: invalid YAML: {error}",
-            sanitize(&path.to_string_lossy())
-        )
+    let raw: Value = serde_yaml::from_str(&text).map_err(|error| CatalogOpsError::InvalidYaml {
+        path: sanitize(&path.to_string_lossy()),
+        detail: error.to_string(),
     })?;
     let raw = match raw {
         Value::Null => Value::Mapping(Default::default()),
         Value::Mapping(_) => raw,
         _ => {
-            return Err(format!(
-                "{}: expected a mapping at the top level",
-                sanitize(&path.to_string_lossy())
-            ))
+            return Err(CatalogOpsError::NotAMapping {
+                path: sanitize(&path.to_string_lossy()),
+            })
         }
     };
     let models = raw.get("models").and_then(Value::as_sequence);
@@ -326,17 +401,25 @@ pub fn deprecations(previous_ids: &HashSet<String>, current_ids: &HashSet<String
     removed
 }
 
-pub fn list_generated(reg_dir: &Path, today: NaiveDate) -> Result<Vec<CatalogStatus>, String> {
+pub fn list_generated(
+    reg_dir: &Path,
+    today: NaiveDate,
+) -> Result<Vec<CatalogStatus>, CatalogOpsError> {
+    // Path.glob returns an empty iterator when the directory does not exist or
+    // is a regular file, matching that public Python helper behavior.
+    if !reg_dir.is_dir() {
+        return Ok(Vec::new());
+    }
     let mut paths = Vec::new();
-    for entry in std::fs::read_dir(reg_dir).map_err(|error| error.to_string())? {
-        let path = entry.map_err(|error| error.to_string())?.path();
+    for entry in std::fs::read_dir(reg_dir)? {
+        let path = entry?.path();
         let Some(name) = path.file_name() else {
             continue;
         };
         let display = name.to_string_lossy();
         if display.starts_with("models.") && display.ends_with(".generated.yaml") {
             if name.to_str().is_none() {
-                return Err("invalid generated catalog provider id".to_string());
+                return Err(CatalogOpsError::InvalidProviderName);
             }
             paths.push(path);
         }
@@ -438,6 +521,7 @@ mod tests {
         std::fs::write(&path, "refreshed").unwrap();
         assert!(restore(directory.path(), "openai")
             .unwrap_err()
+            .to_string()
             .contains("already exists"));
     }
 
@@ -446,9 +530,11 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         assert!(rollback(directory.path(), "../escape")
             .unwrap_err()
+            .to_string()
             .contains("invalid provider"));
         assert!(restore(directory.path(), "../escape")
             .unwrap_err()
+            .to_string()
             .contains("invalid provider"));
     }
 
@@ -515,6 +601,7 @@ mod tests {
 
         assert!(restore(directory.path(), "openai")
             .unwrap_err()
+            .to_string()
             .contains("already exists"));
         assert_eq!(std::fs::read(&outside).unwrap(), b"outside data");
         assert_eq!(std::fs::read(&backup).unwrap(), b"backup data");

@@ -5,6 +5,12 @@ All notable changes to AgentRouter OS. Format loosely follows
 
 ## [Unreleased]
 
+### Fixed
+- Make Python catalog rollback and restore refuse symlinked catalog inputs,
+  matching the Rust no-follow and no-clobber safeguards. Add typed Rust catalog
+  failures and differential checks for Python-compatible exception categories,
+  malformed input, date parsing, sanitization, backup history, and missing paths.
+
 ### Changed
 - Refuse redirects in the Python OpenAI Responses adapter so credentials cannot
   be forwarded to a redirected host. Add 20 offline Python/Rust adapter

@@ -5,6 +5,24 @@ use std::path::Path;
 use chrono::NaiveDate;
 use serde_json::{json, Value};
 
+fn catalog_or_exit<T>(result: Result<T, agentrouter_registry::catalog_ops::CatalogOpsError>) -> T {
+    match result {
+        Ok(value) => value,
+        Err(error) => {
+            eprintln!(
+                "{}",
+                json!({
+                    "error": {
+                        "kind": error.python_error_kind(),
+                        "message": error.to_string(),
+                    }
+                })
+            );
+            std::process::exit(2);
+        }
+    }
+}
+
 fn status_value(status: agentrouter_registry::catalog_ops::CatalogStatus) -> Value {
     json!({
         "provider": status.provider,
@@ -53,7 +71,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .as_str()
                 .ok_or("today must be an ISO date")?;
             let today = NaiveDate::parse_from_str(today, "%Y-%m-%d")?;
-            let status = agentrouter_registry::catalog_ops::read_status(Path::new(path), today)?;
+            let status = catalog_or_exit(agentrouter_registry::catalog_ops::read_status(
+                Path::new(path),
+                today,
+            ));
             json!({"value": status_value(status)})
         }
         Some("list_generated") => {
@@ -64,8 +85,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .as_str()
                 .ok_or("today must be an ISO date")?;
             let today = NaiveDate::parse_from_str(today, "%Y-%m-%d")?;
-            let statuses =
-                agentrouter_registry::catalog_ops::list_generated(Path::new(reg_dir), today)?;
+            let statuses = catalog_or_exit(agentrouter_registry::catalog_ops::list_generated(
+                Path::new(reg_dir),
+                today,
+            ));
             json!({"value": statuses.into_iter().map(status_value).collect::<Vec<_>>()})
         }
         Some("rollback") | Some("restore") => {
@@ -76,9 +99,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .as_str()
                 .ok_or("provider must be a string")?;
             let path = if request["operation"] == "rollback" {
-                agentrouter_registry::catalog_ops::rollback(Path::new(reg_dir), provider)?
+                catalog_or_exit(agentrouter_registry::catalog_ops::rollback(
+                    Path::new(reg_dir),
+                    provider,
+                ))
             } else {
-                agentrouter_registry::catalog_ops::restore(Path::new(reg_dir), provider)?
+                catalog_or_exit(agentrouter_registry::catalog_ops::restore(
+                    Path::new(reg_dir),
+                    provider,
+                ))
             };
             json!({"value": path.map(|path| path.to_string_lossy().into_owned())})
         }

@@ -64,6 +64,20 @@ def _read_text_nofollow(path: Path) -> str:
         return file.read()
 
 
+def _read_bytes_nofollow(path: Path) -> bytes:
+    """Read a regular registry file as bytes without following a final symlink."""
+    if not stat.S_ISREG(path.lstat().st_mode):
+        raise OSError("registry path is not a regular file")
+    fd = os.open(
+        path,
+        os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0),
+    )
+    with os.fdopen(fd, "rb") as file:
+        if not stat.S_ISREG(os.fstat(file.fileno()).st_mode):
+            raise OSError("registry path is not a regular file")
+        return file.read()
+
+
 def _load_yaml(path: Path) -> dict:
     if not path.exists():
         raise RegistryError(f"Registry file not found: {path} (run: agentrouter init)")

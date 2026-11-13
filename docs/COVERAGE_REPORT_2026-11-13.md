@@ -13,10 +13,10 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 2,081 passed, 5 skipped |
-| Line coverage | 92.51% (6,641 / 7,179 statements) |
-| Branch coverage | 87.63% (1,849 / 2,110 branch outcomes) |
-| Combined coverage reported by pytest-cov | 91.40% |
+| Python regression | 2,094 passed, 5 skipped |
+| Line coverage | 92.52% (6,657 / 7,195 statements) |
+| Branch coverage | 87.65% (1,853 / 2,114 branch outcomes) |
+| Combined coverage reported by pytest-cov | 91.42% |
 | Project line / branch thresholds | 90% / 85% — both passed |
 | CI total-coverage threshold | 80% — passed |
 | Warnings | 1 Starlette/httpx deprecation warning |
@@ -45,7 +45,10 @@ fixed-window rate limiting, idempotency cache expiry, and
 response replay fields are also compared with the Python server primitives.
 Catalog operation checks compare provenance, freshness summaries, sorted
 generated-catalog listing, deprecations, and rollback/restore against Python;
-Rust safety checks cover linked paths and no-clobber restoration. The Rust SDK
+typed Rust errors match Python exception categories for malformed catalogs,
+invalid providers, restore collisions, and filesystem failures. Both
+implementations refuse linked catalog inputs and restore destinations without
+clobbering concurrent files. The Rust SDK
 has local HTTP fixture tests for request cleanup, API-key handling, API errors,
 and redirect refusal. Classification schema tests compare Python/Rust JSON
 round-tripping and rejection of unknown fields.
