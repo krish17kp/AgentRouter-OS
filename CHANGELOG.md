@@ -15,10 +15,11 @@ All notable changes to AgentRouter OS. Format loosely follows
   field additions/removals/requiredness, array-item types, enums/consts,
   numeric and size bounds, patterns, formats, defaults, and
   `additionalProperties` changes. Matching operation-parameter schemas receive
-  the same comparisons. Python differential fixtures cover these implemented
-  classes, including bounded local schema `$ref` traversal with alias and
-  recursive-reference handling. Union/nullability analysis remains on the
-  Python release path, so this probe is not a compatibility gate.
+  the same comparisons. Bounded local schema `$ref` expansion also reaches
+  nested properties and union branches. Nullable wrappers, `type: [T, null]`,
+  `anyOf`/`oneOf` alternatives, `allOf` conjunction direction, and branch-order
+  independence now match Python in differential fixtures. The probe remains
+  partial and is not a compatibility gate.
 
 ### Fixed
 - Add Rust OpenAPI canonicalization and bounded `$ref` validation with stable,

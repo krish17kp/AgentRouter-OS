@@ -4,8 +4,8 @@
 //! stable serialization, and trusted-baseline loading. Semantic compatibility
 //! classification and safe artifact export remain Python-owned until their
 //! complete contracts are ported and differentially checked. The surface-diff
-//! probe still omits reference expansion, combinator semantics, and parameter
-//! schema analysis; it must not be used as the compatibility gate.
+//! probe is a deliberately partial analyzer and must not be used as the
+//! compatibility gate.
 
 use serde_json::{json, Map, Value};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
@@ -16,6 +16,7 @@ use std::path::{Path, PathBuf};
 
 const ORDER_INSENSITIVE: &[&str] = &["required", "enum", "tags"];
 const MAX_EXPANDED_NODES: usize = 200_000;
+const MAX_REF_DEPTH: usize = 64;
 const MAX_SCHEMA_COMPARE_DEPTH: usize = 128;
 const CONTRACT_VERSION: &str = "v1";
 const CONTRACT_EXPORT_COMMAND: &str = "agentrouter contract export";
@@ -152,8 +153,6 @@ pub fn diff_contracts_surface(old: &Value, new: &Value) -> Result<Value, String>
         old_document: old,
         new_document: new,
         budget: MAX_EXPANDED_NODES,
-        old_references: HashSet::new(),
-        new_references: HashSet::new(),
     };
     let old_version = python_object_field(old, "info", "version");
     let new_version = python_object_field(new, "info", "version");
@@ -435,8 +434,6 @@ struct SchemaDiffContext<'a> {
     old_document: &'a Value,
     new_document: &'a Value,
     budget: usize,
-    old_references: HashSet<String>,
-    new_references: HashSet<String>,
 }
 
 fn add_surface_change(
@@ -724,72 +721,93 @@ fn diff_inline_schema(
     depth: usize,
     changes: &mut Vec<SurfaceChange>,
 ) -> Result<(), String> {
-    {
-        if context.budget == 0 {
-            return Err(format!(
-                "contract is too large to compare safely (over {MAX_EXPANDED_NODES} schema nodes)"
-            ));
-        }
-        context.budget -= 1;
-        if depth > MAX_SCHEMA_COMPARE_DEPTH {
-            return Err(format!(
-                "contract is nested too deeply to compare safely (over {MAX_SCHEMA_COMPARE_DEPTH} schema levels)"
-            ));
-        }
+    if depth >= MAX_SCHEMA_COMPARE_DEPTH {
+        return Err(format!(
+            "contract is nested too deeply to compare safely (over {MAX_SCHEMA_COMPARE_DEPTH} schema levels)"
+        ));
     }
+    consume_schema_budget(&mut context.budget)?;
+    let mut old_references = HashSet::new();
+    let mut new_references = HashSet::new();
+    let old_schema = expand_schema_value(
+        old_value.unwrap_or(empty_schema_value()),
+        context.old_document,
+        &mut old_references,
+        &mut context.budget,
+        0,
+    )?;
+    let new_schema = expand_schema_value(
+        new_value.unwrap_or(empty_schema_value()),
+        context.new_document,
+        &mut new_references,
+        &mut context.budget,
+        0,
+    )?;
 
-    let old_reference_snapshot = context.old_references.clone();
-    let new_reference_snapshot = context.new_references.clone();
-    let result = diff_inline_schema_inner(
-        old_value, new_value, location, request, context, depth, changes,
-    );
-    context.old_references = old_reference_snapshot;
-    context.new_references = new_reference_snapshot;
-    result
+    diff_inline_schema_inner(
+        &old_schema,
+        &new_schema,
+        location,
+        request,
+        context,
+        depth,
+        changes,
+    )
 }
 
 fn diff_inline_schema_inner(
-    old_value: Option<&Value>,
-    new_value: Option<&Value>,
+    old_value: &Value,
+    new_value: &Value,
     location: &str,
     request: bool,
     context: &mut SchemaDiffContext<'_>,
     depth: usize,
     changes: &mut Vec<SurfaceChange>,
 ) -> Result<(), String> {
-    let old_schema_value = resolve_schema_reference(
-        old_value,
-        context.old_document,
-        &mut context.old_references,
-        &mut context.budget,
-        depth,
-    )?;
-    let new_schema_value = resolve_schema_reference(
-        new_value,
-        context.new_document,
-        &mut context.new_references,
-        &mut context.budget,
-        depth,
-    )?;
-    let old_schema = match old_schema_value {
-        None => empty_object(),
-        Some(value) => match value.as_object() {
-            Some(schema) => schema,
-            None => return Ok(()),
-        },
+    let Some(old_schema) = old_value.as_object() else {
+        return Ok(());
     };
-    let new_schema = match new_schema_value {
-        None => empty_object(),
-        Some(value) => match value.as_object() {
-            Some(schema) => schema,
-            None => return Ok(()),
-        },
+    let Some(new_schema) = new_value.as_object() else {
+        return Ok(());
     };
 
-    let old_type = schema_type(old_schema.get("type"));
-    let new_type = schema_type(new_schema.get("type"));
+    let old_type = schema_type_of(old_schema);
+    let new_type = schema_type_of(new_schema);
     let old_untyped = schema_is_untyped(old_schema);
     let new_untyped = schema_is_untyped(new_schema);
+    let (old_inner, old_unwrapped, old_rest, old_combinator) = schema_unwrap(old_value);
+    let (new_inner, new_unwrapped, new_rest, new_combinator) = schema_unwrap(new_value);
+    let old_nullable = schema_nullable(old_value);
+    let new_nullable = schema_nullable(new_value);
+    if old_nullable != new_nullable {
+        let widened = new_nullable;
+        add_surface_change(
+            changes,
+            if request {
+                if widened {
+                    "additive"
+                } else {
+                    "breaking"
+                }
+            } else if widened {
+                "breaking"
+            } else {
+                "additive"
+            },
+            if widened {
+                "became_nullable"
+            } else {
+                "became_non_nullable"
+            },
+            location,
+            format!(
+                "nullable: {} -> {}",
+                if old_nullable { "True" } else { "False" },
+                if new_nullable { "True" } else { "False" }
+            ),
+        );
+    }
+
     if old_untyped != new_untyped {
         let erased = new_untyped;
         add_surface_change(
@@ -819,6 +837,79 @@ fn diff_inline_schema_inner(
         );
         return Ok(());
     }
+
+    if (!old_rest.is_empty() || !new_rest.is_empty())
+        && old_rest.len() == new_rest.len()
+        && old_combinator == new_combinator
+    {
+        let old_branches = sorted_schema_branches(&old_rest);
+        let new_branches = sorted_schema_branches(&new_rest);
+        for (index, (old_branch, new_branch)) in old_branches.iter().zip(&new_branches).enumerate()
+        {
+            diff_inline_schema(
+                Some(old_branch),
+                Some(new_branch),
+                &format!("{location}|{index}"),
+                request,
+                context,
+                depth + 1,
+                changes,
+            )?;
+        }
+    } else if !old_rest.is_empty() || !new_rest.is_empty() || old_combinator != new_combinator {
+        let before = if !old_rest.is_empty() {
+            old_rest.len()
+        } else if old_inner.is_object() {
+            1
+        } else {
+            0
+        };
+        let after = if !new_rest.is_empty() {
+            new_rest.len()
+        } else if new_inner.is_object() {
+            1
+        } else {
+            0
+        };
+        let conjunction = old_combinator == "allOf" || new_combinator == "allOf";
+        let stricter = if conjunction {
+            before < after
+        } else {
+            after < before
+        };
+        add_surface_change(
+            changes,
+            if request {
+                if stricter {
+                    "breaking"
+                } else {
+                    "additive"
+                }
+            } else {
+                "risky"
+            },
+            if stricter {
+                "union_narrowed"
+            } else {
+                "union_widened"
+            },
+            location,
+            format!("{old_combinator}[{before}] -> {new_combinator}[{after}]"),
+        );
+        return Ok(());
+    } else if old_unwrapped || new_unwrapped {
+        diff_inline_schema(
+            Some(&old_inner),
+            Some(&new_inner),
+            location,
+            request,
+            context,
+            depth + 1,
+            changes,
+        )?;
+        return Ok(());
+    }
+
     if let (Some(old_type), Some(new_type)) = (&old_type, &new_type) {
         if old_type != new_type {
             add_surface_change(
@@ -943,44 +1034,160 @@ fn diff_inline_schema_inner(
     Ok(())
 }
 
-fn resolve_schema_reference<'a>(
-    value: Option<&'a Value>,
-    document: &'a Value,
+fn schema_type_of(schema: &Map<String, Value>) -> Option<String> {
+    if let Some(value) = schema.get("type") {
+        return schema_type(Some(value));
+    }
+    for combinator in ["anyOf", "oneOf", "allOf"] {
+        let Some(variants) = schema.get(combinator).and_then(Value::as_array) else {
+            continue;
+        };
+        let types = variants
+            .iter()
+            .filter_map(|variant| variant.as_object().and_then(schema_type_of))
+            .collect::<BTreeSet<_>>();
+        if !types.is_empty() {
+            return Some(types.into_iter().collect::<Vec<_>>().join("|"));
+        }
+    }
+    None
+}
+
+fn schema_is_null_variant(schema: &Value) -> bool {
+    let Some(schema) = schema.as_object() else {
+        return false;
+    };
+    match schema.get("type") {
+        Some(Value::String(value)) => value == "null",
+        Some(Value::Array(values)) => {
+            !values.is_empty() && values.iter().all(|value| value.as_str() == Some("null"))
+        }
+        _ => false,
+    }
+}
+
+fn schema_nullable(schema: &Value) -> bool {
+    let Some(schema) = schema.as_object() else {
+        return false;
+    };
+    match schema.get("type") {
+        Some(Value::String(value)) if value == "null" => return true,
+        Some(Value::Array(values)) if values.iter().any(|value| value.as_str() == Some("null")) => {
+            return true;
+        }
+        _ => {}
+    }
+    ["anyOf", "oneOf"].iter().any(|combinator| {
+        schema
+            .get(*combinator)
+            .and_then(Value::as_array)
+            .is_some_and(|variants| variants.iter().any(schema_nullable))
+    })
+}
+
+fn schema_unwrap(schema: &Value) -> (Value, bool, Vec<Value>, &'static str) {
+    let Some(object) = schema.as_object() else {
+        return (schema.clone(), false, Vec::new(), "anyOf");
+    };
+    for combinator in ["anyOf", "oneOf", "allOf"] {
+        let Some(variants) = object.get(combinator).and_then(Value::as_array) else {
+            continue;
+        };
+        if variants.is_empty() {
+            continue;
+        }
+        let rest = variants
+            .iter()
+            .filter(|variant| !schema_is_null_variant(variant))
+            .cloned()
+            .collect::<Vec<_>>();
+        if rest.len() == 1 {
+            let mut inner = rest[0].clone();
+            if let Some(inner_object) = inner.as_object_mut() {
+                for (key, value) in object {
+                    if !matches!(key.as_str(), "anyOf" | "oneOf" | "allOf")
+                        && !inner_object.contains_key(key)
+                    {
+                        inner_object.insert(key.clone(), value.clone());
+                    }
+                }
+            }
+            return (inner, true, Vec::new(), combinator);
+        }
+        return (schema.clone(), false, rest, combinator);
+    }
+    (schema.clone(), false, Vec::new(), "anyOf")
+}
+
+fn sorted_schema_branches(branches: &[Value]) -> Vec<Value> {
+    let mut sorted = branches.to_vec();
+    for branch in &mut sorted {
+        canonicalize(branch);
+    }
+    sorted.sort_by_cached_key(json_sort_key);
+    sorted
+}
+
+fn consume_schema_budget(budget: &mut usize) -> Result<(), String> {
+    if *budget <= 1 {
+        *budget = 0;
+        return Err(format!(
+            "contract is too large to compare safely (over {MAX_EXPANDED_NODES} expanded nodes across the whole document)"
+        ));
+    }
+    *budget -= 1;
+    Ok(())
+}
+
+fn expand_schema_value(
+    value: &Value,
+    document: &Value,
     seen: &mut HashSet<String>,
     budget: &mut usize,
     depth: usize,
-) -> Result<Option<&'a Value>, String> {
-    let Some(mut current) = value else {
-        return Ok(None);
-    };
-    let mut reference_depth = depth;
-    loop {
-        let Some(reference) = current
-            .as_object()
-            .and_then(|schema| schema.get("$ref"))
-            .and_then(Value::as_str)
-        else {
-            return Ok(Some(current));
-        };
-        if !reference.starts_with("#/") || !seen.insert(reference.to_owned()) {
-            return Ok(Some(empty_schema_value()));
+) -> Result<Value, String> {
+    if *budget <= 1 {
+        *budget = 0;
+        return Err(format!(
+            "contract is too large or nested too deeply to compare safely (over {MAX_EXPANDED_NODES} expanded nodes, or {MAX_REF_DEPTH} levels of nesting — `$ref` hops and plain object nesting both count)"
+        ));
+    }
+    *budget -= 1;
+    if depth > MAX_REF_DEPTH {
+        return Err(format!(
+            "contract is too large or nested too deeply to compare safely (over {MAX_EXPANDED_NODES} expanded nodes, or {MAX_REF_DEPTH} levels of nesting — `$ref` hops and plain object nesting both count)"
+        ));
+    }
+
+    match value {
+        Value::Object(object) => {
+            if let Some(reference) = object.get("$ref").and_then(Value::as_str) {
+                if !reference.starts_with("#/") || seen.contains(reference) {
+                    return Ok(Value::Object(Map::new()));
+                }
+                let Some(target) = resolve_local_reference(document, reference) else {
+                    return Ok(Value::Object(Map::new()));
+                };
+                let mut next_seen = seen.clone();
+                next_seen.insert(reference.to_owned());
+                return expand_schema_value(target, document, &mut next_seen, budget, depth + 1);
+            }
+            let mut expanded = Map::new();
+            for (key, child) in object {
+                expanded.insert(
+                    key.clone(),
+                    expand_schema_value(child, document, seen, budget, depth + 1)?,
+                );
+            }
+            Ok(Value::Object(expanded))
         }
-        let Some(target) = resolve_local_reference(document, reference) else {
-            return Ok(Some(empty_schema_value()));
-        };
-        if *budget == 0 {
-            return Err(format!(
-                "contract is too large to compare safely (over {MAX_EXPANDED_NODES} schema nodes)"
-            ));
-        }
-        *budget -= 1;
-        reference_depth += 1;
-        if reference_depth > MAX_SCHEMA_COMPARE_DEPTH {
-            return Err(format!(
-                "contract is nested too deeply to compare safely (over {MAX_SCHEMA_COMPARE_DEPTH} schema levels)"
-            ));
-        }
-        current = target;
+        Value::Array(values) => Ok(Value::Array(
+            values
+                .iter()
+                .map(|child| expand_schema_value(child, document, seen, budget, depth + 1))
+                .collect::<Result<Vec<_>, _>>()?,
+        )),
+        other => Ok(other.clone()),
     }
 }
 

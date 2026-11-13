@@ -750,10 +750,19 @@ def _compare_schema_inner(
 
     if (old_rest or new_rest) and len(old_rest) == len(new_rest) and old_comb == new_comb:
         # Same shape of union on both sides: compare branch by branch. Branch
-        # order is not semantic, so `_canonical` sorts these lists — otherwise a
-        # library upgrade that reorders union members turns CI red on a
-        # byte-equivalent API.
-        for i, (o, n) in enumerate(zip(old_rest, new_rest, strict=True)):
+        # order is not semantic, so compare the canonical branch order —
+        # otherwise a library upgrade that reorders union members turns CI red
+        # on a byte-equivalent API even when callers invoke `diff_contracts`
+        # directly with non-canonical documents.
+        old_branches = sorted(
+            old_rest,
+            key=lambda value: json.dumps(_canonical(value), sort_keys=True),
+        )
+        new_branches = sorted(
+            new_rest,
+            key=lambda value: json.dumps(_canonical(value), sort_keys=True),
+        )
+        for i, (o, n) in enumerate(zip(old_branches, new_branches, strict=True)):
             _compare_schema(o, n, doc_old, doc_new, f"{loc}|{i}", report, request=request)
     elif old_rest or new_rest or old_comb != new_comb:
         # Arity or combinator changed. `anyOf`/`oneOf` are alternatives, so more

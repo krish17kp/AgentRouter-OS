@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-14 (TASK-082–092). This inventory covers every Python source module under
+Updated: 2026-11-14 (TASK-082–102). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -115,10 +115,13 @@ release authority until the full set is complete.
   changes, plus inline request/response schema type, field-presence/requiredness,
   array-item, enum/const, numeric/size bound, pattern, format, default, and
   `additionalProperties` changes, and matching operation-parameter schemas.
-  Schema `$ref` traversal is bounded and handles local aliases,
-  missing/external references, and recursive schemas with Python-compatible
-  results. It intentionally omits union/nullability analysis. It is not
-  suitable as a compatibility gate.
+  Schema `$ref` traversal is bounded and handles local aliases, nested refs
+  (including union branches), missing/external references, and recursive
+  schemas with Python-compatible results. Nullable wrappers and
+  `type: [T, null]` are classified separately; `anyOf`/`oneOf` branch counts,
+  `allOf` conjunction direction, payload changes, and branch ordering have
+  Python differential coverage. It remains a partial surface probe, not the
+  full semantic compatibility checker or a release gate.
   Symlink/hardlink-safe artifact export, manifest provenance, the full semantic
   compatibility checker, and CLI integration remain Python-only.
 - The Rust MCP process implements the five Python tools and stdio lifecycle;

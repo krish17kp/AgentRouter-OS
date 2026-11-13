@@ -13,10 +13,10 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 2,192 passed, 5 skipped |
-| Line coverage | 92.73% (6,706 / 7,232 statements) |
-| Branch coverage | 88.21% (1,886 / 2,138 branch outcomes) |
-| Combined coverage reported by pytest-cov | 91.70% |
+| Python regression | 2,203 passed, 5 skipped |
+| Line coverage | 92.76% (6,710 / 7,234 statements) |
+| Branch coverage | 88.35% (1,889 / 2,138 branch outcomes) |
+| Combined coverage reported by pytest-cov | 91.75% |
 | Project line / branch thresholds | 90% / 85% — both passed |
 | CI total-coverage threshold | 80% — passed |
 | Warnings | 1 Starlette/httpx deprecation warning |
@@ -26,15 +26,18 @@ includes simultaneous Python SQLite schema-migration checks, idempotency cache
 capacity boundaries, portable JSON integer and non-finite-number validation,
 Python/Rust storage round trips and snapshots, Python/Rust dashboard HTML,
 OpenAPI canonicalization, and baseline-trust comparisons, plus the existing
-evaluation, API, CLI, and safety suites. Rust
-workspace tests and strict Clippy were run separately. This run adds forty-six
-Python/Rust OpenAPI surface-diff cases for version/server/path/method changes,
-operation metadata and authentication, parameter presence/requiredness,
-request/response media types, body requiredness, response statuses, and
-documented semantics; inline schema coverage now includes type, field presence
+evaluation, API, CLI, and safety suites. Rust workspace tests and strict
+Clippy were run separately. The contract compatibility suite has 66 Python/Rust
+cases in total, including canonicalization, reference validation, and baseline
+loading. Surface-diff cases cover version/server/path/method changes, operation
+metadata and authentication, parameter presence/requiredness, request/response
+media types, body requiredness, response statuses, and documented semantics.
+Inline schema coverage now includes type, field presence
 and requiredness, array items, enum/const, bounds, patterns, formats, defaults,
-and `additionalProperties`, plus matching operation-parameter schemas.
-Reference fixtures cover local aliases, nested refs, missing targets, recursive
+and `additionalProperties`, plus matching operation-parameter schemas. Eleven
+focused cases exercise nullable wrappers, union branch direction and order,
+`$ref` expansion inside union branches, and the shared 64-level expansion
+limit. Reference fixtures also cover local aliases, missing targets, recursive
 schemas, and sibling behavior. The Rust slice is not the full compatibility
 analyzer.
 Five skips are

@@ -214,9 +214,9 @@ def test_rust_baseline_loader_rejects_untrusted_references(tmp_path):
     assert "only local refs are supported" in process.stderr
 
 
-def _rust_surface_diff(old: dict, new: dict) -> dict:
+def _rust_surface_diff_process(old: dict, new: dict) -> subprocess.CompletedProcess[str]:
     root = Path(__file__).resolve().parents[1]
-    process = subprocess.run(
+    return subprocess.run(
         [
             "cargo",
             "run",
@@ -235,6 +235,10 @@ def _rust_surface_diff(old: dict, new: dict) -> dict:
         timeout=120,
         check=False,
     )
+
+
+def _rust_surface_diff(old: dict, new: dict) -> dict:
+    process = _rust_surface_diff_process(old, new)
     assert process.returncode == 0, process.stderr
     return json.loads(process.stdout)
 
@@ -830,3 +834,116 @@ def test_rust_parameter_schema_matches_python(
     old = document(old_schema, old_components, old_required)
     new = document(new_schema, new_components, new_required)
     assert _rust_surface_diff(old, new) == diff_contracts(old, new).as_dict()
+
+
+@pytest.mark.parametrize(
+    ("is_request", "old_schema", "new_schema", "old_components", "new_components"),
+    [
+        (
+            True,
+            {"type": "string"},
+            {"anyOf": [{"type": "string"}, {"type": "null"}]},
+            {},
+            {},
+        ),
+        (
+            False,
+            {"type": "string"},
+            {"anyOf": [{"type": "string"}, {"type": "null"}]},
+            {},
+            {},
+        ),
+        (
+            True,
+            {"anyOf": [{"type": "string", "enum": ["a", "b"]}, {"type": "null"}]},
+            {"anyOf": [{"type": "string", "enum": ["a"]}, {"type": "null"}]},
+            {},
+            {},
+        ),
+        (
+            True,
+            {"oneOf": [{"type": "integer"}, {"type": "string"}]},
+            {"oneOf": [{"type": "boolean"}, {"type": "integer"}, {"type": "string"}]},
+            {},
+            {},
+        ),
+        (
+            False,
+            {"anyOf": [{"type": "boolean"}, {"type": "integer"}, {"type": "string"}]},
+            {"anyOf": [{"type": "integer"}, {"type": "string"}]},
+            {},
+            {},
+        ),
+        (
+            True,
+            {"allOf": [{"type": "string"}]},
+            {"allOf": [{"type": "string"}, {"pattern": "^[a-z]+$"}]},
+            {},
+            {},
+        ),
+        (
+            True,
+            {"allOf": [{"type": "string"}, {"pattern": "^[a-z]+$"}]},
+            {"allOf": [{"type": "string"}]},
+            {},
+            {},
+        ),
+        (
+            True,
+            {"anyOf": [{"type": "string"}, {"type": "integer"}]},
+            {"anyOf": [{"type": "integer"}, {"type": "string"}]},
+            {},
+            {},
+        ),
+        (
+            True,
+            {"type": "string"},
+            {"type": ["null", "string"]},
+            {},
+            {},
+        ),
+        (
+            True,
+            {"anyOf": [{"$ref": "#/components/schemas/Payload"}, {"type": "null"}]},
+            {"anyOf": [{"$ref": "#/components/schemas/Payload"}, {"type": "null"}]},
+            {"Payload": {"type": "string", "maxLength": 12}},
+            {"Payload": {"type": "string", "maxLength": 6}},
+        ),
+    ],
+)
+def test_rust_schema_unions_and_nullability_match_python(
+    is_request, old_schema, new_schema, old_components, new_components
+):
+    def document(schema, components):
+        if is_request:
+            operation = {
+                "post": {"requestBody": {"content": {"application/json": {"schema": schema}}}}
+            }
+        else:
+            operation = {
+                "get": {"responses": {"200": {"content": {"application/json": {"schema": schema}}}}}
+            }
+        return {"components": {"schemas": components}, "paths": {"/schema": operation}}
+
+    old = document(old_schema, old_components)
+    new = document(new_schema, new_components)
+    assert _rust_surface_diff(old, new) == diff_contracts(old, new).as_dict()
+
+
+def test_rust_schema_expansion_depth_limit_matches_python():
+    schema = {"type": "string"}
+    for _ in range(33):
+        schema = {"type": "object", "properties": {"value": schema}}
+    document = {
+        "paths": {
+            "/schema": {
+                "post": {"requestBody": {"content": {"application/json": {"schema": schema}}}}
+            }
+        }
+    }
+
+    with pytest.raises(ContractError, match="or 64 levels of nesting"):
+        diff_contracts(document, document)
+    rust = _rust_surface_diff_process(document, document)
+    assert rust.returncode != 0
+    assert "or 64 levels of nesting" in rust.stderr
