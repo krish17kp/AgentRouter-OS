@@ -31,6 +31,10 @@ All notable changes to AgentRouter OS. Format loosely follows
   path validation that rejects traversal, device names, controls, and Windows
   path aliases. Filesystem transactions and the user-facing `agentrouter
   plugin` commands remain Python-only until their safety behavior is ported.
+- Add fail-closed Rust validation for plugin ownership-record shape, allowed
+  dispositions, destination and backup paths, digests, and file/directory
+  identities. This validates untrusted JSON only; it does not read or trust a
+  record from disk until the no-follow filesystem reader is ported.
 
 ### Fixed
 - Add Rust OpenAPI canonicalization and bounded `$ref` validation with stable,

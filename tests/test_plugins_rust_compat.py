@@ -9,6 +9,7 @@ from agentrouter import plugins
 
 def _rust_plugin_probe(payload: dict) -> dict:
     repository = Path(__file__).resolve().parents[1]
+    binary = "plugin_state_from_json" if "states" in payload else "plugin_paths_from_json"
     process = subprocess.run(
         [
             "cargo",
@@ -18,7 +19,7 @@ def _rust_plugin_probe(payload: dict) -> dict:
             "-p",
             "agentrouter-cli",
             "--bin",
-            "plugin_paths_from_json",
+            binary,
         ],
         cwd=repository,
         input=json.dumps(payload, ensure_ascii=False),
@@ -113,3 +114,110 @@ def test_rust_plugin_destination_roots_match_python(tmp_path, monkeypatch):
     actual = _rust_plugin_probe(payload)["roots"]
     assert [item["path"] for item in actual[:2]] == expected_override
     assert [item["path"] for item in actual[2:]] == expected_home
+
+
+def test_rust_ownership_state_validation_matches_python(tmp_path):
+    plugin = plugins.get_plugin("codex")
+    valid = plugins._empty_state(plugin)
+    valid["state_dir_identity"] = [True, 42]  # Python treats bool as an int.
+    valid["files"] = {
+        "AGENTS.md": {
+            "disposition": "replaced",
+            "installed_sha256": "abc",
+            "installed_identity": [1, 2],
+            "backup": "AGENTS.md.agentrouter-bak",
+            "backup_sha256": "def",
+            "backup_identity": [3, 4],
+            "backup_mode": 384,
+        }
+    }
+    valid["directories"] = {"skills": {"identity": [5, 6]}}
+    float_schema_version = {**valid, "schema": 2.0}
+    states = [
+        json.dumps(valid),
+        json.dumps(float_schema_version),
+        "{not json",
+        json.dumps({"schema": 1, "plugin": "codex", "files": {}, "directories": {}}),
+        json.dumps({"schema": 2, "plugin": "other", "files": {}, "directories": {}}),
+        json.dumps({"schema": 2, "plugin": "codex", "files": [], "directories": {}}),
+        json.dumps(
+            {
+                "schema": 2,
+                "plugin": "codex",
+                "files": {"../escape": {}},
+                "directories": {},
+            }
+        ),
+        json.dumps(
+            {
+                "schema": 2,
+                "plugin": "codex",
+                "files": {"AGENTS.md": {"disposition": "created"}},
+                "directories": {},
+            }
+        ),
+        json.dumps(
+            {
+                "schema": 2,
+                "plugin": "codex",
+                "files": {
+                    "AGENTS.md": {
+                        "disposition": "created",
+                        "installed_sha256": "abc",
+                        "installed_identity": [1.5, 2],
+                    }
+                },
+                "directories": {},
+            }
+        ),
+        json.dumps(
+            {
+                "schema": 2,
+                "plugin": "codex",
+                "files": {
+                    "AGENTS.md": {
+                        "disposition": "created",
+                        "installed_sha256": "abc",
+                        "installed_identity": [1, 2],
+                        "backup": "../outside",
+                    }
+                },
+                "directories": {},
+            }
+        ),
+        json.dumps(
+            {
+                "schema": 2,
+                "plugin": "codex",
+                "files": {},
+                "directories": {"skills": {"identity": [1]}},
+            }
+        ),
+        json.dumps(
+            {
+                "schema": 2,
+                "plugin": "codex",
+                "files": {},
+                "directories": {},
+                "state_dir_identity": [1, 2, 3],
+            }
+        ),
+    ]
+
+    expected = []
+    for index, raw in enumerate(states):
+        root = tmp_path / str(index)
+        state_path = plugins._state_path(root, plugin)
+        state_path.parent.mkdir(parents=True)
+        state_path.write_text(raw, encoding="utf-8")
+        try:
+            plugins._load_state(root, plugin)
+        except plugins.PluginError:
+            expected.append(False)
+        else:
+            expected.append(True)
+
+    actual = _rust_plugin_probe(
+        {"states": [{"plugin": plugin.name, "state_raw": raw} for raw in states]}
+    )["states"]
+    assert [item["accepted"] for item in actual] == expected

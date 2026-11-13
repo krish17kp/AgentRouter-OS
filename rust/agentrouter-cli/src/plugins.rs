@@ -154,6 +154,131 @@ pub fn dest_root(
         .fold(home.to_path_buf(), |path, part| path.join(part)))
 }
 
+/// Validate the JSON ownership-record shape without claiming any filesystem
+/// path. Callers must still open the record without following links and verify
+/// its digest/inode before using these claims to mutate a destination.
+pub fn validate_state_data(plugin: &PluginSpec, state: &serde_json::Value) -> Result<(), String> {
+    let path_for = |category: &str| format!("plugin ownership state {category}");
+    let Some(object) = state.as_object() else {
+        return Err("plugin ownership state has an unsupported schema".to_owned());
+    };
+    if !object
+        .get("schema")
+        .is_some_and(python_equal_schema_version)
+        || object.get("plugin").and_then(serde_json::Value::as_str) != Some(plugin.name)
+        || !object
+            .get("files")
+            .is_some_and(serde_json::Value::is_object)
+        || !object
+            .get("directories")
+            .is_some_and(serde_json::Value::is_object)
+    {
+        return Err(path_for("has an unsupported schema"));
+    }
+    let files = object
+        .get("files")
+        .and_then(serde_json::Value::as_object)
+        .expect("files shape checked above");
+    for (relative, entry) in files {
+        safe_relative(relative, "plugin destination")?;
+        let Some(entry) = entry.as_object() else {
+            return Err(format!(
+                "plugin ownership state contains an invalid destination: {}",
+                python_string_repr(relative)
+            ));
+        };
+        if !matches!(
+            entry.get("disposition").and_then(serde_json::Value::as_str),
+            Some("created" | "replaced" | "preexisting")
+        ) {
+            return Err(format!(
+                "plugin ownership state contains an invalid disposition: {}",
+                python_string_repr(relative)
+            ));
+        }
+        if !entry
+            .get("installed_sha256")
+            .is_some_and(serde_json::Value::is_string)
+        {
+            return Err(format!(
+                "plugin ownership state lacks an installed digest: {}",
+                python_string_repr(relative)
+            ));
+        }
+        if !valid_identity(entry.get("installed_identity")) {
+            return Err(format!(
+                "plugin ownership state lacks a valid file identity: {}",
+                python_string_repr(relative)
+            ));
+        }
+        if let Some(backup) = entry.get("backup").filter(|value| !value.is_null()) {
+            let Some(backup) = backup.as_str() else {
+                return Err(format!(
+                    "unsafe relative path for plugin backup in ownership state: {}",
+                    python_string_repr(&backup.to_string())
+                ));
+            };
+            safe_relative(backup, "plugin backup in ownership state")?;
+            if !entry
+                .get("backup_sha256")
+                .is_some_and(serde_json::Value::is_string)
+            {
+                return Err(format!(
+                    "plugin ownership state lacks a backup digest: {}",
+                    python_string_repr(relative)
+                ));
+            }
+            if !valid_identity(entry.get("backup_identity"))
+                || !entry.get("backup_mode").is_some_and(is_python_integer)
+            {
+                return Err(format!(
+                    "plugin ownership state lacks backup identity metadata: {}",
+                    python_string_repr(relative)
+                ));
+            }
+        }
+    }
+    let directories = object
+        .get("directories")
+        .and_then(serde_json::Value::as_object)
+        .expect("directories shape checked above");
+    for (relative, entry) in directories {
+        safe_relative(relative, "managed plugin directory")?;
+        if !entry
+            .as_object()
+            .and_then(|entry| entry.get("identity"))
+            .is_some_and(|identity| valid_identity(Some(identity)))
+        {
+            return Err(format!(
+                "plugin ownership state has invalid directory identity: {}",
+                python_string_repr(relative)
+            ));
+        }
+    }
+    if let Some(identity) = object.get("state_dir_identity") {
+        if !identity.is_null() && !valid_identity(Some(identity)) {
+            return Err(
+                "plugin ownership state has an invalid private-directory identity".to_owned(),
+            );
+        }
+    }
+    Ok(())
+}
+
+fn valid_identity(value: Option<&serde_json::Value>) -> bool {
+    value
+        .and_then(serde_json::Value::as_array)
+        .is_some_and(|identity| identity.len() == 2 && identity.iter().all(is_python_integer))
+}
+
+fn is_python_integer(value: &serde_json::Value) -> bool {
+    value.is_boolean() || value.as_i64().is_some() || value.as_u64().is_some()
+}
+
+fn python_equal_schema_version(value: &serde_json::Value) -> bool {
+    !value.is_boolean() && value.as_f64() == Some(2.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -231,5 +356,57 @@ mod tests {
             dest_root(plugin, None, Some(Path::new("/home/u"))).unwrap(),
             PathBuf::from("/home/u/.claude")
         );
+    }
+
+    #[test]
+    fn ownership_state_shape_matches_python_integer_and_optional_fields() {
+        let plugin = get_plugin("codex").unwrap();
+        let valid = serde_json::json!({
+            "schema": 2,
+            "plugin": "codex",
+            "state_dir_identity": [true, 42],
+            "files": {
+                "AGENTS.md": {
+                    "disposition": "replaced",
+                    "installed_sha256": "abc",
+                    "installed_identity": [1, 2],
+                    "backup": "AGENTS.md.agentrouter-bak",
+                    "backup_sha256": "def",
+                    "backup_identity": [3, 4],
+                    "backup_mode": 384
+                }
+            },
+            "directories": {"skills": {"identity": [5, 6]}}
+        });
+        assert!(validate_state_data(plugin, &valid).is_ok());
+        let mut float_schema_version = valid.clone();
+        float_schema_version["schema"] = serde_json::json!(2.0);
+        assert!(validate_state_data(plugin, &float_schema_version).is_ok());
+        assert!(validate_state_data(
+            plugin,
+            &serde_json::json!({"schema":2,"plugin":"codex","files":{},"directories":{}})
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn ownership_state_shape_rejects_untrusted_claims() {
+        let plugin = get_plugin("codex").unwrap();
+        let invalid = [
+            serde_json::json!([]),
+            serde_json::json!({"schema":1,"plugin":"codex","files":{},"directories":{}}),
+            serde_json::json!({"schema":2,"plugin":"claude-code","files":{},"directories":{}}),
+            serde_json::json!({"schema":2,"plugin":"codex","files":[],"directories":{}}),
+            serde_json::json!({"schema":2,"plugin":"codex","files":{"../escape":{}},"directories":{}}),
+            serde_json::json!({"schema":2,"plugin":"codex","files":{"AGENTS.md":{}},"directories":{}}),
+            serde_json::json!({"schema":2,"plugin":"codex","files":{"AGENTS.md":{"disposition":"unknown"}},"directories":{}}),
+            serde_json::json!({"schema":2,"plugin":"codex","files":{"AGENTS.md":{"disposition":"created","installed_sha256":"abc","installed_identity":[1.5,2]}},"directories":{}}),
+            serde_json::json!({"schema":2,"plugin":"codex","files":{"AGENTS.md":{"disposition":"created","installed_sha256":"abc","installed_identity":[1,2],"backup":"../outside"}},"directories":{}}),
+            serde_json::json!({"schema":2,"plugin":"codex","files":{},"directories":{"skills":{"identity":[1]}}}),
+            serde_json::json!({"schema":2,"plugin":"codex","files":{},"directories":{},"state_dir_identity":[1,2,3]}),
+        ];
+        for state in invalid {
+            assert!(validate_state_data(plugin, &state).is_err(), "{state}");
+        }
     }
 }
