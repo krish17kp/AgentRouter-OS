@@ -61,6 +61,10 @@ name = "dashboard_cli"
 path = "src/bin/dashboard_cli.rs"
 
 [[bin]]
+name = "dashboard_render_from_json"
+path = "src/bin/dashboard_render_from_json.rs"
+
+[[bin]]
 name = "observability_cli"
 path = "src/bin/observability_cli.rs"
 

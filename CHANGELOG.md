@@ -12,6 +12,9 @@ All notable changes to AgentRouter OS. Format loosely follows
   malformed input, date parsing, sanitization, backup history, and missing paths.
 - Preserve Python adapter exception classes in Rust quota-check results through
   typed failures, without returning provider error messages to users.
+- Add direct Python/Rust dashboard page comparisons, including escaped user
+  data and truncation, and compare the live Rust page with Python's rendered
+  store output.
 
 ### Changed
 - Refuse redirects in the Python OpenAI Responses adapter so credentials cannot

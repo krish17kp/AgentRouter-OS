@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-13 (TASK-082–085). This inventory covers every Python source module under
+Updated: 2026-11-13 (TASK-082–086). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -33,7 +33,7 @@ release authority until the full set is complete.
 | `agentrouter/context_model.py` | `agentrouter-classifier::context_model` | Parity |
 | `agentrouter/contract.py` | `—` | Not ported |
 | `agentrouter/controls.py` | `agentrouter-policy::controls` | Parity |
-| `agentrouter/dashboard.py` | `agentrouter-cli::dashboard` | Partial |
+| `agentrouter/dashboard.py` | `agentrouter-cli::dashboard` | Parity |
 | `agentrouter/diagnostics.py` | `agentrouter-cli::diagnostics` | Partial |
 | `agentrouter/engine.py` | `agentrouter-routing` | Parity |
 | `agentrouter/evaluate.py` | `agentrouter-evaluation::legacy_gold` | Partial |
@@ -177,6 +177,10 @@ release authority until the full set is complete.
   Python date formats and summary sanitization, non-directory listings,
   backup rotation, restore collisions, and linked-file refusal. Python now
   applies the same no-follow and exclusive-write safeguards.
+- The Rust dashboard page renderer matches Python's complete HTML output over
+  empty, escaped, truncated, and aggregate-bearing cases. Its loopback server
+  is checked against Python's rendered SQLite output and refuses write methods
+  without changing the decision log.
 - The Rust SDK client covers Python endpoint paths, payload cleanup, an
   optional API-key header, timeout configuration and structured HTTP errors.
   The local HTTP server and end-to-end client/server contract remain

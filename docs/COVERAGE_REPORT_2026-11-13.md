@@ -13,7 +13,7 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 2,097 passed, 5 skipped |
+| Python regression | 2,100 passed, 5 skipped |
 | Line coverage | 92.52% (6,657 / 7,195 statements) |
 | Branch coverage | 87.65% (1,853 / 2,114 branch outcomes) |
 | Combined coverage reported by pytest-cov | 91.42% |
@@ -90,3 +90,9 @@ Unicode/control-character sanitization. Typed offline adapter failures also
 compare `TimeoutError`, `ConnectionError`, and `ValueError` reporting while
 checking provider error messages stay private. These fixtures exercise the
 adapter extension seam without registering or calling a real provider.
+
+The Rust dashboard is differentially compared with Python for empty and
+populated pages, escaped user values, truncated task text, and missing optional
+user aggregates. A live Rust dashboard response is also compared byte-for-byte
+with Python's rendered SQLite statistics and recent decisions; write methods
+are refused without changing the decision log.
