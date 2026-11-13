@@ -9,9 +9,9 @@ cargo run --locked -p agentrouter-cli --bin agentrouter -- --help
 ```
 
 `agentrouter` currently dispatches `init`, `route`, `explain`, `feedback`,
-`prompt`, `registry list`, `providers status`, `hosts`, `models`, `doctor`, and
-`dashboard` to their Rust implementations. The human annotation flow is linked
-directly:
+`stats`, `prompt`, `registry list`, provider status/doctor/rollback/restore,
+`hosts`, `models`, `doctor`, and `dashboard` to their Rust implementations.
+The human annotation flow is linked directly:
 
 ```sh
 cargo run --locked -p agentrouter-cli --bin agentrouter -- dataset --help

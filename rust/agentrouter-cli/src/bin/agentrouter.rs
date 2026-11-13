@@ -5,6 +5,7 @@
 //! evaluation crate so it does not depend on a second package installation.
 
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -12,7 +13,7 @@ use std::process::Command;
 use agentrouter_registry::{load_all_models, load_providers, ModelEntry};
 
 fn usage() -> &'static str {
-    "usage: agentrouter <init|route|explain|feedback|prompt|registry|providers|hosts|models|doctor|dashboard|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers status\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  dashboard [port]\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
+    "usage: agentrouter <init|route|explain|feedback|stats|prompt|registry|providers|hosts|models|doctor|dashboard|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  stats [--json]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  dashboard [port]\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
 }
 
 fn home() -> Result<PathBuf, String> {
@@ -305,6 +306,186 @@ fn feedback(home: &Path, args: &[String]) -> Result<i32, String> {
     Ok(0)
 }
 
+fn stats(home: &Path, args: &[String]) -> Result<i32, String> {
+    let json_output = match args {
+        [] => false,
+        [flag] if flag == "--json" => true,
+        _ => return Err("usage: agentrouter stats [--json]".to_owned()),
+    };
+    let database = home.join("agentrouter.db");
+    if !database.is_file() {
+        eprintln!("No decision log found at {}.", database.display());
+        eprintln!("Next: agentrouter init, then agentrouter route \"<task>\"");
+        return Ok(2);
+    }
+    let models = load_catalog(home)?;
+    let tiers: HashMap<String, String> = models
+        .into_iter()
+        .map(|model| {
+            (
+                model.key(),
+                format!("{:?}", model.pricing_tier).to_lowercase(),
+            )
+        })
+        .collect();
+    let connection = agentrouter_storage::connect(home).map_err(|error| error.to_string())?;
+    let aggregate = agentrouter_storage::aggregate_stats(&connection, Some(&tiers))
+        .map_err(|error| error.to_string())?;
+    if json_output {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&aggregate).map_err(|error| error.to_string())?
+        );
+        return Ok(0);
+    }
+    let summary = |key: &str| {
+        aggregate[key]
+            .as_object()
+            .map(|values| {
+                let mut pairs = values
+                    .iter()
+                    .map(|(name, value)| format!("{name}={}", value.as_i64().unwrap_or_default()))
+                    .collect::<Vec<_>>();
+                pairs.sort();
+                if pairs.is_empty() {
+                    "-".to_owned()
+                } else {
+                    pairs.join(", ")
+                }
+            })
+            .unwrap_or_else(|| "-".to_owned())
+    };
+    println!("Decisions logged: {}", aggregate["decisions"]);
+    println!("By risk: {}", summary("by_risk"));
+    println!(
+        "By recommended pricing tier: {}",
+        summary("by_pricing_tier")
+    );
+    println!("By user: {}", summary("by_user"));
+    let avg = aggregate["feedback"]["avg_rating"]
+        .as_f64()
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "-".to_owned());
+    let acceptance = aggregate["feedback"]["acceptance_rate"]
+        .as_f64()
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "-".to_owned());
+    println!(
+        "Feedback: {} rating(s), avg {avg}, acceptance rate {acceptance}",
+        aggregate["feedback"]["count"]
+    );
+    Ok(0)
+}
+
+fn providers_rollback(home: &Path, provider: &str) -> Result<i32, String> {
+    let registry = home.join("registry");
+    match agentrouter_registry::catalog_ops::rollback(&registry, provider) {
+        Ok(Some(backup)) => {
+            println!(
+                "Rolled back '{provider}'; backed up to {}.",
+                backup.file_name().unwrap_or_default().to_string_lossy()
+            );
+            println!("Manual models.yaml is now authoritative. Re-refresh to restore, or");
+            println!("Next: agentrouter providers restore {provider}");
+            Ok(0)
+        }
+        Ok(None) => {
+            eprintln!("No generated catalog for '{provider}' to roll back.");
+            eprintln!(
+                "Why: {} does not exist.",
+                registry
+                    .join(format!("models.{provider}.generated.yaml"))
+                    .display()
+            );
+            Ok(2)
+        }
+        Err(error) => Err(format!("Cannot roll back: {error}")),
+    }
+}
+
+fn providers_restore(home: &Path, provider: &str) -> Result<i32, String> {
+    let registry = home.join("registry");
+    match agentrouter_registry::catalog_ops::restore(&registry, provider) {
+        Ok(Some(restored)) => {
+            println!("Restored {}.", restored.display());
+            println!("Next: agentrouter providers status");
+            Ok(0)
+        }
+        Ok(None) => {
+            eprintln!("No rollback backup for '{provider}' to restore.");
+            eprintln!(
+                "Why: {} does not exist.",
+                registry
+                    .join(format!("models.{provider}.generated.yaml.bak"))
+                    .display()
+            );
+            Ok(2)
+        }
+        Err(error) => Err(format!("Cannot restore '{provider}': {error}")),
+    }
+}
+
+fn providers_doctor(home: &Path) -> Result<i32, String> {
+    let registry = home.join("registry");
+    if !registry.is_dir() {
+        eprintln!("Registry directory not found: {}", registry.display());
+        eprintln!("Next: run agentrouter init first.");
+        return Ok(3);
+    }
+    let mut generated = std::fs::read_dir(&registry)
+        .map_err(|error| error.to_string())?
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| {
+                    name.starts_with("models.") && name.ends_with(".generated.yaml")
+                })
+        })
+        .collect::<Vec<_>>();
+    generated.sort();
+    if generated.is_empty() {
+        println!("No refreshed catalogs to check. Manual models.yaml is authoritative.");
+        return Ok(0);
+    }
+    let providers = load_providers(&registry.join("providers.yaml"))
+        .map_err(|error| format!("Cannot validate: {error}"))?;
+    let today = chrono::Local::now().date_naive();
+    let mut broken = 0;
+    for path in generated {
+        let provider = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .and_then(|name| name.strip_prefix("models."))
+            .and_then(|name| name.strip_suffix(".generated.yaml"))
+            .unwrap_or("unknown");
+        let status = agentrouter_registry::catalog_ops::read_status(&path, today);
+        let models =
+            agentrouter_registry::load_models(&path, &providers).map_err(|error| error.to_string());
+        match (status, models) {
+            (Ok(status), Ok(_)) => {
+                println!(
+                    "[{}] {}",
+                    if status.stale { "STALE" } else { "OK   " },
+                    status.summary()
+                );
+            }
+            (Err(error), _) | (_, Err(error)) => {
+                println!("[FAIL ] {provider:<12} {error}");
+                broken += 1;
+            }
+        }
+    }
+    if broken > 0 {
+        println!("\n{broken} generated catalog(s) are corrupt or invalid.");
+        println!("Next: agentrouter providers rollback <provider>, then re-refresh.");
+        Ok(3)
+    } else {
+        Ok(0)
+    }
+}
+
 fn run() -> Result<i32, String> {
     let mut args = env::args().skip(1);
     let Some(command) = args.next() else {
@@ -352,6 +533,7 @@ fn run() -> Result<i32, String> {
             )
         }
         "feedback" => feedback(&home, &tail),
+        "stats" => stats(&home, &tail),
         "prompt" => {
             if tail.first().map(String::as_str) != Some("generate") {
                 return Err(
@@ -383,15 +565,19 @@ fn run() -> Result<i32, String> {
             }
             run_sibling("registry_cli", with_home(&home, tail.into_iter().skip(1)))
         }
-        "providers" => {
-            if tail.first().map(String::as_str) != Some("status") || tail.len() != 1 {
-                return Err("usage: agentrouter providers status".to_owned());
-            }
-            run_sibling(
+        "providers" => match tail.first().map(String::as_str) {
+            Some("status") if tail.len() == 1 => run_sibling(
                 "providers_status_cli",
                 [home.to_string_lossy().into_owned()],
-            )
-        }
+            ),
+            Some("doctor") if tail.len() == 1 => providers_doctor(&home),
+            Some("rollback") if tail.len() == 2 => providers_rollback(&home, &tail[1]),
+            Some("restore") if tail.len() == 2 => providers_restore(&home, &tail[1]),
+            _ => Err(
+                "usage: agentrouter providers <status|doctor|rollback PROVIDER|restore PROVIDER>"
+                    .to_owned(),
+            ),
+        },
         "hosts" => match tail.first().map(String::as_str) {
             Some("list") if tail.len() == 1 => hosts_list(&home),
             Some("doctor") if tail.len() == 1 => hosts_doctor(),

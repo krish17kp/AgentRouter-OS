@@ -114,6 +114,20 @@ def test_init_and_route_dispatch_to_rust_implementations(tmp_path, unified_binar
     assert feedback.returncode == 0, feedback.stderr
     assert "Recorded rating 4" in feedback.stdout
 
+    stats = _run(unified_binary, "stats", "--json", home=home)
+    assert stats.returncode == 0, stats.stderr
+    aggregate = json.loads(stats.stdout)
+    assert aggregate["decisions"] == 1
+    assert aggregate["feedback"] == {
+        "count": 1,
+        "avg_rating": 4.0,
+        "acceptance_rate": 1.0,
+    }
+    stats_text = _run(unified_binary, "stats", home=home)
+    assert stats_text.returncode == 0, stats_text.stderr
+    assert "Decisions logged: 1" in stats_text.stdout
+    assert "Feedback: 1 rating(s), avg 4" in stats_text.stdout
+
 
 def test_dataset_is_available_from_unified_entrypoint(tmp_path, unified_binary):
     candidates_path = tmp_path / "candidate-pool.yaml"
@@ -130,6 +144,48 @@ def test_dataset_is_available_from_unified_entrypoint(tmp_path, unified_binary):
     )
     assert generated.returncode == 0, generated.stderr
     assert store.load_candidates(candidates_path) == candidate_mod.generate(20, seed=-901)
+
+
+def test_provider_catalog_rollback_is_reversible(tmp_path, unified_binary):
+    home = tmp_path / "agentrouter-home"
+    initialized = _run(unified_binary, "init", home=home)
+    assert initialized.returncode == 0, initialized.stderr
+    registry = home / "registry"
+    catalog = registry / "models.fixture.generated.yaml"
+    original = (
+        b"provenance: {source_url: https://fixture.invalid}\n"
+        b"models:\n"
+        b"  - provider: openrouter\n"
+        b"    model_id: fixture/model\n"
+        b"    context_window: 8192\n"
+        b"    max_output_tokens: 2048\n"
+        b"    pricing_tier: low\n"
+        b"    latency_tier: medium\n"
+        b"    ability: {coding: 6, reasoning: 6, writing: 6}\n"
+        b"    tool_support: []\n"
+        b"    vision_support: false\n"
+        b"    deprecation_status: active\n"
+    )
+    catalog.write_bytes(original)
+
+    rolled_back = _run(unified_binary, "providers", "rollback", "fixture", home=home)
+    assert rolled_back.returncode == 0, rolled_back.stderr
+    assert not catalog.exists()
+    assert catalog.with_name(catalog.name + ".bak").read_bytes() == original
+
+    restored = _run(unified_binary, "providers", "restore", "fixture", home=home)
+    assert restored.returncode == 0, restored.stderr
+    assert catalog.read_bytes() == original
+    assert not catalog.with_name(catalog.name + ".bak").exists()
+
+    doctor = _run(unified_binary, "providers", "doctor", home=home)
+    assert doctor.returncode == 0, doctor.stderr
+    assert "[STALE]" in doctor.stdout
+
+    catalog.write_text("models: [\n", encoding="utf-8")
+    broken = _run(unified_binary, "providers", "doctor", home=home)
+    assert broken.returncode == 3
+    assert "[FAIL ] fixture" in broken.stdout
 
 
 def test_unknown_or_unported_command_fails_with_usage(unified_binary):

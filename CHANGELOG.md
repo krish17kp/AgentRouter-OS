@@ -43,6 +43,10 @@ All notable changes to AgentRouter OS. Format loosely follows
   route, explain, feedback, prompt, registry, provider status, host/model
   inspection, doctor, dashboard, and dataset commands. Python CLI commands
   without Rust implementations remain explicit migration gaps.
+- Extend the unified Rust CLI with local telemetry summaries and generated
+  provider-catalog doctor, rollback, and restore operations. Rust/Python
+  command checks cover saved feedback aggregates, reversible catalog changes,
+  and corrupt-catalog reporting.
 - Port the HTTP service business layer to `agentrouter-api` for model/host
   listing, classification, routing, decision lookup, feedback, and dry-run
   previews. It depends directly on routing, host, registry, classifier, and
