@@ -143,6 +143,36 @@ def test_rust_saved_decision_matches_python_reader(seeded_home):
     conn.close()
 
 
+def test_rust_store_preserves_portable_json_integer_boundaries(seeded_home):
+    conn = store.connect(seeded_home)
+    payload = {"signed_min": -(2**63), "unsigned_max": 2**64 - 1}
+    decision_id = json.loads(_run(seeded_home, "save", "large integer", json.dumps(payload)))
+
+    assert store.load_decision(conn, decision_id)["signed_min"] == -(2**63)
+    assert store.load_decision(conn, decision_id)["unsigned_max"] == 2**64 - 1
+    assert json.loads(_run(seeded_home, "load", decision_id))["signed_min"] == -(2**63)
+    assert json.loads(_run(seeded_home, "load", decision_id))["unsigned_max"] == 2**64 - 1
+    conn.close()
+
+
+@pytest.mark.parametrize("number", [2**64, -(2**63) - 1])
+def test_python_store_rejects_integers_outside_portable_json_range(seeded_home, number):
+    conn = store.connect(seeded_home)
+    with pytest.raises(ValueError, match="signed/unsigned 64-bit JSON range"):
+        store.save_decision(conn, "out-of-range integer", {"value": [number]})
+    assert conn.execute("SELECT COUNT(*) FROM decisions").fetchone()[0] == 3
+    conn.close()
+
+
+@pytest.mark.parametrize("number", [float("nan"), float("inf"), float("-inf")])
+def test_python_store_rejects_nonstandard_json_numbers(seeded_home, number):
+    conn = store.connect(seeded_home)
+    with pytest.raises(ValueError, match="Out of range float values"):
+        store.save_decision(conn, "non-standard number", {"value": number})
+    assert conn.execute("SELECT COUNT(*) FROM decisions").fetchone()[0] == 3
+    conn.close()
+
+
 def test_rust_snapshot_is_readable_by_python_and_creates_parent(seeded_home, tmp_path):
     destination = tmp_path / "nested" / "snapshot.db"
     assert json.loads(_run(seeded_home, "snapshot", str(destination))) is True
@@ -160,6 +190,25 @@ def test_rust_snapshot_is_readable_by_python_and_creates_parent(seeded_home, tmp
     assert rust_ids == ["d_00003", "d_00002", "d_00001"]
 
 
+def test_current_user_matches_python_environment_precedence(seeded_home, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_USER", "")
+    monkeypatch.setenv("LOGNAME", "")
+    monkeypatch.setenv("USER", "compat-login-user")
+    monkeypatch.setenv("LNAME", "later-user")
+
+    assert json.loads(_run(seeded_home, "current-user")) == store.current_user()
+
+
+def test_current_user_matches_python_os_account_fallback(seeded_home, monkeypatch):
+    with monkeypatch.context() as environment:
+        for name in ("AGENTROUTER_USER", "LOGNAME", "USER", "LNAME", "USERNAME"):
+            environment.delenv(name, raising=False)
+        expected = store.current_user()
+        actual = json.loads(_run(seeded_home, "current-user"))
+
+    assert actual == expected
+
+
 def test_malformed_persisted_json_fails_closed_in_both_runtimes(seeded_home):
     conn = store.connect(seeded_home)
     conn.execute("UPDATE decisions SET payload = '{' WHERE id = 1")
@@ -171,6 +220,29 @@ def test_malformed_persisted_json_fails_closed_in_both_runtimes(seeded_home):
         lambda: store.load_decision(conn, "d_00001"),
     ):
         with pytest.raises(json.JSONDecodeError):
+            python_reader()
+
+    for operation, args in (
+        ("recent-decisions", ("10",)),
+        ("aggregate-stats", ()),
+        ("load", ("d_00001",)),
+    ):
+        with pytest.raises(subprocess.CalledProcessError):
+            _run(seeded_home, operation, *args)
+    conn.close()
+
+
+def test_non_object_persisted_json_fails_closed_in_both_runtimes(seeded_home):
+    conn = store.connect(seeded_home)
+    conn.execute("UPDATE decisions SET payload = '[]' WHERE id = 1")
+    conn.commit()
+
+    for python_reader in (
+        lambda: store.recent_decisions(conn, 10),
+        lambda: store.aggregate_stats(conn),
+        lambda: store.load_decision(conn, "d_00001"),
+    ):
+        with pytest.raises((AttributeError, TypeError)):
             python_reader()
 
     for operation, args in (

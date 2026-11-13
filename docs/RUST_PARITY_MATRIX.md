@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-14 (TASK-082–090). This inventory covers every Python source module under
+Updated: 2026-11-14 (TASK-082–091). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -87,7 +87,7 @@ release authority until the full set is complete.
 | `agentrouter/server/limits.py` | `agentrouter-limits` (re-exported as `agentrouter_cli::limits`) | Partial |
 | `agentrouter/server/schemas.py` | `agentrouter-api::{schemas,responses}` | Partial |
 | `agentrouter/server/service.py` | `agentrouter-api::service` | Partial |
-| `agentrouter/store.py` | `agentrouter-storage` | Partial |
+| `agentrouter/store.py` | `agentrouter-storage` | Parity |
 | `agentrouter/taxonomy.py` | `agentrouter-policy::taxonomy` | Parity |
 | `agentrouter/usage.py` | `agentrouter-usage::{check_usage,apply_live_verification}` | Parity |
 
@@ -187,14 +187,14 @@ release authority until the full set is complete.
   for empty and corrupt databases. Diagnostics as a whole remain Partial
   because Rust plugin health, server-extra detection, and some environment
   details are not yet equivalent.
-- Python and Rust serialize first-use SQLite schema changes with an immediate
-  transaction and recheck the legacy `user` column after acquiring the write
-  reservation. A 16-connection concurrent upgrade check covers both runtimes;
-  storage now has bidirectional shared-database checks for decision writes,
-  summaries, pricing-tier aggregates, feedback, snapshots, common Python
-  integer ID forms, and malformed JSON failures. It remains Partial because
-  Python's `getpass` account-database fallback and permissive JSON serialization
-  do not yet have Rust equivalents.
+- The complete `store.py` public data contract is differentially checked over
+  a shared SQLite database: identity precedence and OS-account fallback,
+  concurrent first-use migration and decision writes, Python/Rust save and
+  read directions, all summaries and tier-aware statistics, feedback, online
+  snapshots in both directions, numeric decision-ID forms, signed/unsigned
+  64-bit integer boundaries, and fail-closed malformed/non-object payload
+  handling. Python rejects out-of-range integers and non-standard NaN/infinity
+  values before persistence, matching Rust's JSON number domain.
 - The Rust SDK client covers Python endpoint paths, payload cleanup, an
   optional API-key header, timeout configuration and structured HTTP errors.
   The local HTTP server and end-to-end client/server contract remain

@@ -27,6 +27,10 @@ All notable changes to AgentRouter OS. Format loosely follows
 - Match Python decision-ID parsing for decimal strings and signs in the Rust
   store, fail closed on malformed stored JSON, and verify bidirectional saves,
   pricing-tier aggregates, and SQLite snapshots against the shared database.
+- Match Python account-name precedence and POSIX user-database fallback in the
+  Rust store, preserve the full portable signed/unsigned 64-bit JSON integer
+  range, reject out-of-range integers and non-finite values before persistence,
+  and verify concurrent writes in both runtimes.
 
 ### Changed
 - Refuse redirects in the Python OpenAI Responses adapter so credentials cannot

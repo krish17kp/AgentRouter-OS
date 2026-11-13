@@ -32,6 +32,27 @@ CREATE TABLE IF NOT EXISTS feedback (
 """,
 )
 
+_MIN_JSON_INTEGER = -(2**63)
+_MAX_JSON_INTEGER = 2**64 - 1
+
+
+def _validate_json_integer_range(value: object) -> None:
+    """Reject Python integers serde_json cannot preserve exactly as JSON numbers."""
+    if isinstance(value, bool):
+        return
+    if isinstance(value, int):
+        if not _MIN_JSON_INTEGER <= value <= _MAX_JSON_INTEGER:
+            raise ValueError(
+                "decision payload integers must fit the signed/unsigned 64-bit JSON range"
+            )
+        return
+    if isinstance(value, dict):
+        for nested in value.values():
+            _validate_json_integer_range(nested)
+    elif isinstance(value, (list, tuple)):
+        for nested in value:
+            _validate_json_integer_range(nested)
+
 
 def current_user() -> str:
     """M7 identity: AGENTROUTER_USER wins (shared-home teams), else the OS user."""
@@ -137,9 +158,15 @@ def save_decision(conn: sqlite3.Connection, task: str, payload: dict) -> str:
 
 
 def _save_decision_locked(conn: sqlite3.Connection, task: str, payload: dict) -> str:
+    _validate_json_integer_range(payload)
     cur = conn.execute(
         "INSERT INTO decisions (created_at, task, payload, user) VALUES (?, ?, ?, ?)",
-        (datetime.now(timezone.utc).isoformat(), task, json.dumps(payload), current_user()),
+        (
+            datetime.now(timezone.utc).isoformat(),
+            task,
+            json.dumps(payload, allow_nan=False),
+            current_user(),
+        ),
     )
     conn.commit()
     return f"d_{cur.lastrowid:05d}"

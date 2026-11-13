@@ -33,19 +33,70 @@ const BUSY_TIMEOUT_MS: u32 = 15_000;
 /// converts "compete and sometimes fail" into "queue and always succeed".
 static WRITE_LOCK: Mutex<()> = Mutex::new(());
 
-/// M7 identity: `AGENTROUTER_USER` wins (shared-home teams), else the OS
-/// user (checked the same env vars `getpass.getuser()` checks, in order,
-/// skipping the pwd-database fallback since there is no Rust stdlib
-/// equivalent and CI/containers always set one of these).
+/// M7 identity: `AGENTROUTER_USER` wins (shared-home teams), else match
+/// Python's `getpass.getuser()` environment precedence and OS-account fallback.
 pub fn current_user() -> String {
-    std::env::var("AGENTROUTER_USER")
-        .ok()
-        .filter(|v| !v.is_empty())
-        .or_else(|| std::env::var("LOGNAME").ok())
-        .or_else(|| std::env::var("USER").ok())
-        .or_else(|| std::env::var("LNAME").ok())
-        .or_else(|| std::env::var("USERNAME").ok())
-        .unwrap_or_else(|| "unknown".to_string())
+    choose_user(
+        ["AGENTROUTER_USER", "LOGNAME", "USER", "LNAME", "USERNAME"]
+            .map(|name| std::env::var(name).ok()),
+        os_user_name,
+    )
+}
+
+fn choose_user(
+    candidates: impl IntoIterator<Item = Option<String>>,
+    os_fallback: impl FnOnce() -> Option<String>,
+) -> String {
+    candidates
+        .into_iter()
+        .flatten()
+        .find(|candidate| !candidate.is_empty())
+        .or_else(os_fallback)
+        .unwrap_or_else(|| "???".to_string())
+}
+
+#[cfg(unix)]
+fn os_user_name() -> Option<String> {
+    use std::ffi::CStr;
+    use std::mem::MaybeUninit;
+    use std::ptr;
+
+    // `getpwuid_r` writes only into the supplied record and buffer. Retry with
+    // larger buffers for NSS backends whose account records exceed the common
+    // initial size; the pointers are consumed before each buffer is dropped.
+    let uid = unsafe { libc::getuid() };
+    for size in [16 * 1024, 64 * 1024, 256 * 1024, 1024 * 1024] {
+        let mut record = MaybeUninit::<libc::passwd>::uninit();
+        let mut result = ptr::null_mut();
+        let mut buffer = vec![0_u8; size];
+        let status = unsafe {
+            libc::getpwuid_r(
+                uid,
+                record.as_mut_ptr(),
+                buffer.as_mut_ptr().cast(),
+                buffer.len(),
+                &mut result,
+            )
+        };
+        if status == libc::ERANGE {
+            continue;
+        }
+        if status != 0 || result.is_null() {
+            return None;
+        }
+        let record = unsafe { record.assume_init() };
+        if record.pw_name.is_null() {
+            return None;
+        }
+        let name = unsafe { CStr::from_ptr(record.pw_name) };
+        return Some(name.to_string_lossy().into_owned());
+    }
+    None
+}
+
+#[cfg(not(unix))]
+fn os_user_name() -> Option<String> {
+    None
 }
 
 fn ensure_schema(conn: &mut Connection) -> rusqlite::Result<()> {
@@ -118,9 +169,20 @@ fn decision_id(rowid: i64) -> String {
 }
 
 fn parse_payload(payload_json: &str, column: usize) -> rusqlite::Result<Value> {
-    serde_json::from_str(payload_json).map_err(|error| {
+    let payload: Value = serde_json::from_str(payload_json).map_err(|error| {
         rusqlite::Error::FromSqlConversionFailure(column, Type::Text, Box::new(error))
-    })
+    })?;
+    if !payload.is_object() {
+        return Err(rusqlite::Error::FromSqlConversionFailure(
+            column,
+            Type::Text,
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "stored decision payload must be a JSON object",
+            )),
+        ));
+    }
+    Ok(payload)
 }
 
 /// Parse the public ID argument the same way Python's `int(value)` does for
@@ -387,6 +449,27 @@ mod tests {
     use serde_json::json;
 
     #[test]
+    fn username_selection_skips_empty_environment_values() {
+        assert_eq!(
+            choose_user(
+                [
+                    Some(String::new()),
+                    Some(String::new()),
+                    Some("login-user".to_string()),
+                    Some("later-user".to_string()),
+                ],
+                || Some("system-user".to_string()),
+            ),
+            "login-user"
+        );
+        assert_eq!(
+            choose_user([None, None], || Some("system-user".to_string())),
+            "system-user"
+        );
+        assert_eq!(choose_user([None, None], || None), "???");
+    }
+
+    #[test]
     fn save_then_load_round_trips() {
         let dir = tempfile::tempdir().unwrap();
         let conn = connect(dir.path()).unwrap();
@@ -464,6 +547,21 @@ mod tests {
     }
 
     #[test]
+    fn non_object_persisted_json_is_an_error_for_every_payload_reader() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = connect(dir.path()).unwrap();
+        conn.execute(
+            "INSERT INTO decisions (created_at, task, payload, user) VALUES ('now', 'task', '[]', NULL)",
+            [],
+        )
+        .unwrap();
+
+        assert!(recent_decisions(&conn, 10).is_err());
+        assert!(aggregate_stats(&conn, None).is_err());
+        assert!(load_decision(&conn, "d_00001").is_err());
+    }
+
+    #[test]
     fn recent_ids_newest_first() {
         let dir = tempfile::tempdir().unwrap();
         let conn = connect(dir.path()).unwrap();
@@ -514,6 +612,50 @@ mod tests {
         for handle in handles {
             handle.join().unwrap();
         }
+    }
+
+    #[test]
+    fn concurrent_decision_writes_are_serialized_and_unique() {
+        use std::collections::HashSet;
+        use std::sync::{Arc, Barrier};
+        use std::thread;
+
+        let dir = tempfile::tempdir().unwrap();
+        let workers = 8;
+        let writes_per_worker = 8;
+        let barrier = Arc::new(Barrier::new(workers));
+        let handles = (0..workers)
+            .map(|worker| {
+                let home = dir.path().to_path_buf();
+                let barrier = Arc::clone(&barrier);
+                thread::spawn(move || {
+                    barrier.wait();
+                    let conn = connect(&home).unwrap();
+                    (0..writes_per_worker)
+                        .map(|write| {
+                            save_decision(
+                                &conn,
+                                &format!("worker {worker} write {write}"),
+                                &json!({"worker": worker, "write": write}),
+                            )
+                            .unwrap()
+                        })
+                        .collect::<Vec<_>>()
+                })
+            })
+            .collect::<Vec<_>>();
+        let ids = handles
+            .into_iter()
+            .flat_map(|handle| handle.join().unwrap())
+            .collect::<Vec<_>>();
+
+        assert_eq!(ids.len(), workers * writes_per_worker);
+        assert_eq!(ids.iter().collect::<HashSet<_>>().len(), ids.len());
+        let conn = connect(dir.path()).unwrap();
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM decisions", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(count, (workers * writes_per_worker) as i64);
     }
 
     #[test]

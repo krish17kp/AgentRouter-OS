@@ -68,6 +68,9 @@ fn main() {
             snapshot(&home, &destination).unwrap();
             println!("true");
         }
+        "current-user" => {
+            println!("{}", serde_json::to_string(&current_user()).unwrap());
+        }
         other => panic!("unknown op {other}"),
     }
 }
