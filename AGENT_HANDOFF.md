@@ -1,15 +1,19 @@
 # AGENT_HANDOFF — live checkpoint
 
-## Current checkpoint — 2026-11-11
+## Current checkpoint — 2026-11-14
 
-- Active RC branch `release/agentrouter-v0.5-rc1`; latest pushed head is `740355d` (TASK-052 annotation integer coercion). PR #16 remains the sole open PR to `main` and must not merge while the frozen gate is below threshold.
-- TASK-044 ports the frozen context-band report, scoring, intervals, bootstrap, and split-leak checks; full Python/Rust report output matches. TASK-045–048 port public package exports, validated embedded evaluator seed loading, and canonical distribution version. TASK-049–052 extend Pydantic-compatible annotation scalar coercions. TASK-051 verified the evaluation-adapters and server package markers expose no runtime API.
-- Latest full Python regression: 1,893 passed, 6 skipped; 92.16% statement/line, 87.27% branch, 91.05% combined coverage. Full Rust workspace tests, format, and Clippy pass through TASK-051; focused annotation schema tests and evaluation crate Clippy pass through TASK-052.
-- Latest hosted CI for `740355d` is still pending/running; inspect the run for that exact head and continue work while it runs. Earlier pushes created queued workflow runs; do not treat an older green SHA as evidence for the latest head.
-- PR #16 must remain open: the frozen context-band release gate is 0.6667 against 0.90. Do not enable learned routing or alter the gate. Human annotation, bounded OpenAI live smoke credentials, and production deployment credentials remain under **Needs Krish** in `PRODUCTION_STATUS.md`.
-- The 77-module inventory is in `docs/RUST_PARITY_MATRIX.md`; 35 modules are parity-complete, 25 Partial, and 17 Not ported. Python remains the shipping authority until every surface reaches measured parity and release gates pass. Continue with the next module, inspect hosted checks for the latest head, review every open PR, and update `PRODUCTION_STATUS.md` after each slice.
+- Active RC branch `release/agentrouter-v0.5-rc1`; latest pushed head is `6a707d5` (Rust no-follow ownership-state reading). PR #16 is the only open PR and remains blocked by the unchanged frozen context-band score of 0.6667 against 0.90.
+- The local Python regression passes 2,214 tests with 5 skips at 92.83% statement, 88.63% branch, and 91.87% combined coverage. The complete Rust workspace, strict Clippy, formatting, Ruff, and focused plugin compatibility tests pass locally.
+- Hosted Rust/Python compatibility is confirmed on Linux, Windows, and macOS at `2fe81da`. Checks for `6a707d5` are running: Rust workspace run `43521650608`, CI run `43521650790`; inspect these exact head checks before marking TASK-107 hosted complete. The frozen release-gate check fails as expected; do not weaken it.
+- TASK-104–107 advance the Rust plugin slice through inventory/path checks, ownership-record shape validation, read-only `plugin list`, and safe no-follow ownership-state reading. Install/uninstall transactions and `plugin doctor` remain Python-only; see `PRODUCTION_STATUS.md` and `docs/RUST_PARITY_MATRIX.md` for exact remaining parity gaps.
+- The 77-module inventory is current in `docs/RUST_PARITY_MATRIX.md`; migration remains incomplete and Python remains the shipping authority. Continue the remaining module work, review current PR checks, and update `PRODUCTION_STATUS.md` after each slice.
+- The owner explicitly authorized iterative pushes to the release-candidate branch for this objective. The frozen evaluation threshold and holdout remain immutable; real human annotation, the bounded OpenAI live smoke, and production credentials are listed under **Needs Krish**.
 
-## Historical checkpoint
+## Historical checkpoint — 2026-11-11
+
+- The old local test counts, branch head, and task position below describe the earlier session and are not current.
+
+## How to use this handoff
 
 **Canonical volatile handoff.** A fresh session given only "continue from the
 previous left-off task" should recover from this file plus the repository and
@@ -312,8 +316,10 @@ consolidation session's LOW-severity items remain pre-existing/out-of-scope,
 below the fix-now bar under this repo's "don't reopen a finished milestone
 for stylistic reasons" policy.
 
-## Prohibited
+## Release and safety boundaries
 
-Pushing to `main`; pushing directly to the RC; merging RC → main; force-push;
-tags; PyPI/npm publication; deployment; paid inference; lowering any release,
-coverage or mutation threshold; weakening tests; fabricating human annotation.
+The active owner instruction authorizes iterative pushes to the release-candidate
+branch. Do not force-push, promote to `main`, tag, publish, or deploy until the
+required release gates are satisfied. Do not lower evaluation, coverage, or
+mutation thresholds; weaken tests; spend on live inference without the listed
+credential/authorization; or fabricate human annotations.
