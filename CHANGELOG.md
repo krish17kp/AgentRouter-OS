@@ -11,9 +11,11 @@ All notable changes to AgentRouter OS. Format loosely follows
   and scheme definitions, request-body requiredness, response status changes
   (including wildcard refinement), parameter additions/removals/requiredness,
   request/response media-type additions/removals, and summary/description
-  changes. Python differential fixtures cover these classes; parameter schema
-  and general schema analysis remains on the Python release path, so this probe
-  is not a compatibility gate.
+  changes. It also classifies inline request/response schema type changes,
+  field additions/removals/requiredness, and array-item types. Python
+  differential fixtures cover the implemented classes; reference expansion,
+  unions, enums, constraints, and parameter schemas remain on the Python
+  release path, so this probe is not a compatibility gate.
 
 ### Fixed
 - Add Rust OpenAPI canonicalization and bounded `$ref` validation with stable,

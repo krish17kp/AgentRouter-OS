@@ -16,6 +16,7 @@ use std::path::{Path, PathBuf};
 
 const ORDER_INSENSITIVE: &[&str] = &["required", "enum", "tags"];
 const MAX_EXPANDED_NODES: usize = 200_000;
+const MAX_SCHEMA_COMPARE_DEPTH: usize = 128;
 const CONTRACT_VERSION: &str = "v1";
 const CONTRACT_EXPORT_COMMAND: &str = "agentrouter contract export";
 const HTTP_METHODS: &[&str] = &[
@@ -145,8 +146,9 @@ pub fn load_baseline(root: &Path) -> Result<Value, BaselineError> {
 /// Compare the OpenAPI document and operation surface while the complete
 /// schema, parameter, and media-type analyzer is being ported. Results use the
 /// same report shape and change ordering as Python's checker.
-pub fn diff_contracts_surface(old: &Value, new: &Value) -> Value {
+pub fn diff_contracts_surface(old: &Value, new: &Value) -> Result<Value, String> {
     let mut changes = Vec::<SurfaceChange>::new();
+    let mut schema_budget = MAX_EXPANDED_NODES;
     let old_version = python_object_field(old, "info", "version");
     let new_version = python_object_field(new, "info", "version");
     if !python_value_equal(old_version, new_version) {
@@ -300,6 +302,14 @@ pub fn diff_contracts_surface(old: &Value, new: &Value) -> Value {
                 &format!("{location}.request"),
                 &mut changes,
             );
+            diff_content_schema(
+                old_operation.get("requestBody"),
+                new_operation.get("requestBody"),
+                &format!("{location}.request"),
+                true,
+                &mut schema_budget,
+                &mut changes,
+            )?;
 
             let old_responses = object_or_empty(old_operation.get("responses"));
             let new_responses = object_or_empty(new_operation.get("responses"));
@@ -340,6 +350,14 @@ pub fn diff_contracts_surface(old: &Value, new: &Value) -> Value {
                     &format!("{location}.{status}"),
                     &mut changes,
                 );
+                diff_content_schema(
+                    old_responses.get(status),
+                    new_responses.get(status),
+                    &format!("{location}.{status}"),
+                    false,
+                    &mut schema_budget,
+                    &mut changes,
+                )?;
             }
 
             if !python_or_empty_equal(old_operation.get("summary"), new_operation.get("summary"))
@@ -381,7 +399,7 @@ pub fn diff_contracts_surface(old: &Value, new: &Value) -> Value {
         .iter()
         .filter(|change| change.severity == "additive")
         .count();
-    json!({
+    Ok(json!({
         "compatible": breaking == 0,
         "counts": {
             "breaking": breaking,
@@ -390,7 +408,7 @@ pub fn diff_contracts_surface(old: &Value, new: &Value) -> Value {
             "additive": additive,
         },
         "changes": changes,
-    })
+    }))
 }
 
 #[derive(serde::Serialize)]
@@ -632,6 +650,274 @@ fn media_types(value: Option<&Value>) -> BTreeSet<String> {
         .and_then(Value::as_object)
         .map(|content| content.keys().cloned().collect())
         .unwrap_or_default()
+}
+
+fn diff_content_schema(
+    old_body: Option<&Value>,
+    new_body: Option<&Value>,
+    location: &str,
+    request: bool,
+    budget: &mut usize,
+    changes: &mut Vec<SurfaceChange>,
+) -> Result<(), String> {
+    diff_inline_schema(
+        content_schema(old_body),
+        content_schema(new_body),
+        location,
+        request,
+        budget,
+        0,
+        changes,
+    )
+}
+
+fn content_schema(body: Option<&Value>) -> Option<&Value> {
+    let content = body
+        .and_then(Value::as_object)
+        .and_then(|object| object.get("content"))
+        .and_then(Value::as_object)?;
+    if let Some(media) = content.get("application/json").and_then(Value::as_object) {
+        return media.get("schema");
+    }
+    content
+        .values()
+        .filter_map(Value::as_object)
+        .find_map(|media| media.get("schema"))
+}
+
+fn diff_inline_schema(
+    old_value: Option<&Value>,
+    new_value: Option<&Value>,
+    location: &str,
+    request: bool,
+    budget: &mut usize,
+    depth: usize,
+    changes: &mut Vec<SurfaceChange>,
+) -> Result<(), String> {
+    if *budget == 0 {
+        return Err(format!(
+            "contract is too large to compare safely (over {MAX_EXPANDED_NODES} schema nodes)"
+        ));
+    }
+    *budget -= 1;
+    if depth > MAX_SCHEMA_COMPARE_DEPTH {
+        return Err(format!(
+            "contract is nested too deeply to compare safely (over {MAX_SCHEMA_COMPARE_DEPTH} schema levels)"
+        ));
+    }
+
+    let old_schema = match old_value {
+        None => empty_object(),
+        Some(value) => match value.as_object() {
+            Some(schema) => schema,
+            None => return Ok(()),
+        },
+    };
+    let new_schema = match new_value {
+        None => empty_object(),
+        Some(value) => match value.as_object() {
+            Some(schema) => schema,
+            None => return Ok(()),
+        },
+    };
+
+    // Reference expansion is a separate bounded operation. Keep referenced
+    // schemas out of this inline-only slice until it can share the full
+    // document-wide expansion budget and cycle handling.
+    if old_schema.contains_key("$ref") || new_schema.contains_key("$ref") {
+        return Ok(());
+    }
+
+    let old_type = schema_type(old_schema.get("type"));
+    let new_type = schema_type(new_schema.get("type"));
+    let old_untyped = schema_is_untyped(old_schema);
+    let new_untyped = schema_is_untyped(new_schema);
+    if old_untyped != new_untyped {
+        let erased = new_untyped;
+        add_surface_change(
+            changes,
+            if erased {
+                if request {
+                    "additive"
+                } else {
+                    "risky"
+                }
+            } else if request {
+                "breaking"
+            } else {
+                "risky"
+            },
+            if erased {
+                "type_erased"
+            } else {
+                "type_declared"
+            },
+            location,
+            if erased {
+                "schema no longer constrains the value"
+            } else {
+                "schema now constrains a previously free value"
+            },
+        );
+        return Ok(());
+    }
+    if let (Some(old_type), Some(new_type)) = (&old_type, &new_type) {
+        if old_type != new_type {
+            add_surface_change(
+                changes,
+                "breaking",
+                if request {
+                    "request_type_changed"
+                } else {
+                    "response_type_changed"
+                },
+                location,
+                format!("type {old_type} -> {new_type}"),
+            );
+        }
+    }
+
+    let old_properties = object_or_empty(old_schema.get("properties"));
+    let new_properties = object_or_empty(new_schema.get("properties"));
+    let old_required = schema_required(old_schema.get("required"));
+    let new_required = schema_required(new_schema.get("required"));
+
+    for name in old_properties
+        .keys()
+        .filter(|name| !new_properties.contains_key(*name))
+    {
+        let (severity, kind) = if request && old_required.contains(name) {
+            ("breaking", "required_request_field_removed")
+        } else if request {
+            ("risky", "request_field_removed")
+        } else {
+            ("breaking", "response_field_removed")
+        };
+        add_surface_change(
+            changes,
+            severity,
+            kind,
+            format!("{location}.{name}"),
+            "field removed",
+        );
+    }
+    for name in new_properties
+        .keys()
+        .filter(|name| !old_properties.contains_key(*name))
+    {
+        let required = new_required.contains(name);
+        add_surface_change(
+            changes,
+            if request && required {
+                "breaking"
+            } else {
+                "additive"
+            },
+            if request && required {
+                "required_request_field_added"
+            } else if request {
+                "optional_request_field_added"
+            } else {
+                "response_field_added"
+            },
+            format!("{location}.{name}"),
+            if request && required {
+                "new field is required"
+            } else if request {
+                "new optional field"
+            } else {
+                "new response field"
+            },
+        );
+    }
+    for name in old_properties
+        .keys()
+        .filter(|name| new_properties.contains_key(*name))
+    {
+        let was_required = old_required.contains(name);
+        let is_required = new_required.contains(name);
+        if was_required != is_required {
+            let became_required = is_required;
+            add_surface_change(
+                changes,
+                if became_required == request {
+                    "breaking"
+                } else {
+                    "additive"
+                },
+                if became_required {
+                    "field_became_required"
+                } else {
+                    "field_became_optional"
+                },
+                format!("{location}.{name}"),
+                if became_required {
+                    "optional -> required"
+                } else {
+                    "required -> optional"
+                },
+            );
+        }
+        diff_inline_schema(
+            old_properties.get(name),
+            new_properties.get(name),
+            &format!("{location}.{name}"),
+            request,
+            budget,
+            depth + 1,
+            changes,
+        )?;
+    }
+
+    if old_schema.contains_key("items") || new_schema.contains_key("items") {
+        diff_inline_schema(
+            old_schema.get("items"),
+            new_schema.get("items"),
+            &format!("{location}[]"),
+            request,
+            budget,
+            depth + 1,
+            changes,
+        )?;
+    }
+    Ok(())
+}
+
+fn schema_type(value: Option<&Value>) -> Option<String> {
+    match value? {
+        Value::String(value) => Some(value.clone()),
+        Value::Array(values) => {
+            let names = values
+                .iter()
+                .filter_map(Value::as_str)
+                .collect::<BTreeSet<_>>();
+            if names.is_empty() {
+                None
+            } else {
+                Some(names.into_iter().collect::<Vec<_>>().join("|"))
+            }
+        }
+        _ => None,
+    }
+}
+
+fn schema_is_untyped(schema: &Map<String, Value>) -> bool {
+    schema.keys().all(|key| {
+        matches!(
+            key.as_str(),
+            "title" | "description" | "default" | "example" | "examples"
+        )
+    })
+}
+
+fn schema_required(value: Option<&Value>) -> BTreeSet<String> {
+    value
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .map(str::to_owned)
+        .collect()
 }
 
 fn diff_operation_security(

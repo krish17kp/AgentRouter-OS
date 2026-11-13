@@ -14,9 +14,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let new = request
         .get("new")
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "new document is required"))?;
-    println!(
-        "{}",
-        serde_json::to_string(&agentrouter_cli::contract::diff_contracts_surface(old, new))?
-    );
+    let report = agentrouter_cli::contract::diff_contracts_surface(old, new)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+    println!("{}", serde_json::to_string(&report)?);
     Ok(())
 }

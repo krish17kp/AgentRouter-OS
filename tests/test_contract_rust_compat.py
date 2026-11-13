@@ -426,6 +426,176 @@ def _rust_surface_diff(old: dict, new: dict) -> dict:
             },
         ),
         (
+            {
+                "paths": {
+                    "/x": {
+                        "post": {
+                            "requestBody": {
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "required": ["id"],
+                                            "properties": {
+                                                "id": {"type": "integer"},
+                                                "optional": {"type": "string"},
+                                                "removed": {"type": "boolean"},
+                                            },
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                "paths": {
+                    "/x": {
+                        "post": {
+                            "requestBody": {
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "required": ["id", "optional", "added"],
+                                            "properties": {
+                                                "id": {"type": "string"},
+                                                "optional": {"type": "string"},
+                                                "added": {"type": "string"},
+                                            },
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+        ),
+        (
+            {
+                "paths": {
+                    "/x": {
+                        "get": {
+                            "responses": {
+                                "200": {
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "type": "object",
+                                                "required": ["name"],
+                                                "properties": {
+                                                    "name": {"type": "string"},
+                                                    "legacy": {"type": "integer"},
+                                                },
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                "paths": {
+                    "/x": {
+                        "get": {
+                            "responses": {
+                                "200": {
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "type": "object",
+                                                "required": ["name", "added"],
+                                                "properties": {
+                                                    "name": {"type": "integer"},
+                                                    "added": {"type": "boolean"},
+                                                },
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+        ),
+        (
+            {
+                "paths": {
+                    "/x": {
+                        "get": {
+                            "responses": {
+                                "200": {
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "type": "array",
+                                                "items": {"type": "string"},
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                "paths": {
+                    "/x": {
+                        "get": {
+                            "responses": {
+                                "200": {
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "type": "array",
+                                                "items": {"type": "integer"},
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+        ),
+        (
+            {
+                "paths": {
+                    "/x": {
+                        "get": {
+                            "responses": {
+                                "200": {
+                                    "content": {"application/json": {"schema": {"type": "string"}}}
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                "paths": {
+                    "/x": {
+                        "get": {
+                            "responses": {
+                                "200": {
+                                    "content": {
+                                        "application/json": {"schema": {"description": "opaque"}}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+        ),
+        (
             {"paths": {"/x": {"get": {"summary": "", "description": None}}}},
             {"paths": {"/x": {"get": {"summary": None, "description": ""}}}},
         ),
