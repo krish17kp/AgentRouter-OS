@@ -15,6 +15,7 @@ from agentrouter.contract import (
     _canonical,
     canonical_openapi,
     contract_paths,
+    diff_contracts,
     dumps,
     load_baseline_file,
     validate_refs,
@@ -211,3 +212,81 @@ def test_rust_baseline_loader_rejects_untrusted_references(tmp_path):
     assert process.returncode != 0
     assert process.stderr.startswith("invalid_references:")
     assert "only local refs are supported" in process.stderr
+
+
+def _rust_surface_diff(old: dict, new: dict) -> dict:
+    root = Path(__file__).resolve().parents[1]
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "-p",
+            "agentrouter-cli",
+            "--bin",
+            "contract_surface_diff_from_json",
+        ],
+        cwd=root,
+        input=json.dumps({"old": old, "new": new}, ensure_ascii=False),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+        check=False,
+    )
+    assert process.returncode == 0, process.stderr
+    return json.loads(process.stdout)
+
+
+@pytest.mark.parametrize(
+    ("old", "new"),
+    [
+        (
+            {"info": {"version": "1.0"}, "paths": {}},
+            {"info": {"version": "2.0"}, "paths": {"/new": {"get": {}}}},
+        ),
+        (
+            {"paths": {"/x": {"get": {}, "post": {}}}},
+            {"paths": {"/x": {"get": {}, "delete": {}}, "/y": {}}},
+        ),
+        (
+            {
+                "paths": {
+                    "/x": {
+                        "post": {
+                            "operationId": "before",
+                            "deprecated": False,
+                            "requestBody": {"required": False},
+                            "responses": {"200": {}, "404": {}},
+                            "summary": "before",
+                        }
+                    }
+                }
+            },
+            {
+                "paths": {
+                    "/x": {
+                        "post": {
+                            "operationId": "after",
+                            "deprecated": True,
+                            "requestBody": {"required": True},
+                            "responses": {"200": {}, "201": {}},
+                            "summary": "after",
+                        }
+                    }
+                }
+            },
+        ),
+        (
+            {"paths": {"/x": {"get": {"responses": {"4XX": {}}}}}},
+            {"paths": {"/x": {"get": {"responses": {"401": {}, "404": {}}}}}},
+        ),
+        (
+            {"paths": {"/x": {"get": {"summary": "", "description": None}}}},
+            {"paths": {"/x": {"get": {"summary": None, "description": ""}}}},
+        ),
+    ],
+)
+def test_rust_surface_diff_matches_python_for_implemented_change_classes(old, new):
+    assert _rust_surface_diff(old, new) == diff_contracts(old, new).as_dict()

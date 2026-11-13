@@ -31,7 +31,7 @@ release authority until the full set is complete.
 | `agentrouter/classifier.py` | `agentrouter-classifier` | Parity |
 | `agentrouter/cli.py` | `agentrouter-cli::bin::agentrouter` plus command modules | Partial |
 | `agentrouter/context_model.py` | `agentrouter-classifier::context_model` | Parity |
-| `agentrouter/contract.py` | `agentrouter-cli::contract::{canonicalize,dumps,validate_refs,load_baseline}` | Partial |
+| `agentrouter/contract.py` | `agentrouter-cli::contract::{canonicalize,dumps,validate_refs,load_baseline,diff_contracts_surface}` | Partial |
 | `agentrouter/controls.py` | `agentrouter-policy::controls` | Parity |
 | `agentrouter/dashboard.py` | `agentrouter-cli::dashboard` | Parity |
 | `agentrouter/diagnostics.py` | `agentrouter-cli::diagnostics` | Partial |
@@ -106,9 +106,13 @@ release authority until the full set is complete.
   The baseline loader reads the committed artifact, preserves Python's missing,
   malformed, non-OpenAPI, and untrusted-reference failure states, and applies
   the same traversal limit. Differential fixtures cover the live document,
-  invalid references, and baseline failures. Symlink/hardlink-safe artifact
-  export, manifest provenance, semantic compatibility classification, and CLI
-  integration remain Python-only.
+  invalid references, and baseline failures. A separately named surface-diff
+  probe covers versions, paths/methods, selected operation metadata, request
+  body requiredness, response status additions/removals/refinements, and
+  summary/description changes. It intentionally omits schema, parameter,
+  media-type, and security analysis and is not suitable as a compatibility
+  gate. Symlink/hardlink-safe artifact export, manifest provenance, the full
+  semantic compatibility checker, and CLI integration remain Python-only.
 - The Rust MCP process implements the five Python tools and stdio lifecycle;
   protocol/tool and result differentials cover all five. The unified CLI now
   runs this stdio server in-process with the selected AgentRouter home. Broader

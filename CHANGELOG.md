@@ -5,13 +5,21 @@ All notable changes to AgentRouter OS. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+- Add a Rust OpenAPI surface-diff probe for API versions, paths and methods,
+  operation identifiers/deprecation, request-body requiredness, response
+  status changes (including wildcard refinement), and summary/description
+  changes. Python differential fixtures cover the implemented classes; schema,
+  parameter, media-type, and security analysis remains on the Python release
+  path, so this probe is not a compatibility gate.
+
 ### Fixed
 - Add Rust OpenAPI canonicalization and bounded `$ref` validation with stable,
   Unicode-preserving JSON output and Python differential fixtures for the live
   document, order-insensitive fields, missing/external references, and cycles.
   Load committed baselines with fail-closed JSON, OpenAPI-shape, and reference
-  checks. Semantic compatibility analysis and safe artifact export remain on
-  the Python release path.
+  checks. Full semantic compatibility analysis and safe artifact export remain
+  on the Python release path.
 - Make Python catalog rollback and restore refuse symlinked catalog inputs,
   matching the Rust no-follow and no-clobber safeguards. Add typed Rust catalog
   failures and differential checks for Python-compatible exception categories,

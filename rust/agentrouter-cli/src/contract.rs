@@ -3,9 +3,11 @@
 //! Rust contract-tooling slices for canonicalization, reference validation,
 //! stable serialization, and trusted-baseline loading. Semantic compatibility
 //! classification and safe artifact export remain Python-owned until their
-//! complete contracts are ported and differentially checked.
+//! complete contracts are ported and differentially checked. The surface-only
+//! diff below intentionally omits parameter, schema, media-type, and security
+//! analysis; it must not be used as the compatibility gate.
 
-use serde_json::{Map, Value};
+use serde_json::{json, Map, Value};
 use std::collections::{BTreeSet, HashSet};
 use std::fmt;
 use std::fmt::Write as _;
@@ -16,6 +18,9 @@ const ORDER_INSENSITIVE: &[&str] = &["required", "enum", "tags"];
 const MAX_EXPANDED_NODES: usize = 200_000;
 const CONTRACT_VERSION: &str = "v1";
 const CONTRACT_EXPORT_COMMAND: &str = "agentrouter contract export";
+const HTTP_METHODS: &[&str] = &[
+    "get", "put", "post", "delete", "patch", "head", "options", "trace",
+];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BaselineErrorKind {
@@ -135,6 +140,334 @@ pub fn load_baseline_file(path: &Path) -> Result<Value, BaselineError> {
 /// Load the committed OpenAPI baseline under a repository root.
 pub fn load_baseline(root: &Path) -> Result<Value, BaselineError> {
     load_baseline_file(&baseline_path(root))
+}
+
+/// Compare the OpenAPI document and operation surface while the complete
+/// schema, parameter, media-type, and security analyzer is being ported.
+/// Results use the same report shape and change ordering as Python's checker.
+pub fn diff_contracts_surface(old: &Value, new: &Value) -> Value {
+    let mut changes = Vec::<SurfaceChange>::new();
+    let old_version = python_object_field(old, "info", "version");
+    let new_version = python_object_field(new, "info", "version");
+    if !python_value_equal(old_version, new_version) {
+        add_surface_change(
+            &mut changes,
+            "risky",
+            "api_version_changed",
+            "info.version",
+            format!(
+                "{} -> {}",
+                python_display(old_version),
+                python_display(new_version)
+            ),
+        );
+    }
+
+    let old_paths = object_or_empty(old.get("paths"));
+    let new_paths = object_or_empty(new.get("paths"));
+    let old_path_names = old_paths.keys().cloned().collect::<BTreeSet<_>>();
+    let new_path_names = new_paths.keys().cloned().collect::<BTreeSet<_>>();
+
+    for path in old_path_names.difference(&new_path_names) {
+        add_surface_change(
+            &mut changes,
+            "breaking",
+            "endpoint_removed",
+            path,
+            "path no longer served",
+        );
+    }
+    for path in new_path_names.difference(&old_path_names) {
+        add_surface_change(&mut changes, "additive", "endpoint_added", path, "new path");
+    }
+
+    for path in old_path_names.intersection(&new_path_names) {
+        let old_operations = object_or_empty(old_paths.get(path));
+        let new_operations = object_or_empty(new_paths.get(path));
+        let old_methods = old_operations.keys().cloned().collect::<BTreeSet<_>>();
+        let new_methods = new_operations.keys().cloned().collect::<BTreeSet<_>>();
+        for method in old_methods.difference(&new_methods) {
+            if HTTP_METHODS.contains(&method.as_str()) {
+                add_surface_change(
+                    &mut changes,
+                    "breaking",
+                    "method_removed",
+                    format!("{path}.{method}"),
+                    "method no longer served",
+                );
+            }
+        }
+        for method in new_methods.difference(&old_methods) {
+            if HTTP_METHODS.contains(&method.as_str()) {
+                add_surface_change(
+                    &mut changes,
+                    "additive",
+                    "method_added",
+                    format!("{path}.{method}"),
+                    "new method",
+                );
+            }
+        }
+
+        for method in old_methods.intersection(&new_methods) {
+            if !HTTP_METHODS.contains(&method.as_str()) {
+                continue;
+            }
+            let location = format!("{path}.{method}");
+            let old_operation = object_or_empty(old_operations.get(method));
+            let new_operation = object_or_empty(new_operations.get(method));
+
+            let old_id = old_operation.get("operationId");
+            let new_id = new_operation.get("operationId");
+            if !python_value_equal(old_id, new_id) {
+                add_surface_change(
+                    &mut changes,
+                    "risky",
+                    "operation_id_changed",
+                    &location,
+                    format!(
+                        "{} -> {} (renames the method in generated clients)",
+                        python_display(old_id),
+                        python_display(new_id)
+                    ),
+                );
+            }
+
+            let was_deprecated = old_operation.get("deprecated").is_some_and(python_truthy);
+            let is_deprecated = new_operation.get("deprecated").is_some_and(python_truthy);
+            if was_deprecated != is_deprecated {
+                add_surface_change(
+                    &mut changes,
+                    "risky",
+                    "deprecation_changed",
+                    &location,
+                    format!(
+                        "deprecated: {} -> {}",
+                        python_bool_display(was_deprecated),
+                        python_bool_display(is_deprecated)
+                    ),
+                );
+            }
+
+            let old_required = request_body_required(old_operation.get("requestBody"));
+            let new_required = request_body_required(new_operation.get("requestBody"));
+            if old_required != new_required {
+                add_surface_change(
+                    &mut changes,
+                    if new_required { "breaking" } else { "additive" },
+                    if new_required {
+                        "request_body_became_required"
+                    } else {
+                        "request_body_became_optional"
+                    },
+                    format!("{location}.request"),
+                    format!(
+                        "required: {} -> {}",
+                        python_bool_display(old_required),
+                        python_bool_display(new_required)
+                    ),
+                );
+            }
+
+            let old_responses = object_or_empty(old_operation.get("responses"));
+            let new_responses = object_or_empty(new_operation.get("responses"));
+            let old_statuses = old_responses.keys().cloned().collect::<BTreeSet<_>>();
+            let new_statuses = new_responses.keys().cloned().collect::<BTreeSet<_>>();
+            for status in old_statuses.difference(&new_statuses) {
+                if status_still_covered(status, &new_statuses) {
+                    add_surface_change(
+                        &mut changes,
+                        "risky",
+                        "response_status_refined",
+                        format!("{location}.{status}"),
+                        "replaced by explicit codes in the same class",
+                    );
+                    continue;
+                }
+                add_surface_change(
+                    &mut changes,
+                    "breaking",
+                    "response_status_removed",
+                    format!("{location}.{status}"),
+                    "status no longer documented",
+                );
+            }
+            for status in new_statuses.difference(&old_statuses) {
+                add_surface_change(
+                    &mut changes,
+                    "additive",
+                    "response_status_added",
+                    format!("{location}.{status}"),
+                    "newly documented status",
+                );
+            }
+
+            if !python_or_empty_equal(old_operation.get("summary"), new_operation.get("summary"))
+                || !python_or_empty_equal(
+                    old_operation.get("description"),
+                    new_operation.get("description"),
+                )
+            {
+                add_surface_change(
+                    &mut changes,
+                    "risky",
+                    "documented_semantics_changed",
+                    &location,
+                    "summary/description changed",
+                );
+            }
+        }
+    }
+
+    changes.sort_by(|left, right| {
+        severity_rank(&left.severity)
+            .cmp(&severity_rank(&right.severity))
+            .then_with(|| left.location.cmp(&right.location))
+            .then_with(|| left.kind.cmp(&right.kind))
+    });
+    let breaking = changes
+        .iter()
+        .filter(|change| change.severity == "breaking")
+        .count();
+    let accepted = changes
+        .iter()
+        .filter(|change| change.severity == "accepted")
+        .count();
+    let risky = changes
+        .iter()
+        .filter(|change| change.severity == "risky")
+        .count();
+    let additive = changes
+        .iter()
+        .filter(|change| change.severity == "additive")
+        .count();
+    json!({
+        "compatible": breaking == 0,
+        "counts": {
+            "breaking": breaking,
+            "accepted": accepted,
+            "risky": risky,
+            "additive": additive,
+        },
+        "changes": changes,
+    })
+}
+
+#[derive(serde::Serialize)]
+struct SurfaceChange {
+    severity: String,
+    kind: String,
+    location: String,
+    detail: String,
+}
+
+fn add_surface_change(
+    changes: &mut Vec<SurfaceChange>,
+    severity: &str,
+    kind: &str,
+    location: impl Into<String>,
+    detail: impl Into<String>,
+) {
+    changes.push(SurfaceChange {
+        severity: severity.to_owned(),
+        kind: kind.to_owned(),
+        location: location.into(),
+        detail: detail.into(),
+    });
+}
+
+fn severity_rank(severity: &str) -> usize {
+    match severity {
+        "breaking" => 0,
+        "accepted" => 1,
+        "risky" => 2,
+        _ => 3,
+    }
+}
+
+fn object_or_empty(value: Option<&Value>) -> &Map<String, Value> {
+    static EMPTY: std::sync::OnceLock<Map<String, Value>> = std::sync::OnceLock::new();
+    value
+        .and_then(Value::as_object)
+        .unwrap_or_else(|| EMPTY.get_or_init(Map::new))
+}
+
+fn python_object_field<'a>(document: &'a Value, outer: &str, inner: &str) -> Option<&'a Value> {
+    document
+        .get(outer)
+        .filter(|value| python_truthy(value))
+        .and_then(Value::as_object)
+        .and_then(|object| object.get(inner))
+}
+
+fn python_value_equal(left: Option<&Value>, right: Option<&Value>) -> bool {
+    match (
+        left.filter(|value| !value.is_null()),
+        right.filter(|value| !value.is_null()),
+    ) {
+        (None, None) => true,
+        (Some(left), Some(right)) => left == right,
+        _ => false,
+    }
+}
+
+fn python_or_empty_equal(left: Option<&Value>, right: Option<&Value>) -> bool {
+    let left = left.filter(|value| python_truthy(value));
+    let right = right.filter(|value| python_truthy(value));
+    python_value_equal(left, right)
+}
+
+fn python_truthy(value: &Value) -> bool {
+    match value {
+        Value::Null => false,
+        Value::Bool(value) => *value,
+        Value::Number(value) => value.as_f64() != Some(0.0),
+        Value::String(value) => !value.is_empty(),
+        Value::Array(value) => !value.is_empty(),
+        Value::Object(value) => !value.is_empty(),
+    }
+}
+
+fn status_still_covered(status: &str, present: &BTreeSet<String>) -> bool {
+    if status.len() == 3 && status.to_ascii_uppercase().ends_with("XX") {
+        let prefix = status.as_bytes()[0] as char;
+        return present.iter().any(|candidate| {
+            let bytes = candidate.as_bytes();
+            bytes.len() == 3
+                && bytes[0] as char == prefix
+                && bytes[1..].iter().all(u8::is_ascii_digit)
+        });
+    }
+    if status.len() == 3 && status.bytes().all(|byte| byte.is_ascii_digit()) {
+        let class = &status[..1];
+        return present.contains(&format!("{class}XX")) || present.contains(&format!("{class}xx"));
+    }
+    false
+}
+
+fn python_display(value: Option<&Value>) -> String {
+    match value.filter(|value| !value.is_null()) {
+        None => "None".to_owned(),
+        Some(Value::String(value)) => value.clone(),
+        Some(Value::Bool(true)) => "True".to_owned(),
+        Some(Value::Bool(false)) => "False".to_owned(),
+        Some(value) => value.to_string(),
+    }
+}
+
+fn python_bool_display(value: bool) -> &'static str {
+    if value {
+        "True"
+    } else {
+        "False"
+    }
+}
+
+fn request_body_required(value: Option<&Value>) -> bool {
+    value
+        .and_then(Value::as_object)
+        .and_then(|object| object.get("required"))
+        .is_some_and(python_truthy)
 }
 
 /// Recursively normalize object keys and the OpenAPI arrays whose order is not
