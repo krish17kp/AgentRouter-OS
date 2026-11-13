@@ -85,6 +85,10 @@ name = "contract_export_from_json"
 path = "src/bin/contract_export_from_json.rs"
 
 [[bin]]
+name = "plugin_paths_from_json"
+path = "src/bin/plugin_paths_from_json.rs"
+
+[[bin]]
 name = "observability_cli"
 path = "src/bin/observability_cli.rs"
 

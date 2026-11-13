@@ -31,6 +31,7 @@ pub mod harness;
 pub use agentrouter_limits as limits;
 pub mod observability;
 pub mod openai;
+pub mod plugins;
 pub mod providers;
 pub mod sdk;
 

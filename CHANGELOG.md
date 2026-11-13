@@ -26,6 +26,11 @@ All notable changes to AgentRouter OS. Format loosely follows
   replaces artifacts, and refuses symlinked or hard-linked targets. Python/Rust
   fixtures compare canonical bytes and manifest fields. The unified
   `agentrouter contract export` command remains to be integrated.
+- Start the Rust plugin-system port with the exact bundled Claude Code and Codex
+  inventory, bounded error echoing, destination-root resolution, and portable
+  path validation that rejects traversal, device names, controls, and Windows
+  path aliases. Filesystem transactions and the user-facing `agentrouter
+  plugin` commands remain Python-only until their safety behavior is ported.
 
 ### Fixed
 - Add Rust OpenAPI canonicalization and bounded `$ref` validation with stable,

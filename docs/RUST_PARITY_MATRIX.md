@@ -72,7 +72,7 @@ release authority until the full set is complete.
 | `agentrouter/mcp_server.py` | `agentrouter-mcp::{Server,run_stdio}` | Partial |
 | `agentrouter/observability.py` | `agentrouter-cli::observability` | Partial |
 | `agentrouter/openai_adapter.py` | `agentrouter-cli::openai` | Parity |
-| `agentrouter/plugins.py` | `—` | Not ported |
+| `agentrouter/plugins.py` | `agentrouter-cli::plugins` (inventory, destination roots, portable path validation) | Partial |
 | `agentrouter/prompts.py` | `agentrouter-cli::generate_prompt` | Parity |
 | `agentrouter/refresh.py` | `agentrouter-registry::refresh` | Partial |
 | `agentrouter/registry.py` | `agentrouter-registry` | Parity |
@@ -250,6 +250,11 @@ release authority until the full set is complete.
 - The AgentRouter gold adapter now matches Python metadata, availability, description, all 165 records, checksums, and deterministic sampling; the full behavior is differentially tested, including Unicode/default handling.
 - Shared fixture-mode evaluation adapter behavior now matches six fixture-backed adapters for metadata, availability, description, JSONL record loading/checksums, deterministic sampling, and explicit skipped-external behavior. Real dataset downloads, preparation, and adapter-specific real-data mappings remain Python-only.
 - Evaluation provenance now matches Python for dataset-quality/leakage aggregation and the complete four-field runtime environment snapshot.
+- The Rust plugin module currently ports the bundled manifest and portable path
+  trust boundary. It does not install or remove files, read ownership/journal
+  state, preserve user changes, or provide the Python `plugin` CLI commands.
+  Those operations remain authoritative in Python until their transaction
+  protocol has matching cross-platform safety tests.
 - Routing evaluation now scores caller-supplied model catalogs against gold
   constraints or the declared distinct-fallback proxy. Loading seed models and
   custom classifier injection remain Python-only.
