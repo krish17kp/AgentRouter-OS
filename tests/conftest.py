@@ -34,8 +34,9 @@ _runner = CliRunner()
 
 @pytest.fixture()
 def home(tmp_path, monkeypatch):
-    """Isolated AGENTROUTER_HOME with no API key, initialized via the real `init` command."""
+    """Isolated app and plugin roots with no API key, initialized via real `init`."""
     monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path / "plugins"))
     monkeypatch.delenv("AGENTROUTER_API_KEY", raising=False)
     assert _runner.invoke(_cli_app, ["init"]).exit_code == 0
     return tmp_path

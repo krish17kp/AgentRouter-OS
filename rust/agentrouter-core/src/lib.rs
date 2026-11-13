@@ -90,6 +90,7 @@ pub enum PricingTier {
 /// Field names match the Python model exactly (`approval_level`, not
 /// `approval`) since this is the JSON contract the compatibility test checks.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Classification {
     pub task_type: TaskType,
     pub complexity: Level,
@@ -181,5 +182,23 @@ mod tests {
         let back: Classification = serde_json::from_str(&json).unwrap();
         assert_eq!(back.task_type, TaskType::Coding);
         assert_eq!(back.output_type, OutputType::CodeTests);
+    }
+
+    #[test]
+    fn classification_rejects_unknown_fields_like_python() {
+        let mut value = serde_json::json!({
+            "task_type": "coding",
+            "complexity": "medium",
+            "risk": "low",
+            "context_tokens": 12,
+            "context_band": "small",
+            "output_type": "code",
+            "tool_needs": [],
+            "approval_level": "auto",
+            "unexpected": true
+        });
+        assert!(serde_json::from_value::<Classification>(value.clone()).is_err());
+        value.as_object_mut().unwrap().remove("unexpected");
+        assert!(serde_json::from_value::<Classification>(value).is_ok());
     }
 }

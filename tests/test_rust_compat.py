@@ -16,6 +16,7 @@ import shutil
 import subprocess
 
 import pytest
+from pydantic import ValidationError
 
 from agentrouter.schema import (
     ApprovalLevel,
@@ -59,3 +60,33 @@ def _rust_classification_json() -> dict:
 
 def test_classification_json_matches_between_python_and_rust():
     assert _rust_classification_json() == _python_classification_json()
+
+
+def test_classification_schema_roundtrip_and_extra_field_rejection_match():
+    payload = _python_classification_json()
+    valid = subprocess.run(
+        ["cargo", "run", "--quiet", "--bin", "classification_from_json"],
+        cwd=RUST_CRATE_DIR,
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert valid.returncode == 0, valid.stderr
+    assert json.loads(valid.stdout) == payload
+
+    invalid = {**payload, "unknown_field": True}
+    with pytest.raises(ValidationError):
+        Classification.model_validate(invalid)
+    rejected = subprocess.run(
+        ["cargo", "run", "--quiet", "--bin", "classification_from_json"],
+        cwd=RUST_CRATE_DIR,
+        input=json.dumps(invalid),
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert rejected.returncode != 0
+    assert rejected.stdout == ""

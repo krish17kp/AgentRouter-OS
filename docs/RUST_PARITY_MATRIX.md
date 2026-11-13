@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-11. This inventory covers every Python source module under
+Updated: 2026-11-13. This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -99,6 +99,10 @@ release authority until the full set is complete.
   responsibilities. The CLI, HTTP, MCP, plugin/skill, evaluation/annotation,
   diagnostic-bundle, and reliability surfaces still need their Rust contract
   implementations and differential tests.
+- Rust `Classification` now rejects unknown fields and has round-trip and
+  rejection checks against Pydantic. Python's unbounded integer and scalar
+  coercion behavior is not fully represented by the Rust integer/serde types,
+  so the schema module remains Partial.
 - Context-band model inference is ported but remains disabled in the default
   classifier. The frozen evaluation gate still controls whether learned routing
   can be enabled.
