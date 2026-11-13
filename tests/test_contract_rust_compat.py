@@ -681,3 +681,96 @@ def test_rust_inline_schema_keywords_match_python(is_request, old_schema, new_sc
     old = document(old_schema)
     new = document(new_schema)
     assert _rust_surface_diff(old, new) == diff_contracts(old, new).as_dict()
+
+
+@pytest.mark.parametrize(
+    ("old_components", "new_components", "old_schema", "new_schema"),
+    [
+        (
+            {"Payload": {"type": "string", "maxLength": 20}},
+            {"Payload": {"type": "string", "maxLength": 8}},
+            {"$ref": "#/components/schemas/Payload"},
+            {"$ref": "#/components/schemas/Payload"},
+        ),
+        (
+            {
+                "Payload": {"$ref": "#/components/schemas/Shared"},
+                "Shared": {"type": "object", "properties": {"id": {"type": "string"}}},
+            },
+            {
+                "Payload": {"$ref": "#/components/schemas/Shared"},
+                "Shared": {"type": "object", "properties": {"id": {"type": "integer"}}},
+            },
+            {"$ref": "#/components/schemas/Payload"},
+            {"$ref": "#/components/schemas/Payload"},
+        ),
+        (
+            {
+                "Payload": {
+                    "type": "object",
+                    "properties": {"id": {"$ref": "#/components/schemas/Item"}},
+                },
+                "Item": {"type": "string"},
+            },
+            {
+                "Payload": {
+                    "type": "object",
+                    "properties": {"id": {"$ref": "#/components/schemas/Item"}},
+                },
+                "Item": {"type": "integer"},
+            },
+            {"$ref": "#/components/schemas/Payload"},
+            {"$ref": "#/components/schemas/Payload"},
+        ),
+        (
+            {
+                "Payload": {
+                    "type": "object",
+                    "properties": {
+                        "next": {"$ref": "#/components/schemas/Payload"},
+                        "value": {"type": "string"},
+                    },
+                }
+            },
+            {
+                "Payload": {
+                    "type": "object",
+                    "properties": {
+                        "next": {"$ref": "#/components/schemas/Payload"},
+                        "value": {"type": "integer"},
+                    },
+                }
+            },
+            {"$ref": "#/components/schemas/Payload"},
+            {"$ref": "#/components/schemas/Payload"},
+        ),
+        (
+            {},
+            {},
+            {"$ref": "#/components/schemas/Missing"},
+            {"type": "string"},
+        ),
+        (
+            {"Payload": {"type": "string"}},
+            {"Payload": {"type": "string"}},
+            {"$ref": "#/components/schemas/Payload", "type": "integer"},
+            {"$ref": "#/components/schemas/Payload"},
+        ),
+    ],
+)
+def test_rust_schema_reference_comparison_matches_python(
+    old_components, new_components, old_schema, new_schema
+):
+    def document(components, schema):
+        return {
+            "components": {"schemas": components},
+            "paths": {
+                "/schema": {
+                    "post": {"requestBody": {"content": {"application/json": {"schema": schema}}}}
+                }
+            },
+        }
+
+    old = document(old_components, old_schema)
+    new = document(new_components, new_schema)
+    assert _rust_surface_diff(old, new) == diff_contracts(old, new).as_dict()

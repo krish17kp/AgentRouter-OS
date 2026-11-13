@@ -15,8 +15,9 @@ All notable changes to AgentRouter OS. Format loosely follows
   field additions/removals/requiredness, array-item types, enums/consts,
   numeric and size bounds, patterns, formats, defaults, and
   `additionalProperties` changes. Python differential fixtures cover these
-  implemented classes; reference expansion, unions/nullability, and parameter
-  schemas remain on the Python release path, so this probe is not a
+  implemented classes, including bounded local schema `$ref` traversal with
+  alias and recursive-reference handling. Union/nullability analysis and
+  parameter schemas remain on the Python release path, so this probe is not a
   compatibility gate.
 
 ### Fixed

@@ -148,7 +148,13 @@ pub fn load_baseline(root: &Path) -> Result<Value, BaselineError> {
 /// same report shape and change ordering as Python's checker.
 pub fn diff_contracts_surface(old: &Value, new: &Value) -> Result<Value, String> {
     let mut changes = Vec::<SurfaceChange>::new();
-    let mut schema_budget = MAX_EXPANDED_NODES;
+    let mut schema_context = SchemaDiffContext {
+        old_document: old,
+        new_document: new,
+        budget: MAX_EXPANDED_NODES,
+        old_references: HashSet::new(),
+        new_references: HashSet::new(),
+    };
     let old_version = python_object_field(old, "info", "version");
     let new_version = python_object_field(new, "info", "version");
     if !python_value_equal(old_version, new_version) {
@@ -307,7 +313,7 @@ pub fn diff_contracts_surface(old: &Value, new: &Value) -> Result<Value, String>
                 new_operation.get("requestBody"),
                 &format!("{location}.request"),
                 true,
-                &mut schema_budget,
+                &mut schema_context,
                 &mut changes,
             )?;
 
@@ -355,7 +361,7 @@ pub fn diff_contracts_surface(old: &Value, new: &Value) -> Result<Value, String>
                     new_responses.get(status),
                     &format!("{location}.{status}"),
                     false,
-                    &mut schema_budget,
+                    &mut schema_context,
                     &mut changes,
                 )?;
             }
@@ -417,6 +423,14 @@ struct SurfaceChange {
     kind: String,
     location: String,
     detail: String,
+}
+
+struct SchemaDiffContext<'a> {
+    old_document: &'a Value,
+    new_document: &'a Value,
+    budget: usize,
+    old_references: HashSet<String>,
+    new_references: HashSet<String>,
 }
 
 fn add_surface_change(
@@ -657,7 +671,7 @@ fn diff_content_schema(
     new_body: Option<&Value>,
     location: &str,
     request: bool,
-    budget: &mut usize,
+    context: &mut SchemaDiffContext<'_>,
     changes: &mut Vec<SurfaceChange>,
 ) -> Result<(), String> {
     diff_inline_schema(
@@ -665,7 +679,7 @@ fn diff_content_schema(
         content_schema(new_body),
         location,
         request,
-        budget,
+        context,
         0,
         changes,
     )
@@ -690,43 +704,71 @@ fn diff_inline_schema(
     new_value: Option<&Value>,
     location: &str,
     request: bool,
-    budget: &mut usize,
+    context: &mut SchemaDiffContext<'_>,
     depth: usize,
     changes: &mut Vec<SurfaceChange>,
 ) -> Result<(), String> {
-    if *budget == 0 {
-        return Err(format!(
-            "contract is too large to compare safely (over {MAX_EXPANDED_NODES} schema nodes)"
-        ));
-    }
-    *budget -= 1;
-    if depth > MAX_SCHEMA_COMPARE_DEPTH {
-        return Err(format!(
-            "contract is nested too deeply to compare safely (over {MAX_SCHEMA_COMPARE_DEPTH} schema levels)"
-        ));
+    {
+        if context.budget == 0 {
+            return Err(format!(
+                "contract is too large to compare safely (over {MAX_EXPANDED_NODES} schema nodes)"
+            ));
+        }
+        context.budget -= 1;
+        if depth > MAX_SCHEMA_COMPARE_DEPTH {
+            return Err(format!(
+                "contract is nested too deeply to compare safely (over {MAX_SCHEMA_COMPARE_DEPTH} schema levels)"
+            ));
+        }
     }
 
-    let old_schema = match old_value {
+    let old_reference_snapshot = context.old_references.clone();
+    let new_reference_snapshot = context.new_references.clone();
+    let result = diff_inline_schema_inner(
+        old_value, new_value, location, request, context, depth, changes,
+    );
+    context.old_references = old_reference_snapshot;
+    context.new_references = new_reference_snapshot;
+    result
+}
+
+fn diff_inline_schema_inner(
+    old_value: Option<&Value>,
+    new_value: Option<&Value>,
+    location: &str,
+    request: bool,
+    context: &mut SchemaDiffContext<'_>,
+    depth: usize,
+    changes: &mut Vec<SurfaceChange>,
+) -> Result<(), String> {
+    let old_schema_value = resolve_schema_reference(
+        old_value,
+        context.old_document,
+        &mut context.old_references,
+        &mut context.budget,
+        depth,
+    )?;
+    let new_schema_value = resolve_schema_reference(
+        new_value,
+        context.new_document,
+        &mut context.new_references,
+        &mut context.budget,
+        depth,
+    )?;
+    let old_schema = match old_schema_value {
         None => empty_object(),
         Some(value) => match value.as_object() {
             Some(schema) => schema,
             None => return Ok(()),
         },
     };
-    let new_schema = match new_value {
+    let new_schema = match new_schema_value {
         None => empty_object(),
         Some(value) => match value.as_object() {
             Some(schema) => schema,
             None => return Ok(()),
         },
     };
-
-    // Reference expansion is a separate bounded operation. Keep referenced
-    // schemas out of this inline-only slice until it can share the full
-    // document-wide expansion budget and cycle handling.
-    if old_schema.contains_key("$ref") || new_schema.contains_key("$ref") {
-        return Ok(());
-    }
 
     let old_type = schema_type(old_schema.get("type"));
     let new_type = schema_type(new_schema.get("type"));
@@ -865,7 +907,7 @@ fn diff_inline_schema(
             new_properties.get(name),
             &format!("{location}.{name}"),
             request,
-            budget,
+            context,
             depth + 1,
             changes,
         )?;
@@ -877,12 +919,53 @@ fn diff_inline_schema(
             new_schema.get("items"),
             &format!("{location}[]"),
             request,
-            budget,
+            context,
             depth + 1,
             changes,
         )?;
     }
     Ok(())
+}
+
+fn resolve_schema_reference<'a>(
+    value: Option<&'a Value>,
+    document: &'a Value,
+    seen: &mut HashSet<String>,
+    budget: &mut usize,
+    depth: usize,
+) -> Result<Option<&'a Value>, String> {
+    let Some(mut current) = value else {
+        return Ok(None);
+    };
+    let mut reference_depth = depth;
+    loop {
+        let Some(reference) = current
+            .as_object()
+            .and_then(|schema| schema.get("$ref"))
+            .and_then(Value::as_str)
+        else {
+            return Ok(Some(current));
+        };
+        if !reference.starts_with("#/") || !seen.insert(reference.to_owned()) {
+            return Ok(Some(empty_schema_value()));
+        }
+        let Some(target) = resolve_local_reference(document, reference) else {
+            return Ok(Some(empty_schema_value()));
+        };
+        if *budget == 0 {
+            return Err(format!(
+                "contract is too large to compare safely (over {MAX_EXPANDED_NODES} schema nodes)"
+            ));
+        }
+        *budget -= 1;
+        reference_depth += 1;
+        if reference_depth > MAX_SCHEMA_COMPARE_DEPTH {
+            return Err(format!(
+                "contract is nested too deeply to compare safely (over {MAX_SCHEMA_COMPARE_DEPTH} schema levels)"
+            ));
+        }
+        current = target;
+    }
 }
 
 fn schema_type(value: Option<&Value>) -> Option<String> {
@@ -1544,6 +1627,11 @@ fn security_schemes(document: &Value) -> &Map<String, Value> {
 fn empty_object() -> &'static Map<String, Value> {
     static EMPTY: std::sync::OnceLock<Map<String, Value>> = std::sync::OnceLock::new();
     EMPTY.get_or_init(Map::new)
+}
+
+fn empty_schema_value() -> &'static Value {
+    static EMPTY: std::sync::OnceLock<Value> = std::sync::OnceLock::new();
+    EMPTY.get_or_init(|| Value::Object(Map::new()))
 }
 
 fn python_repr_option(value: Option<&Value>) -> String {
