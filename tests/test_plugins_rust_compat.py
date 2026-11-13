@@ -11,7 +11,11 @@ from agentrouter import plugins
 
 def _rust_plugin_probe(payload: dict) -> dict:
     repository = Path(__file__).resolve().parents[1]
-    binary = "plugin_state_from_json" if "states" in payload else "plugin_paths_from_json"
+    binary = (
+        "plugin_state_from_json"
+        if "states" in payload or "reads" in payload
+        else "plugin_paths_from_json"
+    )
     process = subprocess.run(
         [
             "cargo",
@@ -223,6 +227,59 @@ def test_rust_ownership_state_validation_matches_python(tmp_path):
         {"states": [{"plugin": plugin.name, "state_raw": raw} for raw in states]}
     )["states"]
     assert [item["accepted"] for item in actual] == expected
+
+
+def test_rust_ownership_state_disk_reader_matches_python(tmp_path):
+    plugin = plugins.get_plugin("codex")
+    root = tmp_path / plugin.name
+
+    def rust_read():
+        return _rust_plugin_probe({"reads": [{"plugin": plugin.name, "root": str(root)}]})["reads"][
+            0
+        ]
+
+    expected_empty, empty_digest = plugins._load_state(root, plugin)
+    missing = rust_read()
+    assert missing == {"accepted": True, "state": None, "sha256": None}
+    assert empty_digest is None
+
+    state_path = plugins._state_path(root, plugin)
+    state_path.parent.mkdir(parents=True)
+    raw = plugins._serialized_state(plugins._empty_state(plugin))
+    state_path.write_bytes(raw)
+    expected_state, expected_digest = plugins._load_state(root, plugin)
+    loaded = rust_read()
+    assert loaded["accepted"] is True
+    assert loaded["state"] == expected_state == expected_empty
+    assert loaded["sha256"] == expected_digest
+
+    state_path.write_bytes(b"not JSON")
+    with pytest.raises(plugins.PluginError):
+        plugins._load_state(root, plugin)
+    assert rust_read()["accepted"] is False
+
+    state_path.unlink()
+    outside = tmp_path / "outside.json"
+    outside.write_bytes(raw)
+    try:
+        state_path.symlink_to(outside)
+    except OSError:
+        pass
+    else:
+        with pytest.raises(plugins.PluginError):
+            plugins._load_state(root, plugin)
+        assert rust_read()["accepted"] is False
+        state_path.unlink()
+
+    state_path.write_bytes(raw)
+    linked_copy = tmp_path / "linked-state.json"
+    try:
+        linked_copy.hardlink_to(state_path)
+    except OSError:
+        pytest.skip("hard links are unavailable")
+    with pytest.raises(plugins.PluginError):
+        plugins._load_state(root, plugin)
+    assert rust_read()["accepted"] is False
 
 
 def _rust_plugin_list() -> subprocess.CompletedProcess[str]:

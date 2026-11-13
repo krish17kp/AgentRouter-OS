@@ -4,7 +4,12 @@
 //! the trust boundary before filesystem mutation: plugin names and manifest
 //! paths are checked with the same cross-platform rules as Python.
 
+use std::fs::File;
+use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
+
+use sha2::Digest;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PluginFile {
@@ -250,6 +255,241 @@ fn cap_metadata_is_link_or_reparse(metadata: &cap_std::fs::Metadata) -> bool {
     {
         metadata.file_type().is_symlink()
     }
+}
+
+/// Ownership state successfully read and validated without following links.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LoadedState {
+    pub value: serde_json::Value,
+    pub sha256: String,
+}
+
+/// Read the per-plugin ownership record through pinned directory handles.
+/// Missing root/state directories or state files mean no installed ownership
+/// record. Links, reparse points, hard links, unstable reads, malformed JSON,
+/// and invalid claims fail closed.
+pub fn read_state(root: &Path, plugin: &PluginSpec) -> Result<Option<LoadedState>, String> {
+    match std::fs::symlink_metadata(root) {
+        Ok(metadata) if !super::is_link_or_reparse(&metadata) && metadata.is_dir() => {}
+        Ok(_) => {
+            return Err(format!(
+                "plugin destination root is not a safe directory: {}",
+                root.display()
+            ))
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(format!(
+                "could not inspect plugin root {}: {error}",
+                root.display()
+            ))
+        }
+    }
+    let root_file = super::open_safe_home(root)?;
+    let root_dir = cap_std::fs::Dir::from_std_file(root_file);
+    let Some(state_dir) = open_existing_directory(&root_dir, ".agentrouter-state")? else {
+        return Ok(None);
+    };
+    let state_dir = cap_std::fs::Dir::from_std_file(state_dir);
+    let filename = format!("{}.json", plugin.name);
+    let path = root.join(".agentrouter-state").join(&filename);
+    let Some(raw) = read_verified_file_at(&state_dir, &filename, &path)? else {
+        return Ok(None);
+    };
+    let value: serde_json::Value = serde_json::from_slice(&raw).map_err(|_| {
+        format!(
+            "plugin ownership state is invalid; refusing to continue: {}",
+            path.display()
+        )
+    })?;
+    validate_state_data(plugin, &value)?;
+    let sha256 = format!("{:x}", sha2::Sha256::digest(&raw));
+    Ok(Some(LoadedState { value, sha256 }))
+}
+
+fn read_verified_file_at(
+    parent: &cap_std::fs::Dir,
+    name: &str,
+    path: &Path,
+) -> Result<Option<Vec<u8>>, String> {
+    let before = match parent.symlink_metadata(name) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(format!(
+                "could not check whether plugin ownership state exists at {}: {error}",
+                path.display()
+            ));
+        }
+    };
+    if cap_metadata_is_link_or_reparse(&before) || !before.is_file() {
+        return Err(format!(
+            "plugin ownership state is not a regular non-link file; refusing to modify it: {}",
+            path.display()
+        ));
+    }
+    if super::has_multiple_links(parent, name, &before)? {
+        return Err(format!(
+            "plugin ownership state has multiple hard links; refusing to modify it: {}",
+            path.display()
+        ));
+    }
+
+    let parent_file = parent
+        .try_clone()
+        .map_err(|error| {
+            format!(
+                "could not safely open plugin ownership state {}: {error}",
+                path.display()
+            )
+        })?
+        .into_std_file();
+    let mut options = fs_at::OpenOptions::default();
+    options.read(true).follow(false);
+    let mut file = options
+        .open_at(&parent_file, Path::new(name))
+        .map_err(|error| {
+            format!(
+                "could not safely open plugin ownership state {}: {error}",
+                path.display()
+            )
+        })?;
+    let opened = file.metadata().map_err(|error| {
+        format!(
+            "could not inspect plugin ownership state {}: {error}",
+            path.display()
+        )
+    })?;
+    if !opened.is_file() || super::is_link_or_reparse(&opened) {
+        return Err(format!(
+            "plugin ownership state changed while it was being opened: {}",
+            path.display()
+        ));
+    }
+    let opened_fingerprint = file_fingerprint(&file, &opened)?;
+    let mut raw = Vec::new();
+    file.read_to_end(&mut raw).map_err(|error| {
+        format!(
+            "could not safely read plugin ownership state {}: {error}",
+            path.display()
+        )
+    })?;
+    let after_handle = file.metadata().map_err(|error| {
+        format!(
+            "could not inspect plugin ownership state {}: {error}",
+            path.display()
+        )
+    })?;
+    let after_path = match parent.symlink_metadata(name) {
+        Ok(metadata) => metadata,
+        Err(error) => {
+            return Err(format!(
+                "plugin ownership state changed while it was being read: {} ({error})",
+                path.display()
+            ));
+        }
+    };
+    if cap_metadata_is_link_or_reparse(&after_path)
+        || !after_path.is_file()
+        || super::has_multiple_links(parent, name, &after_path)?
+        || file_fingerprint(&file, &after_handle)? != opened_fingerprint
+        || after_path.len() != opened_fingerprint.len
+        || after_path
+            .modified()
+            .ok()
+            .map(cap_std::time::SystemTime::into_std)
+            != Some(opened_fingerprint.modified)
+    {
+        return Err(format!(
+            "plugin ownership state changed while it was being read: {}",
+            path.display()
+        ));
+    }
+
+    // Re-open the final component without following it to detect a pathname
+    // replacement that occurred while the pinned handle was being read.
+    let parent_file = parent
+        .try_clone()
+        .map_err(|error| {
+            format!(
+                "could not verify plugin ownership state {}: {error}",
+                path.display()
+            )
+        })?
+        .into_std_file();
+    let final_file = options
+        .open_at(&parent_file, Path::new(name))
+        .map_err(|error| {
+            format!(
+                "plugin ownership state changed while it was being read: {} ({error})",
+                path.display()
+            )
+        })?;
+    let final_metadata = final_file.metadata().map_err(|error| {
+        format!(
+            "could not verify plugin ownership state {}: {error}",
+            path.display()
+        )
+    })?;
+    if file_fingerprint(&final_file, &final_metadata)? != opened_fingerprint {
+        return Err(format!(
+            "plugin ownership state changed while it was being read: {}",
+            path.display()
+        ));
+    }
+    Ok(Some(raw))
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct FileFingerprint {
+    identity: (u64, u64),
+    len: u64,
+    modified: SystemTime,
+}
+
+fn file_fingerprint(file: &File, metadata: &std::fs::Metadata) -> Result<FileFingerprint, String> {
+    let identity = file_identity(file, metadata)?;
+    let modified = metadata
+        .modified()
+        .map_err(|error| format!("could not verify plugin ownership state timestamp: {error}"))?;
+    Ok(FileFingerprint {
+        identity,
+        len: metadata.len(),
+        modified,
+    })
+}
+
+#[cfg(unix)]
+fn file_identity(_file: &File, metadata: &std::fs::Metadata) -> Result<(u64, u64), String> {
+    use std::os::unix::fs::MetadataExt;
+    Ok((metadata.dev(), metadata.ino()))
+}
+
+#[cfg(windows)]
+fn file_identity(file: &File, _metadata: &std::fs::Metadata) -> Result<(u64, u64), String> {
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Storage::FileSystem::{
+        GetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION,
+    };
+    let mut information = std::mem::MaybeUninit::<BY_HANDLE_FILE_INFORMATION>::uninit();
+    // SAFETY: `file` owns a valid open handle and the Win32 API initializes the
+    // structure before it is read on success.
+    if unsafe { GetFileInformationByHandle(file.as_raw_handle(), information.as_mut_ptr()) } == 0 {
+        return Err(format!(
+            "could not verify plugin ownership state identity: {}",
+            std::io::Error::last_os_error()
+        ));
+    }
+    // SAFETY: the successful API call above initialized the structure.
+    let information = unsafe { information.assume_init() };
+    let file_index =
+        (u64::from(information.nFileIndexHigh) << 32) | u64::from(information.nFileIndexLow);
+    Ok((u64::from(information.dwVolumeSerialNumber), file_index))
+}
+
+#[cfg(not(any(unix, windows)))]
+fn file_identity(_file: &File, _metadata: &std::fs::Metadata) -> Result<(u64, u64), String> {
+    Err("plugin ownership state identity is unsupported on this platform".to_owned())
 }
 
 /// Validate the JSON ownership-record shape without claiming any filesystem
@@ -535,5 +775,102 @@ mod tests {
         symlink(&outside, &destination).unwrap();
         assert_eq!(status(plugin, &root), "blocked");
         assert_eq!(std::fs::read_to_string(outside).unwrap(), "leave unchanged");
+    }
+
+    #[test]
+    fn reads_valid_ownership_state_and_matches_its_digest() {
+        let plugin = get_plugin("codex").unwrap();
+        let temporary = tempfile::tempdir().unwrap();
+        let root = temporary.path().join(plugin.name);
+        std::fs::create_dir_all(root.join(".agentrouter-state")).unwrap();
+        let raw = br#"{"schema":2,"plugin":"codex","state_dir_identity":null,"files":{},"directories":{}}"#;
+        let path = root.join(".agentrouter-state/codex.json");
+        std::fs::write(&path, raw).unwrap();
+
+        let loaded = read_state(&root, plugin).unwrap().unwrap();
+        assert_eq!(loaded.value["plugin"], "codex");
+        assert_eq!(loaded.sha256, format!("{:x}", sha2::Sha256::digest(raw)));
+    }
+
+    #[test]
+    fn missing_root_state_directory_and_record_are_absent() {
+        let plugin = get_plugin("codex").unwrap();
+        let temporary = tempfile::tempdir().unwrap();
+        let root = temporary.path().join(plugin.name);
+        assert!(read_state(&root, plugin).unwrap().is_none());
+        std::fs::create_dir_all(&root).unwrap();
+        assert!(read_state(&root, plugin).unwrap().is_none());
+        std::fs::create_dir_all(root.join(".agentrouter-state")).unwrap();
+        assert!(read_state(&root, plugin).unwrap().is_none());
+    }
+
+    #[test]
+    fn malformed_and_invalid_ownership_records_fail_closed() {
+        let plugin = get_plugin("codex").unwrap();
+        let temporary = tempfile::tempdir().unwrap();
+        let root = temporary.path().join(plugin.name);
+        let state_dir = root.join(".agentrouter-state");
+        std::fs::create_dir_all(&state_dir).unwrap();
+        let path = state_dir.join("codex.json");
+        std::fs::write(&path, b"not JSON").unwrap();
+        assert!(read_state(&root, plugin)
+            .unwrap_err()
+            .contains("ownership state is invalid"));
+        std::fs::write(
+            &path,
+            br#"{"schema":2,"plugin":"codex","files":{"../escape":{}},"directories":{}}"#,
+        )
+        .unwrap();
+        assert!(read_state(&root, plugin)
+            .unwrap_err()
+            .contains("unsafe relative path"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn ownership_state_reader_rejects_symlinks_and_hardlinks() {
+        use std::fs::hard_link;
+        use std::os::unix::fs::symlink;
+
+        let plugin = get_plugin("codex").unwrap();
+        let temporary = tempfile::tempdir().unwrap();
+        let root = temporary.path().join(plugin.name);
+        let state_dir = root.join(".agentrouter-state");
+        std::fs::create_dir_all(&state_dir).unwrap();
+        let state = state_dir.join("codex.json");
+        let external = temporary.path().join("external.json");
+        std::fs::write(
+            &external,
+            br#"{"schema":2,"plugin":"codex","files":{},"directories":{}}"#,
+        )
+        .unwrap();
+        symlink(&external, &state).unwrap();
+        assert!(read_state(&root, plugin).is_err());
+        std::fs::remove_file(&state).unwrap();
+        std::fs::write(
+            &state,
+            br#"{"schema":2,"plugin":"codex","files":{},"directories":{}}"#,
+        )
+        .unwrap();
+        let linked = temporary.path().join("linked.json");
+        hard_link(&state, linked).unwrap();
+        assert!(read_state(&root, plugin)
+            .unwrap_err()
+            .contains("hard links"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn ownership_state_reader_rejects_a_symlinked_state_directory() {
+        use std::os::unix::fs::symlink;
+
+        let plugin = get_plugin("codex").unwrap();
+        let temporary = tempfile::tempdir().unwrap();
+        let root = temporary.path().join(plugin.name);
+        let external = temporary.path().join("external-state");
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::create_dir_all(&external).unwrap();
+        symlink(&external, root.join(".agentrouter-state")).unwrap();
+        assert!(read_state(&root, plugin).is_err());
     }
 }
