@@ -74,7 +74,7 @@ release authority until the full set is complete.
 | `agentrouter/openai_adapter.py` | `agentrouter-cli::openai` | Partial |
 | `agentrouter/plugins.py` | `—` | Not ported |
 | `agentrouter/prompts.py` | `agentrouter-cli::generate_prompt` | Parity |
-| `agentrouter/refresh.py` | `—` | Not ported |
+| `agentrouter/refresh.py` | `agentrouter-registry::refresh` | Partial |
 | `agentrouter/registry.py` | `agentrouter-registry` | Parity |
 | `agentrouter/reliability/__init__.py` | `—` | Not ported |
 | `agentrouter/reliability/harness.py` | `—` | Not ported |
@@ -103,6 +103,10 @@ release authority until the full set is complete.
   protocol/tool and result differentials cover all five. It is not wired into
   the unified Rust CLI, and the broader cross-version MCP lifecycle/error
   contract remains under compatibility review, so the module is Partial.
+- Rust provider refresh currently converts OpenRouter/OpenAI model records and
+  filters supplied offline payloads with Python differentials. Live HTTP
+  retrieval, key handling, deprecation checks, atomic generated-file writes,
+  and the `providers refresh` CLI are not ported, so the module is Partial.
 - Rust `Classification` now rejects unknown fields and has round-trip and
   rejection checks against Pydantic. Python's unbounded integer and scalar
   coercion behavior is not fully represented by the Rust integer/serde types,

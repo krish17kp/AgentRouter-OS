@@ -13,6 +13,7 @@ use thiserror::Error;
 
 pub use agentrouter_core::PricingTier;
 pub mod catalog_ops;
+pub mod refresh;
 
 pub const STALE_AFTER_DAYS: i64 = 90;
 const OVERRIDES_FILE: &str = "ability_overrides.yaml";

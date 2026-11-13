@@ -13,7 +13,7 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 2,005 passed, 5 skipped |
+| Python regression | 2,026 passed, 5 skipped |
 | Line coverage | 92.49% (6,628 / 7,166 statements) |
 | Branch coverage | 87.61% (1,845 / 2,106 branch outcomes) |
 | Combined coverage reported by pytest-cov | 91.38% |
@@ -59,3 +59,6 @@ process, covering persisted and no-log routing, feedback, decision lookup,
 dry-run, API-key authentication, and typed errors. It also includes the MCP
 stdio parity check against the Python FastMCP 1.30.0 server for negotiated
 protocol version, capabilities, all five tool schemas, and structured outputs.
+The Rust provider-refresh slice is checked against Python for all OpenAI
+family prefixes, OpenRouter model metadata and price tiers, offline payload
+filtering, and skipped-entry warnings.

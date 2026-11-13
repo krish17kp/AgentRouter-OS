@@ -73,3 +73,7 @@ path = "src/bin/limits_from_json.rs"
 [[bin]]
 name = "catalog_ops_from_json"
 path = "src/bin/catalog_ops_from_json.rs"
+
+[[bin]]
+name = "refresh_from_json"
+path = "src/bin/refresh_from_json.rs"

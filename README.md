@@ -436,6 +436,10 @@ checkout; it has not replaced the supported Python CLI entry point. See
 [`docs/RUST_MCP_SERVER.md`](docs/RUST_MCP_SERVER.md) for its local setup and
 parity scope.
 
+Rust also has an offline provider-catalog mapping slice. Live provider refresh
+still runs through the Python CLI; see
+[`docs/RUST_PROVIDER_REFRESH.md`](docs/RUST_PROVIDER_REFRESH.md).
+
 ---
 
 ## Troubleshooting
