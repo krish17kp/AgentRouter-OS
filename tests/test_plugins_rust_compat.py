@@ -320,6 +320,10 @@ def _rust_plugin_install_dry_run(
     return _rust_plugin_command("plugin", "install", plugin_name, *options, "--dry-run")
 
 
+def _rust_plugin_install(plugin_name: str, *options: str) -> subprocess.CompletedProcess[str]:
+    return _rust_plugin_command("plugin", "install", plugin_name, *options)
+
+
 def _expected_plugin_list() -> str:
     return "".join(
         f"{plugin.name:<12} [{plugins.status(plugin)}]  {plugin.description}\n"
@@ -437,3 +441,112 @@ def test_rust_plugin_install_dry_run_matches_python_plan(tmp_path, monkeypatch):
     destination.unlink()
     plugins.install(plugin)
     assert_plan_matches_python()
+
+
+def test_rust_plugin_install_creates_python_compatible_state_and_is_idempotent(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
+    plugin = plugins.get_plugin("codex")
+    root = plugins.dest_root(plugin)
+    destination = root / plugin.files[0].dest
+
+    first = _rust_plugin_install(plugin.name)
+    assert first.returncode == 0, first.stderr
+    assert "created" in first.stdout
+    assert destination.read_bytes() == plugins._src_bytes(plugin.files[0].src)
+    state, _ = plugins._load_state(root, plugin)
+    assert state["files"][plugin.files[0].dest]["disposition"] == "created"
+    assert state["files"][plugin.files[0].dest]["backup"] is None
+    assert plugins._state_path(root, plugin).read_bytes() == plugins._serialized_state(state)
+
+    second = _rust_plugin_install(plugin.name)
+    assert second.returncode == 0, second.stderr
+    assert "skipped (identical, managed)" in second.stdout
+    assert destination.read_bytes() == plugins._src_bytes(plugin.files[0].src)
+
+    removed = plugins.uninstall(plugin)
+    assert any(item["result"] == "removed" for item in removed)
+    assert not destination.exists()
+    assert not plugins._state_path(root, plugin).exists()
+
+
+def test_rust_plugin_install_tracks_claude_cleanup_directory_for_python_uninstall(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
+    plugin = plugins.get_plugin("claude-code")
+    root = plugins.dest_root(plugin)
+    destination = root / plugin.files[0].dest
+    cleanup_directory = root / plugin.cleanup_dirs[0]
+
+    installed = _rust_plugin_install(plugin.name)
+    assert installed.returncode == 0, installed.stderr
+    assert destination.read_bytes() == plugins._src_bytes(plugin.files[0].src)
+    state, _ = plugins._load_state(root, plugin)
+    assert state["directories"][plugin.cleanup_dirs[0]]["identity"]
+
+    removed = plugins.uninstall(plugin)
+    assert any(item["result"] == "removed" for item in removed)
+    assert any(item["result"] == "removed (empty directory)" for item in removed)
+    assert not destination.exists()
+    assert not cleanup_directory.exists()
+    assert not plugins._state_path(root, plugin).exists()
+
+
+@pytest.mark.parametrize(
+    ("adopt", "expected_disposition", "expected_result", "preserved"),
+    [
+        (False, "preexisting", "skipped (identical pre-existing file; will be preserved)", True),
+        (True, "created", "adopted identical legacy installation (managed)", False),
+    ],
+)
+def test_rust_plugin_install_matches_python_identical_file_ownership(
+    tmp_path, monkeypatch, adopt, expected_disposition, expected_result, preserved
+):
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
+    plugin = plugins.get_plugin("codex")
+    root = plugins.dest_root(plugin)
+    destination = root / plugin.files[0].dest
+    destination.parent.mkdir(parents=True)
+    destination.write_bytes(plugins._src_bytes(plugin.files[0].src))
+
+    options = ("--adopt-identical",) if adopt else ()
+    installed = _rust_plugin_install(plugin.name, *options)
+    assert installed.returncode == 0, installed.stderr
+    assert expected_result in installed.stdout
+    state, _ = plugins._load_state(root, plugin)
+    assert state["files"][plugin.files[0].dest]["disposition"] == expected_disposition
+
+    plugins.uninstall(plugin)
+    assert destination.exists() is preserved
+
+
+def test_rust_plugin_install_refuses_differences_force_and_state_links(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
+    plugin = plugins.get_plugin("codex")
+    root = plugins.dest_root(plugin)
+    destination = root / plugin.files[0].dest
+    destination.parent.mkdir(parents=True)
+    destination.write_text("user-authored guidance", encoding="utf-8")
+
+    refused = _rust_plugin_install(plugin.name)
+    assert refused.returncode != 0
+    assert "exists and differs" in refused.stderr
+    forced = _rust_plugin_install(plugin.name, "--force")
+    assert forced.returncode != 0
+    assert "replacement is not migrated yet" in forced.stderr
+    assert destination.read_text(encoding="utf-8") == "user-authored guidance"
+    assert not plugins._state_path(root, plugin).exists()
+
+    state_directory = root / ".agentrouter-state"
+    outside = tmp_path / "outside-state"
+    outside.mkdir()
+    try:
+        state_directory.symlink_to(outside, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlink creation is unavailable")
+    blocked = _rust_plugin_install(plugin.name)
+    assert blocked.returncode != 0
+    assert destination.read_text(encoding="utf-8") == "user-authored guidance"
+    assert not list(outside.iterdir())

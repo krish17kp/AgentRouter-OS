@@ -13,10 +13,10 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 2,223 passed, 4 skipped |
-| Statement coverage | 92.84% (6,716 / 7,234 statements) |
+| Python regression | 2,228 passed, 4 skipped |
+| Statement coverage | 92.85% (6,717 / 7,234 statements) |
 | Branch coverage | 88.68% (1,896 / 2,138 branch outcomes) |
-| Combined coverage reported by pytest-cov | 91.89% |
+| Combined coverage reported by pytest-cov | 91.90% |
 | Project line / branch thresholds | 90% / 85% — both passed |
 | CI total-coverage threshold | 80% — passed |
 | Warnings | 1 Starlette/httpx deprecation warning |
@@ -31,8 +31,12 @@ inventory, destination-root, portable path-validation, ownership-record shape,
 read-only `plugin list`, and no-follow ownership-state read checks, plus the
 Rust text/JSON `plugin doctor` differentials for missing, unmanaged, managed,
 corrupt-state, and linked destinations, and `plugin install --dry-run`
-comparisons for absent, identical, adoptable, user-authored, and managed files, plus the
-existing evaluation, API, CLI, and safety suites. Rust workspace tests and
+comparisons for absent, identical, adoptable, user-authored, and managed files.
+Rust plugin installation also covers new managed files, idempotent installs,
+Python-compatible serialized ownership state, pre-existing and adopted file
+ownership, Python uninstall interoperability, linked state-directory refusal,
+and safe rejection of differing user content and `--force`. It is paired with
+the existing evaluation, API, CLI, and safety suites. Rust workspace tests and
 strict Clippy were run separately. The
 contract compatibility suite has 70 Python/Rust
 cases in total, including canonicalization, reference validation, and baseline

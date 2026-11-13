@@ -1,12 +1,12 @@
 {
   "loop_version": 2,
-  "last_updated": "2026-11-11",
-  "current_phase": "IN_PROGRESS: TASK-043 closes graph signal parity locally, including Unicode final-sigma normalization. Thirteen graph differentials, full Python 1,877/6, Rust workspace/Clippy/format/Ruff pass. Commit/push and inspect hosted checks; continue next public-module parity.",
+  "last_updated": "2026-11-14",
+  "current_phase": "IN_PROGRESS: TASK-110 adds safe Rust plugin creation/adoption. The full Linux Python suite (2,228 passed, 4 skipped), 15 focused plugin parity cases, Rust workspace, strict Clippy, formatting, and Ruff pass locally. Windows path and CPython-compatible file-identity fixes are ready for hosted revalidation; commit/push to the authorized RC and continue the next local parity task. PR #16 remains blocked by frozen context-band accuracy 0.6667 < 0.90.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
     "main": "PR #16 is the sole open PR against main. Cross-platform Python/Rust, security, site, API, build and mutation checks pass; enforce-release-gate fails honestly at context-band 0.6667 < 0.90. No gate bypass.",
-    "release/agentrouter-v0.5-rc1": "RC at 7399b3b. TASK-041 shape and TASK-042 LRU cache fixes pass Linux/Windows/macOS Rust workspace and Python/Rust compatibility. TASK-043 Unicode lowercase parity is local with 13 focused tests and full suite 1,877/6; hosted checks start after push. PR #16 only fails frozen context release gate 0.6667 < 0.90; live smoke skipped without credentials.",
+    "release/agentrouter-v0.5-rc1": "Pushed head e1e8f5c. Rust workspace and Python/Rust compatibility pass on Linux/Windows/macOS; full Windows Python suite found TASK-110 destination separator and file-identity parity failures. Both fixes are local; hosted rerun is pending. Full Linux Python regression passes 2,228/4 at 92.85% statement, 88.68% branch, 91.90% combined coverage. PR #16 remains blocked by frozen context-band accuracy 0.6667 < 0.90; live smoke skips without credentials.",
     "task/rust-r1-workspace": "PR #25 open against RC; 6ee8d3e passed complete GitHub CI; 32eee6f forced-init push failed Windows compile, file-handle repair awaits remote recheck; SQLite path-race blocker remains; Rust R4 partial and OpenAI execution hardening",
     "task/repo-cleanup-architecture-ponytail": "MERGED to RC (PR #14, merge commit 1ae3155); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/dynamic-skill-discovery": "MERGED to RC (PR #15, merge commit 62d5289); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
@@ -29,8 +29,8 @@
   "repo_sha_at_takeover": "602321af91ff298c0d5b59d6d36c24f845557fc1",
   "canonical_release_ready": false,
   "in_progress": [
-    "2026-11-11 TASK-035 annotation schema remains Partial for Pydantic scalar coercion and full fromisoformat edge grammar; 14 focused cases.",
-    "2026-11-11 TASK-043 graph Unicode casing tests pass locally; commit/push, verify cross-platform checks, continue evaluation context-band and annotation CLI parity."
+    "2026-11-14 TASK-110 safe Rust plugin install: local contract and full regression pass; commit/push the Windows parity repairs and inspect Linux/Windows/macOS CI before recording completion.",
+    "After TASK-110 hosted validation, continue public Python module parity; R4 public CLI/HTTP/MCP and R5-R13 remain incomplete."
   ],
   "completed_iter25": [
     "TASK-015 trusted catalogs MERGED to RC (PR #6 -> merge commit 8661629; task branch deleted local+remote). Closes TASK-013's deferred scope: file-level provenance block (provider, source_url, fetched_at UTC, count, tool_version, cli_args) ignored by the registry loader; atomic refresh via tempfile.mkstemp + os.replace; candidate-deprecation reporting on refresh (report-only, never auto-deletes); rollback with non-destructive backup rotation + new `providers restore`; new `providers doctor` that schema-validates every generated catalog and exits 3 only on real corruption (not staleness).",

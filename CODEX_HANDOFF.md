@@ -1,20 +1,19 @@
 # Codex Handoff - AgentRouter OS
 
-## Current checkpoint — 2026-11-11
+## Current checkpoint — 2026-11-14
 
 Active RC branch `release/agentrouter-v0.5-rc1`; latest pushed head is
-`740355d` (TASK-052 annotation integer coercion). TASK-044 ports complete
-context-band evaluation and split-leak checking; TASK-045–051 add package
-facades and exact version/export contracts. Latest full Python regression is
-1,893 passed/6 skipped; coverage is 92.16% statements, 87.27% branch, and
-91.05% combined. Rust workspace, formatting, and Clippy pass through TASK-051;
-focused annotation schema and Clippy pass through TASK-052. Hosted workflows
-for the latest head are running/queued and must be checked by exact SHA. The
-77-module matrix has 35 Parity, 25 Partial, and 17 Not ported. PR #16 remains
-blocked by the frozen 0.6667 < 0.90 context-band gate. Human annotation, bounded
-OpenAI live validation, and deployment credentials remain under **Needs Krish**
-in `PRODUCTION_STATUS.md`. Continue with the next migration gap;
-`AGENT_HANDOFF.md` remains authoritative.
+`e1e8f5c`. PR #16 is the only open PR and is still blocked by the unchanged
+frozen context-band score 0.6667 < 0.90. At `e1e8f5c`, Rust workspace and
+Python/Rust compatibility pass on Linux, Windows, and macOS; the full Windows
+Python suite found plugin path-format and file-identity mismatches. TASK-110
+fixes are now local and await hosted revalidation. The complete Linux Python
+regression is 2,228 passed/4 skipped with 92.85% statement, 88.68% branch, and
+91.90% combined coverage. Rust workspace, strict Clippy, formatting, Ruff, and
+15 focused plugin tests pass locally.
+Human annotation, bounded OpenAI live validation, and deployment credentials
+remain under **Needs Krish** in `PRODUCTION_STATUS.md`. Continue after the
+hosted recheck; `AGENT_HANDOFF.md` remains authoritative.
 
 ## Historical narrative
 

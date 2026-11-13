@@ -5,7 +5,7 @@
 //! paths are checked with the same cross-platform rules as Python.
 
 use std::fs::File;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
@@ -162,6 +162,13 @@ pub fn dest_root(
         .fold(home.to_path_buf(), |path, part| path.join(part)))
 }
 
+fn plugin_path(root: &Path, relative: &str) -> PathBuf {
+    relative
+        .replace('\\', "/")
+        .split('/')
+        .fold(root.to_path_buf(), |path, component| path.join(component))
+}
+
 /// Read-only install-state summary for `agentrouter plugin list`.
 ///
 /// A destination is considered installed when its path exists, matching
@@ -287,7 +294,7 @@ pub fn diagnose(plugin: &PluginSpec, root: &Path) -> Vec<serde_json::Value> {
     }
 
     for file in plugin.files {
-        let destination = root.join(file.dest);
+        let destination = plugin_path(root, file.dest);
         let state_entry = state
             .as_ref()
             .and_then(|loaded| loaded.value.get("files"))
@@ -349,7 +356,7 @@ pub fn plan(
     let mut plan = Vec::new();
     for file in plugin.files {
         check_link_components(root, file.dest)?;
-        let destination = root.join(file.dest);
+        let destination = plugin_path(root, file.dest);
         let expected = bundled_contents(file.src)
             .ok_or_else(|| format!("packaged plugin source is missing: {}", file.src))?;
         let expected_digest = format!("{:x}", sha2::Sha256::digest(expected));
@@ -392,6 +399,457 @@ pub fn plan(
         }));
     }
     Ok(plan)
+}
+
+/// Install only missing or byte-identical files. Destructive replacement is
+/// intentionally rejected until the journaled backup and recovery protocol is
+/// available in Rust.
+pub fn install(
+    plugin: &PluginSpec,
+    root: &Path,
+    force: bool,
+    adopt_identical: bool,
+) -> Result<Vec<serde_json::Value>, String> {
+    if force {
+        return Err("forced plugin replacement is not migrated yet; use the Python CLI".to_owned());
+    }
+    for file in plugin.files {
+        bundled_contents(file.src)
+            .ok_or_else(|| format!("packaged plugin source is missing: {}", file.src))?;
+        check_link_components(root, file.dest)?;
+        check_link_components(root, &format!("{}.agentrouter-bak", file.dest))?;
+    }
+    let transaction = format!(".agentrouter-state/{}.txn.json", plugin.name);
+    if relative_entry_exists(root, &transaction)? {
+        return Err(
+            "an interrupted plugin transaction exists; use the Python CLI to recover it".to_owned(),
+        );
+    }
+
+    let loaded = read_state(root, plugin)?;
+    let mut state_sha = loaded.as_ref().map(|loaded| loaded.sha256.clone());
+    let mut state = loaded
+        .map(|loaded| loaded.value)
+        .unwrap_or_else(|| empty_state(plugin));
+    let known_paths = plugin
+        .files
+        .iter()
+        .map(|file| file.dest)
+        .collect::<std::collections::HashSet<_>>();
+    if let Some(files) = state.get("files").and_then(serde_json::Value::as_object) {
+        let historical = files
+            .keys()
+            .filter(|path| !known_paths.contains(path.as_str()))
+            .cloned()
+            .collect::<Vec<_>>();
+        if !historical.is_empty() {
+            return Err(format!(
+                "plugin registry paths changed; use the Python CLI to safely handle historical paths: {}",
+                historical.join(", ")
+            ));
+        }
+    }
+
+    let root_file = super::open_safe_home(root)?;
+    let root_dir = cap_std::fs::Dir::from_std_file(root_file);
+    let mut results = Vec::new();
+    for relative in plugin.cleanup_dirs {
+        let existing = existing_relative_directory(&root_dir, relative)?;
+        if let Some(directory) = existing {
+            let identity = directory_identity(&directory)?;
+            if let Some(previous) = state
+                .get("directories")
+                .and_then(serde_json::Value::as_object)
+                .and_then(|directories| directories.get(*relative))
+                .and_then(|entry| entry.get("identity"))
+            {
+                if previous != &identity {
+                    return Err(format!(
+                        "managed plugin directory identity changed: {}",
+                        plugin_path(root, relative).display()
+                    ));
+                }
+            }
+        } else {
+            let directory = ensure_relative_directory(&root_dir, relative)?;
+            let identity = directory_identity(&directory)?;
+            state["directories"][*relative] = serde_json::json!({"identity": identity});
+            let saved = save_state(root, &root_dir, plugin, &mut state, state_sha.as_deref())?;
+            state_sha = Some(saved.sha256);
+        }
+    }
+
+    for file in plugin.files {
+        let destination = plugin_path(root, file.dest);
+        let expected = bundled_contents(file.src)
+            .ok_or_else(|| format!("packaged plugin source is missing: {}", file.src))?;
+        let digest = format!("{:x}", sha2::Sha256::digest(expected));
+        let prior = state
+            .get("files")
+            .and_then(serde_json::Value::as_object)
+            .and_then(|files| files.get(file.dest))
+            .cloned();
+        let actual = read_relative_file(root, file.dest)?;
+        if let Some(entry) = prior.as_ref().filter(|entry| {
+            matches!(
+                entry.get("disposition").and_then(serde_json::Value::as_str),
+                Some("created" | "replaced")
+            )
+        }) {
+            let matches = actual.as_ref().is_some_and(|actual| {
+                entry
+                    .get("installed_sha256")
+                    .and_then(serde_json::Value::as_str)
+                    == Some(format!("{:x}", sha2::Sha256::digest(&actual.bytes)).as_str())
+                    && entry.get("installed_identity")
+                        == Some(&serde_json::json!([actual.identity.0, actual.identity.1]))
+            });
+            if !matches {
+                return Err(format!(
+                    "{} changed after AgentRouter installed it; refusing to overwrite the user edit.",
+                    destination.display()
+                ));
+            }
+            if actual
+                .as_ref()
+                .is_some_and(|actual| actual.bytes == expected)
+                && entry
+                    .get("installed_sha256")
+                    .and_then(serde_json::Value::as_str)
+                    == Some(digest.as_str())
+            {
+                results.push(plugin_result(&destination, "skipped (identical, managed)"));
+                continue;
+            }
+            return Err(
+                "managed plugin upgrades require the Rust transaction recovery protocol; use the Python CLI"
+                    .to_owned(),
+            );
+        }
+
+        if let Some(actual) = actual {
+            if actual.bytes != expected {
+                return Err(format!(
+                    "{} exists and differs; re-run with --force to back it up and replace.",
+                    destination.display()
+                ));
+            }
+            let disposition = if adopt_identical {
+                "created"
+            } else {
+                "preexisting"
+            };
+            state["files"][file.dest] = serde_json::json!({
+                "disposition": disposition,
+                "installed_sha256": digest,
+                "installed_identity": [actual.identity.0, actual.identity.1],
+                "backup": null,
+            });
+            save_state(root, &root_dir, plugin, &mut state, state_sha.as_deref())?;
+            state_sha = read_state(root, plugin)?.map(|loaded| loaded.sha256);
+            results.push(plugin_result(
+                &destination,
+                if adopt_identical {
+                    "adopted identical legacy installation (managed)"
+                } else {
+                    "skipped (identical pre-existing file; will be preserved)"
+                },
+            ));
+            continue;
+        }
+
+        let (parent, name) = open_relative_parent(&root_dir, file.dest, true)?
+            .ok_or_else(|| "plugin destination parent is unavailable".to_owned())?;
+        let installed = create_no_clobber(&parent, &name, &destination, expected, 0o644)?;
+        state["files"][file.dest] = serde_json::json!({
+            "disposition": "created",
+            "installed_sha256": digest,
+            "installed_identity": [installed.identity.0, installed.identity.1],
+            "backup": null,
+        });
+        match save_state(root, &root_dir, plugin, &mut state, state_sha.as_deref()) {
+            Ok(saved) => state_sha = Some(saved.sha256),
+            Err(error) => {
+                let rollback =
+                    remove_exact_file(root, &root_dir, file.dest, &digest, installed.identity);
+                return match rollback {
+                    Ok(true) => Err(error),
+                    Ok(false) => Err(format!(
+                        "{error}; the destination changed concurrently and was preserved"
+                    )),
+                    Err(rollback_error) => Err(format!(
+                        "{error}; install rollback was incomplete: {rollback_error}"
+                    )),
+                };
+            }
+        }
+        results.push(plugin_result(&destination, "created"));
+    }
+    Ok(results)
+}
+
+fn empty_state(plugin: &PluginSpec) -> serde_json::Value {
+    serde_json::json!({
+        "schema": 2,
+        "plugin": plugin.name,
+        "state_dir_identity": null,
+        "files": {},
+        "directories": {},
+    })
+}
+
+fn plugin_result(destination: &Path, result: &str) -> serde_json::Value {
+    serde_json::json!({
+        "kind": "file",
+        "dest": destination,
+        "result": result,
+    })
+}
+
+fn existing_relative_directory(
+    root: &cap_std::fs::Dir,
+    relative: &str,
+) -> Result<Option<File>, String> {
+    let parts = safe_relative(relative, "plugin directory")?;
+    let mut current = root
+        .try_clone()
+        .map_err(|error| format!("could not inspect plugin root: {error}"))?;
+    for part in parts {
+        let Some(directory) = open_existing_directory(&current, &part)? else {
+            return Ok(None);
+        };
+        current = cap_std::fs::Dir::from_std_file(directory);
+    }
+    current
+        .try_clone()
+        .map(cap_std::fs::Dir::into_std_file)
+        .map(Some)
+        .map_err(|error| format!("could not inspect plugin directory: {error}"))
+}
+
+fn ensure_relative_directory(root: &cap_std::fs::Dir, relative: &str) -> Result<File, String> {
+    let parts = safe_relative(relative, "plugin directory")?;
+    let mut current = root
+        .try_clone()
+        .map_err(|error| format!("could not inspect plugin root: {error}"))?;
+    for part in parts {
+        if let Some(directory) = open_existing_directory(&current, &part)? {
+            current = cap_std::fs::Dir::from_std_file(directory);
+            continue;
+        }
+        match current.create_dir(&part) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+            Err(error) => return Err(format!("could not create plugin directory: {error}")),
+        }
+        let directory = open_existing_directory(&current, &part)?
+            .ok_or_else(|| "plugin directory disappeared while being created".to_owned())?;
+        current = cap_std::fs::Dir::from_std_file(directory);
+    }
+    current
+        .try_clone()
+        .map(cap_std::fs::Dir::into_std_file)
+        .map_err(|error| format!("could not inspect plugin directory: {error}"))
+}
+
+fn open_relative_parent(
+    root: &cap_std::fs::Dir,
+    relative: &str,
+    create: bool,
+) -> Result<Option<(cap_std::fs::Dir, String)>, String> {
+    let parts = safe_relative(relative, "plugin destination")?;
+    let Some((filename, directories)) = parts.split_last() else {
+        return Ok(None);
+    };
+    let mut parent = root
+        .try_clone()
+        .map_err(|error| format!("could not inspect plugin root: {error}"))?;
+    for part in directories {
+        let directory = match open_existing_directory(&parent, part)? {
+            Some(directory) => directory,
+            None if create => {
+                match parent.create_dir(part) {
+                    Ok(()) => {}
+                    Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+                    Err(error) => {
+                        return Err(format!("could not create plugin directory: {error}"));
+                    }
+                }
+                open_existing_directory(&parent, part)?
+                    .ok_or_else(|| "plugin destination directory disappeared".to_owned())?
+            }
+            None => return Ok(None),
+        };
+        parent = cap_std::fs::Dir::from_std_file(directory);
+    }
+    Ok(Some((parent, filename.clone())))
+}
+
+fn directory_identity(directory: &File) -> Result<serde_json::Value, String> {
+    let metadata = directory
+        .metadata()
+        .map_err(|error| format!("could not inspect plugin directory identity: {error}"))?;
+    let identity = file_identity(directory, &metadata)?;
+    Ok(serde_json::json!([identity.0, identity.1]))
+}
+
+fn plugin_permissions(mode: u32) -> Option<cap_std::fs::Permissions> {
+    #[cfg(unix)]
+    {
+        use cap_std::fs::PermissionsExt;
+        Some(cap_std::fs::Permissions::from_mode(mode))
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = mode;
+        None
+    }
+}
+
+fn create_no_clobber(
+    parent: &cap_std::fs::Dir,
+    name: &str,
+    path: &Path,
+    contents: &[u8],
+    mode: u32,
+) -> Result<VerifiedFile, String> {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    for _ in 0..16 {
+        let candidate = format!(
+            ".agentrouter-plugin-{}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|error| error.to_string())?
+                .as_nanos(),
+            COUNTER.fetch_add(1, Ordering::Relaxed)
+        );
+        let mut options = cap_std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        match parent.open_with(&candidate, &options) {
+            Ok(mut temporary) => {
+                let result = (|| {
+                    if let Some(permissions) = plugin_permissions(mode) {
+                        temporary.set_permissions(permissions).map_err(|error| {
+                            format!("could not set plugin file permissions: {error}")
+                        })?;
+                    }
+                    temporary
+                        .write_all(contents)
+                        .map_err(|error| format!("could not write staged plugin file: {error}"))?;
+                    temporary
+                        .sync_all()
+                        .map_err(|error| format!("could not sync staged plugin file: {error}"))?;
+                    drop(temporary);
+                    let staged_path = path.with_file_name(&candidate);
+                    let staged = read_verified_file_at(parent, &candidate, &staged_path)?
+                        .ok_or_else(|| "staged plugin file disappeared".to_owned())?;
+                    if staged.bytes != contents {
+                        return Err("staged plugin file changed before installation".to_owned());
+                    }
+                    parent
+                        .hard_link(&candidate, parent, Path::new(name))
+                        .map_err(|error| {
+                            if error.kind() == std::io::ErrorKind::AlreadyExists {
+                                format!("destination appeared during install; refusing to overwrite it: {}", path.display())
+                            } else {
+                                format!("could not create destination atomically {}: {error}", path.display())
+                            }
+                        })?;
+                    parent
+                        .remove_file(&candidate)
+                        .map_err(|error| format!("could not remove staged plugin file: {error}"))?;
+                    let installed = read_verified_file_at(parent, name, path)?
+                        .ok_or_else(|| "installed plugin file disappeared".to_owned())?;
+                    if installed.bytes != contents || installed.identity != staged.identity {
+                        return Err("plugin destination changed while being installed".to_owned());
+                    }
+                    Ok(installed)
+                })();
+                if result.is_err() {
+                    let _ = parent.remove_file(&candidate);
+                }
+                return result;
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(format!("could not create staged plugin file: {error}")),
+        }
+    }
+    Err("could not create a unique staged plugin file".to_owned())
+}
+
+fn save_state(
+    root: &Path,
+    root_dir: &cap_std::fs::Dir,
+    plugin: &PluginSpec,
+    state: &mut serde_json::Value,
+    expected_sha: Option<&str>,
+) -> Result<LoadedState, String> {
+    let directory = ensure_relative_directory(root_dir, ".agentrouter-state")?;
+    let identity = directory_identity(&directory)?;
+    if state
+        .get("state_dir_identity")
+        .is_some_and(serde_json::Value::is_null)
+    {
+        state["state_dir_identity"] = identity;
+    } else if state.get("state_dir_identity") != Some(&identity) {
+        return Err(
+            "plugin private state directory identity changed; refusing to write".to_owned(),
+        );
+    }
+    let current = read_state(root, plugin)?;
+    if current.as_ref().map(|loaded| loaded.sha256.as_str()) != expected_sha {
+        return Err(
+            "plugin ownership state changed concurrently; refusing to overwrite it".to_owned(),
+        );
+    }
+    let serialized = super::contract::dumps(state).map_err(|error| error.to_string())?;
+    let state_dir = cap_std::fs::Dir::from_std_file(directory);
+    let filename = format!("{}.json", plugin.name);
+    if expected_sha.is_none() {
+        create_no_clobber(
+            &state_dir,
+            &filename,
+            &root.join(".agentrouter-state").join(&filename),
+            serialized.as_bytes(),
+            0o600,
+        )?;
+    } else {
+        let mut contents = std::io::Cursor::new(serialized.into_bytes());
+        let permissions = plugin_permissions(0o600);
+        super::atomic_replace(
+            &state_dir,
+            Path::new(&filename),
+            &mut contents,
+            permissions.as_ref(),
+        )?;
+    }
+    read_state(root, plugin)?.ok_or_else(|| "saved plugin ownership state disappeared".to_owned())
+}
+
+fn remove_exact_file(
+    root: &Path,
+    root_dir: &cap_std::fs::Dir,
+    relative: &str,
+    digest: &str,
+    identity: (u64, u64),
+) -> Result<bool, String> {
+    let Some((parent, name)) = open_relative_parent(root_dir, relative, false)? else {
+        return Ok(false);
+    };
+    let destination = plugin_path(root, relative);
+    let Some(current) = read_verified_file_at(&parent, &name, &destination)? else {
+        return Ok(false);
+    };
+    let current_digest = format!("{:x}", sha2::Sha256::digest(&current.bytes));
+    if current_digest != digest || current.identity != identity {
+        return Ok(false);
+    }
+    parent
+        .remove_file(&name)
+        .map_err(|error| format!("could not remove the exact new plugin file: {error}"))?;
+    Ok(true)
 }
 
 fn diagnose_failure(plugin: &PluginSpec) -> serde_json::Value {
@@ -532,7 +990,7 @@ fn read_relative_file(root: &Path, relative: &str) -> Result<Option<VerifiedFile
         };
         parent = cap_std::fs::Dir::from_std_file(directory);
     }
-    let path = root.join(relative);
+    let path = plugin_path(root, relative);
     read_verified_file_at(&parent, filename, &path)
 }
 
@@ -818,13 +1276,49 @@ fn file_identity(_file: &File, metadata: &std::fs::Metadata) -> Result<(u64, u64
 #[cfg(windows)]
 fn file_identity(file: &File, _metadata: &std::fs::Metadata) -> Result<(u64, u64), String> {
     use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Foundation::HANDLE;
     use windows_sys::Win32::Storage::FileSystem::{
-        GetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION,
+        FileIdInfo, GetFileInformationByHandle, GetFileInformationByHandleEx,
+        BY_HANDLE_FILE_INFORMATION, FILE_ID_INFO,
     };
+    let handle = file.as_raw_handle() as HANDLE;
+    let mut extended = std::mem::MaybeUninit::<FILE_ID_INFO>::uninit();
+    // Python 3.12+ uses FILE_ID_INFO for os.stat identity. Keep the ownership
+    // record byte-compatible while rejecting 128-bit file IDs that the current
+    // two-integer state schema cannot represent losslessly.
+    if unsafe {
+        GetFileInformationByHandleEx(
+            handle,
+            FileIdInfo,
+            extended.as_mut_ptr().cast(),
+            std::mem::size_of::<FILE_ID_INFO>() as u32,
+        )
+    } != 0
+    {
+        let information = unsafe { extended.assume_init() };
+        let low = u64::from_le_bytes(
+            information.FileId.Identifier[..8]
+                .try_into()
+                .map_err(|_| "could not read plugin file identity".to_owned())?,
+        );
+        let high = u64::from_le_bytes(
+            information.FileId.Identifier[8..]
+                .try_into()
+                .map_err(|_| "could not read plugin file identity".to_owned())?,
+        );
+        if high != 0 {
+            return Err(
+                "plugin file identity exceeds the current ownership-state representation"
+                    .to_owned(),
+            );
+        }
+        return Ok((information.VolumeSerialNumber, low));
+    }
+
     let mut information = std::mem::MaybeUninit::<BY_HANDLE_FILE_INFORMATION>::uninit();
     // SAFETY: `file` owns a valid open handle and the Win32 API initializes the
     // structure before it is read on success.
-    if unsafe { GetFileInformationByHandle(file.as_raw_handle(), information.as_mut_ptr()) } == 0 {
+    if unsafe { GetFileInformationByHandle(handle, information.as_mut_ptr()) } == 0 {
         return Err(format!(
             "could not verify plugin ownership state identity: {}",
             std::io::Error::last_os_error()

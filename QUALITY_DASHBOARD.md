@@ -1,19 +1,18 @@
 # Quality Dashboard — AgentRouter OS
 
-## Current checkpoint — 2026-11-11
+## Current checkpoint — 2026-11-14
 
-The current release-candidate head is `2065075`, with PRs #27–#33 and #13
-merged. PR #16's Python 3.10–3.13, Windows/macOS Python, Rust Linux/Windows/
-macOS, Python/Rust compatibility, security, site, API, build, and mutation
-checks pass. The promotion gate correctly remains red: frozen context-band
-accuracy is 0.6667 < 0.90. Rust now differentially normalizes CLINC150, Banking77, MASSIVE, LongBench v2,
-and SWE-bench rows; it also matches the complete LLMRouterBench adapter. Shared
-fixture adapter behavior is covered for six datasets. The AgentRouter-gold adapter matches Python
-metadata, availability, description, all 165 records, checksum, and seeded
-sampling, including Unicode/default behavior. Full Python regression passes:
-1,768 passed, 6 skipped; coverage is 92.09% line, 87.04% branch, and 90.94%
-combined. Python remains the shipping authority, and the full Rust migration
-is not complete.
+The latest pushed RC head is `e1e8f5c`. Rust workspace and Python/Rust
+compatibility checks pass on Linux, Windows, and macOS. The full Windows
+Python job found two TASK-110 plugin mismatches: destination separator
+rendering and Windows file identity. Local fixes now use component-wise path
+joins and CPython-compatible `FILE_ID_INFO` identity; the full Linux Python
+suite passes 2,228 tests with 4 skips at 92.85% statement, 88.68% branch, and
+91.90% combined coverage. Fifteen focused plugin compatibility cases, Rust
+workspace tests, strict Clippy, and Ruff pass locally. Hosted confirmation of
+the fixes is pending the next RC push. PR #16 remains blocked by the unchanged
+context-band score 0.6667 < 0.90; Python remains the shipping authority and the
+Rust migration is incomplete.
 
 ## Historical dashboard
 

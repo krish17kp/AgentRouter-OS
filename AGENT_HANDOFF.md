@@ -2,10 +2,9 @@
 
 ## Current checkpoint — 2026-11-14
 
-- Active RC branch `release/agentrouter-v0.5-rc1`; latest implementation commit is `d99b748` (Rust plugin install preview plus the macOS test-root fix). PR #16 is the only open PR and remains blocked by the unchanged frozen context-band score of 0.6667 against 0.90.
-- The local Python regression passes 2,223 tests with 4 skips at 92.84% statement, 88.68% branch, and 91.89% combined coverage. Rust workspace tests, strict Clippy, formatting, Ruff, and ten focused plugin compatibility tests pass locally.
-- Hosted Rust workspace at `e33e840` passes on Linux and Windows but fails five macOS plugin unit tests because test roots traverse Apple's `/var` symlink alias. Commit `d99b748` canonicalizes temporary test roots without relaxing production link checks; verify its hosted matrix after push before marking doctor/plan hosted complete. The frozen release-gate check fails as expected and remains unchanged.
-- TASK-108 added Rust read-only plugin doctor; TASK-109 adds Python-compatible `plugin install --dry-run` planning. Actual plugin install/uninstall transactions remain Python-only. See `PRODUCTION_STATUS.md` and `docs/RUST_PARITY_MATRIX.md` for the full remaining migration gaps.
+- Active RC branch `release/agentrouter-v0.5-rc1`; latest pushed head is `e1e8f5c`. Local TASK-110 fixes now address the Windows plugin path and file-identity mismatches; the complete Linux suite, focused parity suite, Rust workspace, strict Clippy, formatting, and Ruff pass. Hosted revalidation awaits this RC push.
+- PR #16 is the only open PR and remains blocked by the unchanged frozen context-band score of 0.6667 against 0.90. Human evaluation, OpenAI live validation, and deployment credentials remain under **Needs Krish**.
+- TASK-108 added Rust read-only plugin doctor; TASK-109 adds the safe dry-run plan; TASK-110 adds non-forced creation/adoption with Python-readable ownership state. Force replacement, managed upgrade, recovery, and Rust uninstall remain Python-only. See `PRODUCTION_STATUS.md` and `docs/RUST_PARITY_MATRIX.md` for the remaining migration gaps.
 - The 77-module inventory is current in `docs/RUST_PARITY_MATRIX.md`; migration remains incomplete and Python remains the shipping authority. Continue the remaining module work, review current PR checks, and update `PRODUCTION_STATUS.md` after each slice.
 - The owner explicitly authorized iterative pushes to the release-candidate branch for this objective. The frozen evaluation threshold and holdout remain immutable; real human annotation, the bounded OpenAI live smoke, and production credentials are listed under **Needs Krish**.
 

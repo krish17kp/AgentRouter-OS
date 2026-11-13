@@ -72,7 +72,7 @@ release authority until the full set is complete.
 | `agentrouter/mcp_server.py` | `agentrouter-mcp::{Server,run_stdio}` | Partial |
 | `agentrouter/observability.py` | `agentrouter-cli::observability` | Partial |
 | `agentrouter/openai_adapter.py` | `agentrouter-cli::openai` | Parity |
-| `agentrouter/plugins.py` | `agentrouter-cli::plugins` (inventory, destination roots, portable paths, ownership-record shape and no-follow disk validation, read-only list/status/doctor/install plan) | Partial |
+| `agentrouter/plugins.py` | `agentrouter-cli::plugins` (inventory, destination roots, portable paths, ownership-record shape and no-follow state reads, list/status/doctor/install plan, no-force create/adopt/pre-existing install) | Partial |
 | `agentrouter/prompts.py` | `agentrouter-cli::generate_prompt` | Parity |
 | `agentrouter/refresh.py` | `agentrouter-registry::refresh` | Partial |
 | `agentrouter/registry.py` | `agentrouter-registry` | Parity |
@@ -250,13 +250,15 @@ release authority until the full set is complete.
 - The AgentRouter gold adapter now matches Python metadata, availability, description, all 165 records, checksums, and deterministic sampling; the full behavior is differentially tested, including Unicode/default handling.
 - Shared fixture-mode evaluation adapter behavior now matches six fixture-backed adapters for metadata, availability, description, JSONL record loading/checksums, deterministic sampling, and explicit skipped-external behavior. Real dataset downloads, preparation, and adapter-specific real-data mappings remain Python-only.
 - Evaluation provenance now matches Python for dataset-quality/leakage aggregation and the complete four-field runtime environment snapshot.
-- The Rust plugin module currently ports the bundled manifest, portable path
-  trust boundary, and pure validation of the ownership-record JSON shape. It
-  does not yet read ownership/journal files from disk, verify claimed file
-  identities or digests, install or remove files, preserve user changes, or
-  provide the Python `plugin` CLI commands. Those operations remain authoritative
-  in Python until their transaction protocol has matching cross-platform safety
-  tests.
+- The Rust plugin module ports the bundled manifest, portable path trust
+  boundary, no-follow ownership-state reads, read-only list/doctor and dry-run
+  planning, plus safe no-force installation of missing and byte-identical
+  files. Rust-created ownership state is byte-compatible with Python and can
+  be read and uninstalled by Python. Rust still refuses differing-file
+  replacement, managed upgrades, transaction recovery, and uninstall; those
+  lifecycle operations and full CLI parity remain Python responsibilities.
+  Windows parity uses the CPython-compatible file-ID query where supported and
+  fails closed for 128-bit identities the current state schema cannot encode.
 - Routing evaluation now scores caller-supplied model catalogs against gold
   constraints or the declared distinct-fallback proxy. Loading seed models and
   custom classifier injection remain Python-only.

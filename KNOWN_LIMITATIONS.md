@@ -1,6 +1,6 @@
 # Known Limitations
 
-## Current migration and release limits (2026-11-11)
+## Current migration and release limits (2026-11-14)
 
 - The Rust evaluation crate now matches the full `agentrouter/evaluation/adapters/agentrouter_gold.py` module surface: metadata, availability, describe, loading, checksum and deterministic sampling. Its Python/Rust differential test covers all 165 committed cases plus Unicode/default handling. External adapter base behavior and the other dataset adapters remain Python-only; see `docs/RUST_PARITY_MATRIX.md`.
 - A Rust fixture-mode adapter base now covers metadata, availability, description, JSONL loading/checksums, deterministic sampling, and explicit real-mode skips for six external fixtures. Real dataset downloads and dataset-specific row transformations still require Python's optional `datasets` integration.
@@ -21,8 +21,14 @@
   tests; full CLI parity, Windows ACL restrictions, and cross-platform CI for
   this change remain open.
 - Rust provider-status parity is a new probe, not full `providers` CLI parity.
-- Latest full Python coverage is 91.24% line / 85.80% branch, meeting the
-  unchanged 90%/85% gates; see `docs/COVERAGE_REPORT_2026-11-11.md`.
+- Rust plugin install now handles missing and byte-identical files without
+  replacement and writes Python-readable ownership state. Forced replacement,
+  managed upgrades, transaction recovery, and Rust uninstall remain Python-only.
+  Hosted Windows Python CI found path-format and file-identity mismatches on
+  `e1e8f5c`; local fixes await hosted revalidation.
+- Latest full Python coverage is 92.85% statement / 88.68% branch / 91.90%
+  combined, meeting the unchanged 90%/85% thresholds; see
+  `docs/COVERAGE_REPORT_2026-11-14.md`.
 - The frozen context-band release gate remains 0.6667 < 0.90. The 63-candidate
   two-human annotation/adjudication round is not complete. Synthetic or AI
   labels cannot be submitted as human labels.

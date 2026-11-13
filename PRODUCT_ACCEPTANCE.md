@@ -1,16 +1,16 @@
 # Product Acceptance Evidence
 
-## Current checkpoint — 2026-11-11
+## Current checkpoint — 2026-11-14
 
-Product acceptance remains **not granted**. PRs #27–#33 and #13 are merged to
-the RC; PR #16 is the sole open PR. Its cross-platform Python/Rust, security,
-website, API, build, and mutation checks pass, but the unchanged
-context-band gate remains 0.6667 < 0.90. The Rust gold-adapter and LLMRouterBench modules now have
-differential coverage for metadata, availability, description, all 165 cases,
-checksums, and deterministic sampling. Full Python regression passes with
-1,768 passed and 6 skipped; line coverage is 92.09%, branch coverage 87.04%,
-and combined coverage 90.94%. Rust R4 and R5–R13 remain incomplete; no
-production deployment or paid OpenAI request occurred.
+Product acceptance remains **not granted**. PR #16 is the sole open PR. At
+`e1e8f5c`, Rust workspace and Python/Rust compatibility pass on Linux,
+Windows, and macOS, but the full Windows Python job found two TASK-110 plugin
+path and file-identity mismatches. Local fixes are ready for hosted
+revalidation. Full Linux Python regression passes with 2,228 passed and 4
+skipped; statement coverage is 92.85%, branch coverage 88.68%, and combined
+coverage 91.90%. The frozen context-band gate remains 0.6667 < 0.90. Rust R4
+and R5–R13 remain incomplete; no production deployment or paid OpenAI request
+occurred.
 The table below is historical.
 
 ## Historical assessment

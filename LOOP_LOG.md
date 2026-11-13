@@ -2241,3 +2241,18 @@ Added a normalized-case runner that performs Rust classification, scorecard,
 and dataset-quality aggregation with explicit metadata. It is intentionally
 Partial because adapter loading, full `measure_all`, and runtime provenance
 discovery remain unported. Focused parity testing is in progress.
+
+## 2026-11-14 — TASK-110 safe Rust plugin installation (hosted validation pending)
+
+Implemented Rust install for missing and byte-identical plugin files, with
+Python-readable ownership records and safe refusal of force replacement,
+changed managed files, and linked state paths. Fifteen Python/Rust compatibility
+cases pass, including byte-exact state serialization and Python uninstall
+interoperability. Full Linux Python regression passes 2,228/4 at 92.85%
+statement, 88.68% branch, and 91.90% combined coverage; Rust workspace tests,
+strict Clippy, formatting, Ruff, and diff checks pass. Hosted Windows Python CI
+on `e1e8f5c` found mixed-separator destination output and a Windows file identity
+representation mismatch. Local fixes use component-wise joins and CPython 3.12+
+`FILE_ID_INFO` with fail-closed handling for identities the state schema cannot
+represent. Push the fix to RC and verify the complete cross-platform CI before
+marking this increment complete. The frozen release gate remains 0.6667 < 0.90.

@@ -48,8 +48,11 @@ All notable changes to AgentRouter OS. Format loosely follows
   remain on the Python CLI.
 - Add a Rust `agentrouter plugin install NAME --dry-run` preview with
   Python-compatible create, preserve, adopt, managed-skip, overwrite, and
-  blocked actions. The preview does not modify host files; install and
-  uninstall transactions remain on the Python CLI.
+  blocked actions. The preview does not modify host files. Add no-force Rust
+  installation for missing and byte-identical files with Python-compatible
+  ownership-state bytes and safe no-clobber writes. Differing files, force
+  replacement, managed upgrades, transaction recovery, and uninstall remain
+  Python-only until their lifecycle safeguards are ported.
 
 ### Fixed
 - Add Rust OpenAPI canonicalization and bounded `$ref` validation with stable,
