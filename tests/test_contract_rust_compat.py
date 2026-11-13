@@ -603,3 +603,81 @@ def _rust_surface_diff(old: dict, new: dict) -> dict:
 )
 def test_rust_surface_diff_matches_python_for_implemented_change_classes(old, new):
     assert _rust_surface_diff(old, new) == diff_contracts(old, new).as_dict()
+
+
+@pytest.mark.parametrize(
+    ("is_request", "old_schema", "new_schema"),
+    [
+        (True, {"type": "string"}, {"type": "string", "maxLength": 8}),
+        (
+            True,
+            {"type": "string", "maxLength": 8},
+            {"type": "string", "maxLength": 8.0},
+        ),
+        (
+            True,
+            {"type": "string", "maxLength": 20},
+            {"type": "string", "maxLength": 8},
+        ),
+        (
+            True,
+            {"type": "string", "maxLength": 9007199254740993},
+            {"type": "string", "maxLength": 9007199254740992.0},
+        ),
+        (True, {"type": "string"}, {"type": "string", "pattern": "^[0-9]+$"}),
+        (
+            True,
+            {"type": "string"},
+            {"type": "string", "enum": ["red", "blue"]},
+        ),
+        (True, {"type": "integer"}, {"type": "integer", "enum": [10, 2]}),
+        (
+            True,
+            {"type": "string", "enum": ["blue", "red"]},
+            {"type": "string", "enum": ["blue", "green"]},
+        ),
+        (True, {"type": "integer", "enum": [1]}, {"type": "integer", "enum": [True]}),
+        (
+            False,
+            {"type": "string", "enum": ["blue", "red"]},
+            {"type": "string", "enum": ["blue"]},
+        ),
+        (True, {"type": "string"}, {"type": "string", "format": "uuid"}),
+        (
+            False,
+            {"type": "string", "default": "before"},
+            {"type": "string", "default": "after"},
+        ),
+        (False, {"type": "number", "default": 1}, {"type": "number", "default": 1.0}),
+        (
+            True,
+            {"type": "object"},
+            {"type": "object", "additionalProperties": {"type": "integer"}},
+        ),
+        (
+            True,
+            {"type": "object", "additionalProperties": {"minimum": 1}},
+            {"type": "object", "additionalProperties": {"minimum": 1.0}},
+        ),
+        (
+            False,
+            {"type": "object", "additionalProperties": True},
+            {"type": "object", "additionalProperties": False},
+        ),
+    ],
+)
+def test_rust_inline_schema_keywords_match_python(is_request, old_schema, new_schema):
+    def document(schema):
+        if is_request:
+            operation = {
+                "post": {"requestBody": {"content": {"application/json": {"schema": schema}}}}
+            }
+        else:
+            operation = {
+                "get": {"responses": {"200": {"content": {"application/json": {"schema": schema}}}}}
+            }
+        return {"paths": {"/schema": operation}}
+
+    old = document(old_schema)
+    new = document(new_schema)
+    assert _rust_surface_diff(old, new) == diff_contracts(old, new).as_dict()

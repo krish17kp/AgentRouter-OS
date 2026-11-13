@@ -113,9 +113,10 @@ release authority until the full set is complete.
   request and response media-type additions/removals,
   response status additions/removals/refinements, and summary/description
   changes, plus inline request/response schema type, field-presence/requiredness,
-  and array-item changes. It intentionally omits `$ref` expansion,
-  union/nullability analysis, enums, validation constraints, and parameter
-  schemas. It is not suitable as a compatibility gate.
+  array-item, enum/const, numeric/size bound, pattern, format, default, and
+  `additionalProperties` changes. It intentionally omits `$ref` expansion,
+  union/nullability analysis, and parameter schemas. It is not suitable as a
+  compatibility gate.
   Symlink/hardlink-safe artifact export, manifest provenance, the full semantic
   compatibility checker, and CLI integration remain Python-only.
 - The Rust MCP process implements the five Python tools and stdio lifecycle;

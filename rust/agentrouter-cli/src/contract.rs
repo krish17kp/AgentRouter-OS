@@ -3,9 +3,9 @@
 //! Rust contract-tooling slices for canonicalization, reference validation,
 //! stable serialization, and trusted-baseline loading. Semantic compatibility
 //! classification and safe artifact export remain Python-owned until their
-//! complete contracts are ported and differentially checked. The surface-only
-//! diff below intentionally omits parameter, schema, and media-type analysis;
-//! it must not be used as the compatibility gate.
+//! complete contracts are ported and differentially checked. The surface-diff
+//! probe still omits reference expansion, combinator semantics, and parameter
+//! schema analysis; it must not be used as the compatibility gate.
 
 use serde_json::{json, Map, Value};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
@@ -777,6 +777,8 @@ fn diff_inline_schema(
         }
     }
 
+    diff_schema_keywords(old_schema, new_schema, location, request, changes);
+
     let old_properties = object_or_empty(old_schema.get("properties"));
     let new_properties = object_or_empty(new_schema.get("properties"));
     let old_required = schema_required(old_schema.get("required"));
@@ -918,6 +920,474 @@ fn schema_required(value: Option<&Value>) -> BTreeSet<String> {
         .filter_map(Value::as_str)
         .map(str::to_owned)
         .collect()
+}
+
+fn diff_schema_keywords(
+    old: &Map<String, Value>,
+    new: &Map<String, Value>,
+    location: &str,
+    request: bool,
+    changes: &mut Vec<SurfaceChange>,
+) {
+    let upper_bounds = [
+        "maxLength",
+        "maxItems",
+        "maximum",
+        "exclusiveMaximum",
+        "maxProperties",
+    ];
+    let lower_bounds = [
+        "minLength",
+        "minItems",
+        "minimum",
+        "exclusiveMinimum",
+        "minProperties",
+    ];
+    for key in upper_bounds.into_iter().chain(lower_bounds) {
+        let before = old.get(key).filter(|value| !value.is_null());
+        let after = new.get(key).filter(|value| !value.is_null());
+        if schema_value_equal_option(before, after) {
+            continue;
+        }
+        let upper = upper_bounds.contains(&key);
+        let before_number = before.and_then(schema_numeric_value);
+        let after_number = after.and_then(schema_numeric_value);
+        let detail = || {
+            format!(
+                "{key}: {} -> {}",
+                before.map_or_else(|| "None".to_owned(), python_display_value),
+                after.map_or_else(|| "None".to_owned(), python_display_value)
+            )
+        };
+        let (severity, kind, detail) = match (
+            before.is_none(),
+            after.is_none(),
+            before_number,
+            after_number,
+        ) {
+            (true, false, _, Some(_)) => (
+                if request { "breaking" } else { "risky" },
+                "constraint_tightened",
+                detail(),
+            ),
+            (false, true, Some(_), _) => (
+                if request { "additive" } else { "risky" },
+                "constraint_relaxed",
+                detail(),
+            ),
+            (false, false, Some(before_number), Some(after_number)) => {
+                let tightened = match compare_schema_numbers(after_number, before_number) {
+                    Some(std::cmp::Ordering::Less) => upper,
+                    Some(std::cmp::Ordering::Greater) => !upper,
+                    Some(std::cmp::Ordering::Equal) | None => false,
+                };
+                (
+                    if request {
+                        if tightened {
+                            "breaking"
+                        } else {
+                            "additive"
+                        }
+                    } else {
+                        "risky"
+                    },
+                    if tightened {
+                        "constraint_tightened"
+                    } else {
+                        "constraint_relaxed"
+                    },
+                    detail(),
+                )
+            }
+            _ => (
+                "risky",
+                "constraint_changed",
+                format!(
+                    "{key}: {} -> {}",
+                    python_repr_option(before),
+                    python_repr_option(after)
+                ),
+            ),
+        };
+        add_surface_change(changes, severity, kind, location, detail);
+    }
+
+    let old_pattern = old.get("pattern").filter(|value| !value.is_null());
+    let new_pattern = new.get("pattern").filter(|value| !value.is_null());
+    if !schema_value_equal_option(old_pattern, new_pattern) {
+        add_surface_change(
+            changes,
+            if request {
+                if new_pattern.is_some() {
+                    "breaking"
+                } else {
+                    "additive"
+                }
+            } else {
+                "risky"
+            },
+            "pattern_changed",
+            location,
+            format!(
+                "pattern: {} -> {}",
+                python_repr_option(old_pattern),
+                python_repr_option(new_pattern)
+            ),
+        );
+    }
+
+    let old_format = old.get("format");
+    let new_format = new.get("format");
+    if !schema_value_equal_option(old_format, new_format) {
+        add_surface_change(
+            changes,
+            if request {
+                if new_format.is_some_and(|value| !value.is_null()) {
+                    "breaking"
+                } else {
+                    "additive"
+                }
+            } else {
+                "risky"
+            },
+            "format_changed",
+            location,
+            format!(
+                "{} -> {}",
+                python_display(old_format),
+                python_display(new_format)
+            ),
+        );
+    }
+
+    let old_default = old.get("default");
+    let new_default = new.get("default");
+    if !schema_value_equal_option(old_default, new_default) {
+        add_surface_change(
+            changes,
+            "risky",
+            "default_changed",
+            location,
+            format!(
+                "{} -> {}",
+                python_repr_option(old_default),
+                python_repr_option(new_default)
+            ),
+        );
+    }
+
+    diff_schema_enum(old, new, location, request, changes);
+
+    let old_extra = old.get("additionalProperties");
+    let new_extra = new.get("additionalProperties");
+    if !schema_value_equal_option(old_extra, new_extra) {
+        let closed = (new_extra == Some(&Value::Bool(false))
+            && old_extra != Some(&Value::Bool(false)))
+            || new_extra.is_some_and(|value| {
+                value.is_object()
+                    && old_extra != Some(&Value::Bool(false))
+                    && !schema_value_equal_option(old_extra, Some(value))
+            });
+        add_surface_change(
+            changes,
+            if request {
+                if closed {
+                    "breaking"
+                } else {
+                    "additive"
+                }
+            } else {
+                "risky"
+            },
+            if closed {
+                "additional_properties_closed"
+            } else {
+                "additional_properties_changed"
+            },
+            location,
+            format!(
+                "additionalProperties: {} -> {}",
+                python_repr_option(old_extra),
+                python_repr_option(new_extra)
+            ),
+        );
+    }
+}
+
+fn schema_value_equal_option(left: Option<&Value>, right: Option<&Value>) -> bool {
+    match (
+        left.filter(|value| !value.is_null()),
+        right.filter(|value| !value.is_null()),
+    ) {
+        (None, None) => true,
+        (Some(left), Some(right)) => schema_value_equal(left, right),
+        _ => false,
+    }
+}
+
+fn schema_value_equal(left: &Value, right: &Value) -> bool {
+    match (left, right) {
+        (Value::Bool(left), Value::Bool(right)) => left == right,
+        (Value::Bool(left), Value::Number(right)) | (Value::Number(right), Value::Bool(left)) => {
+            schema_numeric_value(&Value::Number(right.clone())).is_some_and(|right| {
+                compare_schema_numbers(SchemaNumber::Signed(i64::from(*left)), right)
+                    == Some(std::cmp::Ordering::Equal)
+            })
+        }
+        (Value::Number(left), Value::Number(right)) => {
+            let Some(left) = schema_numeric_value(&Value::Number(left.clone())) else {
+                return false;
+            };
+            let Some(right) = schema_numeric_value(&Value::Number(right.clone())) else {
+                return false;
+            };
+            compare_schema_numbers(left, right) == Some(std::cmp::Ordering::Equal)
+        }
+        (Value::String(left), Value::String(right)) => left == right,
+        (Value::Array(left), Value::Array(right)) => {
+            left.len() == right.len()
+                && left
+                    .iter()
+                    .zip(right)
+                    .all(|(left, right)| schema_value_equal(left, right))
+        }
+        (Value::Object(left), Value::Object(right)) => {
+            left.len() == right.len()
+                && left.iter().all(|(key, value)| {
+                    right
+                        .get(key)
+                        .is_some_and(|other| schema_value_equal(value, other))
+                })
+        }
+        (Value::Null, Value::Null) => true,
+        _ => false,
+    }
+}
+
+#[derive(Clone, Copy)]
+enum SchemaNumber {
+    Signed(i64),
+    Unsigned(u64),
+    Float(f64),
+}
+
+fn schema_numeric_value(value: &Value) -> Option<SchemaNumber> {
+    match value {
+        Value::Number(number) => number
+            .as_i64()
+            .map(SchemaNumber::Signed)
+            .or_else(|| number.as_u64().map(SchemaNumber::Unsigned))
+            .or_else(|| number.as_f64().map(SchemaNumber::Float)),
+        Value::Bool(false) => Some(SchemaNumber::Signed(0)),
+        Value::Bool(true) => Some(SchemaNumber::Signed(1)),
+        _ => None,
+    }
+}
+
+fn compare_schema_numbers(left: SchemaNumber, right: SchemaNumber) -> Option<std::cmp::Ordering> {
+    use std::cmp::Ordering;
+    match (left, right) {
+        (SchemaNumber::Signed(left), SchemaNumber::Signed(right)) => Some(left.cmp(&right)),
+        (SchemaNumber::Unsigned(left), SchemaNumber::Unsigned(right)) => Some(left.cmp(&right)),
+        (SchemaNumber::Signed(left), SchemaNumber::Unsigned(right)) => Some(if left < 0 {
+            Ordering::Less
+        } else {
+            (left as u64).cmp(&right)
+        }),
+        (SchemaNumber::Unsigned(left), SchemaNumber::Signed(right)) => Some(if right < 0 {
+            Ordering::Greater
+        } else {
+            left.cmp(&(right as u64))
+        }),
+        (SchemaNumber::Signed(integer), SchemaNumber::Float(float)) => {
+            compare_signed_float(integer, float)
+        }
+        (SchemaNumber::Float(float), SchemaNumber::Signed(integer)) => {
+            compare_signed_float(integer, float).map(Ordering::reverse)
+        }
+        (SchemaNumber::Unsigned(integer), SchemaNumber::Float(float)) => {
+            compare_unsigned_float(integer, float)
+        }
+        (SchemaNumber::Float(float), SchemaNumber::Unsigned(integer)) => {
+            compare_unsigned_float(integer, float).map(Ordering::reverse)
+        }
+        (SchemaNumber::Float(left), SchemaNumber::Float(right)) => left.partial_cmp(&right),
+    }
+}
+
+fn compare_signed_float(integer: i64, float: f64) -> Option<std::cmp::Ordering> {
+    use std::cmp::Ordering;
+    if !float.is_finite() {
+        return float.partial_cmp(&(integer as f64));
+    }
+    if float < i64::MIN as f64 {
+        return Some(Ordering::Greater);
+    }
+    if float >= 9_223_372_036_854_775_808.0 {
+        return Some(Ordering::Less);
+    }
+    let truncated = float.trunc() as i64;
+    match integer.cmp(&truncated) {
+        Ordering::Equal if float.fract() > 0.0 => Some(Ordering::Less),
+        Ordering::Equal if float.fract() < 0.0 => Some(Ordering::Greater),
+        ordering => Some(ordering),
+    }
+}
+
+fn compare_unsigned_float(integer: u64, float: f64) -> Option<std::cmp::Ordering> {
+    use std::cmp::Ordering;
+    if !float.is_finite() {
+        return float.partial_cmp(&(integer as f64)).map(Ordering::reverse);
+    }
+    if float < 0.0 {
+        return Some(Ordering::Greater);
+    }
+    if float >= 18_446_744_073_709_551_616.0 {
+        return Some(Ordering::Less);
+    }
+    let truncated = float.trunc() as u64;
+    match integer.cmp(&truncated) {
+        Ordering::Equal if float.fract() > 0.0 => Some(Ordering::Less),
+        ordering => Some(ordering),
+    }
+}
+
+fn python_display_value(value: &Value) -> String {
+    match value {
+        Value::String(value) => value.clone(),
+        Value::Bool(true) => "True".to_owned(),
+        Value::Bool(false) => "False".to_owned(),
+        other => other.to_string(),
+    }
+}
+
+fn schema_enum(schema: &Map<String, Value>) -> Option<Vec<&Value>> {
+    match schema.get("enum") {
+        Some(Value::Array(values)) => Some(values.iter().collect()),
+        _ => schema.get("const").map(|value| vec![value]),
+    }
+}
+
+fn diff_schema_enum(
+    old: &Map<String, Value>,
+    new: &Map<String, Value>,
+    location: &str,
+    request: bool,
+    changes: &mut Vec<SurfaceChange>,
+) {
+    let before = schema_enum(old);
+    let after = schema_enum(new);
+    match (before, after) {
+        (None, None) => {}
+        (None, Some(values)) => {
+            let detail = format!("now limited to {}", python_value_list_repr(&values));
+            add_surface_change(
+                changes,
+                if request { "breaking" } else { "risky" },
+                "enum_introduced",
+                location,
+                detail,
+            );
+        }
+        (Some(_), None) => add_surface_change(
+            changes,
+            if request { "additive" } else { "risky" },
+            "enum_removed",
+            location,
+            "no longer limited to a fixed set",
+        ),
+        (Some(before), Some(after)) => {
+            let removed = before
+                .iter()
+                .copied()
+                .filter(|value| {
+                    !after
+                        .iter()
+                        .any(|candidate| schema_value_equal(value, candidate))
+                })
+                .collect::<Vec<_>>();
+            let added = after
+                .iter()
+                .copied()
+                .filter(|value| {
+                    !before
+                        .iter()
+                        .any(|candidate| schema_value_equal(value, candidate))
+                })
+                .collect::<Vec<_>>();
+            if !removed.is_empty() {
+                let values = removed
+                    .iter()
+                    .map(|value| python_display(Some(value)))
+                    .collect::<Vec<_>>();
+                let mut values = values;
+                values.sort();
+                let detail = format!(
+                    "values removed: [{}]",
+                    values
+                        .iter()
+                        .map(|value| python_string_repr(value))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                );
+                add_surface_change(
+                    changes,
+                    if request { "breaking" } else { "additive" },
+                    "enum_narrowed",
+                    location,
+                    detail,
+                );
+            }
+            if !added.is_empty() {
+                let values = added
+                    .iter()
+                    .map(|value| python_display(Some(value)))
+                    .collect::<Vec<_>>();
+                let mut values = values;
+                values.sort();
+                let detail = format!(
+                    "values added: [{}]",
+                    values
+                        .iter()
+                        .map(|value| python_string_repr(value))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                );
+                add_surface_change(
+                    changes,
+                    if request { "additive" } else { "risky" },
+                    "enum_expanded",
+                    location,
+                    detail,
+                );
+            }
+        }
+    }
+}
+
+fn python_value_list_repr(values: &[&Value]) -> String {
+    let mut values = values.to_vec();
+    if values
+        .iter()
+        .all(|value| schema_numeric_value(value).is_some())
+    {
+        values.sort_by(|left, right| {
+            schema_numeric_value(left)
+                .zip(schema_numeric_value(right))
+                .and_then(|(left, right)| compare_schema_numbers(left, right))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+    } else {
+        values.sort_by_key(|value| python_display(Some(value)));
+    }
+    format!(
+        "[{}]",
+        values
+            .iter()
+            .map(|value| python_repr(value))
+            .collect::<Vec<_>>()
+            .join(", ")
+    )
 }
 
 fn diff_operation_security(
