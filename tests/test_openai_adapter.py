@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import json
+import threading
 from datetime import date
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.error import HTTPError, URLError
+from urllib.request import Request
 
 import pytest
 import typer
@@ -362,6 +365,44 @@ def test_response_request_is_private_bounded_and_text_only(monkeypatch):
         "store": False,
         "stream": False,
     }
+
+
+def test_openai_request_does_not_follow_redirects_or_forward_credentials():
+    class RedirectHandler(BaseHTTPRequestHandler):
+        visited = []
+
+        def do_POST(self):
+            self.visited.append(self.path)
+            self.send_response(302)
+            self.send_header("Location", f"http://127.0.0.1:{self.server.server_port}/capture")
+            self.end_headers()
+
+        def do_GET(self):
+            self.visited.append(self.path)
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, *_args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), RedirectHandler)
+    worker = threading.Thread(target=server.serve_forever, daemon=True)
+    worker.start()
+    try:
+        request = Request(
+            f"http://127.0.0.1:{server.server_port}/responses",
+            data=b"{}",
+            headers={"Authorization": "Bearer fixture-secret"},
+            method="POST",
+        )
+        with pytest.raises(HTTPError) as error:
+            openai_adapter._open_url(request, timeout=2)
+        assert error.value.code == 302
+        assert RedirectHandler.visited == ["/responses"]
+    finally:
+        server.shutdown()
+        server.server_close()
+        worker.join(timeout=2)
 
 
 def test_response_collects_only_assistant_text(monkeypatch):

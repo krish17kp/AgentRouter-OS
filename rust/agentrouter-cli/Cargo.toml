@@ -85,5 +85,9 @@ name = "refresh_from_json"
 path = "src/bin/refresh_from_json.rs"
 
 [[bin]]
+name = "openai_from_json"
+path = "src/bin/openai_from_json.rs"
+
+[[bin]]
 name = "agentrouter"
 path = "src/bin/agentrouter.rs"

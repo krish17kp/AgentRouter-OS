@@ -6,6 +6,10 @@ All notable changes to AgentRouter OS. Format loosely follows
 ## [Unreleased]
 
 ### Changed
+- Refuse redirects in the Python OpenAI Responses adapter so credentials cannot
+  be forwarded to a redirected host. Add 20 offline Python/Rust adapter
+  differential cases plus a local redirect refusal check; no live API key is
+  required.
 - Add an Axum local HTTP server slice with versioned service routes, canonical
   OpenAPI output, graceful shutdown, request IDs, optional API-key auth,
   explicit-origin CORS, and bounded rate/idempotency middleware. The Python API

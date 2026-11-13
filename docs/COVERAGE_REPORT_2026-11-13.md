@@ -13,10 +13,10 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 2,051 passed, 5 skipped |
-| Line coverage | 92.50% (6,632 / 7,170 statements) |
-| Branch coverage | 87.62% (1,847 / 2,108 branch outcomes) |
-| Combined coverage reported by pytest-cov | 91.39% |
+| Python regression | 2,073 passed, 5 skipped |
+| Line coverage | 92.51% (6,641 / 7,179 statements) |
+| Branch coverage | 87.63% (1,849 / 2,110 branch outcomes) |
+| Combined coverage reported by pytest-cov | 91.40% |
 | Project line / branch thresholds | 90% / 85% — both passed |
 | CI total-coverage threshold | 80% — passed |
 | Warnings | 1 Starlette/httpx deprecation warning |
@@ -71,3 +71,10 @@ verify redirect refusal without timing thresholds.
 The legacy gold evaluator comparison covers the full classifier fixture,
 all synthetic routing scenarios, parsed JSON reports, and byte-identical
 Markdown and CSV artifacts.
+
+The OpenAI Responses adapter comparison uses a fixture-only Rust transport, so
+the 20 Python/Rust cases make no network request and reveal no secret. They
+compare request URL/body/limits and success/error behavior, including validation,
+provider failures, refusal, malformed output, and oversized responses. A local
+loopback redirect test confirms Python also refuses redirects before any second
+request can receive credentials.

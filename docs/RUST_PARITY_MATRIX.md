@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-13. This inventory covers every Python source module under
+Updated: 2026-11-13 (TASK-082). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -71,7 +71,7 @@ release authority until the full set is complete.
 | `agentrouter/learning.py` | `agentrouter-learning::learned_weights` | Parity |
 | `agentrouter/mcp_server.py` | `agentrouter-mcp::{Server,run_stdio}` | Partial |
 | `agentrouter/observability.py` | `agentrouter-cli::observability` | Partial |
-| `agentrouter/openai_adapter.py` | `agentrouter-cli::openai` | Partial |
+| `agentrouter/openai_adapter.py` | `agentrouter-cli::openai` | Parity |
 | `agentrouter/plugins.py` | `—` | Not ported |
 | `agentrouter/prompts.py` | `agentrouter-cli::generate_prompt` | Parity |
 | `agentrouter/refresh.py` | `agentrouter-registry::refresh` | Partial |
@@ -106,9 +106,12 @@ release authority until the full set is complete.
 - The unified CLI now exposes safety-gated `execute` for configured provider
   argv, available local host commands, and OpenAI text requests. It recomputes
   the recorded classification gate, refuses high-risk and tampered decisions,
-  and runs commands without a shell. OpenAI live validation and broader
-  cross-platform execution error parity remain open, so the CLI and adapter
-  modules remain Partial.
+  and runs commands without a shell. The OpenAI adapter request and response
+  contract is differentially checked against Python over 20 offline fixtures;
+  credential privacy, bounded reads, validation and provider errors, refusal,
+  malformed/oversized responses, and redirect refusal are covered. Live key
+  validation remains a release check, while broader cross-platform command
+  behavior keeps the CLI module Partial.
 - Rust provider refresh converts and filters OpenRouter/OpenAI catalogs,
   performs fixed-endpoint HTTPS retrieval with header-only keys, reports
   report-only deprecations, and atomically writes generated catalogs without

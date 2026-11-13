@@ -1163,6 +1163,33 @@ def test_execute_would_run_without_yes(monkeypatch, tmp_path, capfd):
     assert "XX" not in out
 
 
+def test_execute_legacy_dry_run_preview_and_exit(monkeypatch, tmp_path, capfd):
+    # The legacy provider dry-run must show both safety messages and exit 0.
+    # This kills the removed preview (mutmut 150), altered dry-run text (152),
+    # and an unspecified success exit (155).
+    marker = tmp_path / "executed"
+    command = [
+        sys.executable,
+        "-c",
+        "from pathlib import Path; import sys; Path(sys.argv[1]).touch()",
+        str(marker),
+    ]
+    providers = {"prov": _prov(supports_execution=True, exec_command=command)}
+    code = _run_execute(
+        monkeypatch,
+        tmp_path,
+        _payload(execution_route=None),
+        providers=providers,
+        yes=True,
+        dry_run=True,
+    )
+    assert code == 0
+    out = capfd.readouterr().out
+    assert f"Would run (provider prov): {command}" in out
+    assert "Dry run: nothing executed." in out.splitlines()
+    assert not marker.exists()
+
+
 def test_execute_provider_runs_and_propagates_code(monkeypatch, tmp_path, capfd):
     # kills 158 (Running echo) and pins prompt substitution + exit-code propagation.
     script = "import sys; sys.stdout.write(sys.argv[1]); sys.exit(5)"
