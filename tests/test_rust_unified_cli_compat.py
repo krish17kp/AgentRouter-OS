@@ -5,7 +5,12 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import signal
+import socket
 import subprocess
+import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 import pytest
@@ -211,6 +216,106 @@ def test_provider_refresh_preflight_is_offline_and_hides_provider_credentials(
         unified_binary, "providers", "refresh", "openrouter", "--limit", "0", home=home
     )
     assert invalid_limit.returncode == 2
+
+
+def test_server_and_mcp_are_available_from_unified_entrypoint(tmp_path, unified_binary):
+    home = tmp_path / "agentrouter-home"
+    initialized = _run(unified_binary, "init", home=home)
+    assert initialized.returncode == 0, initialized.stderr
+
+    server_help = _run(unified_binary, "server", "--help", home=home)
+    assert server_help.returncode == 0, server_help.stderr
+    assert "agentrouter server" in server_help.stdout
+
+    mcp_help = _run(unified_binary, "mcp", "--help", home=home)
+    assert mcp_help.returncode == 0, mcp_help.stderr
+    assert "stdio server" in mcp_help.stdout
+
+    invalid_server = _run(unified_binary, "server", "--port", "70000", home=home)
+    assert invalid_server.returncode == 2
+    assert "0 to 65535" in invalid_server.stderr
+    invalid_mcp = _run(unified_binary, "mcp", "--unexpected", home=home)
+    assert invalid_mcp.returncode == 2
+
+
+def test_unified_mcp_serves_protocol_over_stdio(tmp_path, unified_binary):
+    home = tmp_path / "agentrouter-home"
+    initialized = _run(unified_binary, "init", home=home)
+    assert initialized.returncode == 0, initialized.stderr
+    requests = (
+        '{"jsonrpc":"2.0","id":1,"method":"initialize",'
+        '"params":{"protocolVersion":"2025-11-25"}}\n'
+        '{"jsonrpc":"2.0","id":2,"method":"tools/list"}\n'
+    )
+    result = subprocess.run(
+        [str(unified_binary), "mcp"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        input=requests,
+        env={**os.environ, "AGENTROUTER_HOME": str(home)},
+        timeout=10,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    responses = [json.loads(line) for line in result.stdout.splitlines()]
+    assert responses[0]["result"]["protocolVersion"] == "2025-11-25"
+    assert [tool["name"] for tool in responses[1]["result"]["tools"]] == [
+        "route",
+        "classify",
+        "explain",
+        "list_models",
+        "list_hosts",
+    ]
+
+
+def test_unified_server_starts_http_api_and_shuts_down(tmp_path, unified_binary):
+    home = tmp_path / "agentrouter-home"
+    initialized = _run(unified_binary, "init", home=home)
+    assert initialized.returncode == 0, initialized.stderr
+    with socket.socket() as reservation:
+        reservation.bind(("127.0.0.1", 0))
+        port = reservation.getsockname()[1]
+
+    process = subprocess.Popen(
+        [str(unified_binary), "server", "--host", "127.0.0.1", "--port", str(port)],
+        cwd=ROOT,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        env={**os.environ, "AGENTROUTER_HOME": str(home)},
+        **({"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt" else {}),
+    )
+    try:
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if process.poll() is not None:
+                stderr = process.stderr.read() if process.stderr else ""
+                pytest.fail(f"HTTP server exited early: {stderr}")
+            try:
+                with urllib.request.urlopen(
+                    f"http://127.0.0.1:{port}/health", timeout=0.5
+                ) as response:
+                    assert response.status == 200
+                    break
+            except (urllib.error.URLError, TimeoutError, ConnectionError):
+                time.sleep(0.05)
+        else:
+            pytest.fail("HTTP server did not become healthy within 10 seconds")
+    finally:
+        if process.poll() is None:
+            if os.name == "nt":
+                process.send_signal(signal.CTRL_BREAK_EVENT)
+            else:
+                process.send_signal(signal.SIGINT)
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
 
 
 def test_unknown_or_unported_command_fails_with_usage(unified_binary):

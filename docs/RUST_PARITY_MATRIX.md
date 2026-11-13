@@ -99,9 +99,10 @@ release authority until the full set is complete.
   responsibilities. The CLI, HTTP, MCP, plugin/skill, evaluation/annotation,
   diagnostic-bundle, and reliability surfaces still have Rust contract gaps.
 - The Rust MCP process implements the five Python tools and stdio lifecycle;
-  protocol/tool and result differentials cover all five. It is not wired into
-  the unified Rust CLI, and the broader cross-version MCP lifecycle/error
-  contract remains under compatibility review, so the module is Partial.
+  protocol/tool and result differentials cover all five. The unified CLI now
+  runs this stdio server in-process with the selected AgentRouter home. Broader
+  cross-version lifecycle/error and command-line behavior remain under
+  compatibility review, so the module is Partial.
 - Rust provider refresh converts and filters OpenRouter/OpenAI catalogs,
   performs fixed-endpoint HTTPS retrieval with header-only keys, reports
   report-only deprecations, and atomically writes generated catalogs without

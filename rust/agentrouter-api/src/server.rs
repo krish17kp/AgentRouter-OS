@@ -208,6 +208,28 @@ pub fn router(home: PathBuf) -> Router {
     .layer(middleware::from_fn_with_state(state, request_id))
 }
 
+/// Run the HTTP service until it receives a graceful shutdown signal.
+pub fn run(bind: String, home: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    std::panic::set_hook(Box::new(|_| {
+        eprintln!("api.panic: request handler panicked; details withheld from logs");
+    }));
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()?;
+    runtime.block_on(async move {
+        let listener = tokio::net::TcpListener::bind(&bind).await?;
+        let address = listener.local_addr()?;
+        println!("LISTENING {address}");
+        let app = router(home).into_make_service_with_connect_info::<SocketAddr>();
+        axum::serve(listener, app)
+            .with_graceful_shutdown(async {
+                let _ = tokio::signal::ctrl_c().await;
+            })
+            .await?;
+        Ok::<(), Box<dyn std::error::Error>>(())
+    })
+}
+
 fn cors_origins() -> Vec<HeaderValue> {
     std::env::var(CORS_ORIGINS_ENV)
         .unwrap_or_default()

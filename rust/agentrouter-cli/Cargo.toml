@@ -7,6 +7,8 @@ license.workspace = true
 
 [dependencies]
 agentrouter-core = { path = "../agentrouter-core" }
+agentrouter-api = { path = "../agentrouter-api" }
+agentrouter-mcp = { path = "../agentrouter-mcp" }
 agentrouter-limits = { path = "../agentrouter-limits" }
 agentrouter-registry = { path = "../agentrouter-registry" }
 agentrouter-classifier = { path = "../agentrouter-classifier" }

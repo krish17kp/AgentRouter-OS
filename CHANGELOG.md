@@ -44,6 +44,9 @@ All notable changes to AgentRouter OS. Format loosely follows
   route, explain, feedback, prompt, registry, provider status, host/model
   inspection, doctor, dashboard, and dataset commands. Python CLI commands
   without Rust implementations remain explicit migration gaps.
+- Connect the unified CLI to the Rust HTTP API server and stdio MCP server,
+  preserving the local API's host/port controls, shared data home, inherited
+  API-key settings, and MCP's standard input/output transport.
 - Extend the unified Rust CLI with local telemetry summaries and generated
   provider-catalog doctor, rollback, and restore operations. Rust/Python
   command checks cover saved feedback aggregates, reversible catalog changes,

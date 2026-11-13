@@ -13,7 +13,7 @@ use std::process::Command;
 use agentrouter_registry::{load_all_models, load_providers, ModelEntry};
 
 fn usage() -> &'static str {
-    "usage: agentrouter <init|route|explain|feedback|stats|prompt|registry|providers|hosts|models|doctor|dashboard|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  stats [--json]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  dashboard [port]\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
+    "usage: agentrouter <init|route|explain|feedback|stats|prompt|registry|providers|hosts|models|doctor|server|mcp|dashboard|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  stats [--json]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  server [--host HOST] [--port PORT]\n  mcp (stdio server)\n  dashboard [port]\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
 }
 
 fn home() -> Result<PathBuf, String> {
@@ -616,6 +616,56 @@ fn providers_refresh(home: &Path, args: &[String]) -> Result<i32, String> {
     Ok(0)
 }
 
+fn server(home: &Path, args: &[String]) -> Result<i32, String> {
+    if args
+        .iter()
+        .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
+    {
+        println!("Usage: agentrouter server [--host HOST] [--port PORT]");
+        return Ok(0);
+    }
+    let mut host = "127.0.0.1".to_owned();
+    let mut port = 8000_u16;
+    let mut rest = args.iter();
+    while let Some(argument) = rest.next() {
+        match argument.as_str() {
+            "--host" => host = rest.next().ok_or("--host requires a value")?.clone(),
+            "--port" => {
+                port = rest
+                    .next()
+                    .ok_or("--port requires an integer from 0 to 65535")?
+                    .parse::<u16>()
+                    .map_err(|_| "--port requires an integer from 0 to 65535")?;
+            }
+            _ => return Err("usage: agentrouter server [--host HOST] [--port PORT]".to_owned()),
+        }
+    }
+    let bind = if host.starts_with('[') || !host.contains(':') {
+        format!("{host}:{port}")
+    } else {
+        format!("[{host}]:{port}")
+    };
+    agentrouter_api::server::run(bind, home.to_path_buf())
+        .map(|()| 0)
+        .map_err(|error| error.to_string())
+}
+
+fn mcp(home: &Path, args: &[String]) -> Result<i32, String> {
+    if args
+        .iter()
+        .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
+    {
+        println!("Usage: agentrouter mcp (stdio server)");
+        return Ok(0);
+    }
+    if !args.is_empty() {
+        return Err("usage: agentrouter mcp".to_owned());
+    }
+    agentrouter_mcp::run_stdio(&agentrouter_mcp::Server::new(home.to_path_buf()))
+        .map(|()| 0)
+        .map_err(|error| error.to_string())
+}
+
 fn run() -> Result<i32, String> {
     let mut args = env::args().skip(1);
     let Some(command) = args.next() else {
@@ -730,6 +780,8 @@ fn run() -> Result<i32, String> {
             _ => Err("usage: agentrouter models <list [--available]|show KEY>".to_owned()),
         },
         "doctor" => run_sibling("doctor_cli", with_home(&home, tail)),
+        "server" => server(&home, &tail),
+        "mcp" => mcp(&home, &tail),
         "dashboard" => run_sibling("dashboard_cli", with_home(&home, tail)),
         _ => Err(format!(
             "unknown or not-yet-ported command '{command}'\n{}",

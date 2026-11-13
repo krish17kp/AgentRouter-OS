@@ -36,12 +36,14 @@ dependencies = [
 name = "agentrouter-cli"
 version = "0.1.0"
 dependencies = [
+ "agentrouter-api",
  "agentrouter-classifier",
  "agentrouter-core",
  "agentrouter-evaluation",
  "agentrouter-hosts",
  "agentrouter-learning",
  "agentrouter-limits",
+ "agentrouter-mcp",
  "agentrouter-policy",
  "agentrouter-registry",
  "agentrouter-routing",

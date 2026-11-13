@@ -10,7 +10,11 @@ cargo run --locked -p agentrouter-cli --bin agentrouter -- --help
 
 `agentrouter` currently dispatches `init`, `route`, `explain`, `feedback`,
 `stats`, `prompt`, `registry list`, provider status/doctor/refresh/rollback/restore,
-`hosts`, `models`, `doctor`, and `dashboard` to their Rust implementations.
+`hosts`, `models`, `doctor`, the local HTTP API (`server`), stdio MCP
+(`mcp`), and `dashboard` to their Rust implementations. The server defaults
+to `127.0.0.1:8000`; set `AGENTROUTER_API_KEY` to require API authentication.
+Both services run inside the unified executable and use its selected
+`AGENTROUTER_HOME` directory.
 The human annotation flow is linked directly:
 
 ```sh
