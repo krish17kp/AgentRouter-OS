@@ -125,15 +125,32 @@ fn check_database(home: &Path) -> Check {
             format!("{decisions} decision(s), WAL, integrity ok"),
             None,
         ),
-        Err(_) => Check::new(
+        Err(error) => Check::new(
             "data.database",
             FAIL,
-            "decision log is missing required tables or is unreadable",
+            format!(
+                "decision log is unreadable ({})",
+                database_error_kind(&error)
+            ),
             Some(
-                "restore a valid backup or move the database aside and run: agentrouter init"
+                "restore from a backup or move the database aside and re-run: agentrouter init"
                     .into(),
             ),
         ),
+    }
+}
+
+fn database_error_kind(error: &rusqlite::Error) -> &'static str {
+    match error {
+        rusqlite::Error::SqliteFailure(code, _)
+            if matches!(
+                code.code,
+                rusqlite::ErrorCode::DatabaseCorrupt | rusqlite::ErrorCode::NotADatabase
+            ) =>
+        {
+            "DatabaseError"
+        }
+        _ => "OperationalError",
     }
 }
 

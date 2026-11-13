@@ -13,10 +13,10 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 2,100 passed, 5 skipped |
-| Line coverage | 92.52% (6,657 / 7,195 statements) |
-| Branch coverage | 87.65% (1,853 / 2,114 branch outcomes) |
-| Combined coverage reported by pytest-cov | 91.42% |
+| Python regression | 2,103 passed, 5 skipped |
+| Line coverage | 92.53% (6,661 / 7,199 statements) |
+| Branch coverage | 87.62% (1,854 / 2,116 branch outcomes) |
+| Combined coverage reported by pytest-cov | 91.41% |
 | Project line / branch thresholds | 90% / 85% — both passed |
 | CI total-coverage threshold | 80% — passed |
 | Warnings | 1 Starlette/httpx deprecation warning |

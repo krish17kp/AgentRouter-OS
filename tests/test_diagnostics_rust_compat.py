@@ -103,6 +103,25 @@ def test_corrupt_database_does_not_hide_other_checks(tmp_path):
     assert "contract.version" in checks
 
 
+@pytest.mark.parametrize("contents", [b"", b"not a sqlite database"])
+def test_database_failures_match_python_without_modifying_the_file(tmp_path, contents):
+    from agentrouter import diagnostics
+
+    home = tmp_path / "agentrouter"
+    home.mkdir()
+    database = home / "agentrouter.db"
+    database.write_bytes(contents)
+
+    python_check = next(check for check in diagnostics.run_all(home) if check.id == "data.database")
+    result = _doctor(home, "--json")
+    rust_checks = json.loads(result.stdout)["checks"]
+    rust_check = next(check for check in rust_checks if check["id"] == "data.database")
+
+    assert result.returncode == 1
+    assert rust_check == python_check.as_dict()
+    assert database.read_bytes() == contents
+
+
 def test_api_secrets_are_never_printed_and_usage_is_opt_in(tmp_path):
     home = tmp_path / "agentrouter"
     home.mkdir()

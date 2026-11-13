@@ -15,6 +15,8 @@ All notable changes to AgentRouter OS. Format loosely follows
 - Add direct Python/Rust dashboard page comparisons, including escaped user
   data and truncation, and compare the live Rust page with Python's rendered
   store output.
+- Make doctor database checks read-only and report safe, actionable errors for
+  empty and corrupt database files, with matching Python/Rust classifications.
 
 ### Changed
 - Refuse redirects in the Python OpenAI Responses adapter so credentials cannot

@@ -78,6 +78,21 @@ def test_no_check_ever_raises_directly(home):
     assert all(isinstance(c, diagnostics.Check) for c in checks)
 
 
+def test_database_diagnostic_is_read_only_and_actionable(tmp_path):
+    home = tmp_path / "home"
+    home.mkdir()
+    database = home / "agentrouter.db"
+    database.write_bytes(b"")
+
+    check = diagnostics.check_database(home)
+
+    assert check.status == diagnostics.FAIL
+    assert check.summary == "decision log is unreadable (OperationalError)"
+    assert "restore from a backup" in check.remedy
+    assert database.read_bytes() == b""
+    assert not (home / "agentrouter.db-wal").exists()
+
+
 def test_every_non_ok_check_carries_a_remedy(home):
     """A diagnosis without a fix just tells the user they have a problem."""
     (home / "registry" / "providers.yaml").unlink()
@@ -253,8 +268,6 @@ def test_home_and_database_missing_checks_are_actionable(tmp_path):
 
 
 def test_database_non_wal_and_bad_integrity_are_reported(tmp_path, monkeypatch):
-    from agentrouter import store
-
     db_path = tmp_path / "agentrouter.db"
     db_path.touch()
 
@@ -273,12 +286,12 @@ def test_database_non_wal_and_bad_integrity_are_reported(tmp_path, monkeypatch):
             self.closed = True
 
     conn = FakeConnection([(2,), ("delete",), ("ok",)])
-    monkeypatch.setattr(store, "connect", lambda _home: conn)
+    monkeypatch.setattr(diagnostics.sqlite3, "connect", lambda *_args, **_kwargs: conn)
     assert diagnostics.check_database(tmp_path).status == diagnostics.WARN
     assert conn.closed
 
     conn = FakeConnection([(0,), ("wal",), ("malformed page",)])
-    monkeypatch.setattr(store, "connect", lambda _home: conn)
+    monkeypatch.setattr(diagnostics.sqlite3, "connect", lambda *_args, **_kwargs: conn)
     check = diagnostics.check_database(tmp_path)
     assert check.status == diagnostics.FAIL
     assert "malformed page" in check.summary

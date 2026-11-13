@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-13 (TASK-082–086). This inventory covers every Python source module under
+Updated: 2026-11-13 (TASK-082–087). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -181,6 +181,11 @@ release authority until the full set is complete.
   empty, escaped, truncated, and aggregate-bearing cases. Its loopback server
   is checked against Python's rendered SQLite output and refuses write methods
   without changing the decision log.
+- Python and Rust doctor database checks inspect existing files read-only and
+  report matching actionable `OperationalError` or `DatabaseError` categories
+  for empty and corrupt databases. Diagnostics as a whole remain Partial
+  because Rust plugin health, server-extra detection, and some environment
+  details are not yet equivalent.
 - The Rust SDK client covers Python endpoint paths, payload cleanup, an
   optional API-key header, timeout configuration and structured HTTP errors.
   The local HTTP server and end-to-end client/server contract remain

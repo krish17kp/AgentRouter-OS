@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import os
 import platform
+import sqlite3
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -101,18 +102,28 @@ def check_home(home: Path) -> Check:
 
 
 def check_database(home: Path) -> Check:
-    from . import store
-
     db = home / "agentrouter.db"
     if not db.exists():
         return Check("data.database", WARN, "no decision log yet", "run: agentrouter init")
-    conn = store.connect(home)
+    conn = None
     try:
+        # A diagnostic must not initialize or repair the database it is
+        # inspecting. Open the existing file read-only, matching the Rust
+        # doctor and avoiding writes to the WAL or schema during a health check.
+        conn = sqlite3.connect(f"{db.resolve().as_uri()}?mode=ro", uri=True)
         decisions = conn.execute("SELECT COUNT(*) FROM decisions").fetchone()[0]
         mode = conn.execute("PRAGMA journal_mode").fetchone()[0]
         integrity = conn.execute("PRAGMA integrity_check").fetchone()[0]
+    except sqlite3.Error as exc:
+        return Check(
+            "data.database",
+            FAIL,
+            f"decision log is unreadable ({type(exc).__name__})",
+            "restore from a backup or move the database aside and re-run: agentrouter init",
+        )
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
     if integrity != "ok":
         return Check(
