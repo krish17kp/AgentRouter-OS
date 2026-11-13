@@ -96,6 +96,21 @@ def _request(base: str, path: str, method: str = "GET", body=None, headers=None)
     return response.status, response.headers, json.loads(raw) if raw else None
 
 
+def _request_raw(base: str, path: str, raw: bytes, headers=None):
+    request = urllib.request.Request(
+        base + path,
+        data=raw,
+        headers={"Content-Type": "application/json", **(headers or {})},
+        method="POST",
+    )
+    try:
+        response = urllib.request.urlopen(request, timeout=5)
+    except urllib.error.HTTPError as error:
+        response = error
+    payload = response.read()
+    return response.status, json.loads(payload) if payload else None
+
+
 def test_rust_http_server_matches_public_local_api(home):
     with _server(home) as base:
         status, headers, payload = _request(base, "/health")
@@ -185,6 +200,65 @@ def test_rust_http_server_matches_python_service_responses(home, monkeypatch):
             rust_status, _, rust_payload = _request(rust_api, path, method, body)
             assert rust_status == python_response.status_code, path
             assert rust_payload == python_response.json(), path
+
+
+def test_rust_http_server_matches_python_validation_errors(home, monkeypatch):
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from agentrouter.server.app import create_app
+
+    monkeypatch.delenv("AGENTROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("AGENTROUTER_CORS_ORIGINS", raising=False)
+    too_many_tools = ["tool"] * 101
+    too_long_task = "x" * 100_001
+    too_long_note = "x" * 10_001
+    cases = [
+        ("/v1/classify", {}),
+        ("/v1/classify", {"task": ""}),
+        ("/v1/classify", {"task": 7}),
+        ("/v1/classify", {"task": too_long_task}),
+        ("/v1/classify", {"task": "x", "context_tokens": 1.5}),
+        ("/v1/classify", {"task": "x", "context_tokens": 0}),
+        ("/v1/classify", {"task": "x", "risk": "critical"}),
+        ("/v1/classify", {"task": "x", "tools": "search"}),
+        ("/v1/classify", {"task": "x", "tools": ["search", 7]}),
+        ("/v1/classify", {"task": "x", "tools": too_many_tools}),
+        ("/v1/route", {"task": "x", "prefer": 7}),
+        ("/v1/route", {"task": "x", "no_log": "maybe"}),
+        ("/v1/feedback", {}),
+        ("/v1/feedback", {"decision_id": "d", "rating": 0}),
+        ("/v1/feedback", {"decision_id": "d", "rating": 1.5}),
+        ("/v1/feedback", {"decision_id": "d", "rating": 6}),
+        ("/v1/feedback", {"decision_id": "d", "rating": 5, "note": 7}),
+        (
+            "/v1/feedback",
+            {"decision_id": "d", "rating": 5, "note": too_long_note},
+        ),
+        ("/v1/feedback", {"decision_id": "", "rating": 5}),
+        ("/v1/execute/dry-run", {}),
+        ("/v1/execute/dry-run", []),
+    ]
+    with TestClient(create_app()) as python_api, _server(home) as rust_api:
+        for path, body in cases:
+            python_response = python_api.post(path, json=body)
+            rust_status, _, rust_payload = _request(rust_api, path, "POST", body)
+            assert rust_status == python_response.status_code == 422, path
+            assert rust_payload == python_response.json(), (path, body)
+
+        python_invalid_json = python_api.post(
+            "/v1/classify",
+            content=b"{bad",
+            headers={"content-type": "application/json"},
+        )
+        rust_status, rust_payload = _request_raw(rust_api, "/v1/classify", b"{bad")
+        assert rust_status == python_invalid_json.status_code == 422
+        assert rust_payload == python_invalid_json.json()
+
+        python_missing_route = python_api.get("/v1/removed")
+        rust_status, _, rust_payload = _request(rust_api, "/v1/removed")
+        assert rust_status == python_missing_route.status_code == 404
+        assert rust_payload == python_missing_route.json()
 
 
 def test_rust_http_server_authentication_and_cors_allowlist(home):

@@ -35,7 +35,10 @@ use tower_http::{catch_panic::CatchPanicLayer, cors::CorsLayer};
 use unicode_general_category::{get_general_category, GeneralCategory};
 
 use crate::{
-    schemas::{ClassifyRequest, DryRunRequest, FeedbackRequest, RouteRequest},
+    schemas::{
+        first_validation_message, ClassifyRequest, DryRunRequest, FeedbackRequest, RequestKind,
+        RouteRequest,
+    },
     service::{self, ServiceError},
 };
 
@@ -453,8 +456,20 @@ fn safe_echo(value: &str) -> String {
     }
 }
 
-fn decode<T: DeserializeOwned>(body: Bytes) -> Result<T, ApiError> {
-    serde_json::from_slice(&body).map_err(|_| ApiError::validation("request body is invalid"))
+fn decode<T: DeserializeOwned>(body: Bytes, kind: RequestKind) -> Result<T, ApiError> {
+    let value: Value = serde_json::from_slice(&body).map_err(|error| {
+        let byte_offset = body
+            .split(|byte| *byte == b'\n')
+            .take(error.line().saturating_sub(1))
+            .map(|line| line.len().saturating_add(1))
+            .sum::<usize>()
+            .saturating_add(error.column().saturating_sub(1));
+        ApiError::validation(format!("{byte_offset}: JSON decode error"))
+    })?;
+    if let Some(message) = first_validation_message(&value, kind) {
+        return Err(ApiError::validation(message));
+    }
+    serde_json::from_value(value).map_err(|_| ApiError::validation("request body is invalid"))
 }
 
 fn service_result<T>(result: Result<T, ServiceError>) -> Result<T, ApiError> {
@@ -493,13 +508,13 @@ async fn hosts() -> Json<Value> {
 }
 
 async fn classify(State(_state): State<ApiState>, body: Bytes) -> Result<Json<Value>, ApiError> {
-    let request: ClassifyRequest = decode(body)?;
+    let request: ClassifyRequest = decode(body, RequestKind::Classify)?;
     let result = blocking(move || service::classify_task(&request)).await?;
     Ok(Json(result))
 }
 
 async fn route_task(State(state): State<ApiState>, body: Bytes) -> Result<Json<Value>, ApiError> {
-    let request: RouteRequest = decode(body)?;
+    let request: RouteRequest = decode(body, RequestKind::Route)?;
     let home = state.home;
     let result = blocking(move || service::route_task(&home, &request)).await?;
     Ok(Json(result))
@@ -519,7 +534,7 @@ async fn decision(
 }
 
 async fn feedback(State(state): State<ApiState>, body: Bytes) -> Result<Json<Value>, ApiError> {
-    let request: FeedbackRequest = decode(body)?;
+    let request: FeedbackRequest = decode(body, RequestKind::Feedback)?;
     let decision_id = request.decision_id.clone();
     let home = state.home;
     let recorded = blocking(move || service::save_feedback(&home, &request)).await?;
@@ -535,7 +550,7 @@ async fn feedback(State(state): State<ApiState>, body: Bytes) -> Result<Json<Val
 }
 
 async fn dry_run(State(state): State<ApiState>, body: Bytes) -> Result<Json<Value>, ApiError> {
-    let request: DryRunRequest = decode(body)?;
+    let request: DryRunRequest = decode(body, RequestKind::DryRun)?;
     let decision_id = request.decision_id.clone();
     let home = state.home;
     let result = blocking(move || service::execute_dry_run(&home, &request)).await?;
@@ -547,7 +562,7 @@ async fn dry_run(State(state): State<ApiState>, body: Bytes) -> Result<Json<Valu
 }
 
 async fn not_found() -> ApiError {
-    ApiError::not_found("not found")
+    ApiError::not_found("Not Found")
 }
 
 async fn docs() -> Html<&'static str> {

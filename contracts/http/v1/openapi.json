@@ -499,7 +499,7 @@
   },
   "info": {
     "description": "Local REST surface for task classification and model routing. No remote execution: dry-run only.",
-    "title": "AgentRouter OS — Local API",
+    "title": "AgentRouter OS \u2014 Local API",
     "version": "1"
   },
   "openapi": "3.1.0",

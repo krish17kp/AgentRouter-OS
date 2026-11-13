@@ -4,7 +4,7 @@ Updated: 2026-11-13
 
 ## Definition of done
 
-- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PRs #27–#33 are merged; PR #16 is the sole open PR. On pushed head `218ef42`, the Linux/Windows/macOS Python and Rust suites, API, security, mutation, package, and website checks pass; the enforcing frozen context-band gate remains 0.6667 < 0.90, and live smoke skips without credentials. TASK-068 adds live Rust HTTP process tests to the required three-platform compatibility matrix; that updated run awaits the next push.
+- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PRs #27–#33 are merged; PR #16 is the sole open PR. On `b6d812c`, Rust workspace checks pass on Linux/Windows/macOS and HTTP compatibility passes on Linux/macOS; Windows found an OpenAPI em-dash decoding mismatch. The follow-up changes below normalize that JSON and add field-level error parity. The enforcing frozen context-band gate remains 0.6667 < 0.90; live smoke skips without credentials.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md); current gaps are explicit, and only modules with full-module differential tests are marked parity (35 modules meet that bar after TASK-051).
 - [x] Full Python suite: 2,007 passed, 4 skipped; 92.46% line (6,626/7,166), 87.61% branch (1,845/2,106), and 91.36% combined coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; exact evidence is in `docs/COVERAGE_REPORT_2026-11-13.md`.
@@ -75,7 +75,8 @@ Updated: 2026-11-13
 - [x] TASK-065 adds Rust classify, route, feedback and dry-run HTTP request schemas with field-bound validation. Three Rust tests, 13 Python/Rust compatibility cases, the full Python regression, Rust workspace tests, and workspace Clippy pass locally; field coercion, response passthrough types, HTTP middleware and the server lifecycle remain open, so `server/schemas.py` stays Partial.
 - [x] TASK-066 adds typed and passthrough Rust HTTP response models and Pydantic-compatible boolean/integer coercion for supported ranges. The focused Python/Rust schema suite passes 35 cases; the full Python suite, Rust workspace tests, and Clippy pass locally. Python unbounded integers, HTTP middleware, and server lifecycle remain open, so `server/schemas.py` stays Partial.
 - [x] TASK-067 ports `server/service.py` business functions into `agentrouter-api::service`: model/host listing, classification, no-log and persisted routing, decision lookup, feedback, and dry-run preview. It uses routing/storage/host crates directly. Forty-three focused Python/Rust differentials and the Linux/Windows/macOS hosted Rust/Python matrix pass on pushed head `218ef42`.
-- [ ] TASK-068 adds the Axum HTTP process and endpoints, graceful shutdown, request IDs, API-key checking, explicit-origin CORS, rate limiting, body bounds, and idempotent replay through shared `agentrouter-limits` primitives. The server and CLI now share bounded rate/cache code, including a 16 MiB aggregate cache cap. Four live HTTP process tests, 51 focused Python/Rust and server checks, eight shared-limit Rust unit tests, all Rust workspace tests, strict Clippy, `cargo audit`, and the full Python suite pass locally. Python is still the shipping authority; TypeScript SDK parity, FastAPI edge/error semantics, and MCP remain open.
+- [x] TASK-068 adds the Axum HTTP process and endpoints, graceful shutdown, request IDs, API-key checking, explicit-origin CORS, rate limiting, body bounds, and idempotent replay through shared `agentrouter-limits` primitives. The server and CLI share bounded rate/cache code, including a 16 MiB aggregate cache cap. Five live HTTP process tests, the focused Python/Rust and server checks, eight shared-limit Rust unit tests, all Rust workspace tests, strict Clippy, `cargo audit`, the Python regression, Rust 1.89 tests, and an optimized release build pass locally. Hosted Rust workspace checks pass on all three operating systems; the `b6d812c` Windows compatibility run exposed the OpenAPI Unicode issue addressed by TASK-069. Python remains the release authority.
+- [x] TASK-069 matches FastAPI field-level 422 validation messages for 21 invalid request payloads, malformed JSON, and an unknown route; its cross-language HTTP tests compare full error responses. The OpenAPI contract stores the em dash as a JSON escape, preserving the same parsed schema while avoiding the Windows response mismatch. The full Python suite passes with 2,008 passed and 4 skipped; Rust workspace tests, strict Clippy, Rust 1.89 tests, release build, and focused HTTP parity tests pass locally. Linux/macOS hosted HTTP checks pass on `b6d812c`; hosted confirmation of these follow-up fixes is pending.
 - [ ] TASK-056 adds the `agentrouter-evaluate` Rust CLI for listing/validating datasets, running fixture profiles, writing/rendering/comparing reports, availability, explicit external prepare blockers, and context-band generalization. Four smoke/differential tests pass. The Rust command does not yet replace the Python `agentrouter evaluate` surface or load real datasets, so CLI module parity remains Partial.
 - [x] PR #31 upgraded bundled SQLite to 3.54.1, replaced `unsafe-libyaml`, and raised the Rust minimum to 1.89; workspace tests, Clippy, security audit, and cross-platform CI passed before merge at `a246cf6`.
 - [x] Website product-truth fixes, font hierarchy/motion redesign, unused shadcn CLI removal, server limits/API tests, and website lint/build CI merged via PR #27. npm build/lint and production dependency audit passed; full npm audit still reports moderate dev-tool advisories.
@@ -88,16 +89,17 @@ Updated: 2026-11-13
 - OpenAI live validation: provide `OPENAI_API_KEY` through a local environment or a protected secret store and authorize one bounded Responses API smoke request, which may incur usage charges. Offline request/response fixtures are ready; no key is stored in the repository.
 - Production release/deployment: after the local and hosted release gates pass, provide the production hosting/domain credentials and authorize any paid infrastructure and deployment. The Rust server is loopback-only and no production deployment has run.
 
-Latest completed local checks on 2026-11-13: the full Python suite is 2,007
+Latest completed local checks on 2026-11-13: the full Python suite is 2,008
 passed and 4 skipped with 92.46% line, 87.61% branch, and 91.36% combined
-coverage. The 51-case focused HTTP/schema/service/limits set, Rust workspace
-tests, strict Clippy, formatting, `cargo audit`, and optimized workspace release
-build pass; the release API binary prints its CLI help. PR #16's pushed head
-`218ef42` has passing Linux/macOS/Windows Python, Rust, API, security, mutation,
-package, and site checks; its enforcing gate remains held by frozen context-band
-accuracy 0.6667 against 0.90, while live smoke skips without credentials. The
-new server process test is now included in the cross-platform compatibility job
-and awaits the next push.
+coverage. Five live HTTP process tests, the focused HTTP/schema/service/limits
+set, Rust workspace tests, strict Clippy, formatting, `cargo audit`, Rust 1.89
+tests, and optimized workspace release build pass; the release API binary
+prints its CLI help. On pushed head `b6d812c`, hosted Rust workspace checks pass
+on Linux/Windows/macOS and Python/Rust HTTP checks pass on Linux/macOS. The
+Windows job found the OpenAPI Unicode issue fixed by TASK-069; the new response
+compatibility tests and fix await hosted confirmation. The enforcing release
+gate remains held by frozen context-band accuracy 0.6667 against 0.90, while
+live smoke skips without credentials.
 PR #16 remains promotion-blocked by the unchanged frozen
 context-band result and the human annotation requirement.
 

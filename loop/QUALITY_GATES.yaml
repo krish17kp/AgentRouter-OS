@@ -7,7 +7,7 @@ testing:
   mandatory_tests_pass:
     required: true
     current: pass_local
-    last_full_baseline_passed: 2007
+    last_full_baseline_passed: 2008
   unexplained_failures:
     required: 0
     current: 0
@@ -81,7 +81,7 @@ static_quality:
 security:
   bandit_clean_or_justified: pass_local
   pip_audit_clean_or_mitigated: pass_local
-  secret_scan_clean: pass_on_218ef42_pending_TASK068
+  secret_scan_clean: pass_on_b6d812c_pending_followup
   plugin_permission_audit_pass: pass_PR_13
 
 packaging:
@@ -93,9 +93,9 @@ packaging:
 
 platforms:
   windows_local_green: pending
-  github_linux_green: pass_on_218ef42_pending_TASK068
-  github_windows_green: pass_on_218ef42_pending_TASK068
-  github_macos_green: pass_on_218ef42_pending_TASK068
+  github_linux_green: pass_on_b6d812c_pending_followup
+  github_windows_green: failed_on_b6d812c_openapi_unicode_fix_pending
+  github_macos_green: pass_on_b6d812c_pending_followup
 
 open:
   - id: context_band_generalization
@@ -105,7 +105,7 @@ open:
       proved a dataset ceiling (rules 0.6667 / learned 0.6889 / hybrid 0.6444 all fail)
   - id: release_branch_ci
     blocking: true
-    reason: TASK-068 live Rust HTTP process suite was added to the cross-platform compatibility job and needs hosted confirmation
+    reason: TASK-069 OpenAPI Unicode and field-validation parity fixes need hosted confirmation; frozen context-band remains 0.6667 below the unchanged 0.90 gate
 
 historical_corrections:
   - claim: context_band_accuracy_0.945_release_ready

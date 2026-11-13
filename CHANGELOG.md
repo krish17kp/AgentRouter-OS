@@ -13,6 +13,9 @@ All notable changes to AgentRouter OS. Format loosely follows
   gates pass.
 - Share Rust rate-limit and idempotency primitives between the CLI and HTTP
   server, including a 16 MiB aggregate cached-response limit.
+- Match FastAPI's field-level 422 messages for HTTP request validation and
+  escape the OpenAPI title's em dash in the canonical JSON for cross-platform
+  byte-stable serving.
 - Port the HTTP service business layer to `agentrouter-api` for model/host
   listing, classification, routing, decision lookup, feedback, and dry-run
   previews. It depends directly on routing, host, registry, classifier, and

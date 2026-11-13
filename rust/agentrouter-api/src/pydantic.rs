@@ -141,7 +141,7 @@ impl<'de> Deserialize<'de> for PydanticInteger {
     }
 }
 
-fn parse_integer(value: &str) -> Result<i64, String> {
+pub(crate) fn parse_integer(value: &str) -> Result<i64, String> {
     let value = value.trim();
     if let Ok(integer) = value.parse::<i64>() {
         return Ok(integer);
