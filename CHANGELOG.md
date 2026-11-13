@@ -46,6 +46,10 @@ All notable changes to AgentRouter OS. Format loosely follows
   Python-compatible findings for missing, unmanaged, managed, corrupt-state,
   and unsafe linked destinations. Plugin install and uninstall transactions
   remain on the Python CLI.
+- Add a Rust `agentrouter plugin install NAME --dry-run` preview with
+  Python-compatible create, preserve, adopt, managed-skip, overwrite, and
+  blocked actions. The preview does not modify host files; install and
+  uninstall transactions remain on the Python CLI.
 
 ### Fixed
 - Add Rust OpenAPI canonicalization and bounded `$ref` validation with stable,

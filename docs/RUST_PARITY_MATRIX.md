@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-14 (TASK-082–108). This inventory covers every Python source module under
+Updated: 2026-11-14 (TASK-082–109). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -72,7 +72,7 @@ release authority until the full set is complete.
 | `agentrouter/mcp_server.py` | `agentrouter-mcp::{Server,run_stdio}` | Partial |
 | `agentrouter/observability.py` | `agentrouter-cli::observability` | Partial |
 | `agentrouter/openai_adapter.py` | `agentrouter-cli::openai` | Parity |
-| `agentrouter/plugins.py` | `agentrouter-cli::plugins` (inventory, destination roots, portable paths, ownership-record shape and no-follow disk validation, read-only list/status/doctor) | Partial |
+| `agentrouter/plugins.py` | `agentrouter-cli::plugins` (inventory, destination roots, portable paths, ownership-record shape and no-follow disk validation, read-only list/status/doctor/install plan) | Partial |
 | `agentrouter/prompts.py` | `agentrouter-cli::generate_prompt` | Parity |
 | `agentrouter/refresh.py` | `agentrouter-registry::refresh` | Partial |
 | `agentrouter/registry.py` | `agentrouter-registry` | Parity |

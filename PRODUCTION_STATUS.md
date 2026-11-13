@@ -4,10 +4,10 @@ Updated: 2026-11-14
 
 ## Definition of done
 
-- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PR #16 is the sole open PR; all other historical PRs are merged or documented as superseded/closed. At `2fe81da`, hosted Rust workspace and Python/Rust compatibility pass on Linux/Windows/macOS; the `6a707d5` rerun is in progress. Python 3.10–3.13, Windows/macOS, API compatibility, build smoke, security, website, and mutation checks passed on prior candidate commits. The unchanged frozen release gate fails at 0.6667 < 0.90; live smoke is skipped without credentials.
+- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PR #16 is the sole open PR; all other historical PRs are merged or documented as superseded/closed. At pushed head `e33e840`, hosted Rust workspace passes on Linux and Windows but fails on macOS because Rust plugin fixtures use the `/var` symlink alias; TASK-109 canonicalizes those temporary roots, with cross-platform reruns pending. The unchanged frozen release gate remains 0.6667 < 0.90; live smoke is skipped without credentials.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md); current gaps are explicit, and 40 modules currently meet the full-module differential bar. TASK-089–091 closed the Python/Rust storage contract with shared-database and concurrency evidence.
-- [x] Full Python suite: 2,222 passed, 4 skipped; 92.83% statement (6,715/7,234), 88.63% branch (1,895/2,138), and 91.87% combined coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; evidence is in `docs/COVERAGE_REPORT_2026-11-14.md`.
+- [x] Full Python suite: 2,223 passed, 4 skipped; 92.84% statement (6,716/7,234), 88.68% branch (1,896/2,138), and 91.89% combined coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; evidence is in `docs/COVERAGE_REPORT_2026-11-14.md`.
 - [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations; the Rust release benchmark now runs the same 10/100/1,000 candidate fleets, with a paired local p50 ratio of 2.70×–3.25× under stated synthetic conditions.
 - [x] Changelog, coverage evidence, and local latency measurements are committed to the release candidate. Candidate package version is now `0.5.0rc1`, with draft release notes in `docs/RELEASE_NOTES_v0.5.0rc1.md`; final `0.5.0` packaging and publication remain blocked on parity and all release gates.
 - [ ] Release candidate promoted to `main` with a tagged release.
@@ -116,6 +116,7 @@ Updated: 2026-11-14
 - [ ] TASK-106 adds the read-only Rust `agentrouter plugin list` command. It compares output with Python for absent/present destinations and linked destinations; Rust status traversal refuses links/reparse points and reports blocked paths. Eight Rust plugin tests, strict Clippy, Ruff, and all six focused plugin compatibility checks pass locally. Hosted confirmation is tracked with TASK-107; install, uninstall, and doctor remain Python-only pending transaction and diagnostic parity.
 - [ ] TASK-107 adds a no-follow ownership-state reader using pinned root/private-directory handles, single-link regular-file checks, stable file identity/size/mtime verification, schema validation, and SHA-256 provenance. Thirteen Rust plugin tests, the full Rust workspace, strict workspace Clippy, Ruff, seven focused plugin compatibility checks, and the 2,214-test Python regression pass locally. Hosted Linux/Windows/macOS confirmation is pending; filesystem mutation/transaction recovery remain Python-only.
 - [ ] TASK-108 adds read-only Rust `agentrouter plugin doctor` text and JSON output, with differential findings for absent destinations, byte-identical and different unmanaged files, Python-installed managed files, corrupt ownership state, and linked destinations. Nine focused plugin compatibility tests, the full Rust workspace, strict Clippy, formatting, Ruff, and the full Python regression (2,222 passed, 4 skipped) pass locally. Hosted Linux/Windows/macOS confirmation is pending. Install/uninstall filesystem transactions remain Python-only.
+- [ ] TASK-109 adds Rust `agentrouter plugin install NAME --dry-run` with exact Python plan text for absent files, unmanaged identical and different content, adoption, and managed no-op installs; the preview performs no writes. Ten focused Python/Rust plugin compatibility tests and the full Python regression (2,223 passed, 4 skipped) pass locally. Rust workspace and strict Clippy pass; hosted Linux/Windows/macOS confirmation is pending. Temporary test roots are canonicalized so macOS fixtures do not traverse the `/var` alias; production link checks remain fail-closed.
 - [ ] TASK-056 adds the `agentrouter-evaluate` Rust CLI for listing/validating datasets, running fixture profiles, writing/rendering/comparing reports, availability, explicit external prepare blockers, and context-band generalization. Four smoke/differential tests pass. The Rust command does not yet replace the Python `agentrouter evaluate` surface or load real datasets, so CLI module parity remains Partial.
 - [x] PR #31 upgraded bundled SQLite to 3.54.1, replaced `unsafe-libyaml`, and raised the Rust minimum to 1.89; workspace tests, Clippy, security audit, and cross-platform CI passed before merge at `a246cf6`.
 - [x] Website product-truth fixes, font hierarchy/motion redesign, unused shadcn CLI removal, server limits/API tests, and website lint/build CI merged via PR #27. npm build/lint and production dependency audit passed; full npm audit still reports moderate dev-tool advisories.
@@ -128,13 +129,15 @@ Updated: 2026-11-14
 - OpenAI live validation: provide `OPENAI_API_KEY` through a local environment or a protected secret store and authorize one bounded Responses API smoke request, which may incur usage charges. Offline request/response fixtures are ready; no key is stored in the repository.
 - Production release/deployment: after the local and hosted release gates pass, provide the production hosting/domain credentials and authorize any paid infrastructure and deployment. The Rust server is loopback-only and no production deployment has run.
 
-Latest full local verification: Python 3.12 passes 2,222 tests with 4 skips
-at 92.83% statement, 88.63% branch, and 91.87% combined coverage. The Rust workspace,
+Latest full local verification: Python 3.12 passes 2,223 tests with 4 skips
+at 92.84% statement, 88.68% branch, and 91.89% combined coverage. The Rust workspace,
 strict Clippy, Ruff, formatting, 29 focused storage compatibility and
-concurrency checks, 70 focused contract compatibility checks, and nine plugin
-inventory/path/ownership/list/doctor compatibility checks pass locally. Hosted Rust
+concurrency checks, 70 focused contract compatibility checks, and ten plugin
+inventory/path/ownership/list/doctor/plan compatibility checks pass locally. Hosted Rust
 workspace and Python/Rust compatibility pass on Linux, Windows, and macOS at
-`2fe81da`; the `6a707d5` Rust and Python/Rust matrix is running.
+`2fe81da`. At `e33e840`, hosted Linux and Windows Rust workspace pass; the macOS
+Rust unit tests expose the temporary-path alias issue now corrected in TASK-109.
+The Python/Rust macOS comparison and other matrix jobs are still running.
 Python 3.10–3.13 and Windows/macOS jobs, security, website, and mutation checks
 pass on prior candidate commits. The unchanged
 release gate still fails at 0.6667 against 0.90; live smoke skips without

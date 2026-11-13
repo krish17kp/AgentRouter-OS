@@ -13,7 +13,7 @@ use std::process::Command;
 use agentrouter_registry::{load_all_models, load_providers, ModelEntry};
 
 fn usage() -> &'static str {
-    "usage: agentrouter <init|route|explain|feedback|execute|stats|prompt|registry|providers|hosts|models|doctor|server|mcp|dashboard|plugin|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  execute <decision-id> [--yes] [--dry-run]\n  stats [--json]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  server [--host HOST] [--port PORT]\n  mcp (stdio server)\n  dashboard [port]\n  plugin <list|doctor [--json]>\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
+    "usage: agentrouter <init|route|explain|feedback|execute|stats|prompt|registry|providers|hosts|models|doctor|server|mcp|dashboard|plugin|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  execute <decision-id> [--yes] [--dry-run]\n  stats [--json]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  server [--host HOST] [--port PORT]\n  mcp (stdio server)\n  dashboard [port]\n  plugin <list|install NAME --dry-run [--adopt-identical]|doctor [--json]>\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
 }
 
 fn home() -> Result<PathBuf, String> {
@@ -712,6 +712,53 @@ fn plugin_list() -> Result<i32, String> {
     Ok(0)
 }
 
+fn plugin_install(args: &[String]) -> Result<i32, String> {
+    let mut name = None;
+    let mut dry_run = false;
+    let mut adopt_identical = false;
+    for argument in args.iter().skip(1) {
+        match argument.as_str() {
+            "--dry-run" => dry_run = true,
+            "--adopt-identical" => adopt_identical = true,
+            "--force" => {}
+            option if option.starts_with('-') => {
+                return Err(format!("unknown plugin install option: {option}"));
+            }
+            value if name.is_none() => name = Some(value),
+            value => return Err(format!("unexpected plugin install argument: {value}")),
+        }
+    }
+    let name = name.ok_or_else(|| {
+        "usage: agentrouter plugin install NAME --dry-run [--adopt-identical]".to_owned()
+    })?;
+    let plugin = agentrouter_cli::plugins::get_plugin(name)?;
+    if !dry_run {
+        return Err(
+            "Rust plugin install is not migrated yet; use the Python CLI for filesystem changes."
+                .to_owned(),
+        );
+    }
+    let root = plugin_roots()?
+        .into_iter()
+        .find(|(candidate, _)| candidate.name == plugin.name)
+        .map(|(_, root)| root)
+        .ok_or_else(|| "plugin destination root is unavailable".to_owned())?;
+    let plan = agentrouter_cli::plugins::plan(plugin, &root, adopt_identical)?;
+    println!("Would install '{}':", plugin.name);
+    for item in plan {
+        let action = item
+            .get("action")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("blocked");
+        let destination = item
+            .get("dest")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("");
+        println!("  {action:<24} {destination}");
+    }
+    Ok(0)
+}
+
 fn plugin_doctor(as_json: bool) -> Result<i32, String> {
     let roots = plugin_roots()?;
     let findings = roots
@@ -786,14 +833,15 @@ fn plugin(args: &[String]) -> Result<i32, String> {
         .iter()
         .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
     {
-        println!("Usage: agentrouter plugin <list|doctor [--json]>");
+        println!("Usage: agentrouter plugin <list|install NAME --dry-run [--adopt-identical]|doctor [--json]>");
         return Ok(0);
     }
     match args {
         [command] if command == "list" => plugin_list(),
+        [command, ..] if command == "install" => plugin_install(args),
         [command] if command == "doctor" => plugin_doctor(false),
         [command, flag] if command == "doctor" && flag == "--json" => plugin_doctor(true),
-        [command] if matches!(command.as_str(), "install" | "uninstall") => Err(
+        [command] if command == "uninstall" => Err(
             format!(
                 "Rust agentrouter plugin {command} is not migrated yet; use the Python CLI for this operation."
             ),

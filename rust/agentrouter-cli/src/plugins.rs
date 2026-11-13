@@ -339,6 +339,61 @@ pub fn diagnose(plugin: &PluginSpec, root: &Path) -> Vec<serde_json::Value> {
     findings
 }
 
+/// Preview plugin installation changes without modifying host files.
+pub fn plan(
+    plugin: &PluginSpec,
+    root: &Path,
+    adopt_identical: bool,
+) -> Result<Vec<serde_json::Value>, String> {
+    let state = read_state(root, plugin)?.map(|loaded| loaded.value);
+    let mut plan = Vec::new();
+    for file in plugin.files {
+        check_link_components(root, file.dest)?;
+        let destination = root.join(file.dest);
+        let expected = bundled_contents(file.src)
+            .ok_or_else(|| format!("packaged plugin source is missing: {}", file.src))?;
+        let expected_digest = format!("{:x}", sha2::Sha256::digest(expected));
+        let state_entry = state
+            .as_ref()
+            .and_then(|value| value.get("files"))
+            .and_then(serde_json::Value::as_object)
+            .and_then(|files| files.get(file.dest));
+        let action = match read_relative_file(root, file.dest) {
+            Ok(None) => "create",
+            Ok(Some(actual)) => {
+                let actual_digest = format!("{:x}", sha2::Sha256::digest(&actual.bytes));
+                let managed = state_entry.is_some_and(|entry| {
+                    matches!(
+                        entry.get("disposition").and_then(serde_json::Value::as_str),
+                        Some("created" | "replaced")
+                    ) && entry
+                        .get("installed_sha256")
+                        .and_then(serde_json::Value::as_str)
+                        == Some(actual_digest.as_str())
+                        && entry.get("installed_identity")
+                            == Some(&serde_json::json!([actual.identity.0, actual.identity.1]))
+                });
+                if managed && actual_digest == expected_digest {
+                    "skip (identical, managed)"
+                } else if actual.bytes == expected && adopt_identical {
+                    "adopt identical legacy installation (managed)"
+                } else if actual.bytes == expected {
+                    "record pre-existing (preserved on uninstall)"
+                } else {
+                    "overwrite (backup first)"
+                }
+            }
+            Err(_) => "blocked (not a safe regular file)",
+        };
+        plan.push(serde_json::json!({
+            "kind": "file",
+            "dest": destination,
+            "action": action,
+        }));
+    }
+    Ok(plan)
+}
+
 fn diagnose_failure(plugin: &PluginSpec) -> serde_json::Value {
     serde_json::json!({
         "plugin": plugin.name,
@@ -1047,7 +1102,7 @@ mod tests {
     fn status_reports_missing_and_present_destinations() {
         let plugin = get_plugin("codex").unwrap();
         let temporary = tempfile::tempdir().unwrap();
-        let root = temporary.path().join(plugin.name);
+        let root = temporary.path().canonicalize().unwrap().join(plugin.name);
         assert_eq!(status(plugin, &root), "not-installed");
         std::fs::create_dir_all(&root).unwrap();
         assert_eq!(status(plugin, &root), "not-installed");
@@ -1062,7 +1117,7 @@ mod tests {
 
         let plugin = get_plugin("claude-code").unwrap();
         let temporary = tempfile::tempdir().unwrap();
-        let root = temporary.path().join(plugin.name);
+        let root = temporary.path().canonicalize().unwrap().join(plugin.name);
         let destination = root.join("skills/agentrouter/SKILL.md");
         std::fs::create_dir_all(destination.parent().unwrap()).unwrap();
         let outside = temporary.path().join("outside.md");
@@ -1076,7 +1131,7 @@ mod tests {
     fn reads_valid_ownership_state_and_matches_its_digest() {
         let plugin = get_plugin("codex").unwrap();
         let temporary = tempfile::tempdir().unwrap();
-        let root = temporary.path().join(plugin.name);
+        let root = temporary.path().canonicalize().unwrap().join(plugin.name);
         std::fs::create_dir_all(root.join(".agentrouter-state")).unwrap();
         let raw = br#"{"schema":2,"plugin":"codex","state_dir_identity":null,"files":{},"directories":{}}"#;
         let path = root.join(".agentrouter-state/codex.json");
@@ -1091,7 +1146,7 @@ mod tests {
     fn missing_root_state_directory_and_record_are_absent() {
         let plugin = get_plugin("codex").unwrap();
         let temporary = tempfile::tempdir().unwrap();
-        let root = temporary.path().join(plugin.name);
+        let root = temporary.path().canonicalize().unwrap().join(plugin.name);
         assert!(read_state(&root, plugin).unwrap().is_none());
         std::fs::create_dir_all(&root).unwrap();
         assert!(read_state(&root, plugin).unwrap().is_none());
@@ -1103,7 +1158,7 @@ mod tests {
     fn malformed_and_invalid_ownership_records_fail_closed() {
         let plugin = get_plugin("codex").unwrap();
         let temporary = tempfile::tempdir().unwrap();
-        let root = temporary.path().join(plugin.name);
+        let root = temporary.path().canonicalize().unwrap().join(plugin.name);
         let state_dir = root.join(".agentrouter-state");
         std::fs::create_dir_all(&state_dir).unwrap();
         let path = state_dir.join("codex.json");
@@ -1129,7 +1184,7 @@ mod tests {
 
         let plugin = get_plugin("codex").unwrap();
         let temporary = tempfile::tempdir().unwrap();
-        let root = temporary.path().join(plugin.name);
+        let root = temporary.path().canonicalize().unwrap().join(plugin.name);
         let state_dir = root.join(".agentrouter-state");
         std::fs::create_dir_all(&state_dir).unwrap();
         let state = state_dir.join("codex.json");
@@ -1161,7 +1216,7 @@ mod tests {
 
         let plugin = get_plugin("codex").unwrap();
         let temporary = tempfile::tempdir().unwrap();
-        let root = temporary.path().join(plugin.name);
+        let root = temporary.path().canonicalize().unwrap().join(plugin.name);
         let external = temporary.path().join("external-state");
         std::fs::create_dir_all(&root).unwrap();
         std::fs::create_dir_all(&external).unwrap();

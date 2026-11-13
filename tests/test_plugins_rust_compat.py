@@ -314,6 +314,12 @@ def _rust_plugin_doctor() -> subprocess.CompletedProcess[str]:
     return _rust_plugin_command("plugin", "doctor", "--json")
 
 
+def _rust_plugin_install_dry_run(
+    plugin_name: str, *options: str
+) -> subprocess.CompletedProcess[str]:
+    return _rust_plugin_command("plugin", "install", plugin_name, *options, "--dry-run")
+
+
 def _expected_plugin_list() -> str:
     return "".join(
         f"{plugin.name:<12} [{plugins.status(plugin)}]  {plugin.description}\n"
@@ -322,7 +328,7 @@ def _expected_plugin_list() -> str:
 
 
 def test_rust_plugin_list_matches_python_for_absent_and_present_files(tmp_path, monkeypatch):
-    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path))
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
     absent = _rust_plugin_list()
     assert absent.returncode == 0, absent.stderr
     assert absent.stdout == _expected_plugin_list()
@@ -337,7 +343,7 @@ def test_rust_plugin_list_matches_python_for_absent_and_present_files(tmp_path, 
 
 
 def test_rust_plugin_list_reports_linked_destinations_as_blocked(tmp_path, monkeypatch):
-    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path))
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
     plugin = plugins.get_plugin("claude-code")
     destination = plugins.dest_root(plugin) / plugin.files[0].dest
     destination.parent.mkdir(parents=True)
@@ -356,7 +362,7 @@ def test_rust_plugin_list_reports_linked_destinations_as_blocked(tmp_path, monke
 
 
 def test_rust_plugin_doctor_matches_python_through_install_and_corrupt_state(tmp_path, monkeypatch):
-    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path))
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
 
     def assert_doctor_matches_python(expected_code):
         findings = plugins.diagnose_all()
@@ -385,7 +391,7 @@ def test_rust_plugin_doctor_matches_python_through_install_and_corrupt_state(tmp
 
 
 def test_rust_plugin_doctor_matches_python_for_unsafe_destinations(tmp_path, monkeypatch):
-    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path))
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
     plugin = plugins.get_plugin("claude-code")
     destination = plugins.dest_root(plugin) / plugin.files[0].dest
     destination.parent.mkdir(parents=True)
@@ -402,3 +408,32 @@ def test_rust_plugin_doctor_matches_python_for_unsafe_destinations(tmp_path, mon
     assert process.returncode == 1, process.stderr
     assert json.loads(process.stdout) == expected
     assert outside.read_text(encoding="utf-8") == "leave unchanged"
+
+
+def test_rust_plugin_install_dry_run_matches_python_plan(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
+    plugin = plugins.get_plugin("codex")
+    destination = plugins.dest_root(plugin) / plugin.files[0].dest
+
+    def assert_plan_matches_python(*options, adopt_identical=False):
+        items = plugins.plan(plugin, adopt_identical=adopt_identical)
+        expected = f"Would install '{plugin.name}':\n" + "".join(
+            f"  {item['action']:<24} {item['dest']}\n" for item in items
+        )
+        process = _rust_plugin_install_dry_run(plugin.name, *options)
+        assert process.returncode == 0, process.stderr
+        assert process.stdout == expected
+
+    assert_plan_matches_python()
+
+    destination.parent.mkdir(parents=True)
+    destination.write_bytes(plugins._src_bytes(plugin.files[0].src))
+    assert_plan_matches_python()
+    assert_plan_matches_python("--adopt-identical", adopt_identical=True)
+
+    destination.write_text("user-authored plugin guidance", encoding="utf-8")
+    assert_plan_matches_python()
+
+    destination.unlink()
+    plugins.install(plugin)
+    assert_plan_matches_python()
