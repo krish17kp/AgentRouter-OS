@@ -294,6 +294,13 @@ pub fn diff_contracts_surface(old: &Value, new: &Value) -> Value {
                 );
             }
 
+            diff_media_types(
+                old_operation.get("requestBody"),
+                new_operation.get("requestBody"),
+                &format!("{location}.request"),
+                &mut changes,
+            );
+
             let old_responses = object_or_empty(old_operation.get("responses"));
             let new_responses = object_or_empty(new_operation.get("responses"));
             let old_statuses = old_responses.keys().cloned().collect::<BTreeSet<_>>();
@@ -324,6 +331,14 @@ pub fn diff_contracts_surface(old: &Value, new: &Value) -> Value {
                     "response_status_added",
                     format!("{location}.{status}"),
                     "newly documented status",
+                );
+            }
+            for status in old_statuses.intersection(&new_statuses) {
+                diff_media_types(
+                    old_responses.get(status),
+                    new_responses.get(status),
+                    &format!("{location}.{status}"),
+                    &mut changes,
                 );
             }
 
@@ -580,6 +595,43 @@ fn parameter_index(
             Some((key, object))
         })
         .collect()
+}
+
+fn diff_media_types(
+    old_value: Option<&Value>,
+    new_value: Option<&Value>,
+    location: &str,
+    changes: &mut Vec<SurfaceChange>,
+) {
+    let before = media_types(old_value);
+    let after = media_types(new_value);
+    for media in before.difference(&after) {
+        add_surface_change(
+            changes,
+            "breaking",
+            "media_type_removed",
+            location,
+            format!("{media} no longer offered"),
+        );
+    }
+    for media in after.difference(&before) {
+        add_surface_change(
+            changes,
+            "additive",
+            "media_type_added",
+            location,
+            format!("{media} now offered"),
+        );
+    }
+}
+
+fn media_types(value: Option<&Value>) -> BTreeSet<String> {
+    value
+        .and_then(Value::as_object)
+        .and_then(|object| object.get("content"))
+        .and_then(Value::as_object)
+        .map(|content| content.keys().cloned().collect())
+        .unwrap_or_default()
 }
 
 fn diff_operation_security(

@@ -279,6 +279,38 @@ def _rust_surface_diff(old: dict, new: dict) -> dict:
             },
         ),
         (
+            {
+                "paths": {
+                    "/x": {
+                        "post": {
+                            "requestBody": {
+                                "content": {"application/json": {"schema": {"type": "string"}}}
+                            },
+                            "responses": {
+                                "200": {"content": {"text/plain": {"schema": {"type": "string"}}}}
+                            },
+                        }
+                    }
+                }
+            },
+            {
+                "paths": {
+                    "/x": {
+                        "post": {
+                            "requestBody": {
+                                "content": {"application/cbor": {"schema": {"type": "string"}}}
+                            },
+                            "responses": {
+                                "200": {
+                                    "content": {"application/json": {"schema": {"type": "string"}}}
+                                }
+                            },
+                        }
+                    }
+                }
+            },
+        ),
+        (
             {"paths": {"/x": {"get": {"responses": {"4XX": {}}}}}},
             {"paths": {"/x": {"get": {"responses": {"401": {}, "404": {}}}}}},
         ),

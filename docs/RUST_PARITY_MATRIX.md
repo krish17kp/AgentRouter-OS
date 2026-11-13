@@ -110,9 +110,10 @@ release authority until the full set is complete.
   probe covers versions, server URLs, paths/methods, selected operation
   metadata, operation authentication requirements and scheme definitions,
   parameter add/remove/requiredness changes, request-body requiredness,
+  request and response media-type additions/removals,
   response status additions/removals/refinements, and summary/description
-  changes. It intentionally omits parameter schema, general schema, and
-  media-type analysis and is not suitable as a compatibility gate.
+  changes. It intentionally omits parameter schema and general schema
+  analysis and is not suitable as a compatibility gate.
   Symlink/hardlink-safe artifact export, manifest provenance, the full semantic
   compatibility checker, and CLI integration remain Python-only.
 - The Rust MCP process implements the five Python tools and stdio lifecycle;
