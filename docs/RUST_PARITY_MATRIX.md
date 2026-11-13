@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-13 (TASK-082–088). This inventory covers every Python source module under
+Updated: 2026-11-14 (TASK-082–089). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -187,6 +187,11 @@ release authority until the full set is complete.
   for empty and corrupt databases. Diagnostics as a whole remain Partial
   because Rust plugin health, server-extra detection, and some environment
   details are not yet equivalent.
+- Python and Rust serialize first-use SQLite schema changes with an immediate
+  transaction and recheck the legacy `user` column after acquiring the write
+  reservation. A 16-connection concurrent upgrade check covers both runtimes;
+  storage remains Partial because the full public `store.py` module contract
+  has not yet been closed.
 - The Rust SDK client covers Python endpoint paths, payload cleanup, an
   optional API-key header, timeout configuration and structured HTTP errors.
   The local HTTP server and end-to-end client/server contract remain

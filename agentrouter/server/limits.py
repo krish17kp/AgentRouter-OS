@@ -172,17 +172,10 @@ class IdempotencyCache:
                 or self._total_bytes + response_bytes > MAX_CACHE_BYTES
             ):
                 self._evict_locked(required_bytes=response_bytes)
-            while (
-                len(self._store) >= MAX_ENTRIES
-                or self._total_bytes + response_bytes > MAX_CACHE_BYTES
-            ):
-                oldest = next(iter(self._store))
-                _, removed = self._store.pop(oldest)
-                self._total_bytes = max(0, self._total_bytes - len(removed.body))
             self._store[key] = (self._clock(), resp)
             self._total_bytes += response_bytes
 
-    def _evict_locked(self, required_bytes: int = 0) -> None:
+    def _evict_locked(self, required_bytes: int) -> None:
         """Drop expired entries, then oldest ones until the new entry fits."""
         now, ttl = self._clock(), self.ttl
         for k in [k for k, (ts, _) in self._store.items() if now - ts > ttl]:

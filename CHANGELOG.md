@@ -19,6 +19,11 @@ All notable changes to AgentRouter OS. Format loosely follows
   empty and corrupt database files, with matching Python/Rust classifications.
 - Cap the Python idempotency cache at 16 MiB of response bodies, matching the
   Rust cache and evicting oldest responses as needed.
+- Serialize Python and Rust first-use SQLite schema creation/migration behind
+  an immediate write transaction, preventing simultaneous legacy database
+  connections from attempting the same column addition.
+- Reconcile idempotency cache byte accounting when replacing a key and verify
+  exact byte and entry-capacity boundaries with mutation-focused tests.
 
 ### Changed
 - Refuse redirects in the Python OpenAI Responses adapter so credentials cannot

@@ -48,21 +48,38 @@ pub fn current_user() -> String {
         .unwrap_or_else(|| "unknown".to_string())
 }
 
-fn ensure_schema(conn: &Connection) -> rusqlite::Result<()> {
+fn ensure_schema(conn: &mut Connection) -> rusqlite::Result<()> {
     let tables: Vec<String> = conn
         .prepare("SELECT name FROM sqlite_master WHERE type='table'")?
         .query_map([], |r| r.get(0))?
         .collect::<rusqlite::Result<Vec<String>>>()?;
-    if !tables.iter().any(|t| t == "decisions") || !tables.iter().any(|t| t == "feedback") {
-        conn.execute_batch(SCHEMA)?;
+    let ready = if tables.iter().any(|t| t == "decisions") && tables.iter().any(|t| t == "feedback")
+    {
+        let cols: Vec<String> = conn
+            .prepare("PRAGMA table_info(decisions)")?
+            .query_map([], |r| r.get(1))?
+            .collect::<rusqlite::Result<Vec<String>>>()?;
+        cols.iter().any(|column| column == "user")
+    } else {
+        false
+    };
+    if ready {
+        return Ok(());
     }
-    let cols: Vec<String> = conn
+
+    // DDL and the legacy M7 column migration run behind a database-wide write
+    // reservation. Other processes wait, then recheck after acquiring it, so
+    // two first-use connections cannot both attempt to add the same column.
+    let transaction = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+    transaction.execute_batch(SCHEMA)?;
+    let cols: Vec<String> = transaction
         .prepare("PRAGMA table_info(decisions)")?
         .query_map([], |r| r.get(1))?
         .collect::<rusqlite::Result<Vec<String>>>()?;
-    if !cols.iter().any(|c| c == "user") {
-        conn.execute("ALTER TABLE decisions ADD COLUMN user TEXT", [])?;
+    if !cols.iter().any(|column| column == "user") {
+        transaction.execute("ALTER TABLE decisions ADD COLUMN user TEXT", [])?;
     }
+    transaction.commit()?;
     Ok(())
 }
 
@@ -74,11 +91,11 @@ pub fn connect(home: &Path) -> rusqlite::Result<Connection> {
             Some(e.to_string()),
         )
     })?;
-    let conn = Connection::open(home.join("agentrouter.db"))?;
+    let mut conn = Connection::open(home.join("agentrouter.db"))?;
     // Best-effort, same as Python's contextlib.suppress(sqlite3.DatabaseError).
     let _ = conn.pragma_update(None, "journal_mode", "WAL");
     conn.pragma_update(None, "busy_timeout", BUSY_TIMEOUT_MS)?;
-    ensure_schema(&conn)?;
+    ensure_schema(&mut conn)?;
     Ok(conn)
 }
 
@@ -383,6 +400,49 @@ mod tests {
             save_decision(&conn, &format!("task {i}"), &json!({})).unwrap();
         }
         assert_eq!(recent_ids(&conn, 2).unwrap(), vec!["d_00003", "d_00002"]);
+    }
+
+    #[test]
+    fn concurrent_connections_upgrade_legacy_schema_once() {
+        use std::sync::{Arc, Barrier};
+        use std::thread;
+
+        let dir = tempfile::tempdir().unwrap();
+        let legacy = Connection::open(dir.path().join("agentrouter.db")).unwrap();
+        legacy
+            .execute_batch(
+                "CREATE TABLE decisions (id INTEGER PRIMARY KEY AUTOINCREMENT, \
+                 created_at TEXT NOT NULL, task TEXT NOT NULL, payload TEXT NOT NULL); \
+                 CREATE TABLE feedback (id INTEGER PRIMARY KEY AUTOINCREMENT, \
+                 decision_id INTEGER NOT NULL, created_at TEXT NOT NULL, \
+                 rating INTEGER, note TEXT);",
+            )
+            .unwrap();
+        drop(legacy);
+
+        let workers = 16;
+        let barrier = Arc::new(Barrier::new(workers));
+        let handles = (0..workers)
+            .map(|_| {
+                let home = dir.path().to_path_buf();
+                let barrier = Arc::clone(&barrier);
+                thread::spawn(move || {
+                    barrier.wait();
+                    let conn = connect(&home).unwrap();
+                    let user_columns: i64 = conn
+                        .query_row(
+                            "SELECT COUNT(*) FROM pragma_table_info('decisions') WHERE name='user'",
+                            [],
+                            |row| row.get(0),
+                        )
+                        .unwrap();
+                    assert_eq!(user_columns, 1);
+                })
+            })
+            .collect::<Vec<_>>();
+        for handle in handles {
+            handle.join().unwrap();
+        }
     }
 
     #[test]

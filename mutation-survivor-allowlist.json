@@ -55,5 +55,6 @@
   "agentrouter.plugins.x__safe_relative__mutmut_57": "Equivalent: removing the explicit double-slash prefix check still rejects UNC paths because splitting produces empty components, which are independently invalid.",
   "agentrouter.plugins.x__safe_relative__mutmut_62": "Equivalent: the mutated drive-letter regex no longer matches, but drive-letter paths still contain the forbidden colon.",
   "agentrouter.plugins.x__safe_relative__mutmut_63": "Equivalent: the mutated drive-letter regex character class differs, but drive-letter paths still contain the forbidden colon.",
-  "agentrouter.plugins.x__safe_relative__mutmut_64": "Equivalent: the mutated drive-letter regex character class differs, but drive-letter paths still contain the forbidden colon."
+  "agentrouter.plugins.x__safe_relative__mutmut_64": "Equivalent: the mutated drive-letter regex character class differs, but drive-letter paths still contain the forbidden colon.",
+  "agentrouter.server.limits.xǁIdempotencyCacheǁput__mutmut_18": "Equivalent: `>` to `>=` only triggers the cleanup helper when the incoming response reaches the exact byte cap. The helper retains unexpired entries at equality and only removes entries already past TTL while repairing the byte total, so cache replay and configured memory bounds are unchanged; early expiry cleanup releases memory safely."
 }

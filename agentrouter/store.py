@@ -11,7 +11,8 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
-_SCHEMA = """
+_SCHEMA = (
+    """
 CREATE TABLE IF NOT EXISTS decisions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     created_at TEXT NOT NULL,
@@ -19,6 +20,8 @@ CREATE TABLE IF NOT EXISTS decisions (
     payload TEXT NOT NULL,
     user TEXT
 );
+""",
+    """
 CREATE TABLE IF NOT EXISTS feedback (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     decision_id INTEGER NOT NULL REFERENCES decisions(id),
@@ -26,7 +29,8 @@ CREATE TABLE IF NOT EXISTS feedback (
     rating INTEGER,
     note TEXT
 );
-"""
+""",
+)
 
 
 def current_user() -> str:
@@ -61,19 +65,29 @@ def write_lock() -> threading.Lock:
 
 
 def _ensure_schema(conn: sqlite3.Connection) -> None:
-    """Create tables and apply in-place migrations. Runs only when needed.
+    """Create tables and apply in-place migrations under a SQLite write lock.
 
     This used to run on every ``connect()``, and the server opens a connection
-    per request — so every request paid for a schema script plus a
-    ``PRAGMA table_info``, and two processes could race the ``ALTER TABLE``.
+    per request, so ready databases take a read-only fast path. When the schema
+    needs work, ``BEGIN IMMEDIATE`` serializes initializers across processes;
+    each process rechecks the schema after taking the lock before migrating.
     """
     tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    if not {"decisions", "feedback"} <= tables:
-        conn.executescript(_SCHEMA)
-    cols = {row[1] for row in conn.execute("PRAGMA table_info(decisions)")}
-    if "user" not in cols:  # migrate pre-M7 DBs in place
-        conn.execute("ALTER TABLE decisions ADD COLUMN user TEXT")
-        conn.commit()
+    if {"decisions", "feedback"} <= tables:
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(decisions)")}
+        if "user" in cols:
+            return
+
+    conn.execute("BEGIN IMMEDIATE")
+    with conn:
+        # The first initializer may have completed while this connection was
+        # waiting for the lock. Idempotent CREATEs and the in-lock column check
+        # make repeated migrations safe across processes.
+        for statement in _SCHEMA:
+            conn.execute(statement)
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(decisions)")}
+        if "user" not in cols:  # migrate pre-M7 DBs in place
+            conn.execute("ALTER TABLE decisions ADD COLUMN user TEXT")
 
 
 def connect(home: Path) -> sqlite3.Connection:

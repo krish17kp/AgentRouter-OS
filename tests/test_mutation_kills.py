@@ -213,16 +213,106 @@ def test_idempotency_put_evicts_only_new_key_at_cap(monkeypatch):
     assert "a" in cache._store  # `or` mutant would sweep expired "a" on every new put
 
 
+def test_idempotency_cache_starts_with_zero_accounted_bytes():
+    assert IdempotencyCache()._total_bytes == 0
+
+
+def test_idempotency_cache_keeps_a_response_at_the_exact_byte_limit(monkeypatch):
+    monkeypatch.setattr(limits_mod, "MAX_CACHE_BYTES", 5)
+    cache = IdempotencyCache(ttl=60, clock=_Clock(0.0))
+
+    cache.put("exact", limits_mod.CachedResponse(200, b"12345", None))
+
+    assert cache.get("exact").body == b"12345"
+    assert cache._total_bytes == 5
+
+
+def test_idempotency_cache_replacing_a_key_reconciles_byte_accounting(monkeypatch):
+    monkeypatch.setattr(limits_mod, "MAX_CACHE_BYTES", 10)
+    cache = IdempotencyCache(ttl=60, clock=_Clock(0.0))
+    cache.put("same", limits_mod.CachedResponse(200, b"1234", None))
+
+    cache.put("same", limits_mod.CachedResponse(201, b"12", None))
+    assert cache._total_bytes == 2
+    cache.put("other", limits_mod.CachedResponse(200, b"345", None))
+
+    assert cache.get("same").status == 201
+    assert cache.get("other").body == b"345"
+    assert cache._total_bytes == 5
+
+
+def test_idempotency_cache_enforces_entry_cap_without_overflow(monkeypatch):
+    monkeypatch.setattr(limits_mod, "MAX_ENTRIES", 1)
+    cache = IdempotencyCache(ttl=60, clock=_Clock(0.0))
+    cache.put("old", limits_mod.CachedResponse(200, b"1", None))
+    cache.put("new", limits_mod.CachedResponse(200, b"2", None))
+
+    assert cache.get("old") is None
+    assert cache.get("new").body == b"2"
+    assert len(cache._store) == 1
+    assert cache._total_bytes == 1
+
+
+def test_idempotency_cache_adds_bytes_for_each_retained_key(monkeypatch):
+    monkeypatch.setattr(limits_mod, "MAX_CACHE_BYTES", 5)
+    cache = IdempotencyCache(ttl=60, clock=_Clock(0.0))
+    cache.put("first", limits_mod.CachedResponse(200, b"12", None))
+    cache.put("second", limits_mod.CachedResponse(200, b"345", None))
+
+    assert cache.get("first") is not None
+    assert cache.get("second") is not None
+    assert cache._total_bytes == 5
+
+
+def test_idempotency_evict_locked_keeps_exact_byte_capacity(monkeypatch):
+    monkeypatch.setattr(limits_mod, "MAX_CACHE_BYTES", 5)
+    cache = IdempotencyCache(ttl=60, clock=_Clock(0.0))
+    cache._store = {
+        "first": (0.0, limits_mod.CachedResponse(200, b"12", None)),
+        "second": (0.0, limits_mod.CachedResponse(200, b"345", None)),
+    }
+    cache._total_bytes = 5
+
+    cache._evict_locked(required_bytes=0)
+
+    assert set(cache._store) == {"first", "second"}
+    assert cache._total_bytes == 5
+
+
+def test_idempotency_evict_locked_enforces_entry_capacity(monkeypatch):
+    monkeypatch.setattr(limits_mod, "MAX_ENTRIES", 2)
+    monkeypatch.setattr(limits_mod, "MAX_CACHE_BYTES", 100)
+    cache = IdempotencyCache(ttl=60, clock=_Clock(0.0))
+    cache.put("first", limits_mod.CachedResponse(200, b"1", None))
+    cache.put("second", limits_mod.CachedResponse(200, b"2", None))
+
+    cache._evict_locked(required_bytes=0)
+
+    assert list(cache._store) == ["second"]
+    assert cache._total_bytes == 1
+
+
+def test_idempotency_evict_locked_reserves_incoming_bytes(monkeypatch):
+    monkeypatch.setattr(limits_mod, "MAX_CACHE_BYTES", 5)
+    cache = IdempotencyCache(ttl=60, clock=_Clock(0.0))
+    cache.put("old", limits_mod.CachedResponse(200, b"123", None))
+
+    cache._evict_locked(required_bytes=3)
+
+    assert cache._store == {}
+    assert cache._total_bytes == 0
+
+
 def test_idempotency_evict_expiry_predicate():
     # kills _evict_locked__mutmut_2 (now-ts -> now+ts) and __mutmut_3 (> -> >=).
     clk = _Clock(3.0)
     cache = IdempotencyCache(ttl=5, clock=clk)
     cache._store = {"fresh": (3.0, _resp())}  # now-ts = 0 < ttl: keep
-    cache._evict_locked()
+    cache._evict_locked(required_bytes=0)
     assert "fresh" in cache._store  # now+ts (6>5) mutant drops it
     clk.t = 5.0
     cache._store = {"boundary": (0.0, _resp())}  # now-ts == ttl: NOT expired (strict >)
-    cache._evict_locked()
+    cache._evict_locked(required_bytes=0)
     assert "boundary" in cache._store  # `>=` mutant drops it
 
 

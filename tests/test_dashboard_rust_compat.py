@@ -37,6 +37,7 @@ def _rust_render_html(stats: dict, recent: list[dict]) -> str:
         input=json.dumps({"stats": stats, "recent": recent}),
         capture_output=True,
         text=True,
+        encoding="utf-8",
         timeout=120,
         check=False,
     )
@@ -133,6 +134,7 @@ def test_rust_dashboard_serves_loopback_read_only_page(home):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        encoding="utf-8",
     )
     try:
         url = f"http://127.0.0.1:{port}/"

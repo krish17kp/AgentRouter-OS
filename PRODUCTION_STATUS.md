@@ -1,13 +1,13 @@
 # AgentRouter OS Production Completion
 
-Updated: 2026-11-13
+Updated: 2026-11-14
 
 ## Definition of done
 
-- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PRs #27–#33 are merged; PR #16 is the sole open PR. On `bfbed99`, all Rust workspace jobs, Linux compatibility, Python 3.10–3.13, and API/build/security/site checks pass; macOS/Windows compatibility and test jobs are pending. The unchanged frozen release gate remains 0.6667 < 0.90, and live smoke skips without credentials.
+- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PRs #27–#33 are merged; PR #16 is the sole open PR. On `ec81faf`, Rust migration CI, macOS, Linux, Python 3.10–3.13, and API/build/security/site checks pass. Windows Python CI found three Unicode dashboard-comparison failures because the test helper used the machine's default text codec; explicit UTF-8 decoding is fixed locally. Targeted cache mutation tests now kill the identified regressions, with one reviewed cleanup-only equivalence; the full gate will rerun after push. The unchanged frozen release gate remains 0.6667 < 0.90, and live smoke skips without credentials.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md); current gaps are explicit, and only modules with full-module differential tests are marked parity (39 modules meet that bar after TASK-086).
-- [x] Full Python suite: 2,104 passed, 5 skipped; 92.50% line (6,674/7,215), 87.61% branch (1,859/2,122), and 91.39% combined coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; evidence is in `docs/COVERAGE_REPORT_2026-11-13.md`.
+- [x] Full Python suite: 2,113 passed, 5 skipped; 92.54% line (6,678/7,216), 87.66% branch (1,862/2,124), and 91.43% combined coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; evidence is in `docs/COVERAGE_REPORT_2026-11-14.md`.
 - [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations; the Rust release benchmark now runs the same 10/100/1,000 candidate fleets, with a paired local p50 ratio of 2.70×–3.25× under stated synthetic conditions.
 - [x] Changelog, coverage evidence, and local latency measurements are committed to the release candidate. Candidate package version is now `0.5.0rc1`, with draft release notes in `docs/RELEASE_NOTES_v0.5.0rc1.md`; final `0.5.0` packaging and publication remain blocked on parity and all release gates.
 - [ ] Release candidate promoted to `main` with a tagged release.
@@ -30,7 +30,7 @@ Updated: 2026-11-13
 - [x] PR #13 plugin hardening merged into the release candidate at `9958dd8` after every check passed. The mutation campaign passed: 0.9693 overall, 0.9663 safety/policy/execution, 0.9815 routing, zero unreviewed survivors; portable coverage fixes also passed Linux, Windows, macOS and supported Python CI.
 - [ ] PR #16 remains blocked by context-band accuracy 0.6667 < 0.90; no gate or label policy was changed.
 - [x] macOS CI is merged for Python 3.12 and Rust workspace/parity; all checks on PR #28 passed.
-- [ ] Rust R4 full CLI parity and race-safe SQLite initialization. The new `doctor_cli` probe does not yet replace the shipped Python doctor; its bundle contract remains partial.
+- [ ] Rust R4 full CLI parity. TASK-089 now serializes race-safe SQLite initialization in both runtimes, but the new `doctor_cli` probe does not yet replace the shipped Python doctor and its bundle contract remains partial.
 - [ ] Rust dashboard renderer/loopback server and Rust/Python feedback-stat parity merged via PR #30 at `bd98b6b`; the command remains a migration probe until the unified Rust CLI lands.
 - [ ] Rust observability redaction/safe-echo helpers and bounded `ureq`/rustls OpenAI Responses transport merged via PR #30; structured logging, request context, traceback handling, and OTel integration remain unported. Live credentials, CLI wiring, and Python/Rust end-to-end parity remain open.
 - [ ] Rust R5-R13 milestones and cross-platform parity. PR #30 added a bounded OpenAI Responses HTTPS transport; integration into the guarded execution command remains outstanding.
@@ -95,12 +95,13 @@ Updated: 2026-11-13
 - [x] TASK-085 aligns Rust quota adapter failures with Python `check_usage` exception-name reporting through a typed `LiveCheckError`. Offline differentials cover `TimeoutError`, `ConnectionError`, and `ValueError` while confirming provider messages stay private. Nine usage crate tests, 35 focused Python/compatibility tests, and the full workspace pass; strict Clippy and formatting pass. The full Python suite passes with 2,097 passed and 5 skipped at 92.52% line, 87.65% branch, and 91.42% combined coverage. Hosted confirmation is pending push.
 - [x] TASK-086 adds exact dashboard HTML differentials for empty/filled views, escaping, and truncation, and compares the live Rust server output against Python's real SQLite aggregates. Four focused dashboard checks and the full Python regression pass; Rust workspace tests, strict Clippy, formatting, and Ruff pass locally.
 - [x] TASK-087 makes Python and Rust doctor database checks read-only, with matching safe error categories and remedies for empty and corrupt databases. Thirty-eight focused diagnostic and Rust compatibility tests pass, along with 27 Rust CLI tests and strict Clippy. The full Python regression passes with 2,103 tests, 5 skips, and 91.41% combined coverage.
-- [x] TASK-088 bounds Python idempotency response retention to the same 16 MiB body budget as Rust. Thirty-seven focused Python/Rust compatibility and HTTP middleware tests plus all eight Rust limits crate tests pass; the full Python regression passes with 2,104 tests and 91.39% combined coverage.
+- [x] TASK-088 bounds Python idempotency response retention to the same 16 MiB body budget as Rust. Thirty-seven focused Python/Rust compatibility and HTTP middleware tests plus all eight Rust limits crate tests pass; its full Python regression passed with 2,104 tests and 91.39% combined coverage.
+- [x] TASK-089 serializes Python and Rust first-use SQLite schema creation/migration with an immediate transaction and in-lock schema rechecks. Sixteen simultaneous legacy-database connections pass in each runtime; focused cache mutations kill all regressions except one reviewed cleanup-only equivalence. Full Python regression passes with 2,113 tests and 91.43% combined coverage; hosted Windows/mutation confirmation will rerun after push.
 - [ ] TASK-056 adds the `agentrouter-evaluate` Rust CLI for listing/validating datasets, running fixture profiles, writing/rendering/comparing reports, availability, explicit external prepare blockers, and context-band generalization. Four smoke/differential tests pass. The Rust command does not yet replace the Python `agentrouter evaluate` surface or load real datasets, so CLI module parity remains Partial.
 - [x] PR #31 upgraded bundled SQLite to 3.54.1, replaced `unsafe-libyaml`, and raised the Rust minimum to 1.89; workspace tests, Clippy, security audit, and cross-platform CI passed before merge at `a246cf6`.
 - [x] Website product-truth fixes, font hierarchy/motion redesign, unused shadcn CLI removal, server limits/API tests, and website lint/build CI merged via PR #27. npm build/lint and production dependency audit passed; full npm audit still reports moderate dev-tool advisories.
 - [x] Benchmark evidence merged via PR #29: 12/12 routing gold scenarios and 15 focused tests; live latency/cost are explicitly not claimed.
-- [ ] Full Rust parity is not complete: R4 public CLI and race-safe SQLite work remains; HTTP/MCP, provider execution, plugins/skills, evaluation adapter base/runner/annotation, and R5-R13 remain. The full 77-file module inventory is in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md).
+- [ ] Full Rust parity is not complete: R4 public CLI and full storage-contract coverage remain; HTTP/MCP, provider execution, plugins/skills, evaluation adapter base/runner/annotation, and R5-R13 remain. The full 77-file module inventory is in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md).
 
 ## Needs Krish
 
@@ -108,15 +109,16 @@ Updated: 2026-11-13
 - OpenAI live validation: provide `OPENAI_API_KEY` through a local environment or a protected secret store and authorize one bounded Responses API smoke request, which may incur usage charges. Offline request/response fixtures are ready; no key is stored in the repository.
 - Production release/deployment: after the local and hosted release gates pass, provide the production hosting/domain credentials and authorize any paid infrastructure and deployment. The Rust server is loopback-only and no production deployment has run.
 
-Latest full verification for TASK-088: Python 3.12 passes 2,104 tests with 5
-skipped at 92.50% line, 87.61% branch, and 91.39% combined coverage. The Rust
-CLI's 27 tests, strict Clippy, formatting, Ruff, 38 focused diagnostic checks,
-37 focused limit/server checks, and eight Rust limits crate tests pass. Evidence
-is in `docs/COVERAGE_REPORT_2026-11-13.md`. macOS and Windows hosted checks are
-still pending on the pushed head. The unchanged release gate still fails at
-0.6667 against 0.90; live
-smoke skips without credentials. PR #16 remains promotion-blocked by the
-unchanged frozen context-band result and the human annotation requirement.
+Latest full local verification for TASK-089: Python 3.12 passes 2,113 tests
+with 5 skipped at 92.54% line, 87.66% branch, and 91.43% combined coverage.
+The full Rust workspace, strict Clippy, Rust/Python formatting, Ruff, configured
+Bandit, 141 focused cache/server checks, four dashboard compatibility checks,
+and the 44-mutant cache-focused run pass; one cleanup-only equivalence is
+reviewed and recorded. Evidence is in `docs/COVERAGE_REPORT_2026-11-14.md`.
+Hosted Windows and full mutation confirmation await the push of this head. The
+unchanged release gate still fails at 0.6667 against 0.90; live smoke skips
+without credentials. PR #16 remains promotion-blocked by the unchanged frozen
+context-band result and the human annotation requirement.
 
 PR #16 was reviewed against its release contract and code standards: no
 separate implementation defect was identified in the reviewed diff, but the
