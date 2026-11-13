@@ -18,6 +18,12 @@ All notable changes to AgentRouter OS. Format loosely follows
   byte-stable serving.
 - Run all TypeScript SDK operations against the Rust HTTP process as part of
   the Linux, Windows, and macOS Rust compatibility matrix.
+- Add a Rust stdio MCP server for the Python server's five read-only and
+  dry-run tools, with protocol/tool parity coverage, static JSON Schema
+  contracts, and bounded newline-framed input. The Python CLI remains the
+  supported entry point while Rust integration parity continues.
+- Exercise the Python SDK against the Rust HTTP process for authenticated
+  requests, routing, feedback, decision lookup, and dry-run responses.
 - Port the HTTP service business layer to `agentrouter-api` for model/host
   listing, classification, routing, decision lookup, feedback, and dry-run
   previews. It depends directly on routing, host, registry, classifier, and

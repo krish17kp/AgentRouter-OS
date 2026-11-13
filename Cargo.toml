@@ -4,6 +4,7 @@ members = [
     "rust/agentrouter-core",
     "rust/agentrouter-limits",
     "rust/agentrouter-api",
+    "rust/agentrouter-mcp",
     "rust/agentrouter-registry",
     "rust/agentrouter-classifier",
     "rust/agentrouter-policy",

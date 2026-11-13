@@ -431,6 +431,11 @@ Register it with a Claude Code / MCP client, e.g.:
 { "mcpServers": { "agentrouter": { "command": "agentrouter", "args": ["mcp"] } } }
 ```
 
+The Rust stdio server is available as a migration preview from a source
+checkout; it has not replaced the supported Python CLI entry point. See
+[`docs/RUST_MCP_SERVER.md`](docs/RUST_MCP_SERVER.md) for its local setup and
+parity scope.
+
 ---
 
 ## Troubleshooting

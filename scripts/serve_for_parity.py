@@ -29,8 +29,6 @@ import subprocess
 import sys
 import tempfile
 import time
-import urllib.error
-import urllib.request
 from pathlib import Path
 
 _HOME_PREFIX = "agentrouter-parity-"
@@ -118,7 +116,7 @@ def _serve_rust(home: Path) -> int:
 
     environment = os.environ.copy()
     environment.pop("AGENTROUTER_API_KEY", None)
-    _RUST_SERVER = subprocess.Popen(
+    _RUST_SERVER = subprocess.Popen(  # nosec B603: fixed workspace binary and argv; shell is disabled
         [str(executable), "--bind", f"127.0.0.1:{port}", "--home", str(home)],
         cwd=Path(__file__).resolve().parents[1],
         env=environment,
@@ -138,10 +136,14 @@ def _serve_rust(home: Path) -> int:
             print(f"Rust API server exited during startup: {error}", file=sys.stderr)
             return 1
         try:
-            with urllib.request.urlopen(f"{url}/health", timeout=0.25):
-                print(f"PARITY_SERVER_URL={url}", flush=True)
-                return _RUST_SERVER.wait()
-        except (OSError, urllib.error.URLError):
+            with socket.create_connection(("127.0.0.1", port), timeout=0.25) as connection:
+                connection.sendall(
+                    b"GET /health HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n"
+                )
+                if connection.recv(128).startswith(b"HTTP/1.1 200 "):
+                    print(f"PARITY_SERVER_URL={url}", flush=True)
+                    return _RUST_SERVER.wait()
+        except OSError:
             time.sleep(0.1)
 
     print("Rust API server did not become ready within 30 seconds", file=sys.stderr)

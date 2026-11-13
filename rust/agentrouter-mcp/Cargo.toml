@@ -1,0 +1,16 @@
+[package]
+name = "agentrouter-mcp"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Safe stdio Model Context Protocol server for AgentRouter OS"
+
+[dependencies]
+agentrouter-api = { path = "../agentrouter-api" }
+agentrouter-core = { path = "../agentrouter-core" }
+serde_json = "1.0.128"
+
+[[bin]]
+name = "agentrouter-mcp-server"
+path = "src/main.rs"

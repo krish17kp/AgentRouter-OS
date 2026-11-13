@@ -13,10 +13,10 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 2,008 passed, 4 skipped |
-| Line coverage | 92.46% (6,626 / 7,166 statements) |
+| Python regression | 2,005 passed, 5 skipped |
+| Line coverage | 92.49% (6,628 / 7,166 statements) |
 | Branch coverage | 87.61% (1,845 / 2,106 branch outcomes) |
-| Combined coverage reported by pytest-cov | 91.36% |
+| Combined coverage reported by pytest-cov | 91.38% |
 | Project line / branch thresholds | 90% / 85% — both passed |
 | CI total-coverage threshold | 80% — passed |
 | Warnings | 1 Starlette/httpx deprecation warning |
@@ -49,7 +49,13 @@ Rust safety checks cover linked paths and no-clobber restoration. The Rust SDK
 has local HTTP fixture tests for request cleanup, API-key handling, API errors,
 and redirect refusal. Classification schema tests compare Python/Rust JSON
 round-tripping and rejection of unknown fields.
-The candidate package version is `0.5.0rc1`. The four skips are
+The candidate package version is `0.5.0rc1`. The five skips are
 environment-dependent; CI is responsible for Windows and macOS confirmation.
 Coverage does not replace mutation, security, parity, or release-evaluation
 gates.
+
+This run includes two Python SDK end-to-end checks against the Rust HTTP
+process, covering persisted and no-log routing, feedback, decision lookup,
+dry-run, API-key authentication, and typed errors. It also includes the MCP
+stdio parity check against the Python FastMCP 1.30.0 server for negotiated
+protocol version, capabilities, all five tool schemas, and structured outputs.

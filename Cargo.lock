@@ -114,6 +114,15 @@ name = "agentrouter-limits"
 version = "0.1.0"
 
 [[package]]
+name = "agentrouter-mcp"
+version = "0.1.0"
+dependencies = [
+ "agentrouter-api",
+ "agentrouter-core",
+ "serde_json",
+]
+
+[[package]]
 name = "agentrouter-policy"
 version = "0.1.0"
 dependencies = [

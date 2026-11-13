@@ -288,6 +288,47 @@ def test_rust_http_server_authentication_and_cors_allowlist(home):
             assert response.headers.get("X-Request-ID")
 
 
+def test_python_sdk_round_trips_against_rust_http_server(home):
+    from agentrouter.sdk import AgentRouterClient, AgentRouterError
+
+    with _server(home) as base, AgentRouterClient(base) as client:
+        assert client.health() == {"status": "ok"}
+        assert client.ready() == {"status": "ready"}
+        assert client.models()
+        assert any(row["host"] == "manual" for row in client.hosts())
+        assert "task_type" in client.classify("write a short guide", context_tokens=500)
+
+        routed = client.route("summarize a report", no_log=True)
+        assert routed["decision_id"] is None
+
+        routed = client.route("write a router guide")
+        decision_id = routed["decision_id"]
+        assert decision_id
+        assert client.get_decision(decision_id)["decision_id"] == decision_id
+        assert client.feedback(decision_id, 5, note="looks good")["recorded"] is True
+        assert client.execute_dry_run(decision_id)["would_execute"] is False
+
+        with pytest.raises(AgentRouterError) as missing:
+            client.get_decision("d_99999")
+        assert missing.value.status_code == 404 and missing.value.code == "not_found"
+        with pytest.raises(AgentRouterError) as invalid:
+            client.feedback(decision_id, 99)
+        assert invalid.value.status_code == 422 and invalid.value.code == "validation_error"
+
+
+def test_python_sdk_authenticates_to_rust_http_server(home):
+    from agentrouter.sdk import AgentRouterClient, AgentRouterError
+
+    with _server(home, {"AGENTROUTER_API_KEY": "rust-sdk-secret"}) as base:
+        with AgentRouterClient(base) as unauthenticated:
+            with pytest.raises(AgentRouterError) as error:
+                unauthenticated.models()
+        assert error.value.status_code == 401 and error.value.code == "unauthorized"
+
+        with AgentRouterClient(base, api_key="rust-sdk-secret") as authenticated:
+            assert authenticated.models()
+
+
 def test_rust_http_server_rate_limit_and_idempotency_are_bounded(home):
     with _server(
         home,

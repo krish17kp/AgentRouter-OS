@@ -69,7 +69,7 @@ release authority until the full set is complete.
 | `agentrouter/harness.py` | `agentrouter-cli::harness` | Parity |
 | `agentrouter/hosts.py` | `agentrouter-hosts` | Parity |
 | `agentrouter/learning.py` | `agentrouter-learning::learned_weights` | Parity |
-| `agentrouter/mcp_server.py` | `—` | Not ported |
+| `agentrouter/mcp_server.py` | `agentrouter-mcp::{Server,run_stdio}` | Partial |
 | `agentrouter/observability.py` | `agentrouter-cli::observability` | Partial |
 | `agentrouter/openai_adapter.py` | `agentrouter-cli::openai` | Partial |
 | `agentrouter/plugins.py` | `—` | Not ported |
@@ -99,6 +99,10 @@ release authority until the full set is complete.
   responsibilities. The CLI, HTTP, MCP, plugin/skill, evaluation/annotation,
   diagnostic-bundle, and reliability surfaces still need their Rust contract
   implementations and differential tests.
+- The Rust MCP process implements the five Python tools and stdio lifecycle;
+  protocol/tool and result differentials cover all five. It is not wired into
+  the unified Rust CLI, and the broader cross-version MCP lifecycle/error
+  contract remains under compatibility review, so the module is Partial.
 - Rust `Classification` now rejects unknown fields and has round-trip and
   rejection checks against Pydantic. Python's unbounded integer and scalar
   coercion behavior is not fully represented by the Rust integer/serde types,
