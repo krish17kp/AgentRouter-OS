@@ -291,9 +291,7 @@ def _rust_surface_diff(old: dict, new: dict) -> dict:
                 "paths": {"/x": {"get": {"security": [{"ApiKey": []}]}}},
             },
             {
-                "paths": {
-                    "/x": {"get": {"security": [{"ApiKey": []}, {"OAuth": []}]}}
-                },
+                "paths": {"/x": {"get": {"security": [{"ApiKey": []}, {"OAuth": []}]}}},
             },
         ),
         (
@@ -355,6 +353,45 @@ def _rust_surface_diff(old: dict, new: dict) -> dict:
         (
             {"paths": {"/x": {"get": {"security": [{"ApiKey": []}]}}}},
             {"paths": {"/x": {"get": {"security": []}}}},
+        ),
+        (
+            {
+                "paths": {
+                    "/x": {
+                        "get": {
+                            "parameters": [
+                                {"name": "q", "in": "query", "required": False},
+                                {"name": "old", "in": "header", "required": True},
+                            ]
+                        }
+                    }
+                }
+            },
+            {
+                "paths": {
+                    "/x": {
+                        "get": {
+                            "parameters": [
+                                {"name": "q", "in": "query", "required": True},
+                                {"name": "cookie", "in": "cookie", "required": False},
+                                {"name": "id", "in": "path", "required": True},
+                            ]
+                        }
+                    }
+                }
+            },
+        ),
+        (
+            {
+                "paths": {
+                    "/x": {"get": {"parameters": [{"name": "q", "in": "query", "required": True}]}}
+                }
+            },
+            {
+                "paths": {
+                    "/x": {"get": {"parameters": [{"name": "q", "in": "query", "required": False}]}}
+                }
+            },
         ),
         (
             {"paths": {"/x": {"get": {"summary": "", "description": None}}}},

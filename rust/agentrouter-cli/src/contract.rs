@@ -8,7 +8,7 @@
 //! it must not be used as the compatibility gate.
 
 use serde_json::{json, Map, Value};
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fmt;
 use std::fmt::Write as _;
 use std::fs;
@@ -240,6 +240,7 @@ pub fn diff_contracts_surface(old: &Value, new: &Value) -> Value {
                 &location,
                 &mut changes,
             );
+            diff_parameters(old_operation, new_operation, &location, &mut changes);
 
             let old_id = old_operation.get("operationId");
             let new_id = new_operation.get("operationId");
@@ -493,6 +494,92 @@ fn request_body_required(value: Option<&Value>) -> bool {
         .and_then(Value::as_object)
         .and_then(|object| object.get("required"))
         .is_some_and(python_truthy)
+}
+
+fn diff_parameters(
+    old_operation: &Map<String, Value>,
+    new_operation: &Map<String, Value>,
+    location: &str,
+    changes: &mut Vec<SurfaceChange>,
+) {
+    let before = parameter_index(old_operation);
+    let after = parameter_index(new_operation);
+    let parameter_location = format!("{location}.parameters");
+
+    for key in before.keys().filter(|key| !after.contains_key(*key)) {
+        add_surface_change(
+            changes,
+            "breaking",
+            "parameter_removed",
+            format!("{parameter_location}.{}", key.1),
+            format!("{} parameter removed", key.0),
+        );
+    }
+    for key in after.keys().filter(|key| !before.contains_key(*key)) {
+        let parameter = after[key];
+        let required = parameter.get("required").is_some_and(python_truthy);
+        add_surface_change(
+            changes,
+            if required { "breaking" } else { "additive" },
+            if required {
+                "required_parameter_added"
+            } else {
+                "optional_parameter_added"
+            },
+            format!("{parameter_location}.{}", key.1),
+            format!("new {} parameter", key.0),
+        );
+    }
+    for key in before.keys().filter(|key| after.contains_key(*key)) {
+        let was_required = before[key].get("required").is_some_and(python_truthy);
+        let is_required = after[key].get("required").is_some_and(python_truthy);
+        if was_required == is_required {
+            continue;
+        }
+        let became_required = is_required;
+        add_surface_change(
+            changes,
+            if became_required {
+                "breaking"
+            } else {
+                "additive"
+            },
+            if became_required {
+                "parameter_became_required"
+            } else {
+                "parameter_became_optional"
+            },
+            format!("{parameter_location}.{}", key.1),
+            if became_required {
+                "optional -> required"
+            } else {
+                "required -> optional"
+            },
+        );
+    }
+}
+
+fn parameter_index(
+    operation: &Map<String, Value>,
+) -> BTreeMap<(String, String), &Map<String, Value>> {
+    operation
+        .get("parameters")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|parameter| {
+            let object = parameter.as_object()?;
+            let name = object.get("name")?;
+            let key = (
+                object
+                    .get("in")
+                    .map(|value| python_display(Some(value)))
+                    .unwrap_or_else(|| "None".to_owned()),
+                python_display(Some(name)),
+            );
+            Some((key, object))
+        })
+        .collect()
 }
 
 fn diff_operation_security(

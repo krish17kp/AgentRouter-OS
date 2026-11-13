@@ -109,9 +109,10 @@ release authority until the full set is complete.
   invalid references, and baseline failures. A separately named surface-diff
   probe covers versions, server URLs, paths/methods, selected operation
   metadata, operation authentication requirements and scheme definitions,
-  request-body requiredness, response status additions/removals/refinements,
-  and summary/description changes. It intentionally omits schema, parameter,
-  and media-type analysis and is not suitable as a compatibility gate.
+  parameter add/remove/requiredness changes, request-body requiredness,
+  response status additions/removals/refinements, and summary/description
+  changes. It intentionally omits parameter schema, general schema, and
+  media-type analysis and is not suitable as a compatibility gate.
   Symlink/hardlink-safe artifact export, manifest provenance, the full semantic
   compatibility checker, and CLI integration remain Python-only.
 - The Rust MCP process implements the five Python tools and stdio lifecycle;
