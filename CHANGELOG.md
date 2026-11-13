@@ -6,6 +6,9 @@ All notable changes to AgentRouter OS. Format loosely follows
 ## [Unreleased]
 
 ### Changed
+- Add the Rust local-service SDK client for health, readiness, models, hosts,
+  classification, routing, decision lookup, feedback and dry-run execution;
+  request cleanup and structured API errors have offline HTTP fixture tests.
 - Extend Rust catalog operations with provenance-aware status summaries,
   sorted generated-catalog listing, and guarded rollback/restore; Python/Rust
   differentials cover listing and rollback, while restore refuses linked files

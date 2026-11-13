@@ -81,7 +81,7 @@ release authority until the full set is complete.
 | `agentrouter/reliability/soak.py` | `—` | Not ported |
 | `agentrouter/safety.py` | `agentrouter-policy` | Parity |
 | `agentrouter/schema.py` | `agentrouter-core + agentrouter-registry` | Partial |
-| `agentrouter/sdk.py` | `—` | Not ported |
+| `agentrouter/sdk.py` | `agentrouter-cli::sdk` | Partial |
 | `agentrouter/server/__init__.py` | `agentrouter-evaluation::package_markers::SERVER_PUBLIC_EXPORTS` | Parity |
 | `agentrouter/server/app.py` | `—` | Not ported |
 | `agentrouter/server/limits.py` | `agentrouter-cli::limits` | Partial |
@@ -132,6 +132,10 @@ release authority until the full set is complete.
   refusal and no-clobber restoration. Python-compatible behavior is
   differentially tested; typed `CatalogError` and all error-message edge cases
   remain open, so the module is still Partial.
+- The Rust SDK client covers Python endpoint paths, payload cleanup, an
+  optional API-key header, timeout configuration and structured HTTP errors.
+  The local HTTP server and end-to-end client/server contract remain
+  Python-only; redirects are disabled so a key cannot be forwarded elsewhere.
 - Performance scoring and classification/routing timing now run in Rust for
   caller-supplied models and tasks. Seed loading and injected classifier
   behavior remain Python-side; latency values are machine-dependent.

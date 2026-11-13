@@ -29,6 +29,7 @@ pub mod harness;
 pub mod limits;
 pub mod observability;
 pub mod openai;
+pub mod sdk;
 
 /// Mirrors `safety._CHECKLISTS` + `safety.gates_for`.
 pub fn gates_for(cls: &Classification) -> Value {
