@@ -36,7 +36,7 @@ release authority until the full set is complete.
 | `agentrouter/dashboard.py` | `agentrouter-cli::dashboard` | Partial |
 | `agentrouter/diagnostics.py` | `agentrouter-cli::diagnostics` | Partial |
 | `agentrouter/engine.py` | `agentrouter-routing` | Parity |
-| `agentrouter/evaluate.py` | `—` | Not ported |
+| `agentrouter/evaluate.py` | `agentrouter-evaluation::legacy_gold` | Partial |
 | `agentrouter/evaluation/__init__.py` | `agentrouter-evaluation::evaluation_api` | Parity |
 | `agentrouter/evaluation/adapters/__init__.py` | `agentrouter-evaluation::package_markers::ADAPTERS_PUBLIC_EXPORTS` | Parity |
 | `agentrouter/evaluation/adapters/agentrouter_gold.py` | `agentrouter-evaluation::AgentRouterGoldAdapter` | Parity |
@@ -111,6 +111,11 @@ release authority until the full set is complete.
   startup/shutdown, arbitrary Python request factories, or complete transport
   exception naming; those Python harness and CLI contracts remain Partial. See
   [`RUST_RELIABILITY.md`](RUST_RELIABILITY.md) for the supported surface.
+- The historical classifier and routing-gold evaluator, report rendering, and
+  artifact writing are implemented in Rust and differentially checked against
+  the full checked-in gold sets. Python's typed `GoldError` surface and exact
+  JSON text escaping still differ; the module remains Partial. See
+  [`RUST_LEGACY_GOLD.md`](RUST_LEGACY_GOLD.md).
 - Rust `Classification` now rejects unknown fields and has round-trip and
   rejection checks against Pydantic. Python's unbounded integer and scalar
   coercion behavior is not fully represented by the Rust integer/serde types,

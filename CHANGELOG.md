@@ -31,6 +31,10 @@ All notable changes to AgentRouter OS. Format loosely follows
 - Add a Rust reliability crate for bounded loopback load runs and soak reports,
   with Python/Rust checks for result summaries and request-ID handling. The
   Python server lifecycle and arbitrary request factory remain Python-owned.
+- Port the legacy classifier and routing-gold evaluators, plus Markdown and CSV
+  artifact writers, to the Rust evaluation crate. Full gold-set differential
+  tests preserve the historical diagnostic scope; canonical release gates are
+  unchanged.
 - Port the HTTP service business layer to `agentrouter-api` for model/host
   listing, classification, routing, decision lookup, feedback, and dry-run
   previews. It depends directly on routing, host, registry, classifier, and

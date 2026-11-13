@@ -4,10 +4,10 @@ Updated: 2026-11-13
 
 ## Definition of done
 
-- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PRs #27–#33 are merged; PR #16 is the sole open PR. Pushed head `ddbe236` passes Rust workspace/MSRV and non-skipping Python/Rust checks on all three operating systems; the security scan and Python 3.10–3.13 checks pass. The release gate still fails because frozen context-band accuracy is 0.6667 < 0.90; live smoke skips without credentials. Remaining platform jobs are checked again after each push.
+- [ ] Every open PR reviewed, green on Linux/Windows/macOS and Python/Rust where applicable, and merged into the release candidate. PRs #27–#33 are merged; PR #16 is the sole open PR. Pushed head `051d02d` passes Rust workspace/MSRV and non-skipping Python/Rust checks on Linux, Windows, and macOS, the security scan, and Python 3.10–3.13. The release gate still fails because frozen context-band accuracy is 0.6667 < 0.90; live smoke skips without credentials. The new evaluator checks are pending on this next push.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md); current gaps are explicit, and only modules with full-module differential tests are marked parity (35 modules meet that bar after TASK-051).
-- [x] Full Python suite: 2,031 passed, 5 skipped; 92.49% line (6,628/7,166), 87.61% branch (1,845/2,106), and 91.38% combined coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; evidence is in `docs/COVERAGE_REPORT_2026-11-13.md`.
+- [x] Full Python suite: 2,035 passed, 5 skipped; 92.49% line (6,628/7,166), 87.61% branch (1,845/2,106), and 91.38% combined coverage on Linux/Python 3.12.15. The unchanged 90%/85% quality thresholds pass; evidence is in `docs/COVERAGE_REPORT_2026-11-13.md`.
 - [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations; the Rust release benchmark now runs the same 10/100/1,000 candidate fleets, with a paired local p50 ratio of 2.70×–3.25× under stated synthetic conditions.
 - [x] Changelog, coverage evidence, and local latency measurements are committed to the release candidate. Candidate package version is now `0.5.0rc1`, with draft release notes in `docs/RELEASE_NOTES_v0.5.0rc1.md`; final `0.5.0` packaging and publication remain blocked on parity and all release gates.
 - [ ] Release candidate promoted to `main` with a tagged release.
@@ -82,6 +82,7 @@ Updated: 2026-11-13
 - [x] TASK-072 adds `agentrouter-mcp`, a bounded stdio JSON-RPC server implementing the five Python MCP tools. The official MCP client confirms protocol negotiation, capabilities, tool schemas, structured results, and safe unknown-tool errors; the 4 MiB input-frame bound has a resynchronization test. The full Python suite, full Rust workspace tests, strict Clippy, formatting, and local protocol parity pass. Hosted checks are pending. The Python CLI remains supported; unified Rust CLI wiring is open.
 - [x] TASK-073 adds offline OpenRouter/OpenAI model conversion and payload filtering in `agentrouter-registry::refresh`. Twenty-one Python/Rust differentials compare complete generated model records, all current OpenAI families, tier thresholds, filtering, and warning behavior. Full Python suite, Rust workspace tests, strict Clippy, formatting, and focused parity pass locally. Network retrieval, key handling, atomic registry writes, provenance, deprecation reporting, and CLI wiring remain Python-owned; hosted checks are pending.
 - [x] TASK-074 adds Rust load and soak result models and a concurrent HTTP runner. Five Python/Rust compatibility checks cover summaries, a live loopback run, unique request IDs, redirect refusal, and soak resource samples. The full Python suite, full Rust workspace tests, strict Clippy, formatting, Ruff, and Bandit pass locally. Rust server lifecycle and complete transport-error parity remain open; cross-platform hosted checks are pending.
+- [x] TASK-075 ports the historical classifier and routing-gold evaluator, score summaries, Markdown/CSV artifacts, and `legacy-gold`/`routing-gold` Rust CLI commands. Four Python/Rust tests compare all classifier and routing fixtures, artifact output, and the CLI. Remaining typed `GoldError` and JSON escaping differences keep the Python module Partial. Hosted checks are pending.
 - [ ] TASK-056 adds the `agentrouter-evaluate` Rust CLI for listing/validating datasets, running fixture profiles, writing/rendering/comparing reports, availability, explicit external prepare blockers, and context-band generalization. Four smoke/differential tests pass. The Rust command does not yet replace the Python `agentrouter evaluate` surface or load real datasets, so CLI module parity remains Partial.
 - [x] PR #31 upgraded bundled SQLite to 3.54.1, replaced `unsafe-libyaml`, and raised the Rust minimum to 1.89; workspace tests, Clippy, security audit, and cross-platform CI passed before merge at `a246cf6`.
 - [x] Website product-truth fixes, font hierarchy/motion redesign, unused shadcn CLI removal, server limits/API tests, and website lint/build CI merged via PR #27. npm build/lint and production dependency audit passed; full npm audit still reports moderate dev-tool advisories.
@@ -94,15 +95,15 @@ Updated: 2026-11-13
 - OpenAI live validation: provide `OPENAI_API_KEY` through a local environment or a protected secret store and authorize one bounded Responses API smoke request, which may incur usage charges. Offline request/response fixtures are ready; no key is stored in the repository.
 - Production release/deployment: after the local and hosted release gates pass, provide the production hosting/domain credentials and authorize any paid infrastructure and deployment. The Rust server is loopback-only and no production deployment has run.
 
-Latest local checks on this reliability increment: Python 3.12 full suite 2,031
+Latest local checks on the legacy-gold increment: Python 3.12 full suite 2,035
 passed and 5 skipped with 92.49% line, 87.61% branch, and 91.38% combined
 coverage; full Rust workspace tests, strict Clippy, formatting, MCP protocol,
-provider-refresh differential tests, SDK-to-Rust HTTP tests, Bandit, and Ruff
-pass. Reliability and refresh slices need hosted cross-platform confirmation.
-Pushed head `43c30f7` passes Rust workspace/MSRV, Python/Rust on Linux, Windows,
-and macOS, security scanning, and Python 3.10–3.13 jobs. The frozen
-context-band accuracy remains 0.6667 against the unchanged 0.90 threshold;
-live smoke skips without credentials.
+provider-refresh, reliability, and legacy-gold differentials, SDK-to-Rust HTTP
+tests, Bandit, and Ruff pass. Hosted checks for this increment are pending.
+Pushed head `051d02d` passes cross-platform Rust/MSRV, Python/Rust, Python 3.10–3.13,
+site, and security checks. The frozen context-band release gate still fails at
+0.6667 against the unchanged 0.90 threshold; live smoke skips without
+credentials.
 PR #16 remains promotion-blocked by the unchanged frozen
 context-band result and the human annotation requirement.
 

@@ -16,6 +16,7 @@ pub mod annotation_store;
 pub mod context_bands;
 pub mod evaluation_api;
 pub mod evaluators_api;
+pub mod legacy_gold;
 pub mod package_markers;
 pub mod registry_api;
 pub mod runner;

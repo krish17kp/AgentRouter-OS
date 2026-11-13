@@ -215,3 +215,7 @@ path = "src/bin/evaluation_registered_runner_from_json.rs"
 [[bin]]
 name = "agentrouter-evaluate"
 path = "src/bin/agentrouter_evaluate.rs"
+
+[[bin]]
+name = "legacy_gold_from_json"
+path = "src/bin/legacy_gold_from_json.rs"

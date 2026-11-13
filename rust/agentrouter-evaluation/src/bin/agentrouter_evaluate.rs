@@ -38,7 +38,7 @@ fn runtime_environment(root: &Path) -> Value {
 }
 
 fn usage() -> &'static str {
-    "usage: agentrouter-evaluate <list-datasets|validate-dataset|run|report|compare|prepare|status|context-band-generalization> [options]"
+    "usage: agentrouter-evaluate <legacy-gold|routing-gold|list-datasets|validate-dataset|run|report|compare|prepare|status|context-band-generalization> [options]"
 }
 
 fn parse_flag(args: &mut impl Iterator<Item = String>, flag: &str) -> Result<String, String> {
@@ -61,6 +61,117 @@ fn result_code(result: &Value) -> i32 {
     } else {
         1
     }
+}
+
+fn legacy_gold(args: impl Iterator<Item = String>) -> Result<i32, String> {
+    let root = project_root();
+    let mut gold = root.join("agentrouter/benchmarks/classifier_gold_v1.yaml");
+    let mut out_dir = PathBuf::from("artifacts");
+    let mut json_output = false;
+    let mut no_artifacts = false;
+    let mut args = args;
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "--gold" => gold = PathBuf::from(parse_flag(&mut args, "--gold")?),
+            "--out-dir" => out_dir = PathBuf::from(parse_flag(&mut args, "--out-dir")?),
+            "--json" => json_output = true,
+            "--no-artifacts" => no_artifacts = true,
+            flag => return Err(format!("unknown option '{flag}'")),
+        }
+    }
+    let report = agentrouter_evaluation::legacy_gold::evaluate(&gold)?;
+    if !no_artifacts {
+        for path in agentrouter_evaluation::legacy_gold::write_artifacts(&report, &out_dir)? {
+            println!("Wrote {}", path.display());
+        }
+    }
+    if json_output {
+        let mut slim = report.clone();
+        if let Some(object) = slim.as_object_mut() {
+            object.remove("cases");
+        }
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&slim).map_err(|error| error.to_string())?
+        );
+        return Ok(0);
+    }
+    println!(
+        "\nCases: {}   Overall grade: {}/100",
+        report["n_cases"], report["overall_grade"]
+    );
+    println!(
+        "Legacy gold-set thresholds: {} (not canonical release readiness)",
+        if report["release_ready"] == true {
+            "PASS"
+        } else {
+            "FAIL"
+        }
+    );
+    println!("\nDimension scores (weight x score):");
+    if let (Some(weights), Some(scores)) = (
+        report["grade_weights"].as_object(),
+        report["dimension_scores"].as_object(),
+    ) {
+        for (dimension, weight) in weights {
+            println!(
+                "  {dimension:<11} w={:<2} score={:.3}",
+                weight.as_u64().unwrap_or_default(),
+                scores[dimension].as_f64().unwrap_or_default()
+            );
+        }
+    }
+    println!(
+        "\nTask-type macro F1: {:.3}   high-risk recall: {}   tool F1: {:.3}   approval acc: {:.3}",
+        report["task_type"]["macro_f1"].as_f64().unwrap_or_default(),
+        report["risk"]["high_risk_recall"],
+        report["tools"]["f1"].as_f64().unwrap_or_default(),
+        report["approval"]["accuracy"].as_f64().unwrap_or_default()
+    );
+    println!("\nRelease thresholds:");
+    if let Some(thresholds) = report["release_thresholds"].as_object() {
+        for (name, passed) in thresholds {
+            println!(
+                "  [{}] {name}",
+                if passed == true { "PASS" } else { "FAIL" }
+            );
+        }
+    }
+    println!(
+        "Failed cases: {} (see artifacts/failures.csv)",
+        report["failures"].as_array().map_or(0, Vec::len)
+    );
+    Ok(0)
+}
+
+fn routing_gold(args: impl Iterator<Item = String>) -> Result<i32, String> {
+    let root = project_root();
+    let mut gold = root.join("agentrouter/benchmarks/routing_gold_v1.yaml");
+    let mut json_output = false;
+    let mut args = args;
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "--gold" => gold = PathBuf::from(parse_flag(&mut args, "--gold")?),
+            "--json" => json_output = true,
+            flag => return Err(format!("unknown option '{flag}'")),
+        }
+    }
+    let report = agentrouter_evaluation::legacy_gold::evaluate_routing(&gold)?;
+    if json_output {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&report).map_err(|error| error.to_string())?
+        );
+    } else {
+        println!(
+            "Routing scenarios passed: {}/{}",
+            report["passed"], report["n_scenarios"]
+        );
+        for failure in report["failures"].as_array().into_iter().flatten() {
+            println!("FAIL {} {}", failure["id"], failure["checks"]);
+        }
+    }
+    Ok(if report["all_pass"] == true { 0 } else { 1 })
 }
 
 fn list_datasets(json_output: bool) -> Result<i32, String> {
@@ -232,6 +343,8 @@ fn run() -> Result<i32, String> {
     let mut args = std::env::args().skip(1);
     let command = args.next().ok_or_else(|| usage().to_owned())?;
     match command.as_str() {
+        "legacy-gold" => legacy_gold(args),
+        "routing-gold" => routing_gold(args),
         "list-datasets" => {
             let json_output = args.any(|arg| arg == "--json");
             list_datasets(json_output)
