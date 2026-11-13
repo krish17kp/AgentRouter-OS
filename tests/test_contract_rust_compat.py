@@ -283,6 +283,80 @@ def _rust_surface_diff(old: dict, new: dict) -> dict:
             {"paths": {"/x": {"get": {"responses": {"401": {}, "404": {}}}}}},
         ),
         (
+            {"servers": [{"url": "/"}], "paths": {}},
+            {"servers": [{"url": "/api"}], "paths": {}},
+        ),
+        (
+            {
+                "paths": {"/x": {"get": {"security": [{"ApiKey": []}]}}},
+            },
+            {
+                "paths": {
+                    "/x": {"get": {"security": [{"ApiKey": []}, {"OAuth": []}]}}
+                },
+            },
+        ),
+        (
+            {"paths": {"/x": {"get": {}}}},
+            {"paths": {"/x": {"get": {"security": [{"ApiKey": []}]}}}},
+        ),
+        (
+            {
+                "components": {
+                    "securitySchemes": {
+                        "ApiKey": {
+                            "type": "apiKey",
+                            "name": "X-Key",
+                            "in": "header",
+                            "flows": {
+                                "implicit": {
+                                    "authorizationUrl": "https://old.example/auth",
+                                    "scopes": {"read": "Read"},
+                                }
+                            },
+                        },
+                        "Legacy": {"type": "http", "scheme": "basic"},
+                    }
+                },
+                "paths": {},
+            },
+            {
+                "components": {
+                    "securitySchemes": {
+                        "ApiKey": {
+                            "type": "apiKey",
+                            "name": "Authorization",
+                            "in": "header",
+                            "flows": {
+                                "implicit": {
+                                    "authorizationUrl": "https://new.example/auth",
+                                    "scopes": {"read": "Read"},
+                                }
+                            },
+                        },
+                        "Bearer": {"type": "http", "scheme": "bearer"},
+                    }
+                },
+                "paths": {},
+            },
+        ),
+        (
+            {
+                "paths": {
+                    "/x": {
+                        "get": {
+                            "security": [{"ApiKey": []}, {"OAuth": []}],
+                        }
+                    }
+                }
+            },
+            {"paths": {"/x": {"get": {"security": [{"ApiKey": []}]}}}},
+        ),
+        (
+            {"paths": {"/x": {"get": {"security": [{"ApiKey": []}]}}}},
+            {"paths": {"/x": {"get": {"security": []}}}},
+        ),
+        (
             {"paths": {"/x": {"get": {"summary": "", "description": None}}}},
             {"paths": {"/x": {"get": {"summary": None, "description": ""}}}},
         ),

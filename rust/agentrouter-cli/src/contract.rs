@@ -4,8 +4,8 @@
 //! stable serialization, and trusted-baseline loading. Semantic compatibility
 //! classification and safe artifact export remain Python-owned until their
 //! complete contracts are ported and differentially checked. The surface-only
-//! diff below intentionally omits parameter, schema, media-type, and security
-//! analysis; it must not be used as the compatibility gate.
+//! diff below intentionally omits parameter, schema, and media-type analysis;
+//! it must not be used as the compatibility gate.
 
 use serde_json::{json, Map, Value};
 use std::collections::{BTreeSet, HashSet};
@@ -143,8 +143,8 @@ pub fn load_baseline(root: &Path) -> Result<Value, BaselineError> {
 }
 
 /// Compare the OpenAPI document and operation surface while the complete
-/// schema, parameter, media-type, and security analyzer is being ported.
-/// Results use the same report shape and change ordering as Python's checker.
+/// schema, parameter, and media-type analyzer is being ported. Results use the
+/// same report shape and change ordering as Python's checker.
 pub fn diff_contracts_surface(old: &Value, new: &Value) -> Value {
     let mut changes = Vec::<SurfaceChange>::new();
     let old_version = python_object_field(old, "info", "version");
@@ -159,6 +159,21 @@ pub fn diff_contracts_surface(old: &Value, new: &Value) -> Value {
                 "{} -> {}",
                 python_display(old_version),
                 python_display(new_version)
+            ),
+        );
+    }
+
+    diff_security_schemes(old, new, &mut changes);
+    if !python_or_empty_equal(old.get("servers"), new.get("servers")) {
+        add_surface_change(
+            &mut changes,
+            "breaking",
+            "servers_changed",
+            "servers",
+            format!(
+                "{} -> {} (every URL moves)",
+                python_display(old.get("servers")),
+                python_display(new.get("servers"))
             ),
         );
     }
@@ -216,6 +231,15 @@ pub fn diff_contracts_surface(old: &Value, new: &Value) -> Value {
             let location = format!("{path}.{method}");
             let old_operation = object_or_empty(old_operations.get(method));
             let new_operation = object_or_empty(new_operations.get(method));
+
+            diff_operation_security(
+                old_operation,
+                new_operation,
+                old,
+                new,
+                &location,
+                &mut changes,
+            );
 
             let old_id = old_operation.get("operationId");
             let new_id = new_operation.get("operationId");
@@ -451,6 +475,7 @@ fn python_display(value: Option<&Value>) -> String {
         Some(Value::String(value)) => value.clone(),
         Some(Value::Bool(true)) => "True".to_owned(),
         Some(Value::Bool(false)) => "False".to_owned(),
+        Some(value @ (Value::Array(_) | Value::Object(_))) => python_repr(value),
         Some(value) => value.to_string(),
     }
 }
@@ -468,6 +493,220 @@ fn request_body_required(value: Option<&Value>) -> bool {
         .and_then(Value::as_object)
         .and_then(|object| object.get("required"))
         .is_some_and(python_truthy)
+}
+
+fn diff_operation_security(
+    old_operation: &Map<String, Value>,
+    new_operation: &Map<String, Value>,
+    old_document: &Value,
+    new_document: &Value,
+    location: &str,
+    changes: &mut Vec<SurfaceChange>,
+) {
+    let before = security_requirements(old_operation, old_document);
+    let after = security_requirements(new_operation, new_document);
+    if before == after {
+        return;
+    }
+
+    let removed = before.difference(&after).next().is_some();
+    let added = after.difference(&before).next().is_some();
+    if removed {
+        let unauthenticated = after.is_empty();
+        add_surface_change(
+            changes,
+            "breaking",
+            if unauthenticated {
+                "authentication_removed"
+            } else {
+                "authentication_changed"
+            },
+            location,
+            if unauthenticated {
+                "endpoint no longer requires authentication"
+            } else {
+                "alternative removed"
+            },
+        );
+    }
+    if added && !removed {
+        let was_unauthenticated = before.is_empty();
+        add_surface_change(
+            changes,
+            if was_unauthenticated {
+                "breaking"
+            } else {
+                "additive"
+            },
+            if was_unauthenticated {
+                "authentication_added"
+            } else {
+                "authentication_alternative_added"
+            },
+            location,
+            if was_unauthenticated {
+                "endpoint now requires authentication"
+            } else {
+                "an additional accepted scheme"
+            },
+        );
+    }
+}
+
+fn security_requirements(operation: &Map<String, Value>, document: &Value) -> BTreeSet<String> {
+    let requirements = operation
+        .get("security")
+        .filter(|value| !value.is_null())
+        .or_else(|| document.get("security"));
+    requirements
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .map(|requirement| {
+            if requirement.is_object() {
+                serde_json::to_string(requirement).unwrap_or_default()
+            } else {
+                python_repr(requirement)
+            }
+        })
+        .collect()
+}
+
+fn diff_security_schemes(old: &Value, new: &Value, changes: &mut Vec<SurfaceChange>) {
+    let old_schemes = security_schemes(old);
+    let new_schemes = security_schemes(new);
+    let old_names = old_schemes.keys().cloned().collect::<BTreeSet<_>>();
+    let new_names = new_schemes.keys().cloned().collect::<BTreeSet<_>>();
+
+    for name in old_names.difference(&new_names) {
+        add_surface_change(
+            changes,
+            "breaking",
+            "security_scheme_removed",
+            format!("securitySchemes.{name}"),
+            "scheme removed",
+        );
+    }
+    for name in new_names.difference(&old_names) {
+        add_surface_change(
+            changes,
+            "additive",
+            "security_scheme_added",
+            format!("securitySchemes.{name}"),
+            "scheme added",
+        );
+    }
+
+    for name in old_names.intersection(&new_names) {
+        let (Some(old_value), Some(new_value)) = (old_schemes.get(name), new_schemes.get(name))
+        else {
+            continue;
+        };
+        if !old_value.is_object() || !new_value.is_object() {
+            continue;
+        }
+        let before = object_or_empty(Some(old_value));
+        let after = object_or_empty(Some(new_value));
+        for attribute in [
+            "type",
+            "name",
+            "in",
+            "scheme",
+            "bearerFormat",
+            "openIdConnectUrl",
+            "flows",
+        ] {
+            let old_value = before.get(attribute);
+            let new_value = after.get(attribute);
+            if !python_value_equal(old_value, new_value) {
+                add_surface_change(
+                    changes,
+                    "breaking",
+                    "security_scheme_changed",
+                    format!("securitySchemes.{name}.{attribute}"),
+                    format!(
+                        "{} -> {}",
+                        python_repr_option(old_value),
+                        python_repr_option(new_value)
+                    ),
+                );
+            }
+        }
+    }
+}
+
+fn security_schemes(document: &Value) -> &Map<String, Value> {
+    document
+        .get("components")
+        .filter(|value| python_truthy(value))
+        .and_then(Value::as_object)
+        .and_then(|components| components.get("securitySchemes"))
+        .filter(|value| python_truthy(value))
+        .and_then(Value::as_object)
+        .unwrap_or_else(|| empty_object())
+}
+
+fn empty_object() -> &'static Map<String, Value> {
+    static EMPTY: std::sync::OnceLock<Map<String, Value>> = std::sync::OnceLock::new();
+    EMPTY.get_or_init(Map::new)
+}
+
+fn python_repr_option(value: Option<&Value>) -> String {
+    value.map_or_else(|| "None".to_owned(), python_repr)
+}
+
+fn python_repr(value: &Value) -> String {
+    match value {
+        Value::Null => "None".to_owned(),
+        Value::Bool(value) => python_bool_display(*value).to_owned(),
+        Value::Number(value) => value.to_string(),
+        Value::String(value) => python_string_repr(value),
+        Value::Array(values) => format!(
+            "[{}]",
+            values
+                .iter()
+                .map(python_repr)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        Value::Object(values) => format!(
+            "{{{}}}",
+            values
+                .iter()
+                .map(|(key, value)| format!("{}: {}", python_string_repr(key), python_repr(value)))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+    }
+}
+
+fn python_string_repr(value: &str) -> String {
+    let quote = if value.contains('\'') && !value.contains('"') {
+        '"'
+    } else {
+        '\''
+    };
+    let mut rendered = String::with_capacity(value.len() + 2);
+    rendered.push(quote);
+    for character in value.chars() {
+        match character {
+            '\\' => rendered.push_str("\\\\"),
+            '\n' => rendered.push_str("\\n"),
+            '\r' => rendered.push_str("\\r"),
+            '\t' => rendered.push_str("\\t"),
+            character if character == quote => {
+                rendered.push('\\');
+                rendered.push(character);
+            }
+            character if character.is_control() => {
+                use std::fmt::Write as _;
+                let _ = write!(rendered, "\\x{:02x}", character as u32);
+            }
+            character => rendered.push(character),
+        }
+    }
+    rendered.push(quote);
+    rendered
 }
 
 /// Recursively normalize object keys and the OpenAPI arrays whose order is not

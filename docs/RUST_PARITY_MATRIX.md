@@ -107,12 +107,13 @@ release authority until the full set is complete.
   malformed, non-OpenAPI, and untrusted-reference failure states, and applies
   the same traversal limit. Differential fixtures cover the live document,
   invalid references, and baseline failures. A separately named surface-diff
-  probe covers versions, paths/methods, selected operation metadata, request
-  body requiredness, response status additions/removals/refinements, and
-  summary/description changes. It intentionally omits schema, parameter,
-  media-type, and security analysis and is not suitable as a compatibility
-  gate. Symlink/hardlink-safe artifact export, manifest provenance, the full
-  semantic compatibility checker, and CLI integration remain Python-only.
+  probe covers versions, server URLs, paths/methods, selected operation
+  metadata, operation authentication requirements and scheme definitions,
+  request-body requiredness, response status additions/removals/refinements,
+  and summary/description changes. It intentionally omits schema, parameter,
+  and media-type analysis and is not suitable as a compatibility gate.
+  Symlink/hardlink-safe artifact export, manifest provenance, the full semantic
+  compatibility checker, and CLI integration remain Python-only.
 - The Rust MCP process implements the five Python tools and stdio lifecycle;
   protocol/tool and result differentials cover all five. The unified CLI now
   runs this stdio server in-process with the selected AgentRouter home. Broader
