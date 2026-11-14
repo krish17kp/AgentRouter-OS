@@ -310,6 +310,16 @@ def test_unified_mcp_serves_protocol_over_stdio(tmp_path, unified_binary):
         '{"jsonrpc":"2.0","id":1,"method":"initialize",'
         '"params":{"protocolVersion":"2025-11-25"}}\n'
         '{"jsonrpc":"2.0","id":2,"method":"tools/list"}\n'
+        '{"jsonrpc":"2.0","id":3,"method":"server/discover",'
+        '"params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28",'
+        '"io.modelcontextprotocol/clientInfo":{"name":"test","version":"1"},'
+        '"io.modelcontextprotocol/clientCapabilities":{}}}}\n'
+        '{"jsonrpc":"2.0","id":4,"method":"tools/list",'
+        '"params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28",'
+        '"io.modelcontextprotocol/clientCapabilities":{}}}}\n'
+        '{"jsonrpc":"2.0","id":5,"method":"ping",'
+        '"params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28",'
+        '"io.modelcontextprotocol/clientCapabilities":{}}}}\n'
     )
     result = subprocess.run(
         [str(unified_binary), "mcp"],
@@ -332,6 +342,20 @@ def test_unified_mcp_serves_protocol_over_stdio(tmp_path, unified_binary):
         "list_models",
         "list_hosts",
     ]
+    modern_discovery = responses[2]["result"]
+    assert modern_discovery["supportedVersions"] == ["2026-07-28"]
+    assert modern_discovery["_meta"]["io.modelcontextprotocol/serverInfo"]["name"] == "agentrouter"
+    assert modern_discovery["cacheScope"] == "private"
+    modern_tools = responses[3]["result"]
+    assert [tool["name"] for tool in modern_tools["tools"]] == [
+        "route",
+        "classify",
+        "explain",
+        "list_models",
+        "list_hosts",
+    ]
+    assert modern_tools["_meta"]["io.modelcontextprotocol/serverInfo"]["name"] == "agentrouter"
+    assert responses[4]["error"]["code"] == -32601
 
 
 def test_unified_server_starts_http_api_and_shuts_down(tmp_path, unified_binary):

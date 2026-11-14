@@ -2,13 +2,14 @@
 
 ## Current checkpoint — 2026-11-14
 
-Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `ea1f875`
-(TASK-132), and TASK-133 is locally verified and ready for the next RC push.
-The full Python regression passes 2,525 tests with 5 skips; 260 focused
-schema/registry/classification cases and the full Rust workspace pass. Strict
-Clippy, formatting, Ruff, and diff checks pass. Coverage is 91.970%
-statement, 87.690% branch, and 90.988% weighted combined. The frozen context gate remains
-unchanged at 0.6667 < 0.90. Continue schema parity while hosted checks run.
+Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `4909abd`
+(TASK-133), with TASK-134 fully verified and ready for the next RC push.
+The full Python regression passes 2,525 tests with 5 skips; 23 focused MCP
+cases pass on Python 3.10/MCP 1.30 and Python 3.11/3.12/MCP 2.3. The full Rust
+workspace, strict Clippy, formatting, Ruff, package build, and diff checks pass.
+Coverage is 91.971% statement, 87.690% branch, and 90.988% weighted combined.
+The frozen context gate remains unchanged at 0.6667 < 0.90. Continue the MCP
+hosted validation and remaining Rust parity work.
 Human annotation, bounded OpenAI live validation, main promotion, and deployment
 credentials remain owner-gated in `PRODUCTION_STATUS.md`.
 

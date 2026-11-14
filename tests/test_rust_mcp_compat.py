@@ -13,6 +13,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 mcp = pytest.importorskip("mcp", reason="install the optional MCP extra")
+MCPClient = getattr(mcp, "Client", None)
 
 
 def _rust_server_binary() -> Path:
@@ -32,8 +33,7 @@ def _initialize_home(path: Path, monkeypatch) -> None:
     assert result.exit_code == 0, result.output
 
 
-async def _session_snapshot(command: str, args: list[str], home: Path) -> dict:
-    from mcp import ClientSession
+async def _session_snapshot(command: str, args: list[str], home: Path, mode: str = "auto") -> dict:
     from mcp.client.stdio import StdioServerParameters, stdio_client
 
     environment = {**os.environ, "AGENTROUTER_HOME": str(home)}
@@ -44,50 +44,83 @@ async def _session_snapshot(command: str, args: list[str], home: Path) -> dict:
         env=environment,
         cwd=ROOT,
     )
+    if MCPClient is not None:
+        async with MCPClient(parameters, mode=mode) as session:
+            return await _session_snapshot_from_connected(session)
+
+    # Python 3.10 retains the MCP 1.x client because SDK 2.x requires Python 3.11.
+    from mcp import ClientSession
+
     async with stdio_client(parameters) as (read_stream, write_stream):
         async with ClientSession(read_stream, write_stream) as session:
             initialized = await session.initialize()
-            listed = await session.list_tools()
+            return await _session_snapshot_from_connected(
+                session,
+                protocol_version=initialized.protocolVersion,
+                server_info=initialized.serverInfo,
+                capabilities=initialized.capabilities,
+            )
 
-            async def call(name: str, arguments: dict | None = None):
-                result = await session.call_tool(name, arguments)
-                return {
-                    "structured": result.structuredContent,
-                    "is_error": result.isError,
-                    "text": [item.text for item in result.content if item.type == "text"],
-                }
 
-            outputs = {
-                "classify": await call(
-                    "classify", {"task": "write a short guide", "context_tokens": 512}
-                ),
-                "models": await call("list_models"),
-                "hosts": await call("list_hosts"),
+async def _session_snapshot_from_connected(
+    session,
+    protocol_version: str | None = None,
+    server_info=None,
+    capabilities=None,
+) -> dict:
+    listed = await session.list_tools()
+
+    async def call(name: str, arguments: dict | None = None):
+        result = await session.call_tool(name, arguments)
+        wire = result.model_dump(mode="json", by_alias=True, exclude_none=True)
+        return {
+            "structured": wire.get("structuredContent", wire.get("structured_content")),
+            "is_error": wire.get("isError", wire.get("is_error", False)),
+            "text": [item.text for item in result.content if item.type == "text"],
+        }
+
+    outputs = {
+        "classify": await call("classify", {"task": "write a short guide", "context_tokens": 512}),
+        "models": await call("list_models"),
+        "hosts": await call("list_hosts"),
+    }
+    outputs["route"] = await call("route", {"task": "summarize a technical report"})
+    route_value = outputs["route"]["structured"]
+    assert isinstance(route_value, dict), outputs["route"]
+    decision_id = route_value.get("decision_id")
+    assert decision_id
+    outputs["explain"] = await call("explain", {"decision_id": decision_id})
+    outputs["unknown"] = await call("not_a_tool")
+
+    if MCPClient is not None:
+        protocol_version = protocol_version or session.protocol_version
+        server_info = server_info or session.server_info
+        capabilities = capabilities or session.server_capabilities
+
+    server_info_name = getattr(server_info, "name", None)
+    server_info_version = getattr(server_info, "version", None)
+    capabilities_dump = capabilities.model_dump(mode="json", by_alias=True, exclude_none=True)
+    # The 1.x SDK emitted an empty experimental capability; it has no wire
+    # behavior and was removed from the v2 SDK's default capability set.
+    if capabilities_dump.get("experimental") == {}:
+        capabilities_dump.pop("experimental")
+    return {
+        "protocol_version": protocol_version,
+        "server_name": server_info_name,
+        "server_version": server_info_version,
+        "capabilities": capabilities_dump,
+        "tools": [
+            {
+                key: value
+                for key, value in tool.model_dump(
+                    mode="json", by_alias=True, exclude_none=True
+                ).items()
+                if key in {"name", "description", "inputSchema", "outputSchema"}
             }
-            outputs["route"] = await call("route", {"task": "summarize a technical report"})
-            route_value = outputs["route"]["structured"]
-            assert isinstance(route_value, dict), outputs["route"]
-            decision_id = route_value.get("decision_id")
-            assert decision_id
-            outputs["explain"] = await call("explain", {"decision_id": decision_id})
-            outputs["unknown"] = await call("not_a_tool")
-
-            return {
-                "protocol_version": initialized.protocolVersion,
-                "server_name": initialized.serverInfo.name,
-                "capabilities": initialized.capabilities.model_dump(mode="json", exclude_none=True),
-                "tools": [
-                    {
-                        key: value
-                        for key, value in tool.model_dump(
-                            mode="json", by_alias=True, exclude_none=True
-                        ).items()
-                        if key in {"name", "description", "inputSchema", "outputSchema"}
-                    }
-                    for tool in listed.tools
-                ],
-                "outputs": outputs,
-            }
+            for tool in listed.tools
+        ],
+        "outputs": outputs,
+    }
 
 
 def _without_timestamps(value):
@@ -105,10 +138,7 @@ def _without_timestamps(value):
 @pytest.mark.skipif(shutil.which("cargo") is None, reason="cargo not on PATH")
 def test_rust_mcp_matches_python_protocol_tools_and_results(tmp_path, monkeypatch):
     binary = _rust_server_binary()
-    if not binary.is_file():
-        subprocess.run(
-            ["cargo", "build", "--locked", "-p", "agentrouter-mcp"], cwd=ROOT, check=True
-        )
+    subprocess.run(["cargo", "build", "--locked", "-p", "agentrouter-mcp"], cwd=ROOT, check=True)
     assert binary.is_file()
 
     python_home = tmp_path / "python-home"
@@ -116,30 +146,39 @@ def test_rust_mcp_matches_python_protocol_tools_and_results(tmp_path, monkeypatc
     _initialize_home(python_home, monkeypatch)
     _initialize_home(rust_home, monkeypatch)
 
-    python_snapshot = asyncio.run(
-        _session_snapshot(sys.executable, ["-m", "agentrouter.mcp_server"], python_home)
-    )
-    rust_snapshot = asyncio.run(
-        _session_snapshot(str(binary), ["--home", str(rust_home)], rust_home)
-    )
+    modes = ("auto", "legacy") if MCPClient is not None else ("legacy",)
+    for mode in modes:
+        python_snapshot = asyncio.run(
+            _session_snapshot(sys.executable, ["-m", "agentrouter.mcp_server"], python_home, mode)
+        )
+        rust_snapshot = asyncio.run(
+            _session_snapshot(str(binary), ["--home", str(rust_home)], rust_home, mode)
+        )
 
-    assert python_snapshot["protocol_version"] == rust_snapshot["protocol_version"] == "2025-11-25"
-    assert python_snapshot["server_name"] == rust_snapshot["server_name"] == "agentrouter"
-    assert python_snapshot["capabilities"] == rust_snapshot["capabilities"]
-    assert [tool["name"] for tool in rust_snapshot["tools"]] == [
-        "route",
-        "classify",
-        "explain",
-        "list_models",
-        "list_hosts",
-    ]
-    assert python_snapshot["tools"] == rust_snapshot["tools"]
+        expected_version = "2026-07-28" if mode == "auto" and MCPClient else "2025-11-25"
+        assert (
+            python_snapshot["protocol_version"]
+            == rust_snapshot["protocol_version"]
+            == expected_version
+        )
+        assert python_snapshot["server_name"] == rust_snapshot["server_name"] == "agentrouter"
+        if mode == "auto" and MCPClient:
+            assert python_snapshot["server_version"] == rust_snapshot["server_version"]
+        assert python_snapshot["capabilities"] == rust_snapshot["capabilities"]
+        assert [tool["name"] for tool in rust_snapshot["tools"]] == [
+            "route",
+            "classify",
+            "explain",
+            "list_models",
+            "list_hosts",
+        ]
+        assert python_snapshot["tools"] == rust_snapshot["tools"]
 
-    for name in ("classify", "models", "hosts", "route", "explain"):
-        assert python_snapshot["outputs"][name]["is_error"] is False
-        assert rust_snapshot["outputs"][name]["is_error"] is False
-        assert _without_timestamps(
-            python_snapshot["outputs"][name]["structured"]
-        ) == _without_timestamps(rust_snapshot["outputs"][name]["structured"]), name
-    assert python_snapshot["outputs"]["unknown"]["is_error"] is True
-    assert rust_snapshot["outputs"]["unknown"]["is_error"] is True
+        for name in ("classify", "models", "hosts", "route", "explain"):
+            assert python_snapshot["outputs"][name]["is_error"] is False
+            assert rust_snapshot["outputs"][name]["is_error"] is False
+            assert _without_timestamps(
+                python_snapshot["outputs"][name]["structured"]
+            ) == _without_timestamps(rust_snapshot["outputs"][name]["structured"]), name
+        assert python_snapshot["outputs"]["unknown"]["is_error"] is True
+        assert rust_snapshot["outputs"]["unknown"]["is_error"] is True

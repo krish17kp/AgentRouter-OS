@@ -1,4 +1,4 @@
-//! Read-only and dry-run MCP tools over the 2025-11-25 stdio protocol.
+//! Read-only and dry-run MCP tools over modern and legacy stdio protocols.
 //!
 //! This server implements only the five tools exported by
 //! `agentrouter.mcp_server`. It never exposes process or model execution.
@@ -14,9 +14,11 @@ use agentrouter_api::{
 };
 use serde_json::{json, Map, Value};
 
-const SUPPORTED_PROTOCOL_VERSIONS: &[&str] =
-    &["2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"];
-const DEFAULT_PROTOCOL_VERSION: &str = "2025-11-25";
+const LEGACY_PROTOCOL_VERSIONS: &[&str] = &["2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"];
+const DEFAULT_LEGACY_PROTOCOL_VERSION: &str = "2025-11-25";
+const MODERN_PROTOCOL_VERSION: &str = "2026-07-28";
+const PROTOCOL_VERSION_META_KEY: &str = "io.modelcontextprotocol/protocolVersion";
+const SERVER_INFO_META_KEY: &str = "io.modelcontextprotocol/serverInfo";
 const MAX_LINE_BYTES: usize = 4 * 1024 * 1024;
 
 #[derive(Debug, Clone)]
@@ -46,44 +48,99 @@ impl Server {
         let id = id.clone();
         let params = object.get("params").unwrap_or(&Value::Null);
 
+        if method == "server/discover" {
+            let requested = params
+                .get("_meta")
+                .and_then(|meta| meta.get(PROTOCOL_VERSION_META_KEY))
+                .and_then(Value::as_str);
+            return Some(match requested {
+                Some(MODERN_PROTOCOL_VERSION) => self.discover(id),
+                Some(requested) => unsupported_protocol_version(id, requested),
+                None => rpc_error(id, -32602, "protocol version is required in params._meta"),
+            });
+        }
+
+        let modern = match params.get("_meta") {
+            None => false,
+            Some(meta) => match meta.get(PROTOCOL_VERSION_META_KEY).and_then(Value::as_str) {
+                Some(MODERN_PROTOCOL_VERSION) => true,
+                Some(requested) => return Some(unsupported_protocol_version(id, requested)),
+                None => {
+                    return Some(rpc_error(
+                        id,
+                        -32602,
+                        "protocol version is required in params._meta",
+                    ));
+                }
+            },
+        };
+
         match method {
+            "initialize" if modern => Some(rpc_error(
+                id,
+                -32600,
+                "initialize is only available to legacy protocol clients",
+            )),
             "initialize" => Some(self.initialize(id, params)),
+            "ping" if modern => Some(rpc_error(id, -32601, "Method not found")),
             "ping" => Some(rpc_result(id, json!({}))),
-            "tools/list" => Some(rpc_result(id, json!({"tools": tool_definitions()}))),
-            "tools/call" => Some(rpc_result(id, self.call_tool(params))),
-            "resources/list" | "resources/templates/list" => Some(rpc_result(
+            "tools/list" => Some(self.success(id, json!({"tools": tool_definitions()}), modern)),
+            "tools/call" => Some(self.success(id, self.call_tool(params), modern)),
+            "resources/list" | "resources/templates/list" => Some(self.success(
                 id,
                 json!({"resources": [], "resourceTemplates": []}),
+                modern,
             )),
-            "prompts/list" => Some(rpc_result(id, json!({"prompts": []}))),
+            "prompts/list" => Some(self.success(id, json!({"prompts": []}), modern)),
             _ => Some(rpc_error(id, -32601, "Method not found")),
         }
+    }
+
+    fn discover(&self, id: Value) -> Value {
+        rpc_result(
+            id,
+            json!({
+                "resultType": "complete",
+                "supportedVersions": [MODERN_PROTOCOL_VERSION],
+                "capabilities": modern_capabilities(),
+                "_meta": {SERVER_INFO_META_KEY: server_info()},
+                "ttlMs": 0,
+                "cacheScope": "private"
+            }),
+        )
+    }
+
+    fn success(&self, id: Value, mut result: Value, modern: bool) -> Value {
+        if modern {
+            if let Some(result) = result.as_object_mut() {
+                result.insert(
+                    "_meta".to_string(),
+                    json!({SERVER_INFO_META_KEY: server_info()}),
+                );
+                result.insert("resultType".to_string(), json!("complete"));
+                result.insert("ttlMs".to_string(), json!(0));
+                result.insert("cacheScope".to_string(), json!("private"));
+            }
+        }
+        rpc_result(id, result)
     }
 
     fn initialize(&self, id: Value, params: &Value) -> Value {
         let requested = params
             .get("protocolVersion")
             .and_then(Value::as_str)
-            .unwrap_or(DEFAULT_PROTOCOL_VERSION);
-        let protocol_version = if SUPPORTED_PROTOCOL_VERSIONS.contains(&requested) {
+            .unwrap_or(DEFAULT_LEGACY_PROTOCOL_VERSION);
+        let protocol_version = if LEGACY_PROTOCOL_VERSIONS.contains(&requested) {
             requested
         } else {
-            DEFAULT_PROTOCOL_VERSION
+            DEFAULT_LEGACY_PROTOCOL_VERSION
         };
         rpc_result(
             id,
             json!({
                 "protocolVersion": protocol_version,
-                "capabilities": {
-                    "experimental": {},
-                    "prompts": {"listChanged": false},
-                    "resources": {"subscribe": false, "listChanged": false},
-                    "tools": {"listChanged": false}
-                },
-                "serverInfo": {
-                    "name": "agentrouter",
-                    "version": agentrouter_core::package_version()
-                }
+                "capabilities": legacy_capabilities(),
+                "serverInfo": server_info()
             }),
         )
     }
@@ -217,7 +274,7 @@ fn write_message(output: &mut impl Write, message: &Value) -> io::Result<()> {
 }
 
 fn tool_definitions() -> Value {
-    serde_json::from_str(include_str!("../../../contracts/mcp/v1/tools.json"))
+    serde_json::from_str(include_str!("../../../contracts/mcp/tools.json"))
         .expect("committed MCP tools contract must be valid JSON")
 }
 
@@ -230,6 +287,45 @@ fn rpc_error(id: Value, code: i64, message: &str) -> Value {
         "jsonrpc": "2.0",
         "id": id,
         "error": {"code": code, "message": message}
+    })
+}
+
+fn unsupported_protocol_version(id: Value, requested: &str) -> Value {
+    json!({
+        "jsonrpc": "2.0",
+        "id": id,
+        "error": {
+            "code": -32022,
+            "message": "Unsupported protocol version",
+            "data": {
+                "supported": [MODERN_PROTOCOL_VERSION],
+                "requested": requested
+            }
+        }
+    })
+}
+
+fn server_info() -> Value {
+    json!({
+        "name": "agentrouter",
+        "version": agentrouter_core::package_version()
+    })
+}
+
+fn legacy_capabilities() -> Value {
+    json!({
+        "experimental": {},
+        "prompts": {"listChanged": false},
+        "resources": {"subscribe": false, "listChanged": false},
+        "tools": {"listChanged": false}
+    })
+}
+
+fn modern_capabilities() -> Value {
+    json!({
+        "prompts": {"listChanged": false},
+        "resources": {"subscribe": false, "listChanged": false},
+        "tools": {"listChanged": false}
     })
 }
 
@@ -343,6 +439,64 @@ mod tests {
             .handle(&json!({"jsonrpc":"2.0", "id":2, "method":"tools/list"}))
             .unwrap();
         assert_eq!(tools["result"]["tools"].as_array().unwrap().len(), 5);
+    }
+
+    #[test]
+    fn discovers_the_modern_version_without_advertising_legacy_versions() {
+        let server = Server::new(PathBuf::from("/tmp/agentrouter-mcp-test"));
+        let response = server
+            .handle(&json!({
+                "jsonrpc":"2.0", "id":"discover", "method":"server/discover",
+                "params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28"}}
+            }))
+            .unwrap();
+        let result = &response["result"];
+        assert_eq!(result["resultType"], "complete");
+        assert_eq!(result["supportedVersions"], json!(["2026-07-28"]));
+        assert_eq!(result["capabilities"], modern_capabilities());
+        assert_eq!(result["_meta"][SERVER_INFO_META_KEY], server_info());
+        assert_eq!(result["ttlMs"], 0);
+        assert_eq!(result["cacheScope"], "private");
+    }
+
+    #[test]
+    fn modern_requests_validate_version_and_stamp_result_metadata() {
+        let server = Server::new(PathBuf::from("/tmp/agentrouter-mcp-test"));
+        let unsupported = server
+            .handle(&json!({
+                "jsonrpc":"2.0", "id":1, "method":"tools/list",
+                "params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-01-01"}}
+            }))
+            .unwrap();
+        assert_eq!(unsupported["error"]["code"], -32022);
+        assert_eq!(
+            unsupported["error"]["data"]["supported"],
+            json!(["2026-07-28"])
+        );
+        assert_eq!(unsupported["error"]["data"]["requested"], "2026-01-01");
+
+        let tools = server
+            .handle(&json!({
+                "jsonrpc":"2.0", "id":2, "method":"tools/list",
+                "params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28"}}
+            }))
+            .unwrap();
+        assert_eq!(tools["result"]["tools"].as_array().unwrap().len(), 5);
+        assert_eq!(
+            tools["result"]["_meta"][SERVER_INFO_META_KEY],
+            server_info()
+        );
+        assert_eq!(tools["result"]["resultType"], "complete");
+        assert_eq!(tools["result"]["ttlMs"], 0);
+        assert_eq!(tools["result"]["cacheScope"], "private");
+
+        let removed = server
+            .handle(&json!({
+                "jsonrpc":"2.0", "id":3, "method":"ping",
+                "params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28"}}
+            }))
+            .unwrap();
+        assert_eq!(removed["error"]["code"], -32601);
     }
 
     #[test]

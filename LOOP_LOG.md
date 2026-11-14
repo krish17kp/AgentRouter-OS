@@ -1,5 +1,31 @@
 # LOOP_LOG
 
+## 2026-11-14 — TASK-134 current MCP protocol and SDK migration
+
+Moved the Python optional MCP integration to SDK 2.x on Python 3.11+ while
+retaining SDK 1.x for the supported Python 3.10 runtime. The Python v2 server
+reports the AgentRouter release version and disables change subscriptions the
+product does not implement. The Rust stdio server now answers 2026-07-28
+`server/discover`, advertises only modern versions there, validates per-request
+protocol metadata, stamps server identity on modern results, returns the
+specified unsupported-version error, and preserves the legacy initialization
+path. It rejects modern `ping` and keeps the five-tool no-execution boundary.
+
+The official Python MCP client passes modern and legacy Rust/Python tool and
+result comparisons. Focused suites pass 23 cases on Python 3.10/MCP 1.30,
+Python 3.11/MCP 2.3, and Python 3.12/MCP 2.3. The six MCP Rust tests pass. Full
+Python regression passes 2,525/5 in 317.45 seconds at 91.971% statement,
+87.690% branch, and 90.988% weighted combined coverage; `mcp_server.py` is 100%
+covered. Full Rust workspace, strict Clippy, Rust formatting, Ruff, package
+build, and diff checks pass. The Python wheel records the intended per-version
+MCP dependencies. Hosted validation awaits the RC push; the frozen release
+gate remains 0.6667 < 0.90.
+
+The parity matrix keeps the MCP module Partial because non-stdio transport and
+broader lifecycle parity are still unimplemented. Next: update the production
+checkpoint, push the slice, review the new Python 3.10/3.11 hosted MCP jobs,
+then continue the remaining Rust parity inventory.
+
 ## 2026-11-14 — TASK-133 direct public schema required/default parity
 
 Completed the direct contract inventory for `agentrouter/schema.py`. Python

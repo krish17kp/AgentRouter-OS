@@ -127,11 +127,14 @@ release authority until the full set is complete.
   directory handles and atomic replacement. Symlink and hard-link targets are
   refused. The full semantic compatibility checker and the unified CLI command
   remain Python-only.
-- The Rust MCP process implements the five Python tools and stdio lifecycle;
-  protocol/tool and result differentials cover all five. The unified CLI now
-  runs this stdio server in-process with the selected AgentRouter home. Broader
-  cross-version lifecycle/error and command-line behavior remain under
-  compatibility review, so the module is Partial.
+- The Rust MCP process implements the five Python tools, current stateless
+  `server/discover` flow, per-request version validation and server identity,
+  plus the legacy `initialize` path. Official Python SDK 2.x differentials
+  cover modern discovery and legacy negotiation, tool schemas/results, and
+  unknown tools; Rust CLI stdio tests cover both protocol eras. The optional
+  Python extra keeps SDK 1.x on Python 3.10 and uses SDK 2.x on Python 3.11+.
+  The unified CLI dispatches `mcp` to the Rust stdio server. The module remains
+  Partial while broader MCP lifecycle, transport, and error behavior is audited.
 - The unified CLI now exposes safety-gated `execute` for configured provider
   argv, available local host commands, and OpenAI text requests. It recomputes
   the recorded classification gate, refuses high-risk and tampered decisions,

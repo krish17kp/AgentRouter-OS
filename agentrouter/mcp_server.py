@@ -65,14 +65,24 @@ TOOLS = (route, classify, explain, list_models, list_hosts)
 
 
 def build_server():
-    """Build the FastMCP server with the safe tools registered. Requires the mcp extra."""
+    """Build the MCP server with the safe tools registered; requires the mcp extra."""
     try:
-        from mcp.server.fastmcp import FastMCP
-    except ImportError as e:  # pragma: no cover - exercised via the CLI error path
-        raise RuntimeError(
-            'MCP extras not installed. Run: pip install "agentrouter-os[mcp]"'
-        ) from e
-    server = FastMCP(SERVER_NAME)
+        from mcp.server.mcpserver import MCPServer
+    except ImportError:  # pragma: no cover - exercised via the CLI error path
+        try:
+            from mcp.server.fastmcp import FastMCP
+        except ImportError as legacy_error:
+            raise RuntimeError(
+                'MCP extras not installed. Run: pip install "agentrouter-os[mcp]"'
+            ) from legacy_error
+        server = FastMCP(SERVER_NAME)
+    else:
+        from . import __version__
+
+        # Change notifications and resource subscriptions are intentionally not
+        # exposed by AgentRouter. Advertising those capabilities would promise
+        # a transport the product does not implement.
+        server = MCPServer(SERVER_NAME, version=__version__, subscriptions=False)
     for fn in TOOLS:
         server.tool()(fn)
     return server

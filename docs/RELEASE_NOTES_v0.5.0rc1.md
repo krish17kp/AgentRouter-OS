@@ -22,6 +22,7 @@ required independent human annotation and adjudication round is incomplete.
 - Rust doctor `--verify-live` now uses the shared host detector and bounded usage state machine; it checks only authenticated hosts and reports `unsupported` until a provider adapter exists.
 - Feedback-driven route weight adjustments now live in a dedicated Rust crate and match Python across minimum-sample, cap, null-rating, and ties-to-even cases.
 - Registry validation now rejects non-finite price and ability-confidence metadata consistently in Python and Rust.
+- MCP now uses SDK 2.x and the 2026-07-28 stateless protocol on Python 3.11+, while retaining legacy SDK/protocol support on Python 3.10 and for older hosts. The Rust stdio server supports current discovery and per-request version validation alongside legacy initialization; the five planning-only tools remain unchanged.
 
 ## Release gates still open
 

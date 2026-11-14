@@ -6,6 +6,11 @@ All notable changes to AgentRouter OS. Format loosely follows
 ## [Unreleased]
 
 ### Added
+- Upgrade the MCP integration for Python 3.11+ to the current stateless
+  protocol and SDK 2.x, while retaining the legacy SDK for Python 3.10. The Rust
+  stdio server now supports `server/discover`, modern per-request protocol
+  metadata, server identity responses, unsupported-version errors, and legacy
+  initialization; both paths keep the five-tool no-execution contract.
 - Add a Rust OpenAPI surface-diff probe for API versions and server URLs,
   paths/methods, operation identifiers/deprecation, authentication requirements
   and scheme definitions, request-body requiredness, response status changes
