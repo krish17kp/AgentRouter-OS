@@ -3703,7 +3703,7 @@ fn acquire_plugin_mutation_lock(
         mutation_lock
             ._file
             .seek(SeekFrom::Start(0))
-            .and_then(|()| {
+            .and_then(|_| {
                 let mut byte = [0_u8; 1];
                 mutation_lock._file.read_exact(&mut byte)?;
                 if byte != [0] {

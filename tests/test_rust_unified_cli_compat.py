@@ -162,9 +162,7 @@ def test_setup_runs_onboarding_and_persists_selected_preference(
     assert "sk-setup-secret-must-not-be-printed" not in setup.stdout + setup.stderr
 
     config["custom_setting"] = "preserve-me"
-    (home / "config.yaml").write_text(
-        yaml.safe_dump(config, sort_keys=False), encoding="utf-8"
-    )
+    (home / "config.yaml").write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
     repeated = _run(unified_binary, "setup", "--preference", "quality", home=home)
     assert repeated.returncode == 0, repeated.stderr
     assert "exists, skipped" in repeated.stdout
