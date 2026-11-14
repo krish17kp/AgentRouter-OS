@@ -2,26 +2,19 @@
 
 ## Current checkpoint — 2026-11-14
 
-**NOT release ready.** Pushed RC head `b244ad1` has failing Windows Rust,
-Windows compatibility, macOS Rust, and mutation checks. The local TASK-114
-candidate repairs the observed cross-platform failures and implements Rust
-managed plugin upgrades. Its full mutation campaign passes at 0.9698 overall,
-0.9670 safety/policy/execution, and 0.9815 routing, with zero unreviewed
-survivors; exact evidence is in
-`docs/MUTATION_REPORT_2026-11-14-TASK-114.md`. The full Python regression
-on pytest 9.0.3 passes 2,262 tests with 4 skips (91.96% statement, 87.65% branch,
-90.97% combined). The Rust workspace, strict Clippy, Ruff, formatting, Bandit,
-cargo audit, package wheel/sdist build, and Twine metadata checks pass. `pip-audit`
-initially found vulnerable development-only pytest 8.4.2; the constraint now
-requires patched pytest 9.0.3–9.0.x and `pip-audit` is clean. Hosted
-cross-platform confirmation is pending the next release-candidate push. PR #16 remains the
-sole open PR.
-The unchanged context-band score is 0.6667 < 0.90; live smoke is skipped
-without credentials. Full Rust CLI/HTTP/MCP parity, provider execution,
-external dataset loaders, evaluation runner, and R5–R13 remain incomplete.
-Human annotation, live OpenAI validation, main promotion, and production
-credentials remain owner inputs. No paid request or production deployment
-occurred.
+**NOT release ready.** The latest pushed RC head `593e375` has failed
+Python/Rust compatibility jobs on Linux, Windows, and macOS: the new scalar
+coercion used an untagged enum that did not accept serde_json
+arbitrary-precision streaming numbers. The local visitor fix passes 108
+focused registry/evaluation differentials, the full Python suite (2,332 passed,
+4 skipped), full Rust workspace, strict Clippy, formatting, Ruff, and diff
+checks. Hosted cross-platform revalidation remains pending. PR #16 is the sole
+open PR. The unchanged context-band score is
+0.6667 < 0.90; live smoke is skipped without credentials. Full Rust
+CLI/HTTP/MCP parity, provider execution, external dataset loaders, evaluation
+runner, and R5–R13 remain incomplete. Human annotation, live OpenAI validation,
+main promotion, and production credentials remain owner inputs. No paid request
+or production deployment occurred.
 
 ## Historical v0.5 assessment
 

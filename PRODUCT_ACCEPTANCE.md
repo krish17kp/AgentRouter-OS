@@ -3,16 +3,13 @@
 ## Current checkpoint — 2026-11-14
 
 Product acceptance remains **not granted**. PR #16 is the sole open PR. The
-local TASK-114/115 candidate passes the Rust workspace, strict Clippy, and the
-full mutation campaign (0.9698 overall, zero unreviewed survivors). The full
-pytest 9.0.3 regression passes 2,262 tests and 4 skips at 91.96% statement,
-87.65% branch, and 90.97% combined coverage. TASK-114 adds journaled
-managed-plugin upgrades and fixes the
-failures observed at pushed head `b244ad1`; hosted Linux/Windows/macOS
-validation remains pending.
-`pip-audit` found the vulnerable development-only pytest 8.4.2 pin; pytest
-9.0.3 is now required and the audit is clean.
-The frozen context-band gate remains 0.6667 < 0.90. Rust R4 and R5–R13 remain
+latest pushed `593e375` has Python/Rust compatibility failures on Linux,
+Windows, and macOS caused by serde_json arbitrary-precision streaming values;
+a local custom visitor fixes the regression and passes 108 focused
+compatibility cases, the 2,332-pass/4-skip full Python suite, Rust workspace,
+strict Clippy, formatting, Ruff, and diff checks. Hosted revalidation is
+pending. The frozen context-band
+gate remains 0.6667 < 0.90. Rust migration and production acceptance remain
 incomplete; no production deployment or paid OpenAI request occurred.
 The table below is historical.
 

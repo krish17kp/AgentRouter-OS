@@ -2344,3 +2344,15 @@ plugin tests pass (230/3); the full Python regression passes
 2,237/4 with 92.83% line, 88.63% branch, and 91.87% combined coverage. The Rust
 workspace and strict Clippy pass locally; hosted cross-platform validation
 awaits the RC push.
+
+## 2026-11-14 — TASK-125 Rust registry scalar coercion
+
+Aligned Rust registry integers, floats, and booleans with Pydantic-compatible
+coercions. The first pushed candidate exposed a JSON streaming incompatibility:
+with `serde_json/arbitrary_precision`, numbers reach the scalar visitor as a
+private one-entry map. Added a custom scalar visitor and rejected that reserved
+marker recursively in YAML registries. Focused registry/evaluation differentials
+pass (108); full Python passes 2,332/4 at 91.983% statement, 87.735% branch,
+and 91.008% combined coverage. Full Rust workspace, strict Clippy, Rust format,
+Ruff, and diff checks pass locally. The fix awaits hosted cross-platform CI.
+The frozen context-band release gate remains 0.6667 < 0.90.

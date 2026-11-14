@@ -4,10 +4,10 @@ Updated: 2026-11-14
 
 ## Definition of done
 
-- [ ] PR review and hosted checks: PR #16 is the sole open PR against `main`. The Windows workspace and strict Clippy jobs pass on `57935f5`; Linux and macOS checks pass or are running, and Windows Python/Rust differential validation is running. Linux/macOS Python, mutation, security, and website checks are also running or passed. The unchanged context-band gate remains 0.6667 < 0.90; live smoke skips without credentials.
+- [ ] PR review and hosted checks: PR #16 is the sole open PR against `main`. Hosted Rust workspace checks passed on `593e375`, but its Python/Rust compatibility jobs failed across Linux, Windows, and macOS due to JSON number streaming with `serde_json` arbitrary precision. The local fix passes 108 focused compatibility cases, the full Python suite, full Rust workspace, and strict Clippy; hosted revalidation follows the authorized RC push. The unchanged context-band gate remains 0.6667 < 0.90; live smoke skips without credentials.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md); current gaps are explicit, and 45 modules currently meet the full-module differential bar. TASK-089–091 closed the Python/Rust storage contract with shared-database and concurrency evidence.
-- [x] Full Python suite: 2,308 passed and 4 skipped on Linux/Python 3.12.15 using pytest 9.0.3; coverage is 91.97% statement, 87.69% branch, and 90.99% combined. The 90% statement and 85% branch gates pass; refreshed evidence is in [`docs/COVERAGE_REPORT_2026-11-14-TASK-124.md`](docs/COVERAGE_REPORT_2026-11-14-TASK-124.md).
+- [x] Full Python suite: 2,332 passed and 4 skipped on Linux/Python 3.12.15 using pytest 9.0.3; coverage is 91.983% statement, 87.735% branch, and 91.008% combined. The 90% statement and 85% branch gates pass; refreshed evidence is in [`docs/COVERAGE_REPORT_2026-11-14-TASK-125.md`](docs/COVERAGE_REPORT_2026-11-14-TASK-125.md).
 - [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations; the Rust release benchmark now runs the same 10/100/1,000 candidate fleets, with a paired local p50 ratio of 2.70×–3.25× under stated synthetic conditions.
 - [x] Changelog, coverage evidence, and local latency measurements are committed to the release candidate. Candidate package version is now `0.5.0rc1`, with draft release notes in `docs/RELEASE_NOTES_v0.5.0rc1.md`; final `0.5.0` packaging and publication remain blocked on parity and all release gates.
 - [ ] Release candidate promoted to `main` with a tagged release.
@@ -132,7 +132,7 @@ Updated: 2026-11-14
 - [ ] TASK-122 replaces the Rust doctor's placeholder plugin warning with the existing safe Rust plugin diagnostics, aggregates blocked/attention findings like Python, and reports the built-in Rust REST API as available. Thirteen Python/Rust diagnostic compatibility cases pass, including missing and corrupted plugin destinations; the full Rust workspace and strict Clippy pass locally. Cross-platform CI is pending.
 - [ ] TASK-123 corrects annotation timestamp parity for ISO datetimes with omitted seconds and a `Z` suffix, including lowercase `z`. The differential test now sends raw timestamps to Rust rather than pre-normalizing them through Pydantic. All 54 annotation schema compatibility cases, the full Rust workspace, and strict Clippy pass locally; cross-platform CI is pending.
 - [x] TASK-124 aligns the three Rust registry date fields with Pydantic `date | None` normalization for YAML date scalars, midnight ISO datetimes (fractional/offset forms included), and integer, float, or numeric-string epoch dates. Non-midnight datetimes, malformed offsets, booleans, and fractional epoch instants remain rejected. The complete Python suite passed 2,308 tests with 4 skips and 49 registry cases; the focused registry suite now passes all 50 cases, including malformed Unicode without panicking. Rust workspace tests and strict Clippy pass locally. Cross-platform CI for the resulting commit remains pending.
-- [ ] TASK-125 aligns Rust registry scalar coercion with Pydantic for bounded integer, float, and boolean fields. Seventy-three focused Python/Rust differential cases pass, including accepted numeric strings/floats/bools, valid digit separators, recognized boolean tokens, malformed values, and whitespace-sensitive boolean strings. Rust workspace tests pass and strict Clippy passes locally; the full Python coverage run is in progress, and hosted cross-platform validation will run after push.
+- [ ] TASK-125 aligns Rust registry scalar coercion with Pydantic for bounded integer, float, and boolean fields. The initial 73 registry differentials passed, then hosted/full-suite tests exposed that `serde_json` arbitrary-precision numbers reach untagged scalar enums through a private map representation. A visitor now handles that format while YAML rejects the reserved marker map. The 108 focused registry/evaluation differentials, 2,332-test Python suite, full Rust workspace, strict Clippy, formatting, and Ruff pass locally. Hosted cross-platform revalidation follows the authorized fix push.
 - [ ] TASK-056 adds the `agentrouter-evaluate` Rust CLI for listing/validating datasets, running fixture profiles, writing/rendering/comparing reports, availability, explicit external prepare blockers, and context-band generalization. Four smoke/differential tests pass. The Rust command does not yet replace the Python `agentrouter evaluate` surface or load real datasets, so CLI module parity remains Partial.
 - [x] PR #31 upgraded bundled SQLite to 3.54.1, replaced `unsafe-libyaml`, and raised the Rust minimum to 1.89; workspace tests, Clippy, security audit, and cross-platform CI passed before merge at `a246cf6`.
 - [x] Website product-truth fixes, font hierarchy/motion redesign, unused shadcn CLI removal, server limits/API tests, and website lint/build CI merged via PR #27. npm build/lint and production dependency audit passed; full npm audit still reports moderate dev-tool advisories.
@@ -145,10 +145,10 @@ Updated: 2026-11-14
 - OpenAI live validation: provide `OPENAI_API_KEY` through a local environment or a protected secret store and authorize one bounded Responses API smoke request, which may incur usage charges. Offline request/response fixtures are ready; no key is stored in the repository.
 - Production release/deployment: after the local and hosted release gates pass, provide the production hosting/domain credentials and authorize any paid infrastructure and deployment. The Rust server is loopback-only and no production deployment has run.
 
-Latest full local verification: Python 3.12 passes 2,308 tests with 4 skips on
-pytest 9.0.3 at 91.97% statement (6,895/7,497), 87.69% branch (1,959/2,234),
-and 90.99% combined coverage; current evidence is in
-`docs/COVERAGE_REPORT_2026-11-14-TASK-124.md`. The provider defaults, routing duplicate-key,
+Latest full local verification: Python 3.12 passes 2,332 tests with 4 skips on
+pytest 9.0.3 at 91.983% statement (6,896/7,497), 87.735% branch (1,960/2,234),
+and 91.008% combined coverage; current evidence is in
+`docs/COVERAGE_REPORT_2026-11-14-TASK-125.md`. The provider defaults, routing duplicate-key,
 injected-classifier evaluator, legacy gold, and the registry date differentials
 pass. For TASK-121,
 the Rust workspace and strict Clippy pass locally, as do three setup/evaluate
@@ -158,7 +158,9 @@ TASK-122, all 13 diagnostic compatibility cases pass, along with the full Rust
 workspace and strict Clippy. TASK-123's 54 annotation schema compatibility
 cases, Rust workspace, and strict Clippy also pass locally. TASK-124's 49
 registry differential cases, full Python suite, Rust workspace, and strict
-Clippy also pass locally. The native
+Clippy also passed locally. TASK-125's 108 registry/evaluation differential
+cases, full Python suite, full Rust workspace, and strict Clippy now pass with
+the JSON-streaming repair; hosted revalidation is pending. The native
 Windows rename API call compiles in an isolated Windows-target check; the full
 crate cannot cross-compile locally because the MinGW C compiler needed by
 bundled SQLite is absent. Hosted Windows CI must compile and exercise the
@@ -172,7 +174,7 @@ corrected same-directory rename or lock paths. The unchanged release gate
 remains 0.6667 against 0.90; live smoke skips without credentials. PR #16
 remains promotion-blocked by the frozen context-band result and required
 independent human annotations. Latest coverage evidence is in
-`docs/COVERAGE_REPORT_2026-11-14-TASK-124.md`.
+`docs/COVERAGE_REPORT_2026-11-14-TASK-125.md`.
 
 PR #16 was reviewed against its release contract and code standards: no
 separate implementation defect was identified in the reviewed diff, but the

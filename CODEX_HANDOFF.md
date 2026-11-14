@@ -2,21 +2,16 @@
 
 ## Current checkpoint — 2026-11-14
 
-Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `08c019e`.
-TASK-113 locally adds Rust forced replacement and identity-checked transaction
-recovery with Python-compatible journals. Focused plugin tests pass (116); the
-full Python suite passes (2,257 passed, 4 skipped; 91.97% statement, 87.69%
-branch, 90.99% combined coverage). Rust workspace tests, strict Clippy,
-formatting, Ruff, configured Bandit, pip-audit, cargo audit, and diff checks
-pass. Hosted checks for `08c019e` exposed Windows rename/staging failures; the
-local candidate changes the Windows parent-handle path and is pending hosted
-verification. PR #16 remains held by the unchanged frozen context-band score
-0.6667 < 0.90. Next: record TASK-113 evidence, commit/push the reviewed slice to
-the authorized RC, repair any hosted failures, then continue the Rust parity
-backlog. Human annotation, bounded OpenAI live validation, main promotion, and
-deployment credentials remain owner-gated in `PRODUCTION_STATUS.md`.
-Human annotation, bounded OpenAI live validation, main promotion, and
-deployment credentials remain owner-gated in `PRODUCTION_STATUS.md`.
+Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `593e375`.
+TASK-125 adds Pydantic-compatible registry integer, float, and boolean coercion.
+The first hosted Rust migration run found a serde_json arbitrary-precision
+deserialization regression on all three platforms. The local visitor fix now
+passes 108 focused registry/evaluation cases, the 2,332-pass/4-skip full Python
+suite, the full Rust workspace, strict Clippy, formatting, Ruff, and diff
+checks. Push the repair and recheck the cross-platform matrix. PR #16 remains
+held by the unchanged frozen context-band score 0.6667 < 0.90. Human annotation,
+bounded OpenAI live validation, main promotion, and deployment credentials
+remain owner-gated in `PRODUCTION_STATUS.md`.
 
 ## Historical narrative
 

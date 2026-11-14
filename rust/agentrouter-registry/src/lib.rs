@@ -404,14 +404,124 @@ fn epoch_date(value: f64) -> Option<String> {
     Some(date.format("%Y-%m-%d").to_string())
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
+#[derive(Debug)]
 enum PydanticScalar {
     Bool(bool),
     Signed(i64),
     Unsigned(u64),
     Float(f64),
     Text(String),
+}
+
+struct PydanticScalarVisitor;
+
+impl<'de> serde::de::Visitor<'de> for PydanticScalarVisitor {
+    type Value = PydanticScalar;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("a Pydantic-compatible scalar")
+    }
+
+    fn visit_bool<E>(self, value: bool) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(PydanticScalar::Bool(value))
+    }
+
+    fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(PydanticScalar::Signed(value))
+    }
+
+    fn visit_i128<E>(self, value: i128) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        i64::try_from(value)
+            .map(PydanticScalar::Signed)
+            .or_else(|_| Ok(PydanticScalar::Text(value.to_string())))
+    }
+
+    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(PydanticScalar::Unsigned(value))
+    }
+
+    fn visit_u128<E>(self, value: u128) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        u64::try_from(value)
+            .map(PydanticScalar::Unsigned)
+            .or_else(|_| Ok(PydanticScalar::Text(value.to_string())))
+    }
+
+    fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(PydanticScalar::Float(value))
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(PydanticScalar::Text(value.to_owned()))
+    }
+
+    fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(PydanticScalar::Text(value))
+    }
+
+    fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
+    where
+        M: serde::de::MapAccess<'de>,
+    {
+        // serde_json's arbitrary_precision feature presents JSON numbers to
+        // custom visitors as a one-entry map with this private key. Decode
+        // only that exact representation; ordinary YAML/JSON mappings remain
+        // invalid scalar values.
+        let key = map.next_key::<String>()?;
+        if key.as_deref() != Some("$serde_json::private::Number") {
+            return Err(serde::de::Error::custom("expected a scalar value"));
+        }
+        let number = map.next_value::<String>()?;
+        if map.next_key::<serde::de::IgnoredAny>()?.is_some() {
+            return Err(serde::de::Error::custom("expected one scalar value"));
+        }
+        Ok(parse_json_number_text(number))
+    }
+}
+
+impl<'de> Deserialize<'de> for PydanticScalar {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_any(PydanticScalarVisitor)
+    }
+}
+
+fn parse_json_number_text(value: String) -> PydanticScalar {
+    if let Ok(value) = value.parse::<i64>() {
+        return PydanticScalar::Signed(value);
+    }
+    if let Ok(value) = value.parse::<u64>() {
+        return PydanticScalar::Unsigned(value);
+    }
+    if let Ok(value) = value.parse::<f64>() {
+        return PydanticScalar::Float(value);
+    }
+    PydanticScalar::Text(value)
 }
 
 fn strip_valid_digit_separators(value: &str) -> Option<String> {
@@ -740,10 +850,27 @@ fn load_yaml(path: &Path) -> Result<serde_yaml::Mapping, RegistryError> {
         .map_err(|e| RegistryError::InvalidYaml(path.to_path_buf(), e.to_string()))?;
     let value: serde_yaml::Value = serde_yaml::from_str(&text)
         .map_err(|e| RegistryError::InvalidYaml(path.to_path_buf(), e.to_string()))?;
+    if contains_json_number_marker(&value) {
+        return Err(RegistryError::InvalidYaml(
+            path.to_path_buf(),
+            "reserved serde_json numeric marker is not valid YAML registry data".to_string(),
+        ));
+    }
     value
         .as_mapping()
         .cloned()
         .ok_or_else(|| RegistryError::NotAMapping(path.to_path_buf()))
+}
+
+fn contains_json_number_marker(value: &serde_yaml::Value) -> bool {
+    match value {
+        serde_yaml::Value::Sequence(values) => values.iter().any(contains_json_number_marker),
+        serde_yaml::Value::Mapping(values) => values.iter().any(|(key, value)| {
+            key == "$serde_json::private::Number" || contains_json_number_marker(value)
+        }),
+        serde_yaml::Value::Tagged(value) => contains_json_number_marker(value.value()),
+        _ => false,
+    }
 }
 
 fn seq_field(map: &serde_yaml::Mapping, key: &str) -> Vec<serde_yaml::Value> {
@@ -1027,6 +1154,38 @@ models:
     }
 
     #[test]
+    fn json_stream_deserializes_pydantic_float_fields() {
+        let scalar: PydanticScalar = serde_json::from_str("0.4").unwrap();
+        assert!(matches!(scalar, PydanticScalar::Float(value) if value == 0.4));
+        let yaml = MODEL_YAML_TEMPLATE.replace(
+            "deprecation_status: active",
+            "deprecation_status: active\n    ability_confidence: 0.4\n    input_price_per_million: 0.125",
+        );
+        let document: serde_yaml::Value = serde_yaml::from_str(&yaml).unwrap();
+        let model: ModelEntry = serde_yaml::from_value(document["models"][0].clone()).unwrap();
+        let json = serde_json::to_string(&model).unwrap();
+        let roundtrip: ModelEntry = serde_json::from_str(&json).unwrap();
+        assert_eq!(roundtrip.ability_confidence, Some(0.4));
+        assert_eq!(roundtrip.input_price_per_million, Some(0.125));
+    }
+
+    #[test]
+    fn yaml_registry_rejects_serde_json_private_number_maps() {
+        let dir = tempfile::tempdir().unwrap();
+        let providers =
+            load_providers(&write(dir.path(), "providers.yaml", PROVIDERS_YAML)).unwrap();
+        let yaml = MODEL_YAML_TEMPLATE.replace(
+            "deprecation_status: active",
+            "deprecation_status: active\n    ability_confidence: { '$serde_json::private::Number': '0.4' }",
+        );
+        let path = write(dir.path(), "models.yaml", &yaml);
+        assert!(matches!(
+            load_models(&path, &providers),
+            Err(RegistryError::InvalidYaml(_, _))
+        ));
+    }
+
+    #[test]
     fn load_models_unknown_provider_fails() {
         let dir = tempfile::tempdir().unwrap();
         let providers = HashMap::new();
@@ -1150,5 +1309,8 @@ models:
         let providers = load_providers(&reg_dir.join("providers.yaml")).unwrap();
         let (models, _warnings) = load_all_models(&reg_dir, &providers).unwrap();
         assert!(!models.is_empty());
+        let json = serde_json::to_vec(&models).unwrap();
+        let roundtrip: Vec<ModelEntry> = serde_json::from_slice(&json).unwrap();
+        assert_eq!(roundtrip.len(), models.len());
     }
 }

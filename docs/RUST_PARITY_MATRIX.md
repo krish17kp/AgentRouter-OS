@@ -181,7 +181,9 @@ release authority until the full set is complete.
   boolean fields also accept and reject the same scalar forms as Pydantic,
   including decimal integer strings, integral floats, booleans-as-numbers,
   numeric separators, and exact boolean tokens. Differential tests cover
-  accepted and rejected forms. `schema.py` remains Partial: Python's unbounded
+  accepted and rejected forms. Its custom JSON scalar visitor handles
+  `serde_json/arbitrary_precision` number tokens, and YAML rejects the private
+  serde_json marker representation. `schema.py` remains Partial: Python's unbounded
   integer domain and coercion behavior for non-registry model fields are still
   broader than the Rust contract.
 - Context-band model inference is ported but remains disabled in the default
