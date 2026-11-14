@@ -39,11 +39,13 @@
 - `cargo +1.89.0 check --workspace --all-targets --locked` passes.
 - `cargo fmt --all -- --check`, Ruff check/format, Bandit, `pip-audit`,
   `cargo audit`, and `git diff --check` pass.
-- Hosted CI at prior RC head `4a3e7ab` passes Rust workspace, Rust 1.89 minimum,
-  and Python/Rust compatibility on Linux, Windows, and macOS. The PR #16
-  promotion check still fails only at the unchanged context-band gate (0.6667
-  < 0.90); live smoke is skipped without credentials. TASK-128's own hosted run
-  is pending its push.
+- Hosted Rust workspace, Rust 1.89 minimum, and Python/Rust compatibility pass
+  on Linux, Windows, and macOS at `04c483d` (push run
+  [43582429818](https://github.com/krish17kp/AgentRouter-OS/actions/runs/43582429818)
+  and Rust migration PR run
+  [43582434663](https://github.com/krish17kp/AgentRouter-OS/actions/runs/43582434663)).
+  Standard CI and PR checks pass except the unchanged context-band promotion
+  gate, which remains 0.6667 < 0.90; live smoke skips without credentials.
 
 ## Limits
 

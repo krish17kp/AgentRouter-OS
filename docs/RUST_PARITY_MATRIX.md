@@ -196,9 +196,13 @@ release authority until the full set is complete.
   numeric separators, and exact boolean tokens. Differential tests cover
   accepted and rejected forms. Its custom JSON scalar visitor handles
   `serde_json/arbitrary_precision` number tokens, and YAML rejects the private
-  serde_json marker representation. `schema.py` remains Partial: Python's unbounded
-  integer domain and coercion behavior for non-registry model fields are still
-  broader than the Rust contract.
+  serde_json marker representation. Rust `Ability` now enforces its 0–10
+  integer bounds during direct deserialization, with Python/Rust cases for
+  accepted coercions, invalid bounds, unknown fields, and missing fields.
+  `schema.py` remains Partial because there is not yet a full module-level
+  differential probe for every public model, enum, default, validator, and
+  derived property; the individual parity slices above do not close that
+  inventory.
 - Context-band model inference is ported but remains disabled in the default
   classifier. The frozen evaluation gate still controls whether learned routing
   can be enabled.

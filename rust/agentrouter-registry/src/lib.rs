@@ -116,11 +116,11 @@ pub enum ExecutionMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Ability {
-    #[serde(deserialize_with = "deserialize_pydantic_u8")]
+    #[serde(deserialize_with = "deserialize_pydantic_ability_score")]
     pub coding: u8,
-    #[serde(deserialize_with = "deserialize_pydantic_u8")]
+    #[serde(deserialize_with = "deserialize_pydantic_ability_score")]
     pub reasoning: u8,
-    #[serde(deserialize_with = "deserialize_pydantic_u8")]
+    #[serde(deserialize_with = "deserialize_pydantic_ability_score")]
     pub writing: u8,
 }
 
@@ -656,14 +656,14 @@ fn parse_pydantic_bool(value: PydanticScalar) -> Option<bool> {
     }
 }
 
-fn deserialize_pydantic_u8<'de, D>(deserializer: D) -> Result<u8, D::Error>
+fn deserialize_pydantic_ability_score<'de, D>(deserializer: D) -> Result<u8, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
     let value = PydanticScalar::deserialize(deserializer)?;
-    parse_pydantic_integer(value, u64::from(u8::MAX))
+    parse_pydantic_integer(value, 10)
         .and_then(|value| u8::try_from(value).ok())
-        .ok_or_else(|| serde::de::Error::custom("invalid integer value"))
+        .ok_or_else(|| serde::de::Error::custom("ability score must be an integer from 0 to 10"))
 }
 
 fn pydantic_integer(value: PydanticScalar) -> Option<serde_json::Number> {

@@ -21,10 +21,14 @@
 - TASK-128 preserves unbounded positive Rust registry token-limit integers
   through YAML/JSON parsing, OpenRouter refresh, routing thresholds, evaluation,
   model display, and guarded OpenAI output capping. The full suite passes
-  2,382/4 with 91.983% statement and 87.735% branch coverage. Rust workspace,
-  strict Clippy, Rust 1.89 minimum, formatting, Ruff, Bandit, pip-audit, and
-  cargo audit pass locally; TASK-128 hosted validation is pending. The broader
-  `agentrouter/schema.py` public-module parity review remains open.
+  2,382/4; Rust workspace, strict Clippy, Rust 1.89 minimum, formatting, Ruff,
+  Bandit, pip-audit, and cargo audit pass locally. Hosted Rust and Python/Rust
+  checks pass on Linux, Windows, and macOS at `04c483d`.
+- TASK-129 makes Rust's public `Ability` deserializer enforce Pydantic's 0–10
+  bound directly, with accepted/rejected coercion cases. The full regression
+  passes 2,392/4 with 91.970% statement and 87.690% branch coverage; full Rust
+  workspace, strict Clippy, format, and Ruff pass. Hosted validation is pending.
+  The broader `agentrouter/schema.py` public-module parity review remains open.
 - The Rust evaluation crate now matches the full `agentrouter/evaluation/adapters/agentrouter_gold.py` module surface: metadata, availability, describe, loading, checksum and deterministic sampling. Its Python/Rust differential test covers all 165 committed cases plus Unicode/default handling. External adapter base behavior and the other dataset adapters remain Python-only; see `docs/RUST_PARITY_MATRIX.md`.
 - A Rust fixture-mode adapter base now covers metadata, availability, description, JSONL loading/checksums, deterministic sampling, and explicit real-mode skips for six external fixtures. Real dataset downloads and dataset-specific row transformations still require Python's optional `datasets` integration.
 - Python is still the shipping router. Rust R4 has route, SQLite,
@@ -59,9 +63,9 @@
   schema validation and JSON storage under TASK-111; cross-platform checks pass
   at `6223871`. Datetime grammar and remaining Pydantic scalar coercions still
   keep that annotation schema module Partial.
-- Latest full Python coverage is 91.983% statement / 87.735% branch / 91.008%
+- Latest full Python coverage is 91.970% statement / 87.690% branch / 90.988%
   weighted combined, meeting the unchanged 90%/85% thresholds; see
-  `docs/COVERAGE_REPORT_2026-11-14-TASK-128.md` (pytest 9.0.3).
+  `docs/COVERAGE_REPORT_2026-11-14-TASK-129.md` (pytest 9.0.3).
   `pip-audit` also identified pytest 8.4.2 as affected by CVE-2025-71176. The
   dev constraint now selects patched pytest 9.0.x, and `pip-audit` plus the
   full pytest 9.0.3 regression pass.

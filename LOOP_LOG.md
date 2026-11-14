@@ -1,5 +1,23 @@
 # LOOP_LOG
 
+## 2026-11-14 — TASK-129 direct Rust Ability bounds
+
+Python's public `Ability` schema rejects scores above 10 on direct
+deserialization, while Rust previously allowed values up to `u8::MAX` and
+relied on containing `ModelEntry` validation. Rust now enforces the same 0–10
+bound at each `Ability` field boundary. A JSON probe and direct differential
+cases cover valid bool/integral-float/integer-string coercions, invalid lower
+and upper bounds, fractional/string failures, unknown fields, and missing
+fields.
+
+Focused schema/registry compatibility: 88 passed; registry crate tests: 23
+passed. Full Python regression: 2,392 passed / 4 skipped, 91.970% statement,
+87.690% branch, and 90.988% weighted combined coverage. Full Rust workspace,
+strict Clippy, Rust format, Ruff, and diff checks pass locally. Hosted validation
+awaits the authorized RC push. `schema.py` remains Partial until all public
+types, enum/default behavior, validators, and derived properties have a full
+module differential contract.
+
 ## 2026-11-14 — TASK-128 Rust unbounded model token-count parity
 
 Rust now preserves Python's unbounded positive `ModelEntry` context and token
