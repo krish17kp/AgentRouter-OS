@@ -182,7 +182,7 @@ pub fn eligibility<'a>(
             });
             continue;
         }
-        if context_window_is_too_small(m.context_window, &cls.context_tokens) {
+        if context_window_is_too_small(&m.context_window, &cls.context_tokens) {
             excluded.push(Excluded {
                 model: m.key(),
                 reason: format!("context {} < {}", m.context_window, cls.context_tokens),
@@ -216,15 +216,11 @@ pub fn eligibility<'a>(
     (eligible, excluded)
 }
 
-fn context_window_is_too_small(context_window: u32, context_tokens: &serde_json::Number) -> bool {
-    if let Some(context_tokens) = context_tokens.as_u64() {
-        u64::from(context_window) < context_tokens
-    } else {
-        // A negative prompt estimate is valid in Python's Classification
-        // schema; no non-negative model window is too small for it. Positive
-        // values larger than u64 exceed every registry context window.
-        !context_tokens.to_string().starts_with('-')
-    }
+fn context_window_is_too_small(
+    context_window: &serde_json::Number,
+    context_tokens: &serde_json::Number,
+) -> bool {
+    agentrouter_core::pydantic_integer_cmp(context_window, context_tokens).is_lt()
 }
 
 fn capability_match(m: &ModelEntry, task_type: TaskType) -> f64 {
@@ -244,12 +240,28 @@ fn capability_match(m: &ModelEntry, task_type: TaskType) -> f64 {
 
 fn context_fit(m: &ModelEntry, cls: &Classification) -> f64 {
     // Eligibility has excluded positive values beyond the registry window;
-    // Python's max(context_tokens, 1) maps negative values to one.
-    let denominator = cls.context_tokens.as_u64().unwrap_or(0).max(1) as f64;
-    let ratio = m.context_window as f64 / denominator;
-    if ratio < 2.0 {
+    // Python's max(context_tokens, 1) maps negative values to one. Python
+    // divides ints to a rounded f64, so compare against the exact halfway
+    // points below 2 and 16 to preserve its boundary behavior for huge ints.
+    let one = serde_json::Number::from(1_u8);
+    let denominator = if agentrouter_core::pydantic_integer_cmp(&cls.context_tokens, &one).is_gt() {
+        cls.context_tokens.clone()
+    } else {
+        one
+    };
+    let below_two = agentrouter_core::pydantic_integer_cmp(
+        &agentrouter_core::pydantic_integer_mul_small(&m.context_window, 1_u64 << 53),
+        &agentrouter_core::pydantic_integer_mul_small(&denominator, (1_u64 << 54) - 1),
+    )
+    .is_lt();
+    if below_two {
         0.7
-    } else if ratio < 16.0 {
+    } else if agentrouter_core::pydantic_integer_cmp(
+        &agentrouter_core::pydantic_integer_mul_small(&m.context_window, 1_u64 << 50),
+        &agentrouter_core::pydantic_integer_mul_small(&denominator, (1_u64 << 54) - 1),
+    )
+    .is_lt()
+    {
         1.0
     } else {
         0.6
@@ -474,9 +486,19 @@ mod tests {
             .parse::<serde_json::Number>()
             .unwrap();
 
-        assert!(context_window_is_too_small(128_000, &above_u32));
-        assert!(context_window_is_too_small(u32::MAX, &above_u64));
-        assert!(!context_window_is_too_small(1, &negative));
+        assert!(context_window_is_too_small(&128_000.into(), &above_u32));
+        assert!(context_window_is_too_small(&u32::MAX.into(), &above_u64));
+        assert!(!context_window_is_too_small(&1.into(), &negative));
+    }
+
+    #[test]
+    fn context_fit_matches_python_float_rounding_at_huge_integer_boundaries() {
+        let mut model = model("huge", 128_000, "medium", 8);
+        model.context_window = "1267650600228229401496703205375".parse().unwrap();
+        let mut classification = cls(1, TaskType::Coding, Level::Medium);
+        classification.context_tokens = "633825300114114700748351602688".parse().unwrap();
+
+        assert_eq!(context_fit(&model, &classification), 1.0);
     }
 
     #[test]

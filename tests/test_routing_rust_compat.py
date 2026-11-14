@@ -63,3 +63,38 @@ def test_route_matches_between_python_and_rust(scenario_id):
     python_result = _python_route_json(scenario_id)
     rust_result = _rust_route_json(scenario_id)
     assert rust_result == python_result, f"mismatch for scenario: {scenario_id!r}"
+
+
+def test_route_preserves_unbounded_model_and_classification_token_counts(tmp_path):
+    source = yaml.safe_load(GOLD_PATH.read_text(encoding="utf-8"))
+    model = dict(source["scenarios"][0]["models"][0])
+    model["model_id"] = "arbitrary-context"
+    # These large integers sit just below a 2x context ratio. Python's int
+    # division rounds the ratio to 2.0; Rust must preserve that score boundary.
+    model["context_window"] = str(2**100 - 1)
+    classification = {
+        "task_type": "coding",
+        "complexity": "medium",
+        "risk": "low",
+        "context_tokens": str(2**99),
+        "tool_needs": [],
+    }
+    scenario = {
+        "id": "arbitrary-context",
+        "models": [model],
+        "classification": classification,
+    }
+    path = tmp_path / "routing.yaml"
+    path.write_text(yaml.safe_dump({"scenarios": [scenario]}), encoding="utf-8")
+
+    python_classification = {**classification, "context_tokens": 2**99}
+    python_result = route([ModelEntry(**model)], build_classification(python_classification))
+    rust = subprocess.run(
+        ["cargo", "run", "--quiet", "--bin", "route_cli", "--", str(path), scenario["id"]],
+        cwd=RUST_CRATE_DIR,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=True,
+    )
+    assert json.loads(rust.stdout) == python_result

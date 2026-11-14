@@ -2,16 +2,15 @@
 
 ## Current checkpoint — 2026-11-14
 
-Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `2e14606`.
-TASK-125 and TASK-126 pass hosted Rust workspace and Python/Rust compatibility
-on Linux, Windows, and macOS; the Python version/platform matrix, security,
-site, and mutation checks also pass. The only failed required PR check is the
-frozen context-band gate at 0.6667 < 0.90. Local TASK-127 carries arbitrary-
-precision context token values through Classification, classifier, routing,
-HTTP, MCP, and SDK paths. Focused differentials, Rust workspace, strict Clippy,
-formatting, Ruff, Bandit, pip-audit, and cargo audit pass; the full Python suite
-passes 2,378 tests with 4 skips at 91.970% statement, 87.690% branch, and
-90.988% combined coverage. Commit and push TASK-127, then monitor hosted checks.
+Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `4a3e7ab`.
+TASK-127 passes hosted Rust and Python/Rust compatibility on Linux, Windows,
+and macOS. The frozen context-band promotion gate remains 0.6667 < 0.90.
+TASK-128 preserves unbounded model token limits through the exercised Rust
+registry, refresh, routing, evaluation, and display paths. The full Python suite
+passes 2,382 tests with 4 skips at 91.983% statement, 87.735% branch, and
+91.008% weighted combined coverage; the Rust workspace, strict Clippy, Rust
+1.89 minimum check, formatting, Ruff, and security audits pass locally. Push
+TASK-128 and inspect hosted results, then continue Rust public-module parity.
 Human annotation, bounded OpenAI live validation, main promotion, and deployment
 credentials remain owner-gated in `PRODUCTION_STATUS.md`.
 

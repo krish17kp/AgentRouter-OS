@@ -341,6 +341,88 @@ pub fn pydantic_integer_from_value(
     }
 }
 
+/// Compare two canonical integer-valued JSON numbers without narrowing them.
+pub fn pydantic_integer_cmp(
+    left: &serde_json::Number,
+    right: &serde_json::Number,
+) -> std::cmp::Ordering {
+    use std::cmp::Ordering;
+
+    let left = left.to_string();
+    let right = right.to_string();
+    let left_negative = left.starts_with('-');
+    let right_negative = right.starts_with('-');
+    match (left_negative, right_negative) {
+        (true, false) => Ordering::Less,
+        (false, true) => Ordering::Greater,
+        (false, false) => compare_integer_magnitudes(&left, &right),
+        (true, true) => compare_integer_magnitudes(&right[1..], &left[1..]),
+    }
+}
+
+/// Whether an integer-valued JSON number is greater than zero.
+pub fn pydantic_integer_is_positive(value: &serde_json::Number) -> bool {
+    pydantic_integer_cmp(value, &serde_json::Number::from(0_u8)).is_gt()
+}
+
+/// Multiply an integer-valued JSON number by a small non-negative factor.
+pub fn pydantic_integer_mul_small(value: &serde_json::Number, factor: u64) -> serde_json::Number {
+    if factor == 0 {
+        return 0.into();
+    }
+    let text = value.to_string();
+    let negative = text.starts_with('-');
+    let digits = if negative { &text[1..] } else { &text };
+    let mut carry = 0_u64;
+    let mut product = String::with_capacity(digits.len() + 10);
+    for digit in digits.bytes().rev() {
+        let value = u64::from(digit - b'0') * factor + carry;
+        product.push(char::from(b'0' + (value % 10) as u8));
+        carry = value / 10;
+    }
+    while carry > 0 {
+        product.push(char::from(b'0' + (carry % 10) as u8));
+        carry /= 10;
+    }
+    let mut result: String = product.chars().rev().collect();
+    if negative && result != "0" {
+        result.insert(0, '-');
+    }
+    result
+        .parse::<serde_json::Number>()
+        .expect("integer multiplication produces a valid decimal number")
+}
+
+/// Divide a non-negative arbitrary-precision integer by a small positive
+/// divisor, rounding down like Python's `//` for the positive values used by
+/// registry refresh fallback sizing.
+pub fn pydantic_integer_div_small_floor(
+    value: &serde_json::Number,
+    divisor: u32,
+) -> serde_json::Number {
+    assert!(divisor > 0, "integer divisor must be positive");
+    let text = value.to_string();
+    assert!(!text.starts_with('-'), "value must be non-negative");
+    let mut remainder = 0_u64;
+    let mut quotient = String::with_capacity(text.len());
+    for digit in text.bytes() {
+        let current = remainder * 10 + u64::from(digit - b'0');
+        quotient.push(char::from(b'0' + (current / u64::from(divisor)) as u8));
+        remainder = current % u64::from(divisor);
+    }
+    let quotient = quotient.trim_start_matches('0');
+    if quotient.is_empty() {
+        return 0.into();
+    }
+    quotient
+        .parse::<serde_json::Number>()
+        .expect("integer division produces a valid decimal number")
+}
+
+fn compare_integer_magnitudes(left: &str, right: &str) -> std::cmp::Ordering {
+    left.len().cmp(&right.len()).then_with(|| left.cmp(right))
+}
+
 fn pydantic_integer_from_number(number: &serde_json::Number) -> Result<serde_json::Number, String> {
     let text = number.to_string();
     if let Some(integer) = canonical_integer_text(&text) {
@@ -428,6 +510,41 @@ mod tests {
         assert_eq!(
             serde_json::to_string(&ApprovalLevel::HumanApprovalRequired).unwrap(),
             r#""human-approval-required""#
+        );
+    }
+
+    #[test]
+    fn arbitrary_integer_helpers_preserve_sign_and_precision() {
+        let large = "1267650600228229401496703205376"
+            .parse::<serde_json::Number>()
+            .unwrap();
+        let negative = "-1267650600228229401496703205376"
+            .parse::<serde_json::Number>()
+            .unwrap();
+        let doubled = pydantic_integer_mul_small(&large, 2);
+        assert_eq!(doubled.to_string(), "2535301200456458802993406410752");
+        assert!(pydantic_integer_cmp(&negative, &large).is_lt());
+        assert!(pydantic_integer_is_positive(&large));
+        assert!(!pydantic_integer_is_positive(&negative));
+        assert_eq!(
+            pydantic_integer_div_small_floor(&large, 4).to_string(),
+            "316912650057057350374175801344"
+        );
+    }
+
+    #[test]
+    fn pydantic_integer_coercion_matches_float_conversion_bounds() {
+        let value = serde_json::Value::Number(serde_json::Number::from_f64(1e18).unwrap());
+        let integer = pydantic_integer_from_value(&value).unwrap();
+        assert_eq!(integer.to_string(), "1000000000000000000");
+        let out_of_range = serde_json::Value::Number(serde_json::Number::from_f64(1e30).unwrap());
+        assert!(pydantic_integer_from_value(&out_of_range).is_err());
+        let negative_zero = serde_json::Value::Number(serde_json::Number::from_f64(-0.0).unwrap());
+        assert_eq!(
+            pydantic_integer_from_value(&negative_zero)
+                .unwrap()
+                .to_string(),
+            "0"
         );
     }
 

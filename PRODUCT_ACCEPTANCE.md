@@ -3,14 +3,13 @@
 ## Current checkpoint — 2026-11-14
 
 Product acceptance remains **not granted**. PR #16 is the sole open PR. The
-latest pushed `2e14606` passes hosted cross-platform Rust and Python/Rust
-compatibility, Python version/platform, API, build, site, security, and mutation
-checks. Its unchanged context-band gate remains 0.6667 < 0.90. TASK-126 passes
-hosted validation. Local TASK-127 extends context token integer parity through
-classification, routing, and API paths; 295 focused cases, the 2,378-pass /
-4-skip Python suite, and the Rust workspace pass locally. Rust migration and
-production acceptance remain incomplete; no production deployment or paid
-OpenAI request occurred.
+latest pushed `4a3e7ab` passes hosted Rust workspace, Rust 1.89 minimum, and
+Python/Rust compatibility on Linux, Windows, and macOS. Its unchanged
+context-band promotion gate remains 0.6667 < 0.90. TASK-127 is hosted-green.
+TASK-128's full local regression passes 2,382 tests with 4 skips; Rust workspace
+and quality checks pass, and hosted validation awaits the next push. Rust
+migration and production acceptance remain incomplete; no production deployment
+or paid OpenAI request occurred.
 The table below is historical.
 
 ## Historical assessment

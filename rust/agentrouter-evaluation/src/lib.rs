@@ -330,7 +330,7 @@ pub fn evaluate_provider(models: &[agentrouter_registry::ModelEntry]) -> serde_j
         if !clean(&release_channel) {
             missing.push("release_channel");
         }
-        if model.context_window == 0 {
+        if !agentrouter_core::pydantic_integer_is_positive(&model.context_window) {
             missing.push("context_window");
         }
         if model.source.as_deref().is_none_or(|source| !clean(source)) {
@@ -965,10 +965,14 @@ fn routing_constraints(
             Some(format!("model {} is forbidden", model.model_id)),
         );
     }
-    if expectation
-        .min_context_tokens
-        .is_some_and(|minimum| minimum != 0 && i64::from(model.context_window) < minimum)
-    {
+    if expectation.min_context_tokens.is_some_and(|minimum| {
+        minimum != 0
+            && agentrouter_core::pydantic_integer_cmp(
+                &model.context_window,
+                &serde_json::Number::from(minimum),
+            )
+            .is_lt()
+    }) {
         return (
             false,
             Some(format!(

@@ -235,7 +235,11 @@ pub fn run(home: &Path, args: &[String]) -> Result<i32, String> {
             &target.host_model_id,
             prompt,
             &api_key,
-            model.max_output_tokens,
+            model
+                .max_output_tokens
+                .as_u64()
+                .unwrap_or(u64::MAX)
+                .min(u64::from(crate::openai::MAX_OUTPUT_TOKENS)) as u32,
         ) {
             Ok(result) => result,
             Err(error) => {

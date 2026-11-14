@@ -172,12 +172,15 @@ pub struct ModelEntry {
     pub release_channel: ReleaseChannel,
     #[serde(default = "default_snapshot_type")]
     pub snapshot_type: SnapshotType,
-    #[serde(deserialize_with = "deserialize_pydantic_u32")]
-    pub context_window: u32,
-    #[serde(default, deserialize_with = "deserialize_optional_pydantic_u32")]
-    pub max_input_tokens: Option<u32>,
-    #[serde(deserialize_with = "deserialize_pydantic_u32")]
-    pub max_output_tokens: u32,
+    #[serde(deserialize_with = "deserialize_positive_pydantic_integer")]
+    pub context_window: serde_json::Number,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_positive_pydantic_integer"
+    )]
+    pub max_input_tokens: Option<serde_json::Number>,
+    #[serde(deserialize_with = "deserialize_positive_pydantic_integer")]
+    pub max_output_tokens: serde_json::Number,
     pub pricing_tier: PricingTier,
     pub latency_tier: LatencyTier,
     #[serde(default, deserialize_with = "deserialize_optional_pydantic_f64")]
@@ -410,6 +413,7 @@ enum PydanticScalar {
     Signed(i64),
     Unsigned(u64),
     Float(f64),
+    JsonNumber(String),
     Text(String),
 }
 
@@ -442,7 +446,7 @@ impl<'de> serde::de::Visitor<'de> for PydanticScalarVisitor {
     {
         i64::try_from(value)
             .map(PydanticScalar::Signed)
-            .or_else(|_| Ok(PydanticScalar::Text(value.to_string())))
+            .or_else(|_| Ok(PydanticScalar::JsonNumber(value.to_string())))
     }
 
     fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
@@ -458,7 +462,7 @@ impl<'de> serde::de::Visitor<'de> for PydanticScalarVisitor {
     {
         u64::try_from(value)
             .map(PydanticScalar::Unsigned)
-            .or_else(|_| Ok(PydanticScalar::Text(value.to_string())))
+            .or_else(|_| Ok(PydanticScalar::JsonNumber(value.to_string())))
     }
 
     fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
@@ -512,16 +516,19 @@ impl<'de> Deserialize<'de> for PydanticScalar {
 }
 
 fn parse_json_number_text(value: String) -> PydanticScalar {
-    if let Ok(value) = value.parse::<i64>() {
-        return PydanticScalar::Signed(value);
+    if is_integer_number_text(&value) {
+        PydanticScalar::JsonNumber(value)
+    } else {
+        value
+            .parse::<f64>()
+            .map(PydanticScalar::Float)
+            .unwrap_or(PydanticScalar::JsonNumber(value))
     }
-    if let Ok(value) = value.parse::<u64>() {
-        return PydanticScalar::Unsigned(value);
-    }
-    if let Ok(value) = value.parse::<f64>() {
-        return PydanticScalar::Float(value);
-    }
-    PydanticScalar::Text(value)
+}
+
+fn is_integer_number_text(value: &str) -> bool {
+    let digits = value.strip_prefix('-').unwrap_or(value);
+    !digits.is_empty() && digits.bytes().all(|byte| byte.is_ascii_digit())
 }
 
 fn strip_valid_digit_separators(value: &str) -> Option<String> {
@@ -595,6 +602,15 @@ fn parse_pydantic_integer(value: PydanticScalar, max: u64) -> Option<u64> {
             (value.is_finite() && value.fract() == 0.0 && value >= 0.0 && value <= max as f64)
                 .then_some(value as u64)
         }
+        PydanticScalar::JsonNumber(value) => {
+            if is_integer_number_text(&value) {
+                parse_bounded_integer_text(&value, max)
+            } else {
+                let value = value.parse::<f64>().ok()?;
+                (value.is_finite() && value.fract() == 0.0 && value >= 0.0 && value <= max as f64)
+                    .then_some(value as u64)
+            }
+        }
         PydanticScalar::Text(value) => parse_bounded_integer_text(&value, max),
     }
 }
@@ -605,6 +621,7 @@ fn parse_pydantic_float(value: PydanticScalar) -> Option<f64> {
         PydanticScalar::Signed(value) => Some(value as f64),
         PydanticScalar::Unsigned(value) => Some(value as f64),
         PydanticScalar::Float(value) => Some(value),
+        PydanticScalar::JsonNumber(value) => value.parse::<f64>().ok(),
         PydanticScalar::Text(value) => {
             let normalized = if value.contains('_') {
                 strip_valid_digit_separators(&value)?
@@ -623,6 +640,11 @@ fn parse_pydantic_bool(value: PydanticScalar) -> Option<bool> {
         PydanticScalar::Signed(1) | PydanticScalar::Unsigned(1) => Some(true),
         PydanticScalar::Float(0.0) => Some(false),
         PydanticScalar::Float(1.0) => Some(true),
+        PydanticScalar::JsonNumber(value) => match value.parse::<f64>().ok()? {
+            0.0 => Some(false),
+            1.0 => Some(true),
+            _ => None,
+        },
         // Pydantic's bool validator accepts case-insensitive tokens but does
         // not trim strings (unlike its int and float validators).
         PydanticScalar::Text(value) => match value.to_ascii_lowercase().as_str() {
@@ -644,25 +666,43 @@ where
         .ok_or_else(|| serde::de::Error::custom("invalid integer value"))
 }
 
-fn deserialize_pydantic_u32<'de, D>(deserializer: D) -> Result<u32, D::Error>
+fn pydantic_integer(value: PydanticScalar) -> Option<serde_json::Number> {
+    let value = match value {
+        PydanticScalar::Bool(value) => serde_json::Value::Bool(value),
+        PydanticScalar::Signed(value) => serde_json::Value::Number(value.into()),
+        PydanticScalar::Unsigned(value) => serde_json::Value::Number(value.into()),
+        PydanticScalar::Float(value) => {
+            serde_json::Value::Number(serde_json::Number::from_f64(value)?)
+        }
+        PydanticScalar::JsonNumber(value) => serde_json::Value::Number(value.parse().ok()?),
+        PydanticScalar::Text(value) => serde_json::Value::String(value),
+    };
+    agentrouter_core::pydantic_integer_from_value(&value).ok()
+}
+
+fn deserialize_positive_pydantic_integer<'de, D>(
+    deserializer: D,
+) -> Result<serde_json::Number, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
-    let value = PydanticScalar::deserialize(deserializer)?;
-    parse_pydantic_integer(value, u64::from(u32::MAX))
-        .and_then(|value| u32::try_from(value).ok())
-        .ok_or_else(|| serde::de::Error::custom("invalid integer value"))
+    let value = pydantic_integer(PydanticScalar::deserialize(deserializer)?)
+        .filter(agentrouter_core::pydantic_integer_is_positive)
+        .ok_or_else(|| serde::de::Error::custom("value must be a positive integer"))?;
+    Ok(value)
 }
 
-fn deserialize_optional_pydantic_u32<'de, D>(deserializer: D) -> Result<Option<u32>, D::Error>
+fn deserialize_optional_positive_pydantic_integer<'de, D>(
+    deserializer: D,
+) -> Result<Option<serde_json::Number>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
     Option::<PydanticScalar>::deserialize(deserializer)?
         .map(|value| {
-            parse_pydantic_integer(value, u64::from(u32::MAX))
-                .and_then(|value| u32::try_from(value).ok())
-                .ok_or_else(|| serde::de::Error::custom("invalid integer value"))
+            pydantic_integer(value)
+                .filter(agentrouter_core::pydantic_integer_is_positive)
+                .ok_or_else(|| serde::de::Error::custom("value must be a positive integer"))
         })
         .transpose()
 }
@@ -701,13 +741,17 @@ impl ModelEntry {
     /// Enforce the Pydantic `Field` constraints from `schema.ModelEntry`.
     /// Serde's primitive types alone allow zero sizes and non-finite floats.
     fn validate(&self) -> Result<(), String> {
-        if self.context_window == 0 {
+        if !agentrouter_core::pydantic_integer_is_positive(&self.context_window) {
             return Err("context_window must be greater than 0".to_string());
         }
-        if self.max_input_tokens == Some(0) {
+        if self
+            .max_input_tokens
+            .as_ref()
+            .is_some_and(|value| !agentrouter_core::pydantic_integer_is_positive(value))
+        {
             return Err("max_input_tokens must be greater than 0".to_string());
         }
-        if self.max_output_tokens == 0 {
+        if !agentrouter_core::pydantic_integer_is_positive(&self.max_output_tokens) {
             return Err("max_output_tokens must be greater than 0".to_string());
         }
         for (name, score) in [
@@ -853,7 +897,8 @@ fn load_yaml(path: &Path) -> Result<serde_yaml::Mapping, RegistryError> {
     }
     let text = read_text_nofollow(path)
         .map_err(|e| RegistryError::InvalidYaml(path.to_path_buf(), e.to_string()))?;
-    let value: serde_yaml::Value = serde_yaml::from_str(&text)
+    let normalized = quote_unbounded_model_token_integers(&text);
+    let value: serde_yaml::Value = serde_yaml::from_str(&normalized)
         .map_err(|e| RegistryError::InvalidYaml(path.to_path_buf(), e.to_string()))?;
     if contains_json_number_marker(&value) {
         return Err(RegistryError::InvalidYaml(
@@ -865,6 +910,175 @@ fn load_yaml(path: &Path) -> Result<serde_yaml::Mapping, RegistryError> {
         .as_mapping()
         .cloned()
         .ok_or_else(|| RegistryError::NotAMapping(path.to_path_buf()))
+}
+
+/// serde_yaml's value representation rejects integers outside i64/u64 before
+/// Pydantic-compatible field coercion can see them. Quote only oversized
+/// integer scalars assigned to the three unbounded token-count fields; their
+/// custom deserializers then parse the decimal strings exactly.
+fn quote_unbounded_model_token_integers(text: &str) -> String {
+    const KEYS: [&str; 3] = ["context_window", "max_input_tokens", "max_output_tokens"];
+
+    let mut result = String::with_capacity(text.len());
+    let mut block_parent_indent = None;
+    let mut block_content_indent = None;
+    let mut quote = None;
+    for line in text.split_inclusive('\n') {
+        let content = line.strip_suffix('\n').unwrap_or(line);
+        let indent = content.bytes().take_while(|byte| *byte == b' ').count();
+        let nonblank = content[indent..].trim().is_empty();
+        if let Some(parent_indent) = block_parent_indent {
+            if nonblank {
+                result.push_str(line);
+                continue;
+            }
+            match block_content_indent {
+                Some(content_indent) if indent >= content_indent => {
+                    result.push_str(line);
+                    continue;
+                }
+                None if indent > parent_indent => {
+                    block_content_indent = Some(indent);
+                    result.push_str(line);
+                    continue;
+                }
+                _ => {
+                    block_parent_indent = None;
+                    block_content_indent = None;
+                }
+            }
+        }
+
+        let bytes = content.as_bytes();
+        let mut output = Vec::with_capacity(content.len() + 16);
+        let mut index = 0;
+        while index < bytes.len() {
+            let byte = bytes[index];
+            if let Some(delimiter) = quote {
+                output.push(byte);
+                if delimiter == b'"' && byte == b'\\' {
+                    index += 1;
+                    if let Some(escaped) = bytes.get(index) {
+                        output.push(*escaped);
+                    }
+                } else if byte == delimiter {
+                    if delimiter == b'\'' && bytes.get(index + 1) == Some(&b'\'') {
+                        index += 1;
+                        output.push(b'\'');
+                    } else {
+                        quote = None;
+                    }
+                }
+                index += 1;
+                continue;
+            }
+            if byte == b'"' || byte == b'\'' {
+                quote = Some(byte);
+                output.push(byte);
+                index += 1;
+                continue;
+            }
+            if byte == b'#' && (index == 0 || bytes[index - 1].is_ascii_whitespace()) {
+                output.extend_from_slice(&bytes[index..]);
+                break;
+            }
+
+            let matched = KEYS.iter().find(|key| {
+                let key_bytes = key.as_bytes();
+                let end = index + key_bytes.len();
+                bytes.get(index..end) == Some(key_bytes)
+                    && bytes.get(end) == Some(&b':')
+                    && (index == 0
+                        || bytes[index - 1].is_ascii_whitespace()
+                        || matches!(bytes[index - 1], b'{' | b',' | b'-'))
+            });
+            if let Some(key) = matched {
+                let mut value_start = index + key.len() + 1;
+                while bytes
+                    .get(value_start)
+                    .is_some_and(|byte| matches!(byte, b' ' | b'\t'))
+                {
+                    value_start += 1;
+                }
+                let mut value_end = value_start;
+                if bytes
+                    .get(value_end)
+                    .is_some_and(|byte| matches!(byte, b'+' | b'-'))
+                {
+                    value_end += 1;
+                }
+                while bytes
+                    .get(value_end)
+                    .is_some_and(|byte| byte.is_ascii_digit() || *byte == b'_')
+                {
+                    value_end += 1;
+                }
+                let token = &content[value_start..value_end];
+                let normalized = token.replace('_', "");
+                let digits = normalized
+                    .strip_prefix('-')
+                    .or_else(|| normalized.strip_prefix('+'))
+                    .unwrap_or(&normalized);
+                let valid_integer = strip_valid_digit_separators(token).is_some()
+                    && !digits.is_empty()
+                    && digits.bytes().all(|byte| byte.is_ascii_digit());
+                let delimiter = bytes.get(value_end);
+                let scalar_ends_here = delimiter.is_none_or(|byte| {
+                    byte.is_ascii_whitespace() || matches!(byte, b',' | b'}' | b']' | b'#')
+                });
+                let fits = normalized.parse::<i64>().is_ok() || normalized.parse::<u64>().is_ok();
+                if valid_integer && scalar_ends_here && !fits {
+                    output.extend_from_slice(&bytes[index..value_start]);
+                    output.push(b'"');
+                    output.extend_from_slice(token.as_bytes());
+                    output.push(b'"');
+                    index = value_end;
+                    continue;
+                }
+            }
+
+            output.push(byte);
+            index += 1;
+        }
+        result.push_str(&String::from_utf8(output).expect("copied YAML UTF-8 remains valid"));
+
+        let trimmed = content.trim_end();
+        let without_comment = trimmed
+            .split_once(" #")
+            .map_or(trimmed, |(prefix, _)| prefix)
+            .trim_end();
+        let has_scalar_marker = without_comment.rsplit_once(':').is_some_and(|(_, value)| {
+            matches!(value.trim(), "|" | ">" | "|-" | ">-" | "|+" | ">+")
+        });
+        if quote.is_none() && has_scalar_marker {
+            block_parent_indent = Some(indent);
+            block_content_indent = None;
+        }
+        if line.ends_with('\n') {
+            result.push('\n');
+        }
+    }
+    result
+}
+
+#[cfg(test)]
+mod unbounded_yaml_tests {
+    use super::quote_unbounded_model_token_integers;
+
+    #[test]
+    fn oversized_token_integers_are_quoted_only_as_yaml_scalars() {
+        let huge = "1267650600228229401496703205376";
+        let source = format!(
+            "models:\n  - context_window: {huge}\n    max_input_tokens: -{huge}\n    extra: {{max_output_tokens: {huge}}}\n    notes: |\n      context_window: {huge}\n    label: \"context_window: {huge} — 🧭\"\n    # max_output_tokens: {huge}\n"
+        );
+        let rewritten = quote_unbounded_model_token_integers(&source);
+        assert!(rewritten.contains(&format!("context_window: \"{huge}\"")));
+        assert!(rewritten.contains(&format!("max_input_tokens: \"-{huge}\"")));
+        assert!(rewritten.contains(&format!("max_output_tokens: \"{huge}\"}}")));
+        assert!(rewritten.contains(&format!("      context_window: {huge}")));
+        assert!(rewritten.contains(&format!("label: \"context_window: {huge} — 🧭\"")));
+        assert!(rewritten.contains(&format!("# max_output_tokens: {huge}")));
+    }
 }
 
 fn contains_json_number_marker(value: &serde_yaml::Value) -> bool {
@@ -1287,7 +1501,7 @@ models:
         );
         let (models, warnings) = load_all_models(dir.path(), &providers).unwrap();
         assert_eq!(models.len(), 1);
-        assert_eq!(models[0].max_output_tokens, 4096);
+        assert_eq!(models[0].max_output_tokens.to_string(), "4096");
         assert!(warnings.iter().any(|w| w.contains("shadowed")));
     }
 

@@ -1,5 +1,22 @@
 # LOOP_LOG
 
+## 2026-11-14 — TASK-128 Rust unbounded model token-count parity
+
+Rust now preserves Python's unbounded positive `ModelEntry` context and token
+limits across YAML/JSON registry loading, OpenRouter refresh, routing score
+thresholds, evaluation, CLI display, and guarded OpenAI output limits. The YAML
+scanner quotes only oversized decimal token scalars and skips comments,
+quoted strings, Unicode, and block scalars. Exact midpoint comparison preserves
+Python's rounded integer-ratio threshold behavior at 2x and 16x.
+
+Full Python regression: 2,382 passed / 4 skipped, 91.983% statement, 87.735%
+branch, and 91.008% weighted combined coverage. Rust workspace tests, strict
+Clippy, Rust 1.89 minimum, format, Ruff, Bandit, pip-audit, and cargo audit pass.
+Hosted Rust and Python/Rust checks pass on Linux/Windows/macOS at the previous
+RC head `4a3e7ab`; TASK-128's own hosted checks await its push. PR #16's frozen
+context gate remains 0.6667 < 0.90. Continue with the remaining schema and
+public-module differential gaps without changing the evaluation gate.
+
 ## 2026-11-14 — TASK-113 Rust plugin forced replacement and recovery
 
 - Rust now force-replaces unmanaged plugin files using a private install stage,

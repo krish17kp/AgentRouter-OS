@@ -174,7 +174,13 @@ release authority until the full set is complete.
   now preserves Python's signed arbitrary-precision integer values and Pydantic
   numeric/string/boolean coercions. Classifier estimates and routing capacity
   checks also preserve the exact integer rather than truncating to `u32`.
-  The module remains Partial pending full-module differential coverage.
+  Rust `ModelEntry.context_window`, `max_input_tokens`, and
+  `max_output_tokens` likewise preserve arbitrary-precision positive integers
+  across YAML/JSON registry loading, OpenRouter refresh, evaluation, route
+  scoring, and display. Differential cases exercise values beyond `u64` and
+  Python's rounded 2x/16x context-fit boundaries. The `agentrouter/schema.py`
+  module remains Partial pending full-module differential coverage for all
+  public types and behavior.
   Annotation manifest schema versions and count maps
   now preserve Python-compatible arbitrary-precision integers exactly in
   schema validation and JSON storage. Raw timestamp differentials now exercise
@@ -269,17 +275,17 @@ release authority until the full set is complete.
 - The Rust API crate now ports classify, route, feedback and dry-run request
   bounds, typed response models, and passthrough envelopes that preserve
   engine-owned fields. Differential checks cover supported Pydantic boolean and
-  integer coercions and field-level 422 responses; Python's unbounded integer
-  range, some docs behavior, and parts of the server lifecycle remain unported,
-  so the HTTP schema module is Partial. The TypeScript SDK exercises all
+  integer coercions and field-level 422 responses, including unbounded signed
+  Classification context-token values; some docs behavior, other unbounded
+  integer fields, and parts of the server lifecycle remain unported, so the
+  HTTP schema module is Partial. The TypeScript SDK exercises all
   manifest operations against the Rust process in the cross-platform CI job.
 - Rust API service functions now match Python model and host listings,
   classification, no-log and persisted routing, decision lookup, nullable-note
   feedback, and dry-run previews using committed local registries and SQLite.
-  Rust now serves those functions over Axum, and the TypeScript SDK drives every
-  manifest operation against that process. FastAPI middleware/observability
-  edge cases and the full context-token integer range remain open, so service
-  parity is Partial.
+Rust now serves those functions over Axum, and the TypeScript SDK drives every
+manifest operation against that process. FastAPI middleware/observability
+edge cases remain open, so service parity is Partial.
 - Performance scoring and classification/routing timing now run in Rust for
   caller-supplied models and tasks. Seed loading and injected classifier
   behavior remain Python-side; latency values are machine-dependent.

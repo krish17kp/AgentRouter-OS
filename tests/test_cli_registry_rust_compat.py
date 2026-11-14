@@ -220,6 +220,21 @@ def test_rust_registry_coerces_model_scalars_like_pydantic(seeded_home, field, v
     assert json.loads(rust.stdout) == json.loads(python.stdout)
 
 
+def test_rust_registry_preserves_unbounded_model_token_fields_like_pydantic(seeded_home):
+    path = seeded_home / "registry" / "models.yaml"
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
+    model = document["models"][0]
+    model["context_window"] = 2**100
+    model["max_input_tokens"] = "123456789012345678901234567890"
+    model["max_output_tokens"] = 2**120
+    path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
+
+    python = runner.invoke(app, ["registry", "list", "--json"])
+    rust = _rust_registry(seeded_home, "--json")
+    assert python.exit_code == rust.returncode == 0
+    assert json.loads(rust.stdout) == json.loads(python.stdout)
+
+
 @pytest.mark.parametrize("value", ["1_0", "1_000.5"])
 def test_rust_registry_coerces_underscored_float_strings_like_pydantic(seeded_home, value):
     path = seeded_home / "registry" / "models.yaml"

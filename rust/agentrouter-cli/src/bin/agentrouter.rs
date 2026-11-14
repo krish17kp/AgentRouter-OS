@@ -84,16 +84,21 @@ fn option_text(value: Option<&str>) -> &str {
     value.unwrap_or("None")
 }
 
-fn grouped(value: u32) -> String {
+fn grouped(value: &serde_json::Number) -> String {
     let digits = value.to_string();
     let mut reversed = String::with_capacity(digits.len() + digits.len() / 3);
-    for (index, digit) in digits.chars().rev().enumerate() {
+    let negative = digits.starts_with('-');
+    for (index, digit) in digits.trim_start_matches('-').chars().rev().enumerate() {
         if index > 0 && index % 3 == 0 {
             reversed.push(',');
         }
         reversed.push(digit);
     }
-    reversed.chars().rev().collect()
+    let mut grouped: String = reversed.chars().rev().collect();
+    if negative {
+        grouped.insert(0, '-');
+    }
+    grouped
 }
 
 fn hosts_list(home: &Path) -> Result<i32, String> {
@@ -230,8 +235,8 @@ fn models_show(home: &Path, key: &str) -> Result<i32, String> {
     );
     println!(
         "  context={}  max_output={}  pricing_tier={}",
-        grouped(model.context_window),
-        grouped(model.max_output_tokens),
+        grouped(&model.context_window),
+        grouped(&model.max_output_tokens),
         format!("{:?}", model.pricing_tier).to_lowercase()
     );
     println!(

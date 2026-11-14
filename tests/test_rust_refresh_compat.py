@@ -80,6 +80,18 @@ def test_rust_openrouter_mapping_matches_python(raw):
     _assert_model_matches("map_openrouter", raw, _dump(refresh.map_openrouter_model(raw)))
 
 
+@pytest.mark.parametrize("explicit_max_output", [None, 2**120])
+def test_rust_openrouter_mapping_preserves_unbounded_token_counts(explicit_max_output):
+    raw = {
+        "id": "vendor/huge-context",
+        "context_length": 2**100,
+        "pricing": {"prompt": 0},
+    }
+    if explicit_max_output is not None:
+        raw["top_provider"] = {"max_completion_tokens": explicit_max_output}
+    _assert_model_matches("map_openrouter", raw, _dump(refresh.map_openrouter_model(raw)))
+
+
 @pytest.mark.parametrize(
     "model_id",
     [

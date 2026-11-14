@@ -40,8 +40,8 @@ struct EntryData<'a> {
     provider: &'a str,
     model_id: &'a str,
     display_name: Option<String>,
-    context_window: u32,
-    max_output_tokens: u32,
+    context_window: serde_json::Number,
+    max_output_tokens: serde_json::Number,
     pricing_tier: PricingTier,
     ability_scores: (u8, u8, u8),
     tool_support: Vec<String>,
@@ -166,7 +166,11 @@ pub fn map_openrouter_model_on(raw: &Value, today: NaiveDate) -> Result<ModelEnt
     let model_id = raw.get("id");
     let context = raw.get("context_length");
     let context = context.and_then(python_integer);
-    if !model_id.is_some_and(truthy) || !context.is_some_and(|value| value > 0) {
+    if !model_id.is_some_and(truthy)
+        || !context
+            .as_ref()
+            .is_some_and(agentrouter_core::pydantic_integer_is_positive)
+    {
         return Err(RefreshError(format!(
             "entry missing id/context_length: {}",
             model_id
@@ -174,9 +178,7 @@ pub fn map_openrouter_model_on(raw: &Value, today: NaiveDate) -> Result<ModelEnt
                 .unwrap_or_else(|| python_repr(raw))
         )));
     }
-    let context = context.expect("validated above");
-    let context_window = u32::try_from(context)
-        .map_err(|_| RefreshError("context_length exceeds the Rust registry range".into()))?;
+    let context_window = context.expect("validated above");
 
     let pricing = match raw.get("pricing").filter(|value| truthy(value)) {
         None => None,
@@ -213,11 +215,15 @@ pub fn map_openrouter_model_on(raw: &Value, today: NaiveDate) -> Result<ModelEnt
         .get("top_provider")
         .and_then(|value| value.get("max_completion_tokens"))
         .and_then(python_integer)
-        .filter(|value| *value > 0)
-        .map(u32::try_from)
-        .transpose()
-        .map_err(|_| RefreshError("max_completion_tokens exceeds the Rust registry range".into()))?
-        .unwrap_or_else(|| (context_window / 4).max(1024));
+        .filter(agentrouter_core::pydantic_integer_is_positive)
+        .unwrap_or_else(|| {
+            let derived = agentrouter_core::pydantic_integer_div_small_floor(&context_window, 4);
+            if agentrouter_core::pydantic_integer_cmp(&derived, &1024.into()).is_lt() {
+                1024.into()
+            } else {
+                derived
+            }
+        });
 
     let model_id = model_id
         .and_then(Value::as_str)
@@ -274,8 +280,8 @@ pub fn map_openai_model_on(raw: &Value, today: NaiveDate) -> Result<ModelEntry, 
             provider: "openai",
             model_id,
             display_name: None,
-            context_window: family.context,
-            max_output_tokens: family.max_output,
+            context_window: family.context.into(),
+            max_output_tokens: family.max_output.into(),
             pricing_tier: family.tier,
             ability_scores: family.ability,
             tool_support: tools,
@@ -416,10 +422,12 @@ fn make_entry(data: EntryData<'_>, today: NaiveDate) -> ModelEntry {
     }
 }
 
-fn python_integer(value: &Value) -> Option<i64> {
+fn python_integer(value: &Value) -> Option<serde_json::Number> {
     match value {
-        Value::Number(number) => number.as_i64(),
-        Value::Bool(value) => Some(i64::from(*value)),
+        Value::Number(number) if super::is_integer_number_text(&number.to_string()) => {
+            Some(number.clone())
+        }
+        Value::Bool(value) => Some(u8::from(*value).into()),
         _ => None,
     }
 }

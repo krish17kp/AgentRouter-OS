@@ -2,15 +2,14 @@
 
 ## Current checkpoint — 2026-11-14
 
-The latest pushed RC head is `2e14606`. TASK-125 and TASK-126 pass hosted Rust
-workspace and Python/Rust compatibility on Linux, Windows, and macOS, as well
-as the Python version/platform matrix, API, build, security, site, and mutation
-checks. The only failed required PR check is the frozen context gate at 0.6667
-< 0.90. Local TASK-127 passes 295 focused Python/Rust/API cases and the full
-Rust workspace. The 2,378-pass/4-skip Python suite reaches 91.970% statement,
-87.690% branch, and 90.988% combined coverage. Strict Clippy, Ruff, formatting,
-and security audits pass. Python remains the shipping authority and the Rust
-migration is incomplete.
+The latest pushed RC head is `4a3e7ab`. Rust workspace, Rust 1.89 minimum,
+and Python/Rust compatibility pass on Linux, Windows, and macOS; standard PR
+checks pass apart from the frozen context gate at 0.6667 < 0.90. TASK-127 is
+hosted-green. TASK-128 passes locally: the 2,382-pass/4-skip Python suite
+reaches 91.983% statement, 87.735% branch, and 91.008% weighted combined
+coverage; the full Rust workspace, strict Clippy, Ruff, formatting, and
+security audits pass. TASK-128 hosted validation awaits the next RC push.
+Python remains the shipping authority and the Rust migration is incomplete.
 
 ## Historical dashboard
 

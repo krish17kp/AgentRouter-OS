@@ -1,12 +1,12 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-14",
-  "current_phase": "IN_PROGRESS: TASK-126 passes hosted Rust workspace and Python/Rust compatibility on Linux, Windows, and macOS at 2e14606; Python version/platform, API, build, site, security, and mutation checks also pass. The only failed required PR check is the unchanged frozen context-band gate (0.6667 < 0.90); live smoke skips without credentials. Local TASK-127 now preserves signed arbitrary-precision Classification.context_tokens through classification, routing, HTTP, MCP, and SDK paths. Its 295 focused differential cases, 2,378-pass/4-skip Python suite, Rust workspace, strict Clippy, formatting, Ruff, Bandit, pip-audit, and cargo audit pass. Commit/push TASK-127, monitor hosted checks, and continue the remaining parity inventory.",
+  "current_phase": "IN_PROGRESS: TASK-127 passes hosted Rust workspace and Python/Rust compatibility on Linux, Windows, and macOS at 4a3e7ab. TASK-128 locally preserves unbounded positive model token counts through registry parsing, refresh, routing, evaluation, display, and guarded output limits. Its full Python suite passes 2,382/4 with 91.983% statement, 87.735% branch, and 91.008% weighted combined coverage; Rust workspace, strict Clippy, Rust 1.89 minimum, formatting, Ruff, Bandit, pip-audit, and cargo audit pass. Push TASK-128, inspect hosted cross-platform checks, and continue schema/public-module parity. PR #16 remains blocked by frozen context accuracy 0.6667 < 0.90; no release gate changes.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
-    "main": "Main remains unchanged; PR #16 is the sole open PR. At pushed RC 2e14606, Rust and Python/Rust compatibility pass on Linux/Windows/macOS and Python/platform, API, build, website, security, and mutation checks pass. The only failing required PR check is enforce-release-gate: frozen context-band 0.6667 < 0.90. No gate bypass.",
-    "release/agentrouter-v0.5-rc1": "Latest pushed head 2e14606. TASK-125 and TASK-126 pass hosted Rust workspace and Python/Rust compatibility on Linux, Windows, and macOS; Python version/platform, API, build, website, security, and mutation checks pass. The unchanged context gate fails at 0.6667 < 0.90; live smoke skips without credentials. Local TASK-127 passes 295 focused differentials, the 2,378-pass/4-skip full Python suite, Rust workspace, strict Clippy, formatting, Ruff, Bandit, pip-audit, and cargo audit. Hosted validation awaits the next authorized RC push.",
+    "main": "Main remains unchanged; PR #16 is the sole open PR. The latest RC candidate 4a3e7ab has successful hosted Rust workspace, Rust 1.89 minimum, and Python/Rust compatibility checks on Linux/Windows/macOS. The only failed required promotion check is enforce-release-gate: frozen context-band 0.6667 < 0.90. Live smoke skips without credentials. No gate bypass.",
+    "release/agentrouter-v0.5-rc1": "Latest pushed head 4a3e7ab; TASK-127 is hosted-green for Rust workspace and Python/Rust compatibility on Linux, Windows, and macOS. TASK-128 has full local verification: 2,382 passed/4 skipped, 91.983% statement, 87.735% branch, 91.008% weighted combined coverage, Rust workspace, strict Clippy, Rust 1.89 minimum, format, Ruff, Bandit, pip-audit, and cargo audit. Its hosted validation awaits the next authorized RC push. The frozen context gate remains 0.6667 < 0.90; live smoke skips without credentials.",
     "task/rust-r1-workspace": "PR #25 open against RC; 6ee8d3e passed complete GitHub CI; 32eee6f forced-init push failed Windows compile, file-handle repair awaits remote recheck; SQLite path-race blocker remains; Rust R4 partial and OpenAI execution hardening",
     "task/repo-cleanup-architecture-ponytail": "MERGED to RC (PR #14, merge commit 1ae3155); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/dynamic-skill-discovery": "MERGED to RC (PR #15, merge commit 62d5289); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
@@ -29,8 +29,8 @@
   "repo_sha_at_takeover": "602321af91ff298c0d5b59d6d36c24f845557fc1",
   "canonical_release_ready": false,
   "in_progress": [
-    "Finalize, review, commit, and push TASK-127 arbitrary-precision Classification context token parity to the authorized release-candidate branch; inspect hosted cross-platform checks and repair any failures.",
-    "Continue remaining public-module Rust contract parity and routing improvements. Keep Python as shipping authority until full parity and all release gates pass."
+    "Review, commit, and push locally verified TASK-128 to the authorized release-candidate branch; inspect hosted Linux/Windows/macOS Rust and Python/Rust checks and repair any regressions.",
+    "Continue public-module Rust contract parity and routing improvements while hosted checks run. Keep Python as shipping authority until full parity and all release gates pass."
   ],
   "completed_iter25": [
     "TASK-015 trusted catalogs MERGED to RC (PR #6 -> merge commit 8661629; task branch deleted local+remote). Closes TASK-013's deferred scope: file-level provenance block (provider, source_url, fetched_at UTC, count, tool_version, cli_args) ignored by the registry loader; atomic refresh via tempfile.mkstemp + os.replace; candidate-deprecation reporting on refresh (report-only, never auto-deletes); rollback with non-destructive backup rotation + new `providers restore`; new `providers doctor` that schema-validates every generated catalog and exits 3 only on real corruption (not staleness).",
@@ -273,5 +273,11 @@
   ],
   "completed_iter59": [
     "TASK-127 local Classification context integer parity: serde_json arbitrary-precision integers and Pydantic coercions are preserved through schema, classifier inference/overrides, routing capacity checks, HTTP requests/service, MCP, and SDK. 295 focused Python/Rust/API cases pass; full Python passes 2,378/4 with 91.970% statements, 87.690% branches, and 90.988% combined coverage; Rust workspace, strict Clippy, formatting, Ruff, Bandit, pip-audit, and cargo audit pass. Hosted checks pending the authorized RC push."
-  ]
+  ],
+  "events": {
+    "python_full_latest": "2026-11-14: TASK-128 complete local regression: 2,382 passed, 4 skipped; 6,896/7,497 statements (91.983%), 1,960/2,234 branches (87.735%), 91.008% weighted combined; Linux Python 3.12.15, pytest 9.0.3; 343.57 seconds.",
+    "rust_schema_scalar_compat_2026_11_14": "TASK-127 Classification.context_tokens arbitrary-precision parity passes hosted Rust and Python/Rust compatibility on Linux, Windows, and macOS at 4a3e7ab. TASK-128 locally extends arbitrary-precision parity to ModelEntry token limits, registry YAML/JSON, OpenRouter refresh, route thresholds, evaluation, and display. Full Python 2,382/4 with 91.983% statements / 87.735% branches / 91.008% weighted combined, Rust workspace, strict Clippy, Rust 1.89 minimum, format, Ruff, Bandit, pip-audit, and cargo audit pass. TASK-128 hosted validation pending; schema.py remains Partial pending full-module coverage.",
+    "ci_status_4a3e7ab": "Hosted Rust workspace and Python/Rust compatibility pass on Linux, Windows, and macOS, including Rust 1.89 minimum. PR #16 promotion gate remains honestly blocked by context-band accuracy 0.6667 < 0.90; live smoke skips without credentials.",
+    "task128_local_verification": "TASK-128 local verification passed: 2,382 Python tests, 4 skipped, 91.983% statements, 87.735% branches, 91.008% weighted combined; Rust workspace tests, strict Clippy, Rust 1.89 minimum, format, Ruff, Bandit, pip-audit, cargo audit, and diff checks. Hosted validation awaits push."
+  }
 }
