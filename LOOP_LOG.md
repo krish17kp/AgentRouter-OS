@@ -1,5 +1,25 @@
 # LOOP_LOG
 
+## 2026-11-14 — TASK-113 Rust plugin forced replacement and recovery
+
+- Rust now force-replaces unmanaged plugin files using a private install stage,
+  a durable identity record, a staged original, an exclusive backup, and a
+  no-replace commit. Journal recovery validates declared destinations and the
+  canonical backup path before changing files; malformed, forged, concurrent,
+  or identity-ambiguous state is preserved.
+- Python and Rust share journal phases and recovery boundaries. Regression
+  cases cover backup-intent collisions, byte-identical concurrent files,
+  pre-identity and post-identity crash points, rollback cleanup interruption,
+  invalid JSON journals, and valid-JSON path substitution attacks.
+- Focused plugin suite: 116 passed. Full Python regression: 2,257 passed,
+  4 skipped; 91.97% statement, 87.69% branch, 90.99% combined coverage. Rust
+  workspace, strict Clippy, formatting, Ruff, configured Bandit, pip-audit,
+  cargo audit, and diff checks pass locally.
+- Hosted checks for `08c019e` exposed Windows no-replace rename and staging
+  failures. The current local candidate updates Windows parent-handle opening
+  and rename information layout; re-run the hosted Windows matrix before calling
+  cross-platform validation complete. Frozen context-band remains 0.6667 < 0.90.
+
 ## 2026-11-14 — TASK-112 Rust plugin uninstall local verification
 
 - Rust `agentrouter plugin uninstall NAME` now removes only unchanged,

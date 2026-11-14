@@ -1,12 +1,12 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-14",
-  "current_phase": "IN_PROGRESS: TASK-112 local validation is complete. Focused plugin suites pass 230/3; full Python regression passes 2,237/4 with 92.83% line, 88.63% branch, and 91.87% combined coverage; Rust workspace passes 153 tests. Strict Clippy, formatting, Ruff, diff checks, and cargo audit pass. Commit and push the reviewed slice to the authorized RC, inspect hosted checks, then continue Rust forced-install and transaction-recovery parity. PR #16 remains blocked by the unchanged frozen context-band score 0.6667 < 0.90.",
+  "current_phase": "IN_PROGRESS: TASK-113 local validation passes: 116 focused plugin tests; full Python suite 2,257 passed/4 skipped at 91.97% statement, 87.69% branch, and 90.99% combined coverage; Rust workspace, strict Clippy, formatting, Ruff, Bandit, pip-audit, cargo audit, and diff checks pass. Hosted checks at 08c019e exposed Windows plugin rename/staging failures; the local parent-handle repair awaits RC CI. Push the reviewed TASK-113 slice, repair hosted failures, then continue the Rust parity backlog. PR #16 remains blocked by unchanged context-band 0.6667 < 0.90.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
     "main": "PR #16 is the sole open PR against main. Cross-platform Python/Rust, security, site, API, build and mutation checks pass; enforce-release-gate fails honestly at context-band 0.6667 < 0.90. No gate bypass.",
-    "release/agentrouter-v0.5-rc1": "Pushed head 132151d. TASK-111 hosted Rust workspace and non-skipping Python/Rust compatibility pass on Linux/Windows/macOS; Python 3.10-3.13, Windows, macOS, API, build, site, security, and mutation jobs pass. TASK-112 passes 230 focused plugin tests (3 skipped), 2,237 Python regression tests (4 skipped) with 92.83% line/88.63% branch coverage, 153 Rust workspace tests, strict Clippy, audit, formatting, and Ruff. The reviewed slice awaits push and hosted matrix. PR #16 enforce-release-gate fails honestly at frozen context-band 0.6667 < 0.90; live smoke skips without credentials.",
+    "release/agentrouter-v0.5-rc1": "Pushed head 08c019e. TASK-113 local suite: focused plugin 116 passed; full Python 2,257 passed/4 skipped at 91.97% statement, 87.69% branch, 90.99% combined; Rust workspace, Clippy, audits, formatting, Ruff and diff checks pass. Hosted check run at 08c019e failed Windows Rust rename/staging cases and 9 Python/Rust plugin cases; local Windows handle repair awaits push and hosted matrix. PR #16 enforce-release-gate honestly fails at frozen context-band 0.6667 < 0.90; live smoke skips without credentials.",
     "task/rust-r1-workspace": "PR #25 open against RC; 6ee8d3e passed complete GitHub CI; 32eee6f forced-init push failed Windows compile, file-handle repair awaits remote recheck; SQLite path-race blocker remains; Rust R4 partial and OpenAI execution hardening",
     "task/repo-cleanup-architecture-ponytail": "MERGED to RC (PR #14, merge commit 1ae3155); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/dynamic-skill-discovery": "MERGED to RC (PR #15, merge commit 62d5289); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
@@ -29,8 +29,8 @@
   "repo_sha_at_takeover": "602321af91ff298c0d5b59d6d36c24f845557fc1",
   "canonical_release_ready": false,
   "in_progress": [
-    "TASK-112: commit and push locally verified Rust plugin uninstall/recovery-advice slice to the authorized release candidate; inspect and repair all hosted checks.",
-    "Continue Rust plugin forced replacement and transaction recovery, then remaining public-module parity. Keep Python as the shipping authority until all parity and release gates pass."
+    "TASK-113: record evidence, commit, and push the locally verified Rust forced-replacement/transaction-recovery slice to the authorized release candidate; inspect and repair the hosted Windows failures.",
+    "Continue managed plugin upgrade parity and remaining public-module parity. Keep Python as the shipping authority until all parity and release gates pass."
   ],
   "completed_iter25": [
     "TASK-015 trusted catalogs MERGED to RC (PR #6 -> merge commit 8661629; task branch deleted local+remote). Closes TASK-013's deferred scope: file-level provenance block (provider, source_url, fetched_at UTC, count, tool_version, cli_args) ignored by the registry loader; atomic refresh via tempfile.mkstemp + os.replace; candidate-deprecation reporting on refresh (report-only, never auto-deletes); rollback with non-destructive backup rotation + new `providers restore`; new `providers doctor` that schema-validates every generated catalog and exits 3 only on real corruption (not staleness).",
@@ -124,7 +124,7 @@
     "historical task records remain under loop/tasks and loop/reports",
     "historical TASK-004 0.945 result is retained as in-sample evidence but no longer treated as canonical held-out readiness"
   ],
-  "next_action": "Finish TASK-112 evidence and final diff review, commit and push to the authorized release candidate, inspect all CI checks, and repair failures. Start Rust forced-install and transaction-recovery parity while hosted checks run. Keep the frozen context-band gate unchanged.",
+  "next_action": "Finish TASK-113 evidence and final diff review, commit and push to the authorized release candidate, inspect all CI checks, and repair Windows failures. Continue managed plugin upgrades and remaining Rust parity. Keep the frozen context-band gate unchanged.",
   "completed_iter26": [
     "TASK-016 verified execution-host states MERGED to RC (PR #7 -> merge commit 5847c22; task branch deleted local+remote). hosts.py gained a readiness state vocabulary (missing/installed/configured/authenticated/authorized/degraded/unknown) plus a per-host remedy; `availability` keeps its exact prior meaning and is now derived from state. hosts list/doctor/show, the setup wizard and the execute refusal all report state + fix; hosts doctor ends with the cheapest concrete fix and exits non-zero only when no real host is ready. REST/MCP gained additive state/remedy and host_state/host_remedy keys. docs: new USER_GUIDE section 8 with the state table and the honesty note on `authorized`.",
     "BUG FIXED: host detection tested the API-key env var for truthiness, so a set-but-blank key (OPENAI_API_KEY='   ') reported available and `execute` would target a host that cannot authenticate. Now degraded/unavailable with a fix-it message, pinned by a parametrised test.",

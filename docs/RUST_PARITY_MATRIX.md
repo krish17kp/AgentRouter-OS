@@ -72,7 +72,7 @@ release authority until the full set is complete.
 | `agentrouter/mcp_server.py` | `agentrouter-mcp::{Server,run_stdio}` | Partial |
 | `agentrouter/observability.py` | `agentrouter-cli::observability` | Partial |
 | `agentrouter/openai_adapter.py` | `agentrouter-cli::openai` | Parity |
-| `agentrouter/plugins.py` | `agentrouter-cli::plugins` (inventory, portable paths, no-follow state, list/status/doctor/plan, safe no-force install, ownership-checked uninstall and backup restore) | Partial |
+| `agentrouter/plugins.py` | `agentrouter-cli::plugins` (inventory, portable paths, no-follow state, list/status/doctor/plan, safe install/uninstall, forced unmanaged replacement, identity-checked journal recovery) | Partial |
 | `agentrouter/prompts.py` | `agentrouter-cli::generate_prompt` | Parity |
 | `agentrouter/refresh.py` | `agentrouter-registry::refresh` | Partial |
 | `agentrouter/registry.py` | `agentrouter-registry` | Parity |
@@ -253,14 +253,14 @@ release authority until the full set is complete.
 - Evaluation provenance now matches Python for dataset-quality/leakage aggregation and the complete four-field runtime environment snapshot.
 - The Rust plugin module ports the bundled manifest, portable path trust
   boundary, no-follow ownership-state reads, read-only list/doctor and dry-run
-  planning, plus safe no-force installation of missing and byte-identical
-  files and ownership-checked uninstall. Rust-created ownership state is
-  byte-compatible with Python. Differential checks cover owned and unmanaged
-  files, pre-existing/adopted files, edited and missing destinations, verified
-  backup restoration and crash recovery, historical paths, hard-link refusal,
-  and identity-checked empty-directory cleanup. Rust still refuses differing-
-  file replacement, managed upgrades, and interrupted transaction recovery;
-  those lifecycle operations and full CLI parity remain incomplete.
+  planning, safe no-force installation, ownership-checked uninstall, forced
+  replacement of unmanaged files, and transaction recovery. Rust-created
+  ownership state and journals are Python-compatible. Differential checks cover
+  owned and unmanaged files, backup collisions, concurrent edits, pre-identity
+  and post-identity crash boundaries, rollback, malformed or forged journals,
+  verified backup restoration, historical paths, hard-link refusal, and
+  identity-checked empty-directory cleanup. Managed upgrades and full CLI parity
+  remain incomplete; hosted validation of TASK-113 is pending.
   Windows parity uses the CPython-compatible file-ID query where supported and
   fails closed for 128-bit identities the current state schema cannot encode.
 - Routing evaluation now scores caller-supplied model catalogs against gold

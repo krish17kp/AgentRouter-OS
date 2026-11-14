@@ -28,12 +28,10 @@ All notable changes to AgentRouter OS. Format loosely follows
   `agentrouter contract export` command remains to be integrated.
 - Port the Rust plugin inventory, portable path validation, no-follow
   ownership-state reader, list/doctor commands, install planning, safe no-force
-  install, and ownership-checked uninstall. Python and Rust share ownership
-  state; uninstall preserves user edits and unmanaged files, restores verified
-  backups, handles historical managed paths, and prunes only identity-matched
-  empty directories. Forced replacement, managed upgrades, and interrupted
-  transaction recovery remain Python-owned until their Rust safeguards are
-  complete.
+  install, ownership-checked uninstall, forced unmanaged-file replacement, and
+  identity-checked transaction recovery. Python and Rust share ownership and
+  journal formats; both preserve edits and ambiguous files and restore only
+  verified backups. Managed plugin upgrades remain Python-owned.
 - Preserve Python-compatible arbitrary-precision annotation manifest integers
   in Rust schema validation and JSON storage, including exact large schema
   versions and count-map values. Keep the serializer's YAML paths safe under

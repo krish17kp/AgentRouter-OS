@@ -1,5 +1,6 @@
 """Phase P8 — plugin/skill installer (reversible, idempotent, safe)."""
 
+import json
 import os
 import re
 import stat
@@ -226,6 +227,8 @@ def test_backup_collision_created_during_link_is_never_overwritten(plug_root, mo
 
     assert dest.read_text(encoding="utf-8") == "USER CONTENT"
     assert outside.read_text(encoding="utf-8") == "DO NOT TOUCH"
+    txn = plugins._transaction_path(plugins.dest_root(p), p)
+    assert json.loads(txn.read_text(encoding="utf-8"))["phase"] == "backing_up"
 
 
 def test_edit_racing_uninstall_is_preserved(plug_root, monkeypatch):
@@ -291,7 +294,7 @@ def test_post_replace_verification_failure_keeps_recoverable_backup(plug_root, m
     original_lstat = plugins._regular_lstat
 
     def fail_after_replace(path, label, **kwargs):
-        if label == "new AgentRouter-managed file" and path == dest:
+        if label == "replacement destination" and path == dest:
             raise plugins.PluginError("simulated post-replace verification failure")
         return original_lstat(path, label, **kwargs)
 
@@ -324,7 +327,7 @@ def test_state_save_failure_preserves_concurrent_edit_backup_and_journal(plug_ro
         return original_save(root, plugin, state)
 
     monkeypatch.setattr(plugins, "_save_state", edit_then_fail)
-    with pytest.raises(plugins.PluginError, match="preserved a concurrent edit"):
+    with pytest.raises(plugins.PluginError, match="a concurrent edit at"):
         plugins.install(p, force=True)
 
     backup = dest.with_name(dest.name + plugins._BAK_SUFFIX)
@@ -395,7 +398,7 @@ def test_prepared_journal_never_claims_a_concurrent_backup(plug_root):
     assert not plugins._transaction_path(root, p).exists()
 
 
-def test_backup_creation_failure_removes_only_prepared_journal(plug_root, monkeypatch):
+def test_backup_creation_collision_preserves_intent_and_foreign_backup(plug_root, monkeypatch):
     p = plugins.get_plugin("codex")
     root = plugins.dest_root(p)
     dest = _dest(p, plug_root)
@@ -413,7 +416,248 @@ def test_backup_creation_failure_removes_only_prepared_journal(plug_root, monkey
 
     assert dest.read_text(encoding="utf-8") == "ORIGINAL USER FILE"
     assert backup.read_text(encoding="utf-8") == "CONCURRENT ACTOR BACKUP"
+    txn = plugins._transaction_path(root, p)
+    assert json.loads(txn.read_text(encoding="utf-8"))["phase"] == "backing_up"
+
+
+def test_backing_up_intent_never_claims_same_inode_backup_collision(plug_root):
+    p = plugins.get_plugin("codex")
+    root = plugins.dest_root(p)
+    dest = _dest(p, plug_root)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text("ORIGINAL USER FILE", encoding="utf-8")
+    original, original_info = plugins._read_verified(dest, "test destination")
+    backup = plugins._backup_path(root, dest)
+    transaction = {
+        "schema": 1,
+        "plugin": p.name,
+        "phase": "backing_up",
+        "dest": p.files[0].dest,
+        "backup": backup.relative_to(root).as_posix(),
+        "original_sha256": plugins._sha256(original),
+        "original_identity": plugins._identity_json(original_info),
+        "original_mode": stat.S_IMODE(original_info.st_mode),
+        "installed_sha256": plugins._sha256(plugins._src_bytes(p.files[0].src)),
+        "staged": None,
+        "install_staged": None,
+    }
+    plugins._write_transaction(root, p, transaction)
+    os.link(dest, backup, follow_symlinks=False)
+
+    with pytest.raises(plugins.PluginError, match="backup intent is ambiguous"):
+        plugins._recover_transaction(root, p, plugins._empty_state(p))
+
+    assert os.path.samefile(dest, backup)
+    assert plugins._transaction_path(root, p).is_file()
+
+
+def test_recovery_keeps_original_present_if_install_stage_identity_was_not_committed(plug_root):
+    p = plugins.get_plugin("codex")
+    root = plugins.dest_root(p)
+    dest = _dest(p, plug_root)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text("ORIGINAL USER FILE", encoding="utf-8")
+    original, original_info = plugins._read_verified(dest, "test destination")
+    backup = plugins._backup_path(root, dest)
+    want = plugins._src_bytes(p.files[0].src)
+    install_stage = dest.with_name(".agentrouter-install-uncommitted")
+    transaction = {
+        "schema": 1,
+        "plugin": p.name,
+        "phase": "backed_up",
+        "dest": p.files[0].dest,
+        "backup": backup.relative_to(root).as_posix(),
+        "staged": ".agentrouter-remove-uncommitted",
+        "install_staged": install_stage.relative_to(root).as_posix(),
+        "original_sha256": plugins._sha256(original),
+        "original_identity": plugins._identity_json(original_info),
+        "original_mode": stat.S_IMODE(original_info.st_mode),
+        "installed_sha256": plugins._sha256(want),
+        "installed_identity": None,
+    }
+    plugins._write_transaction(root, p, transaction)
+    os.link(dest, backup, follow_symlinks=False)
+    install_stage.write_bytes(want)
+
+    with pytest.raises(plugins.PluginError, match="original destination remains intact"):
+        plugins._recover_transaction(root, p, plugins._empty_state(p))
+
+    assert dest.read_text(encoding="utf-8") == "ORIGINAL USER FILE"
+    assert (
+        plugins._identity_json(plugins._regular_lstat(dest, "test destination", single_link=False))
+        == transaction["original_identity"]
+    )
+    assert backup.is_file() and install_stage.read_bytes() == want
+    assert plugins._transaction_path(root, p).is_file()
+
+
+def test_recovery_rolls_back_committed_install_stage_before_original_staging(plug_root):
+    p = plugins.get_plugin("codex")
+    root = plugins.dest_root(p)
+    dest = _dest(p, plug_root)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text("ORIGINAL USER FILE", encoding="utf-8")
+    original, original_info = plugins._read_verified(dest, "test destination")
+    backup = plugins._backup_path(root, dest)
+    want = plugins._src_bytes(p.files[0].src)
+    install_stage = dest.with_name(".agentrouter-install-committed")
+    transaction = {
+        "schema": 1,
+        "plugin": p.name,
+        "phase": "backed_up",
+        "dest": p.files[0].dest,
+        "backup": backup.relative_to(root).as_posix(),
+        "staged": ".agentrouter-remove-not-created",
+        "install_staged": install_stage.relative_to(root).as_posix(),
+        "original_sha256": plugins._sha256(original),
+        "original_identity": plugins._identity_json(original_info),
+        "original_mode": stat.S_IMODE(original_info.st_mode),
+        "installed_sha256": plugins._sha256(want),
+        "installed_identity": None,
+    }
+    os.link(dest, backup, follow_symlinks=False)
+    plugins._write_transaction(root, p, transaction)
+    install_stage.write_bytes(want)
+    transaction["installed_identity"] = plugins._identity_json(
+        plugins._regular_lstat(install_stage, "test install stage")
+    )
+    plugins._write_transaction(root, p, transaction)
+    state = plugins._empty_state(p)
+
+    plugins._recover_transaction(root, p, state)
+
+    assert dest.read_text(encoding="utf-8") == "ORIGINAL USER FILE"
+    assert not backup.exists()
+    assert not install_stage.exists()
     assert not plugins._transaction_path(root, p).exists()
+    assert not state["files"]
+
+
+def test_recovery_clears_verified_rollback_after_backup_cleanup(plug_root):
+    p = plugins.get_plugin("codex")
+    root = plugins.dest_root(p)
+    dest = _dest(p, plug_root)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text("ORIGINAL USER FILE", encoding="utf-8")
+    original, original_info = plugins._read_verified(dest, "test destination")
+    transaction = {
+        "schema": 1,
+        "plugin": p.name,
+        "phase": "backed_up",
+        "dest": p.files[0].dest,
+        "backup": plugins._backup_path(root, dest).relative_to(root).as_posix(),
+        "staged": ".agentrouter-remove-cleaned",
+        "install_staged": ".agentrouter-install-cleaned",
+        "original_sha256": plugins._sha256(original),
+        "original_identity": plugins._identity_json(original_info),
+        "original_mode": stat.S_IMODE(original_info.st_mode),
+        "installed_sha256": plugins._sha256(plugins._src_bytes(p.files[0].src)),
+        "installed_identity": [0, 0],
+    }
+    plugins._write_transaction(root, p, transaction)
+
+    plugins._recover_transaction(root, p, plugins._empty_state(p))
+
+    assert dest.read_text(encoding="utf-8") == "ORIGINAL USER FILE"
+    assert not plugins._backup_path(root, dest).exists()
+    assert not plugins._transaction_path(root, p).exists()
+
+
+@pytest.mark.parametrize(
+    ("journal_dest", "journal_backup", "reason"),
+    [
+        ("AGENTS.md", "AGENTS.md", "backup does not match"),
+        ("notes.txt", "notes.txt.agentrouter-bak", "undeclared destination"),
+    ],
+)
+def test_malformed_transaction_cannot_claim_or_delete_user_file(
+    plug_root, journal_dest, journal_backup, reason
+):
+    p = plugins.get_plugin("codex")
+    root = plugins.dest_root(p)
+    user_file = plugins._safe_dest(root, journal_dest)
+    user_file.parent.mkdir(parents=True, exist_ok=True)
+    user_file.write_text("KEEP USER CONTENT", encoding="utf-8")
+    original, original_info = plugins._read_verified(user_file, "test destination")
+    transaction = {
+        "schema": 1,
+        "plugin": p.name,
+        "phase": "backed_up",
+        "dest": journal_dest,
+        "backup": journal_backup,
+        "original_sha256": plugins._sha256(original),
+        "original_identity": plugins._identity_json(original_info),
+        "original_mode": stat.S_IMODE(original_info.st_mode),
+        "installed_sha256": plugins._sha256(plugins._src_bytes(p.files[0].src)),
+    }
+    plugins._write_transaction(root, p, transaction)
+
+    with pytest.raises(plugins.PluginError, match=reason):
+        plugins._recover_transaction(root, p, plugins._empty_state(p))
+
+    assert user_file.read_text(encoding="utf-8") == "KEEP USER CONTENT"
+    assert plugins._transaction_path(root, p).is_file()
+
+
+@pytest.mark.parametrize("destination_is_staged_install", [False, True])
+def test_transaction_recovery_claims_only_staged_install_identity(
+    plug_root, destination_is_staged_install
+):
+    p = plugins.get_plugin("codex")
+    root = plugins.dest_root(p)
+    dest = _dest(p, plug_root)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text("ORIGINAL USER FILE", encoding="utf-8")
+    original, original_info = plugins._read_verified(dest, "test destination")
+    want = plugins._src_bytes(p.files[0].src)
+    backup = plugins._backup_path(root, dest)
+    old_stage = dest.with_name(".agentrouter-remove-test")
+    install_stage = dest.with_name(".agentrouter-install-test")
+    transaction = {
+        "schema": 1,
+        "plugin": p.name,
+        "phase": "backed_up",
+        "dest": p.files[0].dest,
+        "backup": backup.relative_to(root).as_posix(),
+        "staged": old_stage.relative_to(root).as_posix(),
+        "install_staged": install_stage.relative_to(root).as_posix(),
+        "original_sha256": plugins._sha256(original),
+        "original_identity": plugins._identity_json(original_info),
+        "original_mode": stat.S_IMODE(original_info.st_mode),
+        "installed_sha256": plugins._sha256(want),
+        "installed_identity": None,
+    }
+    plugins._write_transaction(root, p, transaction)
+    os.link(dest, backup, follow_symlinks=False)
+    os.rename(dest, old_stage)
+    install_stage.write_bytes(want)
+    install_identity = plugins._identity_json(plugins._regular_lstat(install_stage, "test stage"))
+    transaction["installed_identity"] = install_identity
+    plugins._write_transaction(root, p, transaction)
+    if destination_is_staged_install:
+        os.link(install_stage, dest, follow_symlinks=False)
+    else:
+        dest.write_bytes(want)
+        assert (
+            plugins._identity_json(plugins._regular_lstat(dest, "test destination"))
+            != install_identity
+        )
+
+    state = plugins._empty_state(p)
+    if destination_is_staged_install:
+        plugins._recover_transaction(root, p, state)
+        assert state["files"][p.files[0].dest]["installed_identity"] == install_identity
+        assert not old_stage.exists()
+        assert not install_stage.exists()
+        assert backup.exists()
+        assert not plugins._transaction_path(root, p).exists()
+    else:
+        with pytest.raises(plugins.PluginError, match="interrupted plugin install is ambiguous"):
+            plugins._recover_transaction(root, p, state)
+        assert not state["files"]
+        assert dest.read_bytes() == want
+        assert backup.exists() and old_stage.exists() and install_stage.exists()
+        assert plugins._transaction_path(root, p).exists()
 
 
 def test_interrupted_uninstall_recognizes_completed_backup_restore(plug_root):
@@ -485,7 +729,7 @@ def test_replaced_backup_with_same_content_but_new_identity_is_not_restored(plug
     assert backup.is_file()
 
 
-def test_roundtrip_removes_empty_private_state_directory(plug_root):
+def test_roundtrip_keeps_private_lock_directory_after_uninstall(plug_root):
     p = plugins.get_plugin("codex")
     plugins.install(p)
     state_dir = plugins._state_path(plugins.dest_root(p), p).parent
@@ -493,7 +737,8 @@ def test_roundtrip_removes_empty_private_state_directory(plug_root):
 
     plugins.uninstall(p)
 
-    assert not state_dir.exists()
+    assert state_dir.is_dir()
+    assert {path.name for path in state_dir.iterdir()} == {"codex.lock"}
 
 
 def test_explicit_adoption_allows_legacy_identical_file_cleanup(plug_root):

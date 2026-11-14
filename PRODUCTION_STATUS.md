@@ -4,10 +4,10 @@ Updated: 2026-11-14
 
 ## Definition of done
 
-- [ ] PR review and hosted checks: PR #16 is the sole open PR. At `132151d`, Rust workspace and Python/Rust compatibility pass on Linux/Windows/macOS; Python 3.10–3.13, Windows, macOS, API compatibility, build, site, security, and critical-module mutation checks pass. `enforce-release-gate` is the only failing check because frozen context-band accuracy is 0.6667 < 0.90; live smoke is skipped without credentials. The PR targets `main` and remains unmergeable under the unchanged evaluation gate.
+- [ ] PR review and hosted checks: PR #16 is the sole open PR. At pushed head `08c019e`, Rust/Python compatibility and Rust tests pass on Linux/macOS, but Windows Rust staging/rename tests and 9 Python/Rust plugin cases fail. A local Windows parent-handle repair is in TASK-113 and needs hosted verification. `enforce-release-gate` also fails honestly because frozen context-band accuracy is 0.6667 < 0.90; live smoke skips without credentials. PR #16 targets `main` and remains unmergeable under the unchanged evaluation gate.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md); current gaps are explicit, and 40 modules currently meet the full-module differential bar. TASK-089–091 closed the Python/Rust storage contract with shared-database and concurrency evidence.
-- [x] Full Python suite: 2,237 passed, 4 skipped; the latest full run reports 92.83% line, 88.63% branch, and 91.87% combined coverage on Linux/Python 3.12.15. The unchanged 90% line / 85% branch quality thresholds pass; the detailed report is in `docs/COVERAGE_REPORT_2026-11-14.md`.
+- [x] Full Python suite: 2,257 passed, 4 skipped; the latest full run reports 91.97% statement, 87.69% branch, and 90.99% combined coverage on Linux/Python 3.12.15. The unchanged 90% statement / 85% branch quality thresholds pass; evidence is in `docs/COVERAGE_REPORT_2026-11-14-TASK-113.md`.
 - [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations; the Rust release benchmark now runs the same 10/100/1,000 candidate fleets, with a paired local p50 ratio of 2.70×–3.25× under stated synthetic conditions.
 - [x] Changelog, coverage evidence, and local latency measurements are committed to the release candidate. Candidate package version is now `0.5.0rc1`, with draft release notes in `docs/RELEASE_NOTES_v0.5.0rc1.md`; final `0.5.0` packaging and publication remain blocked on parity and all release gates.
 - [ ] Release candidate promoted to `main` with a tagged release.
@@ -117,14 +117,15 @@ Updated: 2026-11-14
 - [x] TASK-107 adds a no-follow ownership-state reader using pinned root/private-directory handles, single-link checks, stable identity/size/mtime verification, schema validation, and SHA-256 provenance. Rust workspace and Python/Rust compatibility pass on Linux, Windows, and macOS at `f81d2d1`.
 - [x] TASK-108 adds read-only Rust `agentrouter plugin doctor` text and JSON output, with Python-compatible findings for missing, unmanaged, managed, corrupt-state, and linked destinations. Cross-platform Rust workspace and non-skipping Python/Rust checks pass at `f81d2d1`.
 - [x] TASK-109 adds Rust `agentrouter plugin install NAME --dry-run` with Python-compatible create, preserve, adopt, managed-skip, overwrite, and blocked actions; the preview performs no writes. Cross-platform hosted checks pass at `f81d2d1`. macOS fixture roots are canonicalized while production link checks remain fail-closed.
-- [x] TASK-110 ports Rust no-force plugin installation for missing and byte-identical files and persists Python-compatible ownership state. The latest cross-platform run for TASK-111 also passes the plugin Rust/Python matrix; force replacement and transaction recovery remain open lifecycle parity items.
+- [x] TASK-110 ports Rust no-force plugin installation for missing and byte-identical files and persists Python-compatible ownership state. The subsequent TASK-113 slice adds forced replacement and transaction recovery; Windows hosted validation is tracked below.
 - [x] TASK-111 removes the annotation manifest's signed-64-bit ceiling with exact arbitrary-precision integer preservation for schema versions and count maps. Focused schema/store/CLI differentials (71 cases), full Python regression, Rust workspace, strict Clippy, formatting, Ruff, and diff checks pass locally. Hosted Linux/Windows/macOS Rust/Python checks pass at `132151d`. YAML serializers reject unsupported oversized integer narrowing instead of silently losing precision. Datetime grammar and other schema edges remain Partial.
-- [ ] TASK-112 ports Rust plugin uninstall with exact ownership checks, backup restoration, historical managed paths, and empty-directory cleanup. Focused plugin suites pass (230 passed, 3 skipped); the full Python regression passes (2,237 passed, 4 skipped; 92.83% line, 88.63% branch, 91.87% combined), and Rust workspace tests pass (153). Strict Clippy, Ruff, formatting, and dependency audit pass locally. The Windows rename helper type-checks in isolation; full local cross-compilation needs the MinGW C compiler used by bundled dependencies. Hosted Linux/Windows/macOS checks are pending push. Force install and Rust-side transaction recovery remain separate open lifecycle work.
+- [x] TASK-112 ports Rust plugin uninstall with exact ownership checks, backup restoration, historical managed paths, and empty-directory cleanup; included in the subsequent TASK-113 full lifecycle verification.
+- [ ] TASK-113 adds forced replacement and identity-checked Rust transaction recovery compatible with Python journals. The focused plugin suite passes 116 tests; full Python passes 2,257/4 at 91.97% statement, 87.69% branch, 90.99% combined; Rust workspace tests, strict Clippy, Ruff, formatting, configured Bandit, pip-audit, cargo audit, and diff checks pass locally. The pushed `08c019e` Windows failures are being repaired in the unpushed local helper; cross-platform CI remains required.
 - [ ] TASK-056 adds the `agentrouter-evaluate` Rust CLI for listing/validating datasets, running fixture profiles, writing/rendering/comparing reports, availability, explicit external prepare blockers, and context-band generalization. Four smoke/differential tests pass. The Rust command does not yet replace the Python `agentrouter evaluate` surface or load real datasets, so CLI module parity remains Partial.
 - [x] PR #31 upgraded bundled SQLite to 3.54.1, replaced `unsafe-libyaml`, and raised the Rust minimum to 1.89; workspace tests, Clippy, security audit, and cross-platform CI passed before merge at `a246cf6`.
 - [x] Website product-truth fixes, font hierarchy/motion redesign, unused shadcn CLI removal, server limits/API tests, and website lint/build CI merged via PR #27. npm build/lint and production dependency audit passed; full npm audit still reports moderate dev-tool advisories.
 - [x] Benchmark evidence merged via PR #29: 12/12 routing gold scenarios and 15 focused tests; live latency/cost are explicitly not claimed.
-- [ ] Full Rust parity is not complete: R4 public CLI and full storage-contract coverage remain; HTTP/MCP, provider execution, plugin force-install/recovery lifecycle, evaluation adapter base/runner/annotation, and R5-R13 remain. The full 77-file module inventory is in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md).
+- [ ] Full Rust parity is not complete: R4 public CLI and full storage-contract coverage remain; HTTP/MCP, provider execution, managed plugin upgrades, evaluation adapter base/runner/annotation, and R5-R13 remain. The full 77-file module inventory is in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md).
 
 ## Needs Krish
 
@@ -132,17 +133,17 @@ Updated: 2026-11-14
 - OpenAI live validation: provide `OPENAI_API_KEY` through a local environment or a protected secret store and authorize one bounded Responses API smoke request, which may incur usage charges. Offline request/response fixtures are ready; no key is stored in the repository.
 - Production release/deployment: after the local and hosted release gates pass, provide the production hosting/domain credentials and authorize any paid infrastructure and deployment. The Rust server is loopback-only and no production deployment has run.
 
-Latest full local verification: Python 3.12 passes 2,237 tests with 4 skips
-at 92.83% line (6,715/7,234), 88.63% branch (1,895/2,138), and 91.87%
-combined coverage. The focused plugin suite passes 230 tests with 3 skips;
-Rust workspace tests pass 153 tests, strict Clippy, formatting, Ruff check and
-format, diff checks, and `cargo audit` pass. Hosted Rust workspace and
-Python/Rust compatibility passed on Linux, Windows, and macOS at `132151d`;
-this TASK-112 uninstall increment awaits its own CI run. The unchanged release
-gate still fails at 0.6667 against 0.90; live smoke skips without credentials.
-PR #16 remains promotion-blocked by the frozen context-band result and required
-independent human annotations. Evidence is in
-`docs/COVERAGE_REPORT_2026-11-14.md` and the TASK-110–TASK-112 evidence folders.
+Latest full local verification: Python 3.12 passes 2,257 tests with 4 skips
+at 91.97% statement (6,895/7,497), 87.69% branch (1,959/2,234), and 90.99%
+combined coverage. The focused plugin suite passes 116 tests; the Rust workspace
+tests, strict Clippy, formatting, Ruff check and format, configured Bandit,
+pip-audit, cargo audit, and diff checks pass. Hosted checks at `08c019e` exposed
+Windows rename/staging failures; TASK-113's local repair awaits CI. The unchanged
+release gate still fails at 0.6667 against 0.90; live smoke skips without
+credentials. PR #16 remains promotion-blocked by the frozen context-band result
+and required independent human annotations. Evidence is in
+`docs/COVERAGE_REPORT_2026-11-14-TASK-113.md` and the TASK-110–TASK-113 evidence
+folders.
 
 PR #16 was reviewed against its release contract and code standards: no
 separate implementation defect was identified in the reviewed diff, but the

@@ -2,18 +2,19 @@
 
 ## Current checkpoint — 2026-11-14
 
-Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `132151d`.
-PR #16 is the only open PR and remains blocked by the unchanged frozen
-context-band score 0.6667 < 0.90. TASK-111 is hosted-green. TASK-112 Rust plugin
-uninstall and Python recovery advice are locally verified: focused plugin suite
-230 passed/3 skipped, full Python regression 2,237 passed/4 skipped (92.83%
-line, 88.63% branch, 91.87% combined), Rust workspace 153 passed and strict
-Clippy pass;
-Bandit, pip-audit, cargo audit, Ruff, formatting, and diff checks pass. Its
-Windows rename API type-checks in isolation; full local cross-compilation is
-blocked by the missing MinGW C compiler. Cross-platform CI awaits pushing the
-reviewed changes to the authorized RC. Next: commit/push this slice, inspect
-every hosted check, and continue Rust force-install/transaction-recovery parity.
+Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `08c019e`.
+TASK-113 locally adds Rust forced replacement and identity-checked transaction
+recovery with Python-compatible journals. Focused plugin tests pass (116); the
+full Python suite passes (2,257 passed, 4 skipped; 91.97% statement, 87.69%
+branch, 90.99% combined coverage). Rust workspace tests, strict Clippy,
+formatting, Ruff, configured Bandit, pip-audit, cargo audit, and diff checks
+pass. Hosted checks for `08c019e` exposed Windows rename/staging failures; the
+local candidate changes the Windows parent-handle path and is pending hosted
+verification. PR #16 remains held by the unchanged frozen context-band score
+0.6667 < 0.90. Next: record TASK-113 evidence, commit/push the reviewed slice to
+the authorized RC, repair any hosted failures, then continue the Rust parity
+backlog. Human annotation, bounded OpenAI live validation, main promotion, and
+deployment credentials remain owner-gated in `PRODUCTION_STATUS.md`.
 Human annotation, bounded OpenAI live validation, main promotion, and
 deployment credentials remain owner-gated in `PRODUCTION_STATUS.md`.
 

@@ -2,21 +2,18 @@
 
 ## Current checkpoint — 2026-11-14
 
-**NOT release ready.** The RC was at `132151d` before the current unpushed
-TASK-112 slice; PR #16 remains the sole open PR. The hosted matrix at
-`132151d` passes Rust workspace and Python/Rust compatibility on Linux,
-Windows, and macOS, full Python CI on Windows and macOS, API compatibility,
-build, site, security, and critical-module mutation checks. The current local
-Python regression passes with 2,237 passed and 4 skipped; line coverage is
-92.83%, branch coverage 88.63%, and combined coverage 91.87%. TASK-112 Rust
-plugin uninstall and Python recovery guidance pass 230 focused plugin cases
-(3 skipped), plus the full Python suite, Rust workspace, strict Clippy,
-formatting, Ruff, and
-dependency audit; hosted checks are pending the RC push. `enforce-release-gate`
+**NOT release ready.** The RC head is `08c019e`; TASK-113 is locally verified
+and awaits push. PR #16 remains the sole open PR. At this local candidate, the
+full Python regression passes 2,257 tests with 4 skips (91.97% statement,
+87.69% branch, 90.99% combined); the Rust workspace, strict Clippy, Ruff,
+formatting, configured Bandit, pip-audit, cargo audit, and diff checks pass.
+The focused plugin suite passes 116 tests. Hosted checks at `08c019e` exposed
+Windows rename/staging failures; the candidate contains a Windows handle-based
+repair, and cross-platform confirmation is pending. `enforce-release-gate`
 still fails on the unchanged context-band score 0.6667 < 0.90; live smoke is
 skipped because no credential was supplied. Full Rust CLI/HTTP/MCP parity,
-provider execution, plugin forced replacement and Rust transaction recovery,
-external dataset loaders, evaluation runner, and R5–R13 remain incomplete.
+provider execution, managed plugin upgrades, external dataset loaders,
+evaluation runner, and R5–R13 remain incomplete.
 Human annotation, live OpenAI validation, main promotion, and production
 credentials remain owner inputs. No paid request or production deployment
 occurred.

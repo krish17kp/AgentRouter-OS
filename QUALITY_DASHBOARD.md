@@ -2,18 +2,15 @@
 
 ## Current checkpoint — 2026-11-14
 
-The latest pushed RC head is `132151d`; TASK-112 changes are locally verified
-and pending push. The hosted Rust workspace and non-skipping Python/Rust
-compatibility checks at `132151d` pass on Linux, Windows, and macOS; full
-Python CI also passes on Windows and macOS. The latest Linux full regression
-passes 2,237 tests with 4 skips at 92.83% line, 88.63% branch, and 91.87%
-combined coverage. Rust plugin uninstall passes 230 focused plugin tests
-(3 skipped), and the Rust CLI has 53 passing unit tests; the Rust workspace has
-153 passing tests. Strict Clippy, Bandit, pip-audit, cargo audit, formatting,
-Ruff, and diff checks pass locally. PR #16's unchanged context-band gate
-remains 0.6667 < 0.90;
-Python remains the shipping authority and Rust migration/release readiness are
-incomplete.
+The latest pushed RC head is `08c019e`; TASK-113 is locally verified and
+pending push. The full Linux/Python 3.12 regression passes 2,257 tests with 4
+skips at 91.97% statement, 87.69% branch, and 90.99% combined coverage. The
+focused plugin suite passes 116 tests; the Rust workspace and strict Clippy
+pass. Formatting, Ruff, configured Bandit, pip-audit, cargo audit, and diff
+checks pass locally. Hosted checks at `08c019e` exposed Windows rename/staging
+failures; the candidate includes a parent-handle repair and awaits hosted
+verification. PR #16's unchanged context-band gate remains 0.6667 < 0.90;
+Python remains the shipping authority and the Rust migration is incomplete.
 
 ## Historical dashboard
 

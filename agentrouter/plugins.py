@@ -16,6 +16,7 @@ import stat
 import tempfile
 import threading
 import uuid
+from contextlib import contextmanager
 from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path, PurePosixPath
@@ -302,6 +303,98 @@ def _lock_for(root: Path, p: Plugin) -> threading.RLock:
     key = f"{root.resolve(strict=False)}::{p.name}"
     with _LOCKS_GUARD:
         return _LOCKS.setdefault(key, threading.RLock())
+
+
+@contextmanager
+def _process_lock_for(root: Path, p: Plugin):
+    """Serialize plugin mutations with a lock shared by Python and Rust."""
+    try:
+        root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    except OSError as exc:
+        raise PluginError(f"could not create plugin destination root: {exc}") from exc
+    _directory_lstat(root, "plugin destination root")
+    state_dir = root / _STATE_DIR
+    try:
+        state_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+    except OSError as exc:
+        raise PluginError(f"could not create plugin private state directory: {exc}") from exc
+    _assert_no_link_components(root, state_dir)
+    directory_info = _directory_lstat(state_dir, "plugin private state directory")
+    if os.name != "nt":
+        if directory_info.st_uid != os.getuid():
+            raise PluginError("plugin private state directory is not owned by the current user")
+        if stat.S_IMODE(directory_info.st_mode) & 0o077:
+            os.chmod(state_dir, 0o700)
+
+    path = state_dir / f"{p.name}.lock"
+    flags = os.O_RDWR | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        fd = os.open(path, flags | os.O_CREAT | os.O_EXCL, 0o600)
+        created = True
+    except FileExistsError:
+        try:
+            fd = os.open(path, flags)
+        except OSError as exc:
+            raise PluginError(f"could not safely open plugin mutation lock {path}: {exc}") from exc
+        created = False
+    except OSError as exc:
+        raise PluginError(f"could not safely create plugin mutation lock {path}: {exc}") from exc
+
+    locked = False
+    try:
+        opened = os.fstat(fd)
+        current = _regular_lstat(path, "plugin mutation lock")
+        if _identity(opened) != _identity(current) or opened.st_nlink != 1:
+            raise PluginError("plugin mutation lock changed while it was opened")
+        if os.name != "nt" and stat.S_IMODE(opened.st_mode) & 0o077:
+            if created:
+                os.fchmod(fd, 0o600)
+            else:
+                raise PluginError("plugin mutation lock permissions are not private")
+        if os.name == "nt":
+            import msvcrt
+
+            if opened.st_size == 0:
+                os.lseek(fd, 0, os.SEEK_SET)
+                os.write(fd, b"\0")
+                os.fsync(fd)
+            elif opened.st_size != 1:
+                raise PluginError("plugin mutation lock contains unexpected data")
+            else:
+                os.lseek(fd, 0, os.SEEK_SET)
+                if os.read(fd, 1) != b"\0":
+                    raise PluginError("plugin mutation lock contains unexpected data")
+            os.lseek(fd, 0, os.SEEK_SET)
+            msvcrt.locking(fd, msvcrt.LK_LOCK, 1)
+        else:
+            import fcntl
+
+            if opened.st_size:
+                raise PluginError("plugin mutation lock contains unexpected data")
+            fcntl.flock(fd, fcntl.LOCK_EX)
+        locked = True
+        current = _regular_lstat(path, "plugin mutation lock")
+        if _identity(os.fstat(fd)) != _identity(current):
+            raise PluginError("plugin mutation lock changed while waiting")
+        yield
+    except OSError as exc:
+        raise PluginError(f"could not lock plugin mutations: {exc}") from exc
+    finally:
+        if locked:
+            try:
+                if os.name == "nt":
+                    import msvcrt
+
+                    os.lseek(fd, 0, os.SEEK_SET)
+                    msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+                else:
+                    import fcntl
+
+                    fcntl.flock(fd, fcntl.LOCK_UN)
+            finally:
+                os.close(fd)
+        else:
+            os.close(fd)
 
 
 def _load_state(root: Path, p: Plugin) -> tuple[dict, str | None]:
@@ -643,12 +736,14 @@ def _save_state(root: Path, p: Plugin, state: dict) -> None:
     _atomic_replace_bytes(root, path, _serialized_state(state), mode=0o600)
 
 
-def _entry_matches(path: Path, entry: dict, *, backup: bool = False) -> bool:
+def _entry_matches(
+    path: Path, entry: dict, *, backup: bool = False, allow_hardlinks: bool = False
+) -> bool:
     if not _path_exists(path):
         return False
     label = "plugin backup" if backup else "managed plugin file"
     try:
-        raw, info = _read_verified(path, label)
+        raw, info = _read_verified(path, label, single_link=not allow_hardlinks)
     except PluginError:
         return False
     if backup:
@@ -693,18 +788,25 @@ def _stage_exact(
     digest: str,
     identity: list[int] | None,
     label: str,
+    *,
+    staged_path: Path | None = None,
+    allow_hardlinks: bool = False,
 ) -> Path | None:
     """Move a candidate aside, then prove the moved object was the expected one."""
-    before_raw, before = _read_verified(path, label)
+    before_raw, before = _read_verified(path, label, single_link=not allow_hardlinks)
     if _sha256(before_raw) != digest or (
         identity is not None and _identity_json(before) != identity
     ):
         return None
-    staged = path.with_name(f".{path.name}.agentrouter-remove-{uuid.uuid4().hex}")
+    staged = staged_path or path.with_name(f".agentrouter-remove-{uuid.uuid4().hex}")
+    if _path_exists(staged):
+        raise PluginError(f"plugin staging path already exists; it was preserved: {staged}")
     _assert_no_link_components(root, path)
     os.rename(path, staged)
     try:
-        staged_raw, staged_info = _read_verified(staged, f"staged {label}")
+        staged_raw, staged_info = _read_verified(
+            staged, f"staged {label}", single_link=not allow_hardlinks
+        )
         if _identity(staged_info) != _identity(before) or _sha256(staged_raw) != digest:
             _restore_staged(staged, path)
             return None
@@ -734,12 +836,181 @@ def _load_transaction(root: Path, p: Plugin) -> tuple[dict, str] | None:
         not isinstance(transaction, dict)
         or transaction.get("schema") != 1
         or transaction.get("plugin") != p.name
-        or transaction.get("phase") not in {"prepared", "backed_up", "replaced"}
+        or transaction.get("phase") not in {"prepared", "backing_up", "backed_up", "replaced"}
     ):
         raise PluginError(f"plugin transaction journal has an unsupported schema: {path}")
-    _safe_dest(root, transaction.get("dest", ""), "journal destination")
-    _safe_dest(root, transaction.get("backup", ""), "journal backup")
+    dest_rel = transaction.get("dest", "")
+    backup_rel = transaction.get("backup", "")
+    _safe_dest(root, dest_rel, "journal destination")
+    _safe_dest(root, backup_rel, "journal backup")
+    if dest_rel not in {file.dest for file in p.files}:
+        raise PluginError(f"plugin transaction journal has an undeclared destination: {path}")
+    if backup_rel != f"{dest_rel}{_BAK_SUFFIX}":
+        raise PluginError(
+            f"plugin transaction journal backup does not match its destination: {path}"
+        )
+    staged = transaction.get("staged")
+    if staged is not None:
+        if not isinstance(staged, str):
+            raise PluginError(f"plugin transaction journal has an invalid staging path: {path}")
+        _safe_dest(root, staged, "journal staging path")
+        if PurePosixPath(staged).parent != PurePosixPath(
+            transaction["dest"]
+        ).parent or not PurePosixPath(staged).name.startswith(".agentrouter-remove-"):
+            raise PluginError(f"plugin transaction journal has an unsafe staging path: {path}")
+    install_staged = transaction.get("install_staged")
+    if install_staged is not None:
+        if not isinstance(install_staged, str):
+            raise PluginError(
+                f"plugin transaction journal has an invalid installed-file staging path: {path}"
+            )
+        _safe_dest(root, install_staged, "journal installed-file staging path")
+        if PurePosixPath(install_staged).parent != PurePosixPath(
+            transaction["dest"]
+        ).parent or not PurePosixPath(install_staged).name.startswith(".agentrouter-install-"):
+            raise PluginError(
+                f"plugin transaction journal has an unsafe installed-file staging path: {path}"
+            )
+    installed_identity = transaction.get("installed_identity")
+    if installed_identity is not None and not (
+        isinstance(installed_identity, list)
+        and len(installed_identity) == 2
+        and all(
+            isinstance(value, int) and not isinstance(value, bool) for value in installed_identity
+        )
+    ):
+        raise PluginError(f"plugin transaction journal has an invalid installed identity: {path}")
     return transaction, _sha256(raw)
+
+
+def _transaction_stage_matches(root: Path, transaction: dict) -> bool:
+    staged_rel = transaction.get("staged")
+    if not isinstance(staged_rel, str):
+        return False
+    staged = _safe_dest(root, staged_rel, "journal staging path")
+    if not _path_exists(staged):
+        return False
+    try:
+        raw, info = _read_verified(staged, "plugin transaction staging file", single_link=False)
+    except PluginError:
+        return False
+    return (
+        _sha256(raw) == transaction.get("original_sha256")
+        and _identity_json(info) == transaction.get("original_identity")
+        and stat.S_IMODE(info.st_mode) == transaction.get("original_mode")
+    )
+
+
+def _transaction_install_stage_matches(root: Path, transaction: dict) -> bool:
+    staged_rel = transaction.get("install_staged")
+    identity = transaction.get("installed_identity")
+    if not isinstance(staged_rel, str) or not isinstance(identity, list) or len(identity) != 2:
+        return False
+    staged = _safe_dest(root, staged_rel, "journal installed-file staging path")
+    if not _path_exists(staged):
+        return False
+    try:
+        raw, info = _read_verified(staged, "plugin installed-file staging path", single_link=False)
+    except PluginError:
+        return False
+    return _sha256(raw) == transaction.get("installed_sha256") and _identity_json(info) == identity
+
+
+def _remove_transaction_install_stage(root: Path, transaction: dict) -> None:
+    staged_rel = transaction.get("install_staged")
+    if not isinstance(staged_rel, str):
+        return
+    staged = _safe_dest(root, staged_rel, "journal installed-file staging path")
+    if not _path_exists(staged):
+        return
+    if not _transaction_install_stage_matches(root, transaction):
+        raise PluginError("plugin installed-file staging path changed; it was preserved")
+    try:
+        staged.unlink()
+    except OSError as exc:
+        raise PluginError(f"could not remove plugin installed-file staging path: {exc}") from exc
+
+
+def _create_transaction_install_stage(
+    root: Path, transaction: dict, contents: bytes
+) -> os.stat_result:
+    staged = _safe_dest(root, transaction["install_staged"], "journal installed-file staging path")
+    _assert_no_link_components(root, staged)
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
+    try:
+        fd = os.open(staged, flags, 0o644)
+    except FileExistsError as exc:
+        raise PluginError(
+            "plugin installed-file staging path appeared concurrently; preserved"
+        ) from exc
+    except OSError as exc:
+        raise PluginError(f"could not create staged plugin replacement: {exc}") from exc
+    try:
+        if hasattr(os, "fchmod"):
+            os.fchmod(fd, 0o644)
+        with os.fdopen(fd, "wb", closefd=False) as stream:
+            stream.write(contents)
+            stream.flush()
+            os.fsync(fd)
+    except BaseException:
+        os.close(fd)
+        raise
+    os.close(fd)
+    raw, info = _read_verified(staged, "plugin installed-file staging path")
+    if raw != contents:
+        raise PluginError("staged plugin replacement changed while being written; preserved")
+    return info
+
+
+def _remove_transaction_stage(root: Path, transaction: dict) -> None:
+    staged_rel = transaction.get("staged")
+    if not isinstance(staged_rel, str):
+        return
+    staged = _safe_dest(root, staged_rel, "journal staging path")
+    if not _path_exists(staged):
+        return
+    if not _transaction_stage_matches(root, transaction):
+        raise PluginError("plugin transaction staging file changed; it was preserved")
+    raw, info = _read_verified(staged, "plugin transaction staging file", single_link=False)
+    if (
+        _sha256(raw) != transaction.get("original_sha256")
+        or _identity_json(info) != transaction.get("original_identity")
+        or stat.S_IMODE(info.st_mode) != transaction.get("original_mode")
+    ):
+        raise PluginError("plugin transaction staging file changed; it was preserved")
+    try:
+        staged.unlink()
+    except OSError as exc:
+        raise PluginError(f"could not remove plugin transaction staging file: {exc}") from exc
+
+
+def _restore_transaction_stage(root: Path, transaction: dict) -> None:
+    staged_rel = transaction.get("staged")
+    if not isinstance(staged_rel, str) or not _transaction_stage_matches(root, transaction):
+        raise PluginError("plugin transaction staged original is missing or changed")
+    staged = _safe_dest(root, staged_rel, "journal staging path")
+    dest = _safe_dest(root, transaction["dest"], "journal destination")
+    try:
+        os.link(staged, dest, follow_symlinks=False)
+    except FileExistsError:
+        raise PluginError(
+            f"destination appeared during transaction recovery; preserved staged original: {dest}"
+        ) from None
+    except OSError as exc:
+        raise PluginError(f"could not restore staged plugin original to {dest}: {exc}") from exc
+    try:
+        restored_raw, restored_info = _read_verified(
+            dest, "restored plugin destination", single_link=False
+        )
+    except PluginError:
+        raise
+    if (
+        _sha256(restored_raw) != transaction.get("original_sha256")
+        or _identity_json(restored_info) != transaction.get("original_identity")
+        or stat.S_IMODE(restored_info.st_mode) != transaction.get("original_mode")
+    ):
+        raise PluginError("restored plugin destination changed; it was preserved")
+    _remove_transaction_stage(root, transaction)
 
 
 def _delete_transaction(root: Path, p: Plugin) -> None:
@@ -771,7 +1042,21 @@ def _recover_transaction(root: Path, p: Plugin, state: dict) -> None:
     dest = _safe_dest(root, transaction["dest"], "journal destination")
     backup = _safe_dest(root, transaction["backup"], "journal backup")
     existing_entry = state["files"].get(transaction["dest"])
-    if existing_entry is not None and _entry_matches(dest, existing_entry):
+    if (
+        transaction["phase"] == "replaced"
+        and existing_entry is not None
+        and existing_entry.get("disposition") == "replaced"
+        and existing_entry.get("backup") == transaction["backup"]
+        and existing_entry.get("backup_sha256") == transaction.get("original_sha256")
+        and existing_entry.get("backup_identity") == transaction.get("original_identity")
+        and existing_entry.get("backup_mode") == transaction.get("original_mode")
+        and existing_entry.get("installed_sha256") == transaction.get("installed_sha256")
+        and existing_entry.get("installed_identity") == transaction.get("installed_identity")
+        and _entry_matches(dest, existing_entry, allow_hardlinks=True)
+        and _entry_matches(backup, existing_entry, backup=True, allow_hardlinks=True)
+    ):
+        _remove_transaction_stage(root, transaction)
+        _remove_transaction_install_stage(root, transaction)
         _delete_transaction(root, p)
         return
 
@@ -788,6 +1073,21 @@ def _recover_transaction(root: Path, p: Plugin, state: dict) -> None:
                 and _sha256(dest_raw) == transaction.get("original_sha256")
                 and _identity_json(dest_info) == transaction.get("original_identity")
             ):
+                staged_exists = transaction.get("staged") and _path_exists(
+                    _safe_dest(root, transaction["staged"], "journal staging path")
+                )
+                install_staged_exists = transaction.get("install_staged") and _path_exists(
+                    _safe_dest(
+                        root,
+                        transaction["install_staged"],
+                        "journal installed-file staging path",
+                    )
+                )
+                if staged_exists or install_staged_exists:
+                    raise PluginError(
+                        "an interrupted prepared install has unexpected staging files; "
+                        "all paths were preserved"
+                    )
                 # No transaction-owned backup was committed. Any backup path that
                 # appeared belongs to another actor and must remain untouched.
                 _delete_transaction(root, p)
@@ -795,6 +1095,43 @@ def _recover_transaction(root: Path, p: Plugin, state: dict) -> None:
         raise PluginError(
             "an interrupted prepared install has an unexpected destination; all paths were "
             "preserved for manual recovery"
+        )
+
+    if transaction["phase"] == "backing_up":
+        destination_is_original = False
+        if _path_exists(dest):
+            try:
+                intent_raw, intent_info = _read_verified(
+                    dest, "backup-intent destination", single_link=False
+                )
+            except PluginError:
+                intent_raw, intent_info = b"", None
+            destination_is_original = (
+                intent_info is not None
+                and _sha256(intent_raw) == transaction.get("original_sha256")
+                and _identity_json(intent_info) == transaction.get("original_identity")
+            )
+        staged_exists = transaction.get("staged") and _path_exists(
+            _safe_dest(root, transaction["staged"], "journal staging path")
+        )
+        install_staged_exists = transaction.get("install_staged") and _path_exists(
+            _safe_dest(
+                root,
+                transaction["install_staged"],
+                "journal installed-file staging path",
+            )
+        )
+        if (
+            destination_is_original
+            and not _path_exists(backup)
+            and not staged_exists
+            and not install_staged_exists
+        ):
+            _delete_transaction(root, p)
+            return
+        raise PluginError(
+            "an interrupted backup intent is ambiguous; destination, backup, and journal "
+            "were preserved"
         )
 
     backup_ok = False
@@ -832,10 +1169,44 @@ def _recover_transaction(root: Path, p: Plugin, state: dict) -> None:
         and _identity_json(dest_info) == transaction.get("original_identity")
         and _sha256(dest_raw or b"") == transaction.get("original_sha256")
     ):
+        staged_exists = transaction.get("staged") and _path_exists(
+            _safe_dest(root, transaction["staged"], "journal staging path")
+        )
+        install_staged_exists = transaction.get("install_staged") and _path_exists(
+            _safe_dest(
+                root,
+                transaction["install_staged"],
+                "journal installed-file staging path",
+            )
+        )
+        if staged_exists:
+            raise PluginError(
+                "an interrupted plugin replacement has the original destination and "
+                "original-file staging path; "
+                "all paths were preserved"
+            )
+        if install_staged_exists:
+            if not _transaction_install_stage_matches(root, transaction):
+                raise PluginError(
+                    "the original destination remains intact, but the install staging path "
+                    "is unverified; all paths were preserved"
+                )
+            _remove_transaction_install_stage(root, transaction)
         try:
             backup.unlink()
         except OSError as exc:
             raise PluginError(f"could not roll back incomplete backup link: {exc}") from exc
+        _delete_transaction(root, p)
+        return
+
+    stage_ok = _transaction_stage_matches(root, transaction)
+    if backup_ok and dest_info is None and stage_ok:
+        _remove_transaction_install_stage(root, transaction)
+        _restore_transaction_stage(root, transaction)
+        try:
+            backup.unlink()
+        except OSError as exc:
+            raise PluginError(f"could not remove rolled-back plugin backup: {exc}") from exc
         _delete_transaction(root, p)
         return
 
@@ -844,6 +1215,18 @@ def _recover_transaction(root: Path, p: Plugin, state: dict) -> None:
         and dest_info is not None
         and _sha256(dest_raw or b"") == transaction.get("installed_sha256")
         and _identity_json(dest_info) != transaction.get("original_identity")
+        and (
+            transaction.get("phase") != "replaced"
+            or _identity_json(dest_info) == transaction.get("installed_identity")
+        )
+        and (transaction.get("staged") is None or stage_ok)
+        and (
+            transaction.get("install_staged") is None
+            or (
+                _transaction_install_stage_matches(root, transaction)
+                and _identity_json(dest_info) == transaction.get("installed_identity")
+            )
+        )
     ):
         state["files"][transaction["dest"]] = {
             "disposition": "replaced",
@@ -855,6 +1238,8 @@ def _recover_transaction(root: Path, p: Plugin, state: dict) -> None:
             "backup_mode": transaction["original_mode"],
         }
         _save_state(root, p, state)
+        _remove_transaction_stage(root, transaction)
+        _remove_transaction_install_stage(root, transaction)
         _delete_transaction(root, p)
         return
 
@@ -862,8 +1247,19 @@ def _recover_transaction(root: Path, p: Plugin, state: dict) -> None:
         if _sha256(dest_raw or b"") == transaction.get("original_sha256") and _identity_json(
             dest_info
         ) == transaction.get("original_identity"):
-            _delete_transaction(root, p)
-            return
+            staged_exists = transaction.get("staged") and _path_exists(
+                _safe_dest(root, transaction["staged"], "journal staging path")
+            )
+            install_staged_exists = transaction.get("install_staged") and _path_exists(
+                _safe_dest(
+                    root,
+                    transaction["install_staged"],
+                    "journal installed-file staging path",
+                )
+            )
+            if not staged_exists and not install_staged_exists:
+                _delete_transaction(root, p)
+                return
     raise PluginError(
         "an interrupted plugin install is ambiguous; destination, backup, and journal were "
         "preserved for manual recovery"
@@ -1001,59 +1397,108 @@ def _install_entry(
             raise PluginError(
                 f"{dest} exists and differs; re-run with --force to back it up and replace."
             )
+        staged = dest.with_name(f".agentrouter-remove-{uuid.uuid4().hex}")
+        install_staged = dest.with_name(f".agentrouter-install-{uuid.uuid4().hex}")
         transaction = {
             "schema": 1,
             "plugin": p.name,
             "phase": "prepared",
             "dest": f.dest,
             "backup": backup.relative_to(root).as_posix(),
+            "staged": staged.relative_to(root).as_posix(),
+            "install_staged": install_staged.relative_to(root).as_posix(),
             "original_sha256": _sha256(current),
             "original_identity": _identity_json(current_info),
             "original_mode": stat.S_IMODE(current_info.st_mode),
             "installed_sha256": want_digest,
+            "installed_identity": None,
         }
         if _path_exists(backup):
             raise PluginError(f"backup already exists at {backup}; refusing to overwrite it.")
+        _write_transaction(root, p, transaction)
+        transaction["phase"] = "backing_up"
         _write_transaction(root, p, transaction)
         try:
             backup_digest, backup_info = _create_backup(root, dest, backup)
         except BaseException as exc:
             try:
-                _delete_transaction(root, p)
-            except PluginError as journal_exc:
+                _recover_transaction(root, p, state)
+            except PluginError as recovery_exc:
                 raise PluginError(
-                    f"backup creation failed and its prepared journal was retained: {journal_exc}"
+                    f"{exc}; backup intent and paths were preserved: {recovery_exc}"
                 ) from exc
             raise
         transaction["phase"] = "backed_up"
-        _write_transaction(root, p, transaction)
         try:
-            installed = _atomic_replace_bytes(root, dest, want)
+            _write_transaction(root, p, transaction)
         except BaseException as exc:
-            if _path_exists(dest):
-                try:
-                    failed_raw, failed_info = _read_verified(
-                        dest, "plugin destination after replacement failure", single_link=False
-                    )
-                except PluginError:
-                    failed_raw, failed_info = b"", None
-                if (
-                    failed_info is not None
-                    and _identity_json(failed_info) == transaction["original_identity"]
-                    and _sha256(failed_raw) == transaction["original_sha256"]
-                ):
-                    try:
-                        backup.unlink()
-                        _delete_transaction(root, p)
-                    except OSError as cleanup_exc:
-                        raise PluginError(
-                            f"replacement failed and rollback cleanup was incomplete: {cleanup_exc}"
-                        ) from exc
             raise PluginError(
-                f"replacement did not complete cleanly; backup and journal were preserved: {exc}"
+                "backup was created but the committed phase could not be recorded; "
+                f"backup and journal were preserved: {exc}"
             ) from exc
+        try:
+            install_info = _create_transaction_install_stage(root, transaction, want)
+        except BaseException as exc:
+            raise PluginError(
+                "could not stage plugin replacement; original, backup, staging paths, "
+                f"and journal were preserved: {exc}"
+            ) from exc
+        transaction["installed_identity"] = _identity_json(install_info)
+        try:
+            _write_transaction(root, p, transaction)
+        except BaseException as exc:
+            raise PluginError(
+                "replacement stage was created but its identity could not be recorded; "
+                f"all paths were preserved: {exc}"
+            ) from exc
+        staged_original = _stage_exact(
+            root,
+            dest,
+            transaction["original_sha256"],
+            transaction["original_identity"],
+            "plugin destination",
+            staged_path=staged,
+            allow_hardlinks=True,
+        )
+        if staged_original is None:
+            raise PluginError(
+                "plugin destination changed during replacement; backup, staging paths, "
+                "and journal were preserved"
+            )
+        try:
+            os.link(install_staged, dest, follow_symlinks=False)
+        except FileExistsError as exc:
+            raise PluginError(
+                "destination appeared during replacement; staged file and original backup "
+                f"were preserved: {dest}"
+            ) from exc
+        except OSError as exc:
+            try:
+                _recover_transaction(root, p, state)
+            except PluginError as recovery_exc:
+                raise PluginError(
+                    "replacement failed; backup, staging files, and journal were preserved: "
+                    f"{exc}; {recovery_exc}"
+                ) from exc
+            raise PluginError(
+                f"replacement did not complete; the original was restored: {exc}"
+            ) from exc
+        try:
+            installed_raw, installed = _read_verified(
+                dest, "replacement destination", single_link=False
+            )
+        except PluginError as exc:
+            raise PluginError(
+                f"replacement verification failed; backup and journal were preserved: {exc}"
+            ) from exc
+        if (
+            _sha256(installed_raw) != want_digest
+            or _identity_json(installed) != transaction["installed_identity"]
+        ):
+            raise PluginError(
+                "replacement destination changed; backup, staging files, and journal were preserved"
+            )
         transaction["phase"] = "replaced"
-        transaction["installed_identity"] = _identity_json(installed)
         _write_transaction(root, p, transaction)
         new_entry = {
             "disposition": "replaced",
@@ -1068,30 +1513,27 @@ def _install_entry(
         try:
             _save_state(root, p, state)
         except BaseException as exc:
-            state["files"].pop(f.dest, None)
-            displaced_new = _stage_exact(
-                root,
-                dest,
-                want_digest,
-                _identity_json(installed),
-                "new managed plugin file",
-            )
-            if displaced_new is None:
-                raise PluginError(
-                    f"state rollback preserved a concurrent edit at {dest}; "
-                    "the original backup and transaction journal were retained"
-                ) from exc
             try:
-                _restore_backup(root, backup, dest)
-                displaced_new.unlink()
-                _delete_transaction(root, p)
-            except BaseException as rollback_exc:
-                if not _path_exists(dest) and _path_exists(displaced_new):
-                    _restore_staged(displaced_new, dest)
+                failed_raw, failed_info = _read_verified(
+                    dest, "replacement destination after state failure", single_link=False
+                )
+            except PluginError:
+                failed_raw, failed_info = b"", None
+            concurrent_edit = failed_info is None or (
+                _sha256(failed_raw) != want_digest
+                or _identity_json(failed_info) != transaction["installed_identity"]
+            )
+            if concurrent_edit:
                 raise PluginError(
-                    f"forced-install rollback was incomplete: {rollback_exc}"
+                    f"state save failed; a concurrent edit at {dest} was preserved with the "
+                    f"backup and transaction journal: {exc}"
                 ) from exc
-            raise
+            raise PluginError(
+                f"state save failed; staged replacement, backup, and transaction journal were "
+                f"preserved: {exc}"
+            ) from exc
+        _remove_transaction_stage(root, transaction)
+        _remove_transaction_install_stage(root, transaction)
         _delete_transaction(root, p)
         return {
             "kind": "file",
@@ -1235,9 +1677,7 @@ def diagnose(p: Plugin) -> list[dict]:
                 "check": "transaction",
                 "status": DIAG_ATTENTION,
                 "summary": "a previous install or uninstall did not finish",
-                "remedy": (
-                    f"recover with the Python CLI: python -m agentrouter plugin install {p.name}"
-                ),
+                "remedy": f"re-run it to recover: agentrouter plugin install {p.name}",
             }
         )
 
@@ -1357,7 +1797,7 @@ def install(p: Plugin, force: bool = False, adopt_identical: bool = False) -> li
     """Install bundled files and persist enough ownership data for safe uninstall."""
     root = dest_root(p)
     results: list[dict] = []
-    with _lock_for(root, p):
+    with _lock_for(root, p), _process_lock_for(root, p):
         state, _ = _load_state(root, p)
         _recover_transaction(root, p, state)
         # Validate all registry paths and packaged resources before any mutation.
@@ -1498,8 +1938,22 @@ def _uninstall_entry(root: Path, f: PluginFile, state: dict) -> dict:
 def uninstall(p: Plugin) -> list[dict]:
     """Remove only proven managed files, restore backups, and prune declared empty dirs."""
     root = dest_root(p)
+    if not _path_exists(root):
+        results = [
+            {"kind": "file", "dest": str(_safe_dest(root, file.dest)), "result": "absent"}
+            for file in p.files
+        ]
+        results.extend(
+            {
+                "kind": "directory",
+                "dest": str(_safe_dest(root, relative, "plugin cleanup directory")),
+                "result": "absent",
+            }
+            for relative in p.cleanup_dirs
+        )
+        return results
     results: list[dict] = []
-    with _lock_for(root, p):
+    with _lock_for(root, p), _process_lock_for(root, p):
         state, _ = _load_state(root, p)
         _recover_transaction(root, p, state)
         for f in p.files:

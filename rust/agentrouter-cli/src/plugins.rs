@@ -9,6 +9,7 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
+use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
 const CLAUDE_SOURCE: &str = "claude-code/agentrouter/SKILL.md";
@@ -239,10 +240,7 @@ pub fn diagnose(plugin: &PluginSpec, root: &Path) -> Vec<serde_json::Value> {
             "check": "transaction",
             "status": "attention",
             "summary": "a previous install or uninstall did not finish",
-            "remedy": format!(
-                "recover with the Python CLI: python -m agentrouter plugin install {}",
-                plugin.name
-            ),
+            "remedy": format!("re-run it to recover: agentrouter plugin install {}", plugin.name),
         })),
         Ok(false) => {}
         Err(_) => {
@@ -404,36 +402,779 @@ pub fn plan(
     Ok(plan)
 }
 
-/// Install only missing or byte-identical files. Destructive replacement is
-/// intentionally rejected until the journaled backup and recovery protocol is
-/// available in Rust.
+fn transaction_relative(plugin: &PluginSpec) -> String {
+    format!(".agentrouter-state/{}.txn.json", plugin.name)
+}
+
+fn read_transaction(
+    root: &Path,
+    root_dir: &cap_std::fs::Dir,
+    plugin: &PluginSpec,
+) -> Result<Option<LoadedTransaction>, String> {
+    let Some(state_dir_file) = existing_relative_directory(root_dir, ".agentrouter-state")? else {
+        return Ok(None);
+    };
+    let state_dir = cap_std::fs::Dir::from_std_file(state_dir_file);
+    let filename = format!("{}.txn.json", plugin.name);
+    let path = root.join(".agentrouter-state").join(&filename);
+    let Some(file) = read_verified_file_at(&state_dir, &filename, &path)? else {
+        return Ok(None);
+    };
+    let transaction: PluginTransaction = serde_json::from_slice(&file.bytes).map_err(|_| {
+        format!(
+            "plugin transaction journal is invalid; refusing to continue: {}",
+            path.display()
+        )
+    })?;
+    if transaction.schema != 1
+        || transaction.plugin != plugin.name
+        || !matches!(
+            transaction.phase.as_str(),
+            "prepared" | "backing_up" | "backed_up" | "replaced"
+        )
+        || transaction.original_sha256.len() != 64
+        || !transaction
+            .original_sha256
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+        || transaction.installed_sha256.len() != 64
+        || !transaction
+            .installed_sha256
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+        || (transaction.phase == "replaced" && transaction.installed_identity.is_none())
+    {
+        return Err(format!(
+            "plugin transaction journal has an unsupported schema or fields: {}",
+            path.display()
+        ));
+    }
+    safe_relative(&transaction.dest, "journal destination")?;
+    safe_relative(&transaction.backup, "journal backup")?;
+    if !plugin
+        .files
+        .iter()
+        .any(|file| file.dest == transaction.dest)
+    {
+        return Err(format!(
+            "plugin transaction journal has an undeclared destination: {}",
+            path.display()
+        ));
+    }
+    if let Some(staged) = transaction.staged.as_deref() {
+        safe_relative(staged, "journal staging path")?;
+        if sibling_directory(staged) != sibling_directory(&transaction.dest)
+            || !staged
+                .rsplit('/')
+                .next()
+                .is_some_and(|name| name.starts_with(".agentrouter-remove-"))
+        {
+            return Err(format!(
+                "plugin transaction journal has an unsafe staging path: {}",
+                path.display()
+            ));
+        }
+    }
+    if let Some(staged) = transaction.install_staged.as_deref() {
+        safe_relative(staged, "journal installed-file staging path")?;
+        if sibling_directory(staged) != sibling_directory(&transaction.dest)
+            || !staged
+                .rsplit('/')
+                .next()
+                .is_some_and(|name| name.starts_with(".agentrouter-install-"))
+        {
+            return Err(format!(
+                "plugin transaction journal has an unsafe installed-file staging path: {}",
+                path.display()
+            ));
+        }
+    }
+    if transaction.backup != format!("{}.agentrouter-bak", transaction.dest) {
+        return Err(format!(
+            "plugin transaction journal backup does not match its destination: {}",
+            path.display()
+        ));
+    }
+    Ok(Some(LoadedTransaction {
+        value: transaction,
+        sha256: format!("{:x}", sha2::Sha256::digest(&file.bytes)),
+        identity: file.identity,
+    }))
+}
+
+fn write_transaction(
+    root: &Path,
+    root_dir: &cap_std::fs::Dir,
+    plugin: &PluginSpec,
+    transaction: &PluginTransaction,
+    expected: Option<&LoadedTransaction>,
+) -> Result<LoadedTransaction, String> {
+    let (state_dir_file, _) = ensure_relative_directory(root_dir, ".agentrouter-state")?;
+    let state_dir = cap_std::fs::Dir::from_std_file(state_dir_file);
+    let filename = format!("{}.txn.json", plugin.name);
+    let path = root.join(".agentrouter-state").join(&filename);
+    let current = read_transaction(root, root_dir, plugin)?;
+    let matches = match (current.as_ref(), expected) {
+        (None, None) => true,
+        (Some(current), Some(expected)) => {
+            current.sha256 == expected.sha256 && current.identity == expected.identity
+        }
+        _ => false,
+    };
+    if !matches {
+        return Err(
+            "plugin transaction journal changed concurrently; refusing to overwrite it".to_owned(),
+        );
+    }
+    let value = serde_json::to_value(transaction)
+        .map_err(|error| format!("could not serialize plugin transaction journal: {error}"))?;
+    let serialized = super::contract::dumps(&value).map_err(|error| error.to_string())?;
+    if expected.is_none() {
+        create_no_clobber(&state_dir, &filename, &path, serialized.as_bytes(), 0o600)?;
+    } else {
+        let mut contents = std::io::Cursor::new(serialized.into_bytes());
+        let permissions = plugin_permissions(0o600);
+        super::atomic_replace(
+            &state_dir,
+            Path::new(&filename),
+            &mut contents,
+            permissions.as_ref(),
+        )?;
+    }
+    read_transaction(root, root_dir, plugin)?
+        .ok_or_else(|| "saved plugin transaction journal disappeared".to_owned())
+}
+
+fn remove_transaction_backup(
+    root: &Path,
+    root_dir: &cap_std::fs::Dir,
+    transaction: &PluginTransaction,
+) -> Result<(), String> {
+    let digest = &transaction.original_sha256;
+    let identity = (
+        transaction.original_identity[0],
+        transaction.original_identity[1],
+    );
+    let Some(staged) = stage_exact_file_with_hardlink_policy(
+        root,
+        root_dir,
+        &transaction.backup,
+        digest,
+        Some(identity),
+        "plugin transaction backup",
+        true,
+    )?
+    else {
+        return Err(
+            "plugin transaction backup changed before cleanup; it was preserved".to_owned(),
+        );
+    };
+    let file =
+        read_verified_file_at_with_hardlinks(&staged.parent, &staged.name, &staged.path, true)?
+            .ok_or_else(|| "staged plugin transaction backup disappeared".to_owned())?;
+    if file.mode != transaction.original_mode {
+        restore_staged_file(&staged)?;
+        return Err(
+            "plugin transaction backup mode changed before cleanup; it was preserved".to_owned(),
+        );
+    }
+    remove_staged_file_exact(&staged, "plugin transaction backup")
+}
+
+fn delete_transaction(
+    root: &Path,
+    root_dir: &cap_std::fs::Dir,
+    plugin: &PluginSpec,
+    expected: &LoadedTransaction,
+) -> Result<(), String> {
+    let current = read_transaction(root, root_dir, plugin)?
+        .ok_or_else(|| "plugin transaction journal disappeared before cleanup".to_owned())?;
+    if current.sha256 != expected.sha256 || current.identity != expected.identity {
+        return Err(
+            "plugin transaction journal changed before cleanup; it was preserved".to_owned(),
+        );
+    }
+    let staged = stage_exact_file(
+        root,
+        root_dir,
+        &transaction_relative(plugin),
+        &current.sha256,
+        Some(current.identity),
+        "plugin transaction journal",
+    )?
+    .ok_or_else(|| "plugin transaction journal changed before cleanup".to_owned())?;
+    remove_staged_file_exact(&staged, "plugin transaction journal")?;
+
+    if read_state(root, plugin)?.is_none() {
+        if let Some(state_dir_file) = existing_relative_directory(root_dir, ".agentrouter-state")? {
+            let identity = directory_identity(&state_dir_file)?;
+            let _ = remove_owned_empty_directory(
+                root,
+                root_dir,
+                ".agentrouter-state",
+                (
+                    identity[0].as_u64().unwrap_or_default(),
+                    identity[1].as_u64().unwrap_or_default(),
+                ),
+            )?;
+        }
+    }
+    Ok(())
+}
+
+fn create_transaction_backup(
+    root: &Path,
+    root_dir: &cap_std::fs::Dir,
+    transaction: &PluginTransaction,
+) -> Result<VerifiedFile, String> {
+    let Some((destination_parent, destination_name)) =
+        open_relative_parent(root_dir, &transaction.dest, false)?
+    else {
+        return Err("plugin destination parent is unavailable".to_owned());
+    };
+    let destination_path = plugin_path(root, &transaction.dest);
+    let Some(before) =
+        read_verified_file_at(&destination_parent, &destination_name, &destination_path)?
+    else {
+        return Err("plugin destination disappeared before backup".to_owned());
+    };
+    if format!("{:x}", sha2::Sha256::digest(&before.bytes)) != transaction.original_sha256
+        || before.identity
+            != (
+                transaction.original_identity[0],
+                transaction.original_identity[1],
+            )
+        || before.mode != transaction.original_mode
+    {
+        return Err("plugin destination changed before backup; refusing to replace it".to_owned());
+    }
+    let backup_name = transaction
+        .backup
+        .rsplit('/')
+        .next()
+        .ok_or_else(|| "invalid plugin transaction backup path".to_owned())?;
+    let backup_path = plugin_path(root, &transaction.backup);
+    if let Err(error) =
+        destination_parent.hard_link(&destination_name, &destination_parent, backup_name)
+    {
+        return Err(if error.kind() == std::io::ErrorKind::AlreadyExists {
+            format!(
+                "backup appeared during install; refusing to overwrite it: {}",
+                backup_path.display()
+            )
+        } else {
+            format!(
+                "could not create a metadata-preserving plugin backup at {}: {error}",
+                backup_path.display()
+            )
+        });
+    }
+    let Some(backup) =
+        read_verified_file_at_with_hardlinks(&destination_parent, backup_name, &backup_path, true)?
+    else {
+        return Err("plugin backup disappeared after creation".to_owned());
+    };
+    if backup.bytes != before.bytes
+        || backup.identity != before.identity
+        || backup.mode != before.mode
+    {
+        return Err("plugin destination changed while its backup was created".to_owned());
+    }
+    Ok(backup)
+}
+
+fn transaction_file_matches(file: &VerifiedFile, transaction: &PluginTransaction) -> bool {
+    format!("{:x}", sha2::Sha256::digest(&file.bytes)) == transaction.original_sha256
+        && file.identity
+            == (
+                transaction.original_identity[0],
+                transaction.original_identity[1],
+            )
+        && file.mode == transaction.original_mode
+}
+
+fn remove_transaction_stage(
+    root: &Path,
+    root_dir: &cap_std::fs::Dir,
+    transaction: &PluginTransaction,
+) -> Result<(), String> {
+    let Some(staged) = transaction.staged.as_deref() else {
+        return Ok(());
+    };
+    let Some((parent, name)) = open_relative_parent(root_dir, staged, false)? else {
+        return Ok(());
+    };
+    let path = plugin_path(root, staged);
+    let Some(file) = read_verified_file_at_with_hardlinks(&parent, &name, &path, true)? else {
+        return Ok(());
+    };
+    if !transaction_file_matches(&file, transaction) {
+        return Err("plugin transaction staging file changed; it was preserved".to_owned());
+    }
+    remove_verified_file_at(
+        &parent,
+        &name,
+        &path,
+        file.identity,
+        &transaction.original_sha256,
+        true,
+        "plugin transaction staging file",
+    )
+}
+
+fn transaction_install_file_matches(file: &VerifiedFile, transaction: &PluginTransaction) -> bool {
+    transaction
+        .installed_identity
+        .is_some_and(|identity| file.identity == (identity[0], identity[1]))
+        && format!("{:x}", sha2::Sha256::digest(&file.bytes)) == transaction.installed_sha256
+}
+
+fn remove_transaction_install_stage(
+    root: &Path,
+    root_dir: &cap_std::fs::Dir,
+    transaction: &PluginTransaction,
+) -> Result<(), String> {
+    let Some(staged) = transaction.install_staged.as_deref() else {
+        return Ok(());
+    };
+    let Some((parent, name)) = open_relative_parent(root_dir, staged, false)? else {
+        return Ok(());
+    };
+    let path = plugin_path(root, staged);
+    let Some(file) = read_verified_file_at_with_hardlinks(&parent, &name, &path, true)? else {
+        return Ok(());
+    };
+    if !transaction_install_file_matches(&file, transaction) {
+        return Err("staged plugin replacement changed; it was preserved".to_owned());
+    }
+    remove_verified_file_at(
+        &parent,
+        &name,
+        &path,
+        file.identity,
+        &transaction.installed_sha256,
+        true,
+        "staged plugin replacement",
+    )
+}
+
+fn link_transaction_install_stage(
+    root: &Path,
+    root_dir: &cap_std::fs::Dir,
+    transaction: &PluginTransaction,
+) -> Result<VerifiedFile, String> {
+    let staged = transaction
+        .install_staged
+        .as_deref()
+        .ok_or_else(|| "plugin transaction lacks an installed-file staging path".to_owned())?;
+    let identity = transaction
+        .installed_identity
+        .ok_or_else(|| "plugin transaction lacks an installed-file identity".to_owned())?;
+    let (parent, staged_name) = open_relative_parent(root_dir, staged, false)?
+        .ok_or_else(|| "plugin installed-file staging directory disappeared".to_owned())?;
+    let staged_path = plugin_path(root, staged);
+    let staged_file =
+        read_verified_file_at_with_hardlinks(&parent, &staged_name, &staged_path, true)?
+            .ok_or_else(|| "staged plugin replacement disappeared".to_owned())?;
+    if !transaction_install_file_matches(&staged_file, transaction) {
+        return Err("staged plugin replacement changed; it was preserved".to_owned());
+    }
+    let (destination_parent, destination_name) =
+        open_relative_parent(root_dir, &transaction.dest, false)?
+            .ok_or_else(|| "plugin destination directory disappeared".to_owned())?;
+    if let Err(error) =
+        destination_parent.hard_link(&staged_name, &destination_parent, &destination_name)
+    {
+        return Err(if error.kind() == std::io::ErrorKind::AlreadyExists {
+            "destination appeared during replacement; staged file and original backup were preserved"
+                .to_owned()
+        } else {
+            format!("could not install staged plugin replacement: {error}")
+        });
+    }
+    let destination_path = plugin_path(root, &transaction.dest);
+    let installed = read_verified_file_at_with_hardlinks(
+        &destination_parent,
+        &destination_name,
+        &destination_path,
+        true,
+    )?
+    .ok_or_else(|| "plugin replacement destination disappeared".to_owned())?;
+    if installed.identity != (identity[0], identity[1])
+        || format!("{:x}", sha2::Sha256::digest(&installed.bytes)) != transaction.installed_sha256
+    {
+        return Err(
+            "plugin replacement destination changed; staged file and original backup were preserved"
+                .to_owned(),
+        );
+    }
+    Ok(installed)
+}
+
+fn create_transaction_install_stage(
+    root: &Path,
+    root_dir: &cap_std::fs::Dir,
+    transaction: &PluginTransaction,
+    contents: &[u8],
+) -> Result<VerifiedFile, String> {
+    let staged = transaction
+        .install_staged
+        .as_deref()
+        .ok_or_else(|| "plugin transaction lacks an installed-file staging path".to_owned())?;
+    let (parent, name) = open_relative_parent(root_dir, staged, false)?
+        .ok_or_else(|| "plugin installed-file staging directory disappeared".to_owned())?;
+    #[cfg(unix)]
+    ensure_unix_staged_parent_is_not_foreign_writable(&parent, "plugin file")?;
+    let mut options = cap_std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    let mut file = parent.open_with(&name, &options).map_err(|error| {
+        if error.kind() == std::io::ErrorKind::AlreadyExists {
+            "plugin installed-file staging path appeared concurrently; it was preserved".to_owned()
+        } else {
+            format!("could not create staged plugin replacement: {error}")
+        }
+    })?;
+    if let Some(permissions) = plugin_permissions(0o644) {
+        file.set_permissions(permissions)
+            .map_err(|error| format!("could not set staged plugin permissions: {error}"))?;
+    }
+    file.write_all(contents)
+        .and_then(|()| file.sync_all())
+        .map_err(|error| format!("could not write staged plugin replacement: {error}"))?;
+    drop(file);
+    let path = plugin_path(root, staged);
+    let staged_file = read_verified_file_at(&parent, &name, &path)?
+        .ok_or_else(|| "staged plugin replacement disappeared".to_owned())?;
+    if staged_file.bytes != contents {
+        return Err("staged plugin replacement changed while being written".to_owned());
+    }
+    Ok(staged_file)
+}
+
+fn restore_transaction_stage(
+    root: &Path,
+    root_dir: &cap_std::fs::Dir,
+    transaction: &PluginTransaction,
+) -> Result<(), String> {
+    let staged = transaction
+        .staged
+        .as_deref()
+        .ok_or_else(|| "plugin transaction has no staged original".to_owned())?;
+    let (parent, staged_name) = open_relative_parent(root_dir, staged, false)?
+        .ok_or_else(|| "plugin transaction staging directory disappeared".to_owned())?;
+    let staged_path = plugin_path(root, staged);
+    let staged_file =
+        read_verified_file_at_with_hardlinks(&parent, &staged_name, &staged_path, true)?
+            .ok_or_else(|| "plugin transaction staged original disappeared".to_owned())?;
+    if !transaction_file_matches(&staged_file, transaction) {
+        return Err("plugin transaction staged original changed; it was preserved".to_owned());
+    }
+    let (destination_parent, destination_name) =
+        open_relative_parent(root_dir, &transaction.dest, false)?
+            .ok_or_else(|| "plugin destination directory disappeared".to_owned())?;
+    let displaced = StagedPluginFile {
+        parent,
+        name: staged_name,
+        destination_name,
+        path: staged_path,
+        identity: staged_file.identity,
+        digest: transaction.original_sha256.clone(),
+        allow_hardlinks: true,
+    };
+    let destination_path = plugin_path(root, &transaction.dest);
+    restore_staged_file(&displaced).map_err(|error| {
+        format!(
+            "could not restore the original plugin destination {}: {error}",
+            destination_path.display()
+        )
+    })?;
+    let Some(restored) = read_verified_file_at_with_hardlinks(
+        &destination_parent,
+        displaced.destination_name.as_str(),
+        &destination_path,
+        true,
+    )?
+    else {
+        return Err("restored plugin destination disappeared".to_owned());
+    };
+    if !transaction_file_matches(&restored, transaction) {
+        return Err("restored plugin destination changed; it was preserved".to_owned());
+    }
+    Ok(())
+}
+
+fn recover_transaction(
+    root: &Path,
+    root_dir: &cap_std::fs::Dir,
+    plugin: &PluginSpec,
+    state: &mut serde_json::Value,
+    state_sha: &mut Option<String>,
+) -> Result<(), String> {
+    let Some(loaded) = read_transaction(root, root_dir, plugin)? else {
+        return Ok(());
+    };
+    let transaction = loaded.value.clone();
+    let loaded_state_entry = state
+        .get("files")
+        .and_then(serde_json::Value::as_object)
+        .and_then(|files| files.get(&transaction.dest));
+    if transaction.phase == "replaced"
+        && loaded_state_entry.is_some_and(|entry| {
+            entry.get("disposition").and_then(serde_json::Value::as_str) == Some("replaced")
+                && entry.get("backup").and_then(serde_json::Value::as_str)
+                    == Some(transaction.backup.as_str())
+                && entry
+                    .get("backup_sha256")
+                    .and_then(serde_json::Value::as_str)
+                    == Some(transaction.original_sha256.as_str())
+                && entry.get("backup_identity")
+                    == Some(&serde_json::json!(transaction.original_identity))
+                && entry.get("backup_mode").and_then(python_integer_to_u64)
+                    == Some(u64::from(transaction.original_mode))
+                && entry
+                    .get("installed_sha256")
+                    .and_then(serde_json::Value::as_str)
+                    == Some(transaction.installed_sha256.as_str())
+                && transaction.installed_identity.is_some_and(|identity| {
+                    entry.get("installed_identity")
+                        == Some(&serde_json::json!([identity[0], identity[1]]))
+                })
+                && verified_file_if_readable_with_hardlinks(root, &transaction.dest, true)
+                    .is_some_and(|file| file_matches_installed(&file, entry))
+                && verified_file_if_readable_with_hardlinks(root, &transaction.backup, true)
+                    .is_some_and(|file| transaction_file_matches(&file, &transaction))
+        })
+    {
+        remove_transaction_stage(root, root_dir, &transaction)?;
+        remove_transaction_install_stage(root, root_dir, &transaction)?;
+        return delete_transaction(root, root_dir, plugin, &loaded);
+    }
+
+    let destination = verified_file_if_readable_with_hardlinks(
+        root,
+        &transaction.dest,
+        transaction.phase != "prepared",
+    );
+    if transaction.phase == "prepared" {
+        if destination.as_ref().is_some_and(|file| {
+            file.identity
+                == (
+                    transaction.original_identity[0],
+                    transaction.original_identity[1],
+                )
+                && format!("{:x}", sha2::Sha256::digest(&file.bytes)) == transaction.original_sha256
+        }) {
+            // In the prepared phase a backup path is not yet owned by this
+            // journal. Leave any colliding path untouched.
+            let staged_exists = transaction
+                .staged
+                .as_deref()
+                .map(|path| relative_entry_exists(root, path))
+                .transpose()?
+                .unwrap_or(false);
+            let install_staged_exists = transaction
+                .install_staged
+                .as_deref()
+                .map(|path| relative_entry_exists(root, path))
+                .transpose()?
+                .unwrap_or(false);
+            if !staged_exists && !install_staged_exists {
+                return delete_transaction(root, root_dir, plugin, &loaded);
+            }
+            return Err("an interrupted prepared install has unexpected staging files; all paths were preserved".to_owned());
+        }
+        return Err(
+            "an interrupted prepared install has an unexpected destination; all paths were preserved"
+                .to_owned(),
+        );
+    }
+
+    if transaction.phase == "backing_up" {
+        let destination_is_original = destination
+            .as_ref()
+            .is_some_and(|file| transaction_file_matches(file, &transaction));
+        let staged_original_exists = transaction
+            .staged
+            .as_deref()
+            .map(|path| relative_entry_exists(root, path))
+            .transpose()?
+            .unwrap_or(false);
+        let staged_install_exists = transaction
+            .install_staged
+            .as_deref()
+            .map(|path| relative_entry_exists(root, path))
+            .transpose()?
+            .unwrap_or(false);
+        if destination_is_original
+            && !relative_entry_exists(root, &transaction.backup)?
+            && !staged_original_exists
+            && !staged_install_exists
+        {
+            return delete_transaction(root, root_dir, plugin, &loaded);
+        }
+        return Err(
+            "an interrupted backup intent is ambiguous; destination, backup, and journal were preserved"
+                .to_owned(),
+        );
+    }
+
+    let backup_present = relative_entry_exists(root, &transaction.backup)?;
+    let backup = verified_file_if_readable_with_hardlinks(root, &transaction.backup, true);
+    let backup_ok = backup
+        .as_ref()
+        .is_some_and(|file| transaction_file_matches(file, &transaction));
+    if backup_ok
+        && destination.as_ref().is_some_and(|file| {
+            file.identity
+                == (
+                    transaction.original_identity[0],
+                    transaction.original_identity[1],
+                )
+                && format!("{:x}", sha2::Sha256::digest(&file.bytes)) == transaction.original_sha256
+        })
+    {
+        let staged_present = transaction
+            .staged
+            .as_deref()
+            .map(|staged| relative_entry_exists(root, staged))
+            .transpose()?
+            .unwrap_or(false);
+        let install_staged_present = transaction
+            .install_staged
+            .as_deref()
+            .map(|staged| relative_entry_exists(root, staged))
+            .transpose()?
+            .unwrap_or(false);
+        if staged_present {
+            return Err(
+                "an interrupted plugin replacement has the original destination and original-file staging path; all paths were preserved"
+                    .to_owned(),
+            );
+        }
+        if install_staged_present {
+            let install_stage_matches = transaction
+                .install_staged
+                .as_deref()
+                .and_then(|staged| verified_file_if_readable_with_hardlinks(root, staged, true))
+                .is_some_and(|file| transaction_install_file_matches(&file, &transaction));
+            if !install_stage_matches {
+                return Err(
+                    "the original destination remains intact, but the install staging path is unverified; all paths were preserved"
+                        .to_owned(),
+                );
+            }
+            remove_transaction_install_stage(root, root_dir, &transaction)?;
+        }
+        remove_transaction_backup(root, root_dir, &transaction)?;
+        return delete_transaction(root, root_dir, plugin, &loaded);
+    }
+
+    let staged = transaction.staged.as_deref().and_then(|relative| {
+        verified_file_if_readable_with_hardlinks(root, relative, true)
+            .filter(|file| transaction_file_matches(file, &transaction))
+    });
+    if backup_ok && destination.is_none() && staged.is_some() {
+        remove_transaction_install_stage(root, root_dir, &transaction)?;
+        restore_transaction_stage(root, root_dir, &transaction)?;
+        remove_transaction_backup(root, root_dir, &transaction)?;
+        return delete_transaction(root, root_dir, plugin, &loaded);
+    }
+
+    if backup_ok
+        && destination.as_ref().is_some_and(|file| {
+            format!("{:x}", sha2::Sha256::digest(&file.bytes)) == transaction.installed_sha256
+                && file.identity
+                    != (
+                        transaction.original_identity[0],
+                        transaction.original_identity[1],
+                    )
+                && (transaction.phase != "replaced"
+                    || transaction.installed_identity.as_ref()
+                        == Some(&[file.identity.0, file.identity.1]))
+                && (transaction.staged.is_none() || staged.is_some())
+                && (transaction.install_staged.is_none()
+                    || (transaction_install_file_matches(file, &transaction)
+                        && transaction
+                            .install_staged
+                            .as_deref()
+                            .and_then(|path| {
+                                verified_file_if_readable_with_hardlinks(root, path, true)
+                            })
+                            .is_some_and(|stage| {
+                                transaction_install_file_matches(&stage, &transaction)
+                            })))
+        })
+    {
+        let backup = backup.expect("verified transaction backup was checked");
+        let destination = destination.expect("verified transaction destination was checked");
+        state["files"][&transaction.dest] = serde_json::json!({
+            "disposition": "replaced",
+            "installed_sha256": transaction.installed_sha256,
+            "installed_identity": [destination.identity.0, destination.identity.1],
+            "backup": transaction.backup,
+            "backup_sha256": transaction.original_sha256,
+            "backup_identity": [backup.identity.0, backup.identity.1],
+            "backup_mode": backup.mode,
+        });
+        let saved = save_state(root, root_dir, plugin, state, state_sha.as_deref())?;
+        *state_sha = Some(saved.sha256);
+        remove_transaction_stage(root, root_dir, &transaction)?;
+        remove_transaction_install_stage(root, root_dir, &transaction)?;
+        return delete_transaction(root, root_dir, plugin, &loaded);
+    }
+
+    if !backup_present
+        && destination.as_ref().is_some_and(|file| {
+            file.identity
+                == (
+                    transaction.original_identity[0],
+                    transaction.original_identity[1],
+                )
+                && format!("{:x}", sha2::Sha256::digest(&file.bytes)) == transaction.original_sha256
+        })
+    {
+        let staged_present = transaction
+            .staged
+            .as_deref()
+            .map(|staged| relative_entry_exists(root, staged))
+            .transpose()?
+            .unwrap_or(false);
+        let install_staged_present = transaction
+            .install_staged
+            .as_deref()
+            .map(|staged| relative_entry_exists(root, staged))
+            .transpose()?
+            .unwrap_or(false);
+        if !staged_present && !install_staged_present {
+            return delete_transaction(root, root_dir, plugin, &loaded);
+        }
+    }
+    Err("an interrupted plugin install is ambiguous; destination, backup, and journal were preserved".to_owned())
+}
+
+/// Install plugin files, preserving ownership and using a journaled backup for
+/// forced replacement of unmanaged files.
 pub fn install(
     plugin: &PluginSpec,
     root: &Path,
     force: bool,
     adopt_identical: bool,
 ) -> Result<Vec<serde_json::Value>, String> {
-    if force {
-        return Err("forced plugin replacement is not migrated yet; use the Python CLI".to_owned());
-    }
+    let root_file = super::open_safe_home(root)?;
+    let root_dir = cap_std::fs::Dir::from_std_file(root_file);
+    let _mutation_lock = acquire_plugin_mutation_lock(root, &root_dir, plugin)?;
     for file in plugin.files {
         bundled_contents(file.src)
             .ok_or_else(|| format!("packaged plugin source is missing: {}", file.src))?;
         check_link_components(root, file.dest)?;
         check_link_components(root, &format!("{}.agentrouter-bak", file.dest))?;
     }
-    let transaction = format!(".agentrouter-state/{}.txn.json", plugin.name);
-    if relative_entry_exists(root, &transaction)? {
-        return Err(
-            "an interrupted plugin transaction exists; use the Python CLI to recover it".to_owned(),
-        );
-    }
-
     let loaded = read_state(root, plugin)?;
     let mut state_sha = loaded.as_ref().map(|loaded| loaded.sha256.clone());
     let mut state = loaded
         .map(|loaded| loaded.value)
         .unwrap_or_else(|| empty_state(plugin));
+    recover_transaction(root, &root_dir, plugin, &mut state, &mut state_sha)?;
     let known_paths = plugin
         .files
         .iter()
@@ -453,8 +1194,6 @@ pub fn install(
         }
     }
 
-    let root_file = super::open_safe_home(root)?;
-    let root_dir = cap_std::fs::Dir::from_std_file(root_file);
     let mut results = Vec::new();
     for relative in plugin.cleanup_dirs {
         let existing = existing_relative_directory(&root_dir, relative)?;
@@ -538,10 +1277,181 @@ pub fn install(
 
         if let Some(actual) = actual {
             if actual.bytes != expected {
-                return Err(format!(
-                    "{} exists and differs; re-run with --force to back it up and replace.",
-                    destination.display()
+                if !force {
+                    return Err(format!(
+                        "{} exists and differs; re-run with --force to back it up and replace.",
+                        destination.display()
+                    ));
+                }
+                let backup = format!("{}.agentrouter-bak", file.dest);
+                if relative_entry_exists(root, &backup)? {
+                    return Err(format!(
+                        "backup already exists at {}; refusing to overwrite it.",
+                        plugin_path(root, &backup).display()
+                    ));
+                }
+                let (parent, name) = open_relative_parent(&root_dir, file.dest, false)?
+                    .ok_or_else(|| "plugin destination parent is unavailable".to_owned())?;
+                let current =
+                    read_verified_file_at(&parent, &name, &destination)?.ok_or_else(|| {
+                        "plugin destination disappeared before replacement".to_owned()
+                    })?;
+                if current.identity != actual.identity || current.bytes != actual.bytes {
+                    return Err(
+                        "plugin destination changed before replacement; refusing to overwrite it"
+                            .to_owned(),
+                    );
+                }
+                let (parent, _) = open_relative_parent(&root_dir, file.dest, false)?
+                    .ok_or_else(|| "plugin destination parent is unavailable".to_owned())?;
+                let staging_name = unique_staged_name(&parent)?;
+                let install_staging_name = unique_install_staged_name(&parent)?;
+                let staged = if sibling_directory(file.dest).is_empty() {
+                    staging_name
+                } else {
+                    format!("{}/{staging_name}", sibling_directory(file.dest))
+                };
+                let install_staged = if sibling_directory(file.dest).is_empty() {
+                    install_staging_name
+                } else {
+                    format!("{}/{install_staging_name}", sibling_directory(file.dest))
+                };
+                let mut transaction = PluginTransaction {
+                    schema: 1,
+                    plugin: plugin.name.to_owned(),
+                    phase: "prepared".to_owned(),
+                    dest: file.dest.to_owned(),
+                    backup,
+                    original_sha256: format!("{:x}", sha2::Sha256::digest(&actual.bytes)),
+                    original_identity: [actual.identity.0, actual.identity.1],
+                    original_mode: actual.mode,
+                    installed_sha256: digest.clone(),
+                    installed_identity: None,
+                    staged: Some(staged),
+                    install_staged: Some(install_staged),
+                };
+                let prepared = write_transaction(root, &root_dir, plugin, &transaction, None)?;
+                transaction.phase = "backing_up".to_owned();
+                let backing_up =
+                    write_transaction(root, &root_dir, plugin, &transaction, Some(&prepared))?;
+                let backup_file = match create_transaction_backup(root, &root_dir, &transaction) {
+                    Ok(file) => file,
+                    Err(error) => {
+                        let recovery = recover_transaction(
+                            root,
+                            &root_dir,
+                            plugin,
+                            &mut state,
+                            &mut state_sha,
+                        );
+                        return match recovery {
+                            Ok(()) => Err(error),
+                            Err(recovery_error) => Err(format!(
+                                "{error}; backup-intent recovery was incomplete and paths were preserved: {recovery_error}"
+                            )),
+                        };
+                    }
+                };
+                transaction.phase = "backed_up".to_owned();
+                let backed_up = match write_transaction(
+                    root,
+                    &root_dir,
+                    plugin,
+                    &transaction,
+                    Some(&backing_up),
+                ) {
+                    Ok(transaction) => transaction,
+                    Err(error) => {
+                        return Err(format!(
+                            "backup was created but the committed phase could not be recorded; backup and journal were preserved: {error}"
+                        ));
+                    }
+                };
+                let staged_install =
+                    create_transaction_install_stage(root, &root_dir, &transaction, expected)?;
+                transaction.installed_identity =
+                    Some([staged_install.identity.0, staged_install.identity.1]);
+                let install_ready =
+                    write_transaction(root, &root_dir, plugin, &transaction, Some(&backed_up))?;
+                let staged_name = transaction
+                    .staged
+                    .as_deref()
+                    .and_then(|relative| relative.rsplit('/').next())
+                    .ok_or_else(|| "plugin transaction staging path is invalid".to_owned())?;
+                let original_identity = (
+                    transaction.original_identity[0],
+                    transaction.original_identity[1],
+                );
+                let staged_original = stage_exact_file_to(
+                    root,
+                    &root_dir,
+                    file.dest,
+                    &transaction.original_sha256,
+                    Some(original_identity),
+                    "plugin destination",
+                    StageOptions {
+                        allow_hardlinks: true,
+                        staged_name: Some(staged_name),
+                    },
+                )?;
+                let Some(staged_original) = staged_original else {
+                    return Err(
+                        "plugin destination changed during replacement; backup, staging files, and journal were preserved"
+                            .to_owned(),
+                    );
+                };
+                let installed = match link_transaction_install_stage(root, &root_dir, &transaction)
+                {
+                    Ok(installed) => installed,
+                    Err(error) => {
+                        let recovery = recover_transaction(
+                            root,
+                            &root_dir,
+                            plugin,
+                            &mut state,
+                            &mut state_sha,
+                        );
+                        return match recovery {
+                            Ok(()) => Err(format!(
+                                "replacement did not complete; the original was restored: {error}"
+                            )),
+                            Err(recovery_error) => Err(format!(
+                                "{error}; backup, staging files, and journal were preserved: {recovery_error}"
+                            )),
+                        };
+                    }
+                };
+                if installed.bytes != expected || installed.identity != staged_install.identity {
+                    return Err(
+                        "replacement destination changed; backup, staging files, and journal were preserved"
+                            .to_owned(),
+                    );
+                }
+                transaction.phase = "replaced".to_owned();
+                let replaced =
+                    write_transaction(root, &root_dir, plugin, &transaction, Some(&install_ready))?;
+                state["files"][file.dest] = serde_json::json!({
+                    "disposition": "replaced",
+                    "installed_sha256": digest,
+                    "installed_identity": [installed.identity.0, installed.identity.1],
+                    "backup": transaction.backup,
+                    "backup_sha256": transaction.original_sha256,
+                    "backup_identity": [backup_file.identity.0, backup_file.identity.1],
+                    "backup_mode": backup_file.mode,
+                });
+                let saved = save_state(root, &root_dir, plugin, &mut state, state_sha.as_deref())?;
+                state_sha = Some(saved.sha256);
+                remove_staged_file_exact(&staged_original, "plugin transaction original")?;
+                remove_transaction_install_stage(root, &root_dir, &transaction)?;
+                delete_transaction(root, &root_dir, plugin, &replaced)?;
+                results.push(plugin_result(
+                    &destination,
+                    &format!(
+                        "replaced (backup: {})",
+                        transaction.backup.rsplit('/').next().unwrap_or("backup")
+                    ),
                 ));
+                continue;
             }
             let disposition = if adopt_identical {
                 "created"
@@ -601,13 +1511,30 @@ pub fn install(
 /// created them. User edits, unmanaged files, unsafe paths, and ambiguous
 /// backups are kept in place for Python-compatible recovery.
 pub fn uninstall(plugin: &PluginSpec, root: &Path) -> Result<Vec<serde_json::Value>, String> {
-    let transaction = format!(".agentrouter-state/{}.txn.json", plugin.name);
-    if relative_entry_exists(root, &transaction)? {
-        return Err(
-            "an interrupted plugin transaction exists; use the Python CLI to recover it".to_owned(),
-        );
-    }
-
+    let root_file = match std::fs::symlink_metadata(root) {
+        Ok(metadata) if !super::is_link_or_reparse(&metadata) && metadata.is_dir() => {
+            super::open_safe_home(root)?
+        }
+        Ok(_) => return Err("plugin destination root is not a safe directory".to_owned()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            let mut results = plugin
+                .files
+                .iter()
+                .map(|file| plugin_result(&plugin_path(root, file.dest), "absent"))
+                .collect::<Vec<_>>();
+            results.extend(plugin.cleanup_dirs.iter().map(|relative| {
+                serde_json::json!({
+                    "kind": "directory",
+                    "dest": plugin_path(root, relative).to_string_lossy(),
+                    "result": "absent",
+                })
+            }));
+            return Ok(results);
+        }
+        Err(error) => return Err(format!("could not inspect plugin root: {error}")),
+    };
+    let root_dir = cap_std::fs::Dir::from_std_file(root_file);
+    let _mutation_lock = acquire_plugin_mutation_lock(root, &root_dir, plugin)?;
     let loaded = read_state(root, plugin)?;
     let mut state_sha = loaded.as_ref().map(|loaded| loaded.sha256.clone());
     let mut state = loaded
@@ -655,28 +1582,22 @@ pub fn uninstall(plugin: &PluginSpec, root: &Path) -> Result<Vec<serde_json::Val
         check_link_components(root, relative)?;
     }
 
-    let root_file = match std::fs::symlink_metadata(root) {
-        Ok(metadata) if !super::is_link_or_reparse(&metadata) && metadata.is_dir() => {
-            super::open_safe_home(root)?
+    recover_transaction(root, &root_dir, plugin, &mut state, &mut state_sha)?;
+    if let Some(files) = state.get("files").and_then(serde_json::Value::as_object) {
+        for relative in files.keys() {
+            if !destinations.iter().any(|existing| existing == relative) {
+                check_link_components(root, relative)?;
+                if let Some(backup) = files
+                    .get(relative)
+                    .and_then(|entry| entry.get("backup"))
+                    .and_then(serde_json::Value::as_str)
+                {
+                    check_link_components(root, backup)?;
+                }
+                destinations.push(relative.clone());
+            }
         }
-        Ok(_) => return Err("plugin destination root is not a safe directory".to_owned()),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-            let mut results = destinations
-                .iter()
-                .map(|relative| plugin_result(&plugin_path(root, relative), "absent"))
-                .collect::<Vec<_>>();
-            results.extend(cleanup_directories.iter().map(|relative| {
-                serde_json::json!({
-                    "kind": "directory",
-                    "dest": plugin_path(root, relative).to_string_lossy(),
-                    "result": "absent",
-                })
-            }));
-            return Ok(results);
-        }
-        Err(error) => return Err(format!("could not inspect plugin root: {error}")),
-    };
-    let root_dir = cap_std::fs::Dir::from_std_file(root_file);
+    }
     let mut results = Vec::new();
 
     for relative in destinations {
@@ -975,16 +1896,20 @@ struct StagedPluginFile {
     allow_hardlinks: bool,
 }
 
-fn staged_name() -> Result<String, String> {
+fn staged_name_with_prefix(prefix: &str) -> Result<String, String> {
     let mut nonce = [0_u8; 16];
     getrandom::getrandom(&mut nonce)
         .map_err(|error| format!("could not generate a private plugin staging name: {error}"))?;
-    let mut name = String::from(".agentrouter-remove-");
+    let mut name = String::from(prefix);
     for byte in nonce {
         use std::fmt::Write as _;
         write!(&mut name, "{byte:02x}").expect("writing to a string cannot fail");
     }
     Ok(name)
+}
+
+fn staged_name() -> Result<String, String> {
+    staged_name_with_prefix(".agentrouter-remove-")
 }
 
 fn unique_staged_name(parent: &cap_std::fs::Dir) -> Result<String, String> {
@@ -997,6 +1922,22 @@ fn unique_staged_name(parent: &cap_std::fs::Dir) -> Result<String, String> {
         }
     }
     Err("could not allocate a unique plugin staging path".to_owned())
+}
+
+fn unique_install_staged_name(parent: &cap_std::fs::Dir) -> Result<String, String> {
+    for _ in 0..16 {
+        let name = staged_name_with_prefix(".agentrouter-install-")?;
+        match parent.symlink_metadata(&name) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(name),
+            Ok(_) => continue,
+            Err(error) => {
+                return Err(format!(
+                    "could not inspect plugin install staging path: {error}"
+                ))
+            }
+        }
+    }
+    Err("could not allocate a unique plugin install staging path".to_owned())
 }
 
 fn sibling_directory(relative: &str) -> &str {
@@ -1045,17 +1986,28 @@ fn rename_sibling_no_replace_windows(
     to: &str,
 ) -> std::io::Result<()> {
     use fs_at::os::windows::OpenOptionsExt;
-    use std::os::windows::io::AsRawHandle;
+    use std::os::windows::io::{AsRawHandle, FromRawHandle};
+    use windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE;
     use windows_sys::Win32::Storage::FileSystem::{
-        FileRenameInfo, SetFileInformationByHandle, FILE_ADD_FILE, FILE_ADD_SUBDIRECTORY,
-        FILE_LIST_DIRECTORY, FILE_READ_ATTRIBUTES, FILE_RENAME_INFO,
+        CreateFileW, FileRenameInfo, GetFinalPathNameByHandleW, SetFileInformationByHandle,
+        FILE_ADD_FILE, FILE_ADD_SUBDIRECTORY, FILE_FLAG_BACKUP_SEMANTICS,
+        FILE_FLAG_OPEN_REPARSE_POINT, FILE_LIST_DIRECTORY, FILE_NAME_NORMALIZED,
+        FILE_READ_ATTRIBUTES, FILE_RENAME_INFO, FILE_SHARE_DELETE, FILE_SHARE_READ,
+        FILE_SHARE_WRITE, FILE_TRAVERSE, OPEN_EXISTING, VOLUME_NAME_DOS,
     };
 
     const DELETE_ACCESS: u32 = 0x0001_0000;
     let parent_file = parent.try_clone()?.into_std_file();
     let mut source_options = fs_at::OpenOptions::default();
     source_options.desired_access(DELETE_ACCESS | FILE_READ_ATTRIBUTES);
-    let source = source_options.open_path_at(&parent_file, Path::new(from))?;
+    let source = source_options
+        .open_path_at(&parent_file, Path::new(from))
+        .map_err(|error| {
+            std::io::Error::new(
+                error.kind(),
+                format!("could not open rename source: {error}"),
+            )
+        })?;
     let source_metadata = source.metadata()?;
     if super::is_link_or_reparse(&source_metadata) {
         return Err(std::io::Error::other(
@@ -1063,12 +2015,54 @@ fn rename_sibling_no_replace_windows(
         ));
     }
 
-    let mut destination_options = fs_at::OpenOptions::default();
-    destination_options.desired_access(
-        FILE_ADD_FILE | FILE_ADD_SUBDIRECTORY | FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES,
-    );
-    let destination_parent = destination_options.open_dir_at(&parent_file, Path::new("."))?;
-    let filename = to.encode_utf16().collect::<Vec<_>>();
+    let parent_identity = directory_identity(&parent_file)?;
+    let mut final_path = vec![0_u16; 32_768];
+    let path_length = unsafe {
+        GetFinalPathNameByHandleW(
+            parent_file.as_raw_handle().cast(),
+            final_path.as_mut_ptr(),
+            final_path.len() as u32,
+            FILE_NAME_NORMALIZED | VOLUME_NAME_DOS,
+        )
+    } as usize;
+    if path_length == 0 || path_length >= final_path.len() {
+        return Err(std::io::Error::last_os_error());
+    }
+    final_path.truncate(path_length);
+    final_path.push(0);
+    let destination_access = if source_metadata.is_dir() {
+        FILE_ADD_SUBDIRECTORY
+    } else {
+        FILE_ADD_FILE
+    };
+    let destination_handle = unsafe {
+        CreateFileW(
+            final_path.as_ptr(),
+            destination_access | FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES | FILE_TRAVERSE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            std::ptr::null(),
+            OPEN_EXISTING,
+            FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+            std::ptr::null_mut(),
+        )
+    };
+    if destination_handle == INVALID_HANDLE_VALUE {
+        let error = std::io::Error::last_os_error();
+        return Err(std::io::Error::new(
+            error.kind(),
+            format!("could not open plugin rename parent: {error}"),
+        ));
+    }
+    let destination_parent = unsafe { std::fs::File::from_raw_handle(destination_handle.cast()) };
+    if !destination_parent.metadata()?.is_dir()
+        || directory_identity(&destination_parent)? != parent_identity
+    {
+        return Err(std::io::Error::other(
+            "plugin staging parent changed while opening it for rename",
+        ));
+    }
+
+    let mut filename = to.encode_utf16().collect::<Vec<_>>();
     let filename_bytes = filename
         .len()
         .checked_mul(std::mem::size_of::<u16>())
@@ -1079,6 +2073,9 @@ fn rename_sibling_no_replace_windows(
                 "plugin staging name is too long",
             )
         })?;
+    // FileNameLength excludes the terminator, but include one in the backing
+    // buffer to satisfy filesystems that consume the member as a wide string.
+    filename.push(0);
     let filename_offset = std::mem::offset_of!(FILE_RENAME_INFO, FileName);
     let buffer_bytes = filename_offset + filename.len() * std::mem::size_of::<u16>();
     let word_count = buffer_bytes.div_ceil(std::mem::size_of::<u64>());
@@ -1104,7 +2101,11 @@ fn rename_sibling_no_replace_windows(
             })?,
         ) == 0
         {
-            return Err(std::io::Error::last_os_error());
+            let error = std::io::Error::last_os_error();
+            return Err(std::io::Error::new(
+                error.kind(),
+                format!("could not rename plugin staging entry: {error}"),
+            ));
         }
     }
     Ok(())
@@ -1130,12 +2131,40 @@ fn stage_exact_file_with_hardlink_policy(
     label: &str,
     allow_hardlinks: bool,
 ) -> Result<Option<StagedPluginFile>, String> {
+    stage_exact_file_to(
+        root_path,
+        root,
+        relative,
+        digest,
+        identity,
+        label,
+        StageOptions {
+            allow_hardlinks,
+            staged_name: None,
+        },
+    )
+}
+
+struct StageOptions<'a> {
+    allow_hardlinks: bool,
+    staged_name: Option<&'a str>,
+}
+
+fn stage_exact_file_to(
+    root_path: &Path,
+    root: &cap_std::fs::Dir,
+    relative: &str,
+    digest: &str,
+    identity: Option<(u64, u64)>,
+    label: &str,
+    options: StageOptions<'_>,
+) -> Result<Option<StagedPluginFile>, String> {
     let Some((parent, name)) = open_relative_parent(root, relative, false)? else {
         return Ok(None);
     };
     let path = plugin_path(root_path, relative);
     let Some(before) =
-        read_verified_file_at_with_hardlinks(&parent, &name, &path, allow_hardlinks)?
+        read_verified_file_at_with_hardlinks(&parent, &name, &path, options.allow_hardlinks)?
     else {
         return Ok(None);
     };
@@ -1145,7 +2174,10 @@ fn stage_exact_file_with_hardlink_policy(
     }
     #[cfg(unix)]
     ensure_unix_staged_parent_is_not_foreign_writable(&parent, label)?;
-    let staged_name = unique_staged_name(&parent)?;
+    let staged_name = match options.staged_name {
+        Some(name) => name.to_owned(),
+        None => unique_staged_name(&parent)?,
+    };
     rename_sibling_no_replace(
         root_path,
         sibling_directory(relative),
@@ -1159,7 +2191,7 @@ fn stage_exact_file_with_hardlink_policy(
         &parent,
         &staged_name,
         &staged_path,
-        allow_hardlinks,
+        options.allow_hardlinks,
     ) {
         Ok(Some(staged)) => staged,
         Ok(None) => return Err(format!("staged {label} disappeared")),
@@ -1202,7 +2234,7 @@ fn stage_exact_file_with_hardlink_policy(
         path: staged_path,
         identity: staged.identity,
         digest: digest.to_owned(),
-        allow_hardlinks,
+        allow_hardlinks: options.allow_hardlinks,
     }))
 }
 
@@ -2130,6 +3162,168 @@ fn secure_state_directory(directory: &File) -> Result<(), String> {
     Ok(())
 }
 
+struct PluginMutationLock {
+    _file: File,
+    #[cfg(windows)]
+    overlapped: windows_sys::Win32::System::IO::OVERLAPPED,
+}
+
+impl Drop for PluginMutationLock {
+    fn drop(&mut self) {
+        #[cfg(windows)]
+        unsafe {
+            use std::os::windows::io::AsRawHandle;
+            use windows_sys::Win32::Storage::FileSystem::UnlockFileEx;
+
+            let _ = UnlockFileEx(
+                self._file.as_raw_handle().cast(),
+                0,
+                1,
+                0,
+                &mut self.overlapped,
+            );
+        }
+    }
+}
+
+fn acquire_plugin_mutation_lock(
+    root: &Path,
+    root_dir: &cap_std::fs::Dir,
+    plugin: &PluginSpec,
+) -> Result<PluginMutationLock, String> {
+    let (state_directory, _) = ensure_relative_directory(root_dir, ".agentrouter-state")?;
+    let state_dir = cap_std::fs::Dir::from_std_file(
+        state_directory
+            .try_clone()
+            .map_err(|error| format!("could not inspect plugin state directory: {error}"))?,
+    );
+    let filename = format!("{}.lock", plugin.name);
+    let path = root.join(".agentrouter-state").join(&filename);
+
+    let mut create = fs_at::OpenOptions::default();
+    create
+        .read(true)
+        .write(fs_at::OpenOptionsWriteMode::Write)
+        .create_new(true)
+        .follow(false);
+    let (file, _created) = match create.open_at(&state_directory, &filename) {
+        Ok(file) => (file, true),
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+            let mut open = fs_at::OpenOptions::default();
+            open.read(true)
+                .write(fs_at::OpenOptionsWriteMode::Write)
+                .follow(false);
+            let file = open
+                .open_at(&state_directory, &filename)
+                .map_err(|error| format!("could not open plugin mutation lock: {error}"))?;
+            (file, false)
+        }
+        Err(error) => return Err(format!("could not create plugin mutation lock: {error}")),
+    };
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        if _created {
+            file.set_permissions(std::fs::Permissions::from_mode(0o600))
+                .map_err(|error| format!("could not secure plugin mutation lock: {error}"))?;
+        }
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = file
+            .metadata()
+            .map_err(|error| format!("could not inspect plugin mutation lock: {error}"))?
+            .permissions()
+            .mode();
+        if mode & 0o077 != 0 {
+            return Err("plugin mutation lock permissions are not private".to_owned());
+        }
+        if file
+            .metadata()
+            .map_err(|error| format!("could not inspect plugin mutation lock: {error}"))?
+            .len()
+            != 0
+        {
+            return Err("plugin mutation lock contains unexpected data".to_owned());
+        }
+    }
+    #[cfg(windows)]
+    {
+        let mut file = file;
+        let length = file
+            .metadata()
+            .map_err(|error| format!("could not inspect plugin mutation lock: {error}"))?
+            .len();
+        if length == 0 {
+            file.write_all(&[0])
+                .and_then(|()| file.sync_data())
+                .map_err(|error| format!("could not initialize plugin mutation lock: {error}"))?;
+        } else if length != 1 {
+            return Err("plugin mutation lock contains unexpected data".to_owned());
+        }
+    }
+    let verified = read_verified_file_at(&state_dir, &filename, &path)?
+        .ok_or_else(|| "plugin mutation lock disappeared while opening it".to_owned())?;
+    #[cfg(unix)]
+    if !verified.bytes.is_empty() {
+        return Err("plugin mutation lock contains unexpected data".to_owned());
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::Storage::FileSystem::{LockFileEx, LOCKFILE_EXCLUSIVE_LOCK};
+
+        if verified.bytes != [0] {
+            return Err("plugin mutation lock contains unexpected data".to_owned());
+        }
+        let mut overlapped = unsafe { std::mem::zeroed() };
+        let locked = unsafe {
+            LockFileEx(
+                file.as_raw_handle().cast(),
+                LOCKFILE_EXCLUSIVE_LOCK,
+                0,
+                1,
+                0,
+                &mut overlapped,
+            )
+        };
+        if locked == 0 {
+            return Err(format!(
+                "could not lock plugin mutations: {}",
+                std::io::Error::last_os_error()
+            ));
+        }
+        let after_lock = read_verified_file_at(&state_dir, &filename, &path)?
+            .ok_or_else(|| "plugin mutation lock disappeared while waiting".to_owned())?;
+        if after_lock.identity != verified.identity {
+            return Err("plugin mutation lock changed while waiting".to_owned());
+        }
+        Ok(PluginMutationLock {
+            _file: file,
+            overlapped,
+        })
+    }
+    #[cfg(unix)]
+    {
+        rustix::fs::flock(&file, rustix::fs::FlockOperation::LockExclusive)
+            .map_err(|error| format!("could not lock plugin mutations: {error}"))?;
+        let after_lock = read_verified_file_at(&state_dir, &filename, &path)?
+            .ok_or_else(|| "plugin mutation lock disappeared while waiting".to_owned())?;
+        if after_lock.identity != verified.identity {
+            return Err("plugin mutation lock changed while waiting".to_owned());
+        }
+        Ok(PluginMutationLock { _file: file })
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        let _ = (file, _created);
+        Err("cross-process plugin mutation locks are unsupported on this platform".to_owned())
+    }
+}
+
 fn ensure_relative_directory(
     root: &cap_std::fs::Dir,
     relative: &str,
@@ -2629,6 +3823,32 @@ fn cap_metadata_is_link_or_reparse(metadata: &cap_std::fs::Metadata) -> bool {
 pub struct LoadedState {
     pub value: serde_json::Value,
     pub sha256: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PluginTransaction {
+    schema: u8,
+    plugin: String,
+    phase: String,
+    dest: String,
+    backup: String,
+    original_sha256: String,
+    original_identity: [u64; 2],
+    original_mode: u32,
+    installed_sha256: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    installed_identity: Option<[u64; 2]>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    staged: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    install_staged: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct LoadedTransaction {
+    value: PluginTransaction,
+    sha256: String,
+    identity: PluginIdentity,
 }
 
 /// Read the per-plugin ownership record through pinned directory handles.
@@ -3267,7 +4487,13 @@ mod tests {
             b"original user bytes"
         );
         assert!(!root.join(backup).exists());
-        assert!(!root.join(".agentrouter-state").exists());
+        assert_eq!(
+            std::fs::read_dir(root.join(".agentrouter-state"))
+                .unwrap()
+                .map(|entry| entry.unwrap().file_name())
+                .collect::<Vec<_>>(),
+            [std::ffi::OsString::from("codex.lock")]
+        );
     }
 
     #[test]
@@ -3427,6 +4653,440 @@ mod tests {
             std::fs::read(root.join("destination/concurrent")).unwrap(),
             b"keep"
         );
+    }
+
+    #[test]
+    fn sibling_no_replace_rename_moves_file_when_target_is_absent() {
+        let temporary = tempfile::tempdir().unwrap();
+        let root = temporary.path().canonicalize().unwrap();
+        std::fs::write(root.join("staged"), b"owned").unwrap();
+        let root_file = crate::open_safe_home(&root).unwrap();
+        let root_dir = cap_std::fs::Dir::from_std_file(root_file);
+
+        rename_sibling_no_replace(&root, "", &root_dir, "staged", "destination").unwrap();
+
+        assert!(!root.join("staged").exists());
+        assert_eq!(std::fs::read(root.join("destination")).unwrap(), b"owned");
+    }
+
+    #[test]
+    fn forced_replacement_preserves_a_destination_changed_after_backup() {
+        let plugin = get_plugin("codex").unwrap();
+        let temporary = tempfile::tempdir().unwrap();
+        let root = temporary.path().canonicalize().unwrap().join("home");
+        std::fs::create_dir_all(&root).unwrap();
+        let destination = plugin.files[0].dest;
+        std::fs::write(root.join(destination), b"original user content").unwrap();
+        let original = read_relative_file(&root, destination).unwrap().unwrap();
+        let root_file = crate::open_safe_home(&root).unwrap();
+        let root_dir = cap_std::fs::Dir::from_std_file(root_file);
+        let (parent, _) = open_relative_parent(&root_dir, destination, false)
+            .unwrap()
+            .unwrap();
+        let staging_name = unique_staged_name(&parent).unwrap();
+        let staged = if sibling_directory(destination).is_empty() {
+            staging_name
+        } else {
+            format!("{}/{staging_name}", sibling_directory(destination))
+        };
+        let mut transaction = PluginTransaction {
+            schema: 1,
+            plugin: plugin.name.to_owned(),
+            phase: "prepared".to_owned(),
+            dest: destination.to_owned(),
+            backup: format!("{destination}.agentrouter-bak"),
+            original_sha256: format!("{:x}", sha2::Sha256::digest(&original.bytes)),
+            original_identity: [original.identity.0, original.identity.1],
+            original_mode: original.mode,
+            installed_sha256: format!(
+                "{:x}",
+                sha2::Sha256::digest(bundled_contents(plugin.files[0].src).unwrap())
+            ),
+            installed_identity: None,
+            staged: Some(staged.clone()),
+            install_staged: None,
+        };
+        let prepared = write_transaction(&root, &root_dir, plugin, &transaction, None).unwrap();
+        transaction.phase = "backing_up".to_owned();
+        let backing_up =
+            write_transaction(&root, &root_dir, plugin, &transaction, Some(&prepared)).unwrap();
+        create_transaction_backup(&root, &root_dir, &transaction).unwrap();
+        transaction.phase = "backed_up".to_owned();
+        write_transaction(&root, &root_dir, plugin, &transaction, Some(&backing_up)).unwrap();
+
+        std::fs::remove_file(root.join(destination)).unwrap();
+        std::fs::write(root.join(destination), b"concurrent user edit").unwrap();
+        let staged_name = staged.rsplit('/').next().unwrap();
+        let stage_result = stage_exact_file_to(
+            &root,
+            &root_dir,
+            destination,
+            &transaction.original_sha256,
+            Some(original.identity),
+            "plugin destination",
+            StageOptions {
+                allow_hardlinks: true,
+                staged_name: Some(staged_name),
+            },
+        )
+        .unwrap();
+
+        assert!(stage_result.is_none());
+        assert_eq!(
+            std::fs::read(root.join(destination)).unwrap(),
+            b"concurrent user edit"
+        );
+        assert_eq!(
+            std::fs::read(root.join(&transaction.backup)).unwrap(),
+            b"original user content"
+        );
+        let mut state = empty_state(plugin);
+        let mut state_sha = None;
+        assert!(
+            recover_transaction(&root, &root_dir, plugin, &mut state, &mut state_sha)
+                .unwrap_err()
+                .contains("ambiguous")
+        );
+        assert!(root.join(&transaction.backup).exists());
+        assert!(root.join(transaction_relative(plugin)).exists());
+        assert!(!root.join(&staged).exists());
+    }
+
+    #[test]
+    fn backing_up_intent_does_not_claim_an_exact_same_inode_backup_collision() {
+        let plugin = get_plugin("codex").unwrap();
+        let temporary = tempfile::tempdir().unwrap();
+        let root = temporary.path().canonicalize().unwrap().join("home");
+        std::fs::create_dir_all(&root).unwrap();
+        let destination = plugin.files[0].dest;
+        std::fs::write(root.join(destination), b"original user bytes").unwrap();
+        let original = read_relative_file(&root, destination).unwrap().unwrap();
+        let root_file = crate::open_safe_home(&root).unwrap();
+        let root_dir = cap_std::fs::Dir::from_std_file(root_file);
+        let expected = bundled_contents(plugin.files[0].src).unwrap();
+        let transaction = PluginTransaction {
+            schema: 1,
+            plugin: plugin.name.to_owned(),
+            phase: "backing_up".to_owned(),
+            dest: destination.to_owned(),
+            backup: format!("{destination}.agentrouter-bak"),
+            original_sha256: format!("{:x}", sha2::Sha256::digest(&original.bytes)),
+            original_identity: [original.identity.0, original.identity.1],
+            original_mode: original.mode,
+            installed_sha256: format!("{:x}", sha2::Sha256::digest(expected)),
+            installed_identity: None,
+            staged: None,
+            install_staged: None,
+        };
+        write_transaction(&root, &root_dir, plugin, &transaction, None).unwrap();
+        std::fs::hard_link(root.join(destination), root.join(&transaction.backup)).unwrap();
+
+        let mut state = empty_state(plugin);
+        let mut state_sha = None;
+        let error =
+            recover_transaction(&root, &root_dir, plugin, &mut state, &mut state_sha).unwrap_err();
+
+        assert!(error.contains("backup intent is ambiguous"));
+        let destination_after =
+            verified_file_if_readable_with_hardlinks(&root, destination, true).unwrap();
+        let backup_after =
+            verified_file_if_readable_with_hardlinks(&root, &transaction.backup, true).unwrap();
+        assert_eq!(destination_after.identity, backup_after.identity);
+        assert!(root.join(transaction_relative(plugin)).is_file());
+        assert!(state["files"].as_object().unwrap().is_empty());
+    }
+
+    #[test]
+    fn recovery_preserves_original_when_install_stage_identity_is_uncommitted() {
+        let plugin = get_plugin("codex").unwrap();
+        let temporary = tempfile::tempdir().unwrap();
+        let root = temporary.path().canonicalize().unwrap().join("home");
+        std::fs::create_dir_all(&root).unwrap();
+        let destination = plugin.files[0].dest;
+        std::fs::write(root.join(destination), b"original user bytes").unwrap();
+        let original = read_relative_file(&root, destination).unwrap().unwrap();
+        let expected = bundled_contents(plugin.files[0].src).unwrap();
+        let root_file = crate::open_safe_home(&root).unwrap();
+        let root_dir = cap_std::fs::Dir::from_std_file(root_file);
+        let (parent, _) = open_relative_parent(&root_dir, destination, false)
+            .unwrap()
+            .unwrap();
+        let install_name = unique_install_staged_name(&parent).unwrap();
+        let install_staged = if sibling_directory(destination).is_empty() {
+            install_name
+        } else {
+            format!("{}/{install_name}", sibling_directory(destination))
+        };
+        let transaction = PluginTransaction {
+            schema: 1,
+            plugin: plugin.name.to_owned(),
+            phase: "backed_up".to_owned(),
+            dest: destination.to_owned(),
+            backup: format!("{destination}.agentrouter-bak"),
+            original_sha256: format!("{:x}", sha2::Sha256::digest(&original.bytes)),
+            original_identity: [original.identity.0, original.identity.1],
+            original_mode: original.mode,
+            installed_sha256: format!("{:x}", sha2::Sha256::digest(expected)),
+            installed_identity: None,
+            staged: Some(".agentrouter-remove-uncommitted".to_owned()),
+            install_staged: Some(install_staged.clone()),
+        };
+        std::fs::hard_link(root.join(destination), root.join(&transaction.backup)).unwrap();
+        write_transaction(&root, &root_dir, plugin, &transaction, None).unwrap();
+        std::fs::write(root.join(&install_staged), expected).unwrap();
+
+        let mut state = empty_state(plugin);
+        let mut state_sha = None;
+        let error =
+            recover_transaction(&root, &root_dir, plugin, &mut state, &mut state_sha).unwrap_err();
+
+        assert!(error.contains("original destination remains intact"));
+        assert_eq!(
+            std::fs::read(root.join(destination)).unwrap(),
+            b"original user bytes"
+        );
+        assert!(root.join(&transaction.backup).is_file());
+        assert!(root.join(&install_staged).is_file());
+        assert!(root.join(transaction_relative(plugin)).is_file());
+        assert!(state["files"].as_object().unwrap().is_empty());
+    }
+
+    #[test]
+    fn recovery_rolls_back_verified_install_stage_before_original_staging() {
+        let plugin = get_plugin("codex").unwrap();
+        let temporary = tempfile::tempdir().unwrap();
+        let root = temporary.path().canonicalize().unwrap().join("home");
+        std::fs::create_dir_all(&root).unwrap();
+        let destination = plugin.files[0].dest;
+        std::fs::write(root.join(destination), b"original user bytes").unwrap();
+        let original = read_relative_file(&root, destination).unwrap().unwrap();
+        let expected = bundled_contents(plugin.files[0].src).unwrap();
+        let root_file = crate::open_safe_home(&root).unwrap();
+        let root_dir = cap_std::fs::Dir::from_std_file(root_file);
+        let (parent, _) = open_relative_parent(&root_dir, destination, false)
+            .unwrap()
+            .unwrap();
+        let install_name = unique_install_staged_name(&parent).unwrap();
+        let install_staged = if sibling_directory(destination).is_empty() {
+            install_name
+        } else {
+            format!("{}/{install_name}", sibling_directory(destination))
+        };
+        let mut transaction = PluginTransaction {
+            schema: 1,
+            plugin: plugin.name.to_owned(),
+            phase: "backed_up".to_owned(),
+            dest: destination.to_owned(),
+            backup: format!("{destination}.agentrouter-bak"),
+            original_sha256: format!("{:x}", sha2::Sha256::digest(&original.bytes)),
+            original_identity: [original.identity.0, original.identity.1],
+            original_mode: original.mode,
+            installed_sha256: format!("{:x}", sha2::Sha256::digest(expected)),
+            installed_identity: None,
+            staged: Some(".agentrouter-remove-not-created".to_owned()),
+            install_staged: Some(install_staged.clone()),
+        };
+        std::fs::hard_link(root.join(destination), root.join(&transaction.backup)).unwrap();
+        let backed_up = write_transaction(&root, &root_dir, plugin, &transaction, None).unwrap();
+        let installed_stage =
+            create_transaction_install_stage(&root, &root_dir, &transaction, expected).unwrap();
+        transaction.installed_identity =
+            Some([installed_stage.identity.0, installed_stage.identity.1]);
+        write_transaction(&root, &root_dir, plugin, &transaction, Some(&backed_up)).unwrap();
+
+        let mut state = empty_state(plugin);
+        let mut state_sha = None;
+        recover_transaction(&root, &root_dir, plugin, &mut state, &mut state_sha).unwrap();
+
+        assert_eq!(
+            std::fs::read(root.join(destination)).unwrap(),
+            b"original user bytes"
+        );
+        assert!(!root.join(&transaction.backup).exists());
+        assert!(!root.join(&install_staged).exists());
+        assert!(!root.join(transaction_relative(plugin)).exists());
+        assert!(state["files"].as_object().unwrap().is_empty());
+    }
+
+    #[test]
+    fn recovery_clears_verified_rollback_after_backup_cleanup() {
+        let plugin = get_plugin("codex").unwrap();
+        let temporary = tempfile::tempdir().unwrap();
+        let root = temporary.path().canonicalize().unwrap().join("home");
+        std::fs::create_dir_all(&root).unwrap();
+        let destination = plugin.files[0].dest;
+        std::fs::write(root.join(destination), b"original user bytes").unwrap();
+        let original = read_relative_file(&root, destination).unwrap().unwrap();
+        let expected = bundled_contents(plugin.files[0].src).unwrap();
+        let root_file = crate::open_safe_home(&root).unwrap();
+        let root_dir = cap_std::fs::Dir::from_std_file(root_file);
+        let transaction = PluginTransaction {
+            schema: 1,
+            plugin: plugin.name.to_owned(),
+            phase: "backed_up".to_owned(),
+            dest: destination.to_owned(),
+            backup: format!("{destination}.agentrouter-bak"),
+            original_sha256: format!("{:x}", sha2::Sha256::digest(&original.bytes)),
+            original_identity: [original.identity.0, original.identity.1],
+            original_mode: original.mode,
+            installed_sha256: format!("{:x}", sha2::Sha256::digest(expected)),
+            installed_identity: None,
+            staged: Some(".agentrouter-remove-cleaned".to_owned()),
+            install_staged: Some(".agentrouter-install-cleaned".to_owned()),
+        };
+        write_transaction(&root, &root_dir, plugin, &transaction, None).unwrap();
+
+        let mut state = empty_state(plugin);
+        let mut state_sha = None;
+        recover_transaction(&root, &root_dir, plugin, &mut state, &mut state_sha).unwrap();
+
+        assert_eq!(
+            std::fs::read(root.join(destination)).unwrap(),
+            b"original user bytes"
+        );
+        assert!(!root.join(transaction_relative(plugin)).exists());
+        assert!(state["files"].as_object().unwrap().is_empty());
+    }
+
+    #[test]
+    fn recovery_rejects_transaction_paths_that_can_claim_user_files() {
+        let plugin = get_plugin("codex").unwrap();
+        let temporary = tempfile::tempdir().unwrap();
+        let expected = bundled_contents(plugin.files[0].src).unwrap();
+        for (index, destination, backup, expected_error) in [
+            (0, "AGENTS.md", "AGENTS.md", "backup does not match"),
+            (
+                1,
+                "notes.txt",
+                "notes.txt.agentrouter-bak",
+                "undeclared destination",
+            ),
+        ] {
+            let root = temporary.path().join(format!("home-{index}"));
+            std::fs::create_dir_all(&root).unwrap();
+            std::fs::write(root.join(destination), b"keep user content").unwrap();
+            let original = read_relative_file(&root, destination).unwrap().unwrap();
+            let root = root.canonicalize().unwrap();
+            let root_file = crate::open_safe_home(&root).unwrap();
+            let root_dir = cap_std::fs::Dir::from_std_file(root_file);
+            let transaction = PluginTransaction {
+                schema: 1,
+                plugin: plugin.name.to_owned(),
+                phase: "backed_up".to_owned(),
+                dest: destination.to_owned(),
+                backup: backup.to_owned(),
+                original_sha256: format!("{:x}", sha2::Sha256::digest(&original.bytes)),
+                original_identity: [original.identity.0, original.identity.1],
+                original_mode: original.mode,
+                installed_sha256: format!("{:x}", sha2::Sha256::digest(expected)),
+                installed_identity: None,
+                staged: None,
+                install_staged: None,
+            };
+            let journal = plugin_path(&root, &transaction_relative(plugin));
+            std::fs::create_dir_all(journal.parent().unwrap()).unwrap();
+            std::fs::write(&journal, serde_json::to_vec(&transaction).unwrap()).unwrap();
+
+            let mut state = empty_state(plugin);
+            let mut state_sha = None;
+            let error = recover_transaction(&root, &root_dir, plugin, &mut state, &mut state_sha)
+                .unwrap_err();
+
+            assert!(error.contains(expected_error), "{error}");
+            assert_eq!(
+                std::fs::read(root.join(destination)).unwrap(),
+                b"keep user content"
+            );
+            assert!(journal.is_file());
+            assert!(state["files"].as_object().unwrap().is_empty());
+        }
+    }
+
+    #[test]
+    fn recovery_does_not_claim_a_byte_identical_replacement_with_another_identity() {
+        let plugin = get_plugin("codex").unwrap();
+        let temporary = tempfile::tempdir().unwrap();
+        let root = temporary.path().canonicalize().unwrap().join("home");
+        std::fs::create_dir_all(&root).unwrap();
+        let destination = plugin.files[0].dest;
+        std::fs::write(root.join(destination), b"original user bytes").unwrap();
+        let original = read_relative_file(&root, destination).unwrap().unwrap();
+        let expected = bundled_contents(plugin.files[0].src).unwrap();
+        let root_file = crate::open_safe_home(&root).unwrap();
+        let root_dir = cap_std::fs::Dir::from_std_file(root_file);
+        let (parent, _) = open_relative_parent(&root_dir, destination, false)
+            .unwrap()
+            .unwrap();
+        let staged_name = unique_staged_name(&parent).unwrap();
+        let install_name = unique_install_staged_name(&parent).unwrap();
+        let staged = if sibling_directory(destination).is_empty() {
+            staged_name
+        } else {
+            format!("{}/{staged_name}", sibling_directory(destination))
+        };
+        let install_staged = if sibling_directory(destination).is_empty() {
+            install_name
+        } else {
+            format!("{}/{install_name}", sibling_directory(destination))
+        };
+        let mut transaction = PluginTransaction {
+            schema: 1,
+            plugin: plugin.name.to_owned(),
+            phase: "prepared".to_owned(),
+            dest: destination.to_owned(),
+            backup: format!("{destination}.agentrouter-bak"),
+            original_sha256: format!("{:x}", sha2::Sha256::digest(&original.bytes)),
+            original_identity: [original.identity.0, original.identity.1],
+            original_mode: original.mode,
+            installed_sha256: format!("{:x}", sha2::Sha256::digest(expected)),
+            installed_identity: None,
+            staged: Some(staged.clone()),
+            install_staged: Some(install_staged.clone()),
+        };
+        let prepared = write_transaction(&root, &root_dir, plugin, &transaction, None).unwrap();
+        transaction.phase = "backing_up".to_owned();
+        let backing_up =
+            write_transaction(&root, &root_dir, plugin, &transaction, Some(&prepared)).unwrap();
+        create_transaction_backup(&root, &root_dir, &transaction).unwrap();
+        transaction.phase = "backed_up".to_owned();
+        let backed_up =
+            write_transaction(&root, &root_dir, plugin, &transaction, Some(&backing_up)).unwrap();
+        let staged_name = staged.rsplit('/').next().unwrap();
+        stage_exact_file_to(
+            &root,
+            &root_dir,
+            destination,
+            &transaction.original_sha256,
+            Some(original.identity),
+            "plugin destination",
+            StageOptions {
+                allow_hardlinks: true,
+                staged_name: Some(staged_name),
+            },
+        )
+        .unwrap()
+        .unwrap();
+        let installed_stage =
+            create_transaction_install_stage(&root, &root_dir, &transaction, expected).unwrap();
+        transaction.installed_identity =
+            Some([installed_stage.identity.0, installed_stage.identity.1]);
+        write_transaction(&root, &root_dir, plugin, &transaction, Some(&backed_up)).unwrap();
+        std::fs::write(root.join(destination), expected).unwrap();
+        let external = read_relative_file(&root, destination).unwrap().unwrap();
+        assert_ne!(external.identity, installed_stage.identity);
+
+        let mut state = empty_state(plugin);
+        let mut state_sha = None;
+        let error =
+            recover_transaction(&root, &root_dir, plugin, &mut state, &mut state_sha).unwrap_err();
+
+        assert!(error.contains("interrupted plugin install is ambiguous"));
+        assert!(state["files"].as_object().unwrap().is_empty());
+        assert!(root.join(destination).is_file());
+        assert!(root.join(&transaction.backup).is_file());
+        assert!(root.join(&staged).is_file());
+        assert!(root.join(&install_staged).is_file());
+        assert!(root.join(transaction_relative(plugin)).is_file());
     }
 
     #[test]

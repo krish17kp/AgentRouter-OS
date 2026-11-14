@@ -266,7 +266,7 @@ Exit `0` installed and unmodified, `1` blocked, `2` needs attention.
 | an identical copy is already here but is not recorded as ours | someone installed the same file by hand | `--adopt-identical` — byte-for-byte identical, so adopting changes nothing on disk |
 | a different file is at this path — either your edit of ours, or your own | AgentRouter cannot tell those apart, so it assumes yours | left alone. `--force` installs over it and backs the original up to `<file>.agentrouter-bak` |
 | the destination is not a plain file | a symlink, reparse point or extra hard link is in the way | inspect it yourself and move it aside; AgentRouter will not write through it |
-| a previous install or uninstall did not finish | a process was killed part way | run `python -m agentrouter plugin install <name>`; the Python transaction recovery restores or finishes only states it can prove |
+| a previous install or uninstall did not finish | a process was killed part way | run `agentrouter plugin install <name>` (or `python -m agentrouter plugin install <name>`); Rust and Python recover only journal states whose paths, identities, and contents they can prove |
 | the ownership record is unusable | the state file is corrupt | AgentRouter will not delete files it cannot prove it owns. Remove the state file only if you accept managing those files by hand |
 
 **Uninstall left files behind.** That is the designed behaviour, not a bug. It

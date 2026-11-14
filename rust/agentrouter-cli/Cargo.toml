@@ -39,7 +39,7 @@ rustix = { version = "=1.1.6", features = ["fs", "process"] }
 tempfile = "=3.13.0"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "=0.59.0", features = ["Win32_Foundation", "Win32_Storage_FileSystem"] }
+windows-sys = { version = "=0.59.0", features = ["Win32_Foundation", "Win32_Storage_FileSystem", "Win32_System_IO"] }
 
 [[bin]]
 name = "cli_route_cli"

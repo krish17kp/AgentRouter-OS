@@ -1,7 +1,10 @@
 """Differential checks for the Rust plugin manifest and path-safety slice."""
 
 import json
+import multiprocessing
+import os
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
@@ -328,6 +331,44 @@ def _rust_plugin_uninstall(plugin_name: str) -> subprocess.CompletedProcess[str]
     return _rust_plugin_command("plugin", "uninstall", plugin_name)
 
 
+def _hold_python_plugin_lock(root: str, plugin_name: str, ready, release) -> None:
+    plugin = plugins.get_plugin(plugin_name)
+    with plugins._process_lock_for(Path(root), plugin):
+        ready.set()
+        release.wait(20)
+
+
+def _prepare_python_interrupted_replacement(plugin, root, *, phase, replace=False):
+    destination = root / plugin.files[0].dest
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text("original user content", encoding="utf-8")
+    original = plugins._regular_lstat(destination, "test destination")
+    expected = plugins._src_bytes(plugin.files[0].src)
+    transaction = {
+        "schema": 1,
+        "plugin": plugin.name,
+        "phase": "prepared",
+        "dest": plugin.files[0].dest,
+        "backup": plugins._backup_path(root, destination).relative_to(root).as_posix(),
+        "original_sha256": plugins._sha256(destination.read_bytes()),
+        "original_identity": plugins._identity_json(original),
+        "original_mode": original.st_mode & 0o7777,
+        "installed_sha256": plugins._sha256(expected),
+    }
+    plugins._write_transaction(root, plugin, transaction)
+    backup_digest, backup_info = plugins._create_backup(
+        root, destination, plugins._backup_path(root, destination)
+    )
+    transaction["phase"] = phase
+    plugins._write_transaction(root, plugin, transaction)
+    if replace:
+        installed = plugins._atomic_replace_bytes(root, destination, expected, mode=0o644)
+        transaction["phase"] = "replaced"
+        transaction["installed_identity"] = plugins._identity_json(installed)
+        plugins._write_transaction(root, plugin, transaction)
+    return destination, expected, transaction, backup_digest, backup_info
+
+
 def _expected_plugin_list() -> str:
     return "".join(
         f"{plugin.name:<12} [{plugins.status(plugin)}]  {plugin.description}\n"
@@ -418,7 +459,7 @@ def test_rust_plugin_doctor_matches_python_for_unsafe_destinations(tmp_path, mon
     assert outside.read_text(encoding="utf-8") == "leave unchanged"
 
 
-def test_rust_plugin_doctor_documents_python_transaction_recovery(tmp_path, monkeypatch):
+def test_rust_plugin_doctor_documents_transaction_recovery(tmp_path, monkeypatch):
     monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
     plugin = plugins.get_plugin("codex")
     root = plugins.dest_root(plugin)
@@ -443,8 +484,281 @@ def test_rust_plugin_doctor_documents_python_transaction_recovery(tmp_path, monk
     transaction_path = plugins._transaction_path(root, plugin)
     refused = _rust_plugin_uninstall(plugin.name)
     assert refused.returncode != 0
-    assert "use the Python CLI to recover it" in refused.stderr
+    assert "unexpected destination" in refused.stderr
     assert transaction_path.is_file()
+
+
+def test_rust_install_recovers_python_crash_after_replacement_before_state(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
+    plugin = plugins.get_plugin("codex")
+    root = plugins.dest_root(plugin)
+    destination, expected, transaction, backup_digest, backup_info = (
+        _prepare_python_interrupted_replacement(plugin, root, phase="backed_up", replace=True)
+    )
+    assert "replaced" == transaction["phase"]
+    assert not plugins._state_path(root, plugin).exists()
+
+    recovered = _rust_plugin_install(plugin.name)
+    assert recovered.returncode == 0, recovered.stderr
+    assert "skipped (identical, managed)" in recovered.stdout
+    assert destination.read_bytes() == expected
+    assert not plugins._transaction_path(root, plugin).exists()
+    state = plugins._load_state(root, plugin)[0]
+    entry = state["files"][plugin.files[0].dest]
+    assert entry["disposition"] == "replaced"
+    assert entry["backup_sha256"] == backup_digest
+    assert entry["backup_identity"] == plugins._identity_json(backup_info)
+
+    removed = plugins.uninstall(plugin)
+    assert any(item["result"] == "removed (restored backup)" for item in removed)
+    assert destination.read_text(encoding="utf-8") == "original user content"
+
+
+def test_rust_install_recovers_python_crash_after_backup_before_replace(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
+    plugin = plugins.get_plugin("codex")
+    root = plugins.dest_root(plugin)
+    destination, _, _, _, _ = _prepare_python_interrupted_replacement(
+        plugin, root, phase="backed_up"
+    )
+    backup = plugins._backup_path(root, destination)
+
+    refused = _rust_plugin_install(plugin.name)
+
+    assert refused.returncode != 0
+    assert "exists and differs" in refused.stderr
+    assert destination.read_text(encoding="utf-8") == "original user content"
+    assert not backup.exists()
+    assert not plugins._transaction_path(root, plugin).exists()
+
+
+def test_rust_recovery_clears_backed_up_journal_when_backup_was_not_created(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
+    plugin = plugins.get_plugin("codex")
+    root = plugins.dest_root(plugin)
+    destination, _, _, _, _ = _prepare_python_interrupted_replacement(
+        plugin, root, phase="backed_up"
+    )
+    backup = plugins._backup_path(root, destination)
+    backup.unlink()
+
+    refused = _rust_plugin_install(plugin.name)
+
+    assert refused.returncode != 0
+    assert "exists and differs" in refused.stderr
+    assert destination.read_text(encoding="utf-8") == "original user content"
+    assert not backup.exists()
+    assert not plugins._transaction_path(root, plugin).exists()
+
+
+def test_rust_recovery_does_not_misread_a_preexisting_state_entry(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
+    plugin = plugins.get_plugin("codex")
+    root = plugins.dest_root(plugin)
+    destination = root / plugin.files[0].dest
+    destination.parent.mkdir(parents=True)
+    destination.write_text("original user content", encoding="utf-8")
+    original, original_info = plugins._read_verified(destination, "test destination")
+    state = plugins._empty_state(plugin)
+    state["files"][plugin.files[0].dest] = {
+        "disposition": "preexisting",
+        "installed_sha256": plugins._sha256(original),
+        "installed_identity": plugins._identity_json(original_info),
+        "backup": None,
+    }
+    plugins._save_state(root, plugin, state)
+    _, _, _, _, _ = _prepare_python_interrupted_replacement(plugin, root, phase="backed_up")
+
+    forced = _rust_plugin_install(plugin.name, "--force")
+
+    assert forced.returncode == 0, forced.stderr
+    assert destination.read_bytes() == plugins._src_bytes(plugin.files[0].src)
+    assert (
+        destination.with_name(destination.name + plugins._BAK_SUFFIX).read_text(encoding="utf-8")
+        == "original user content"
+    )
+    state = plugins._load_state(root, plugin)[0]
+    assert state["files"][plugin.files[0].dest]["disposition"] == "replaced"
+    assert not plugins._transaction_path(root, plugin).exists()
+
+
+def test_rust_replaced_recovery_requires_the_recorded_installed_identity(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
+    plugin = plugins.get_plugin("codex")
+    root = plugins.dest_root(plugin)
+    destination, expected, _, _, _ = _prepare_python_interrupted_replacement(
+        plugin, root, phase="replaced", replace=True
+    )
+    original_installed_identity = plugins._identity_json(destination.stat())
+    replacement = destination.with_name("replacement.tmp")
+    replacement.write_bytes(expected)
+    replacement.replace(destination)
+    assert plugins._identity_json(destination.stat()) != original_installed_identity
+
+    refused = _rust_plugin_install(plugin.name)
+
+    assert refused.returncode != 0
+    assert "ambiguous" in refused.stderr
+    assert destination.read_bytes() == expected
+    assert plugins._backup_path(root, destination).read_text(encoding="utf-8") == (
+        "original user content"
+    )
+    assert plugins._transaction_path(root, plugin).is_file()
+
+
+def test_rust_recovery_restores_original_staged_before_install(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
+    plugin = plugins.get_plugin("codex")
+    root = plugins.dest_root(plugin)
+    destination, _, transaction, _, _ = _prepare_python_interrupted_replacement(
+        plugin, root, phase="backed_up"
+    )
+    staging = destination.with_name(".agentrouter-remove-python-interruption")
+    transaction["staged"] = staging.relative_to(root).as_posix()
+    plugins._write_transaction(root, plugin, transaction)
+    destination.replace(staging)
+
+    refused = _rust_plugin_install(plugin.name)
+
+    assert refused.returncode != 0
+    assert "exists and differs" in refused.stderr
+    assert destination.read_text(encoding="utf-8") == "original user content"
+    assert not staging.exists()
+    assert not plugins._backup_path(root, destination).exists()
+    assert not plugins._transaction_path(root, plugin).exists()
+
+
+def test_rust_install_preserves_ambiguous_transaction_and_user_edit(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
+    plugin = plugins.get_plugin("codex")
+    root = plugins.dest_root(plugin)
+    destination, _, _, _, _ = _prepare_python_interrupted_replacement(
+        plugin, root, phase="backed_up"
+    )
+    backup = plugins._backup_path(root, destination)
+    plugins._atomic_replace_bytes(root, destination, b"concurrent user edit")
+
+    refused = _rust_plugin_install(plugin.name, "--force")
+
+    assert refused.returncode != 0
+    assert "ambiguous" in refused.stderr
+    assert destination.read_bytes() == b"concurrent user edit"
+    assert backup.read_text(encoding="utf-8") == "original user content"
+    assert plugins._transaction_path(root, plugin).is_file()
+
+
+def test_rust_install_fails_closed_on_corrupt_transaction_journal(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
+    plugin = plugins.get_plugin("codex")
+    root = plugins.dest_root(plugin)
+    transaction_path = plugins._transaction_path(root, plugin)
+    transaction_path.parent.mkdir(parents=True)
+    transaction_path.write_text("{broken", encoding="utf-8")
+
+    refused = _rust_plugin_install(plugin.name)
+
+    assert refused.returncode != 0
+    assert "transaction journal is invalid" in refused.stderr
+    assert transaction_path.read_text(encoding="utf-8") == "{broken"
+
+
+def test_rust_install_does_not_claim_a_prepared_phase_backup_collision(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
+    plugin = plugins.get_plugin("codex")
+    root = plugins.dest_root(plugin)
+    destination = root / plugin.files[0].dest
+    destination.parent.mkdir(parents=True)
+    destination.write_text("original user content", encoding="utf-8")
+    original = plugins._regular_lstat(destination, "test destination")
+    backup = plugins._backup_path(root, destination)
+    transaction = {
+        "schema": 1,
+        "plugin": plugin.name,
+        "phase": "prepared",
+        "dest": plugin.files[0].dest,
+        "backup": backup.relative_to(root).as_posix(),
+        "original_sha256": plugins._sha256(destination.read_bytes()),
+        "original_identity": plugins._identity_json(original),
+        "original_mode": original.st_mode & 0o7777,
+        "installed_sha256": plugins._sha256(plugins._src_bytes(plugin.files[0].src)),
+    }
+    plugins._write_transaction(root, plugin, transaction)
+    backup.write_text("another actor's backup", encoding="utf-8")
+
+    refused = _rust_plugin_install(plugin.name)
+
+    assert refused.returncode != 0
+    assert "exists and differs" in refused.stderr
+    assert destination.read_text(encoding="utf-8") == "original user content"
+    assert backup.read_text(encoding="utf-8") == "another actor's backup"
+    assert not plugins._transaction_path(root, plugin).exists()
+
+
+def test_rust_force_install_interoperates_with_python_uninstall_and_backup_mode(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
+    plugin = plugins.get_plugin("codex")
+    root = plugins.dest_root(plugin)
+    destination = root / plugin.files[0].dest
+    destination.parent.mkdir(parents=True)
+    destination.write_text("user-authored guidance", encoding="utf-8")
+    destination.chmod(0o600)
+    original = destination.stat()
+
+    forced = _rust_plugin_install(plugin.name, "--force")
+    assert forced.returncode == 0, forced.stderr
+    assert destination.read_bytes() == plugins._src_bytes(plugin.files[0].src)
+    backup = plugins._backup_path(root, destination)
+    assert backup.read_text(encoding="utf-8") == "user-authored guidance"
+    assert backup.stat().st_ino == original.st_ino
+    assert backup.stat().st_mode & 0o777 == original.st_mode & 0o777
+    assert not plugins._transaction_path(root, plugin).exists()
+
+    removed = plugins.uninstall(plugin)
+    assert any(item["result"] == "removed (restored backup)" for item in removed)
+    assert destination.read_text(encoding="utf-8") == "user-authored guidance"
+    assert destination.stat().st_mode & 0o777 == original.st_mode & 0o777
+    assert not backup.exists()
+
+
+def test_rust_mutation_waits_for_python_process_lock(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
+    plugin = plugins.get_plugin("codex")
+    root = plugins.dest_root(plugin)
+    repository = Path(__file__).resolve().parents[1]
+    binary_name = "agentrouter.exe" if os.name == "nt" else "agentrouter"
+    binary = repository / "target" / "debug" / binary_name
+
+    assert _rust_plugin_list().returncode == 0
+    assert binary.is_file()
+    context = multiprocessing.get_context("spawn")
+    ready = context.Event()
+    release = context.Event()
+    holder = context.Process(
+        target=_hold_python_plugin_lock,
+        args=(str(root), plugin.name, ready, release),
+    )
+    holder.start()
+    try:
+        assert ready.wait(20), "Python worker did not acquire the plugin lock"
+        mutation = subprocess.Popen(
+            [str(binary), "plugin", "install", plugin.name],
+            cwd=repository,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+        )
+        time.sleep(0.3)
+        assert mutation.poll() is None, "Rust mutation bypassed the Python-held lock"
+    finally:
+        release.set()
+        holder.join(20)
+    assert holder.exitcode == 0
+    stdout, stderr = mutation.communicate(timeout=120)
+    assert mutation.returncode == 0, stderr
+    assert "created" in stdout
 
 
 def test_rust_plugin_install_dry_run_matches_python_plan(tmp_path, monkeypatch):
@@ -716,7 +1030,7 @@ def test_rust_plugin_uninstall_refuses_linked_destination_without_following_it(
     assert persisted["files"]
 
 
-def test_rust_plugin_install_refuses_differences_force_and_state_links(tmp_path, monkeypatch):
+def test_rust_plugin_force_install_preserves_python_backup_contract(tmp_path, monkeypatch):
     monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(tmp_path.resolve()))
     plugin = plugins.get_plugin("codex")
     root = plugins.dest_root(plugin)
@@ -728,10 +1042,30 @@ def test_rust_plugin_install_refuses_differences_force_and_state_links(tmp_path,
     assert refused.returncode != 0
     assert "exists and differs" in refused.stderr
     forced = _rust_plugin_install(plugin.name, "--force")
-    assert forced.returncode != 0
-    assert "replacement is not migrated yet" in forced.stderr
+    assert forced.returncode == 0, forced.stderr
+    assert "replaced (backup:" in forced.stdout
+    assert destination.read_bytes() == plugins._src_bytes(plugin.files[0].src)
+    backup = destination.with_name(destination.name + plugins._BAK_SUFFIX)
+    assert backup.read_text(encoding="utf-8") == "user-authored guidance"
+    state = plugins._load_state(root, plugin)[0]
+    entry = state["files"][plugin.files[0].dest]
+    assert entry["disposition"] == "replaced"
+    assert entry["backup_identity"] == plugins._identity_json(backup.stat())
+    assert entry["backup_mode"] == backup.stat().st_mode & 0o777
+    removed = plugins.uninstall(plugin)
+    assert any("removed (restored backup)" == item["result"] for item in removed)
     assert destination.read_text(encoding="utf-8") == "user-authored guidance"
-    assert not plugins._state_path(root, plugin).exists()
+    assert not backup.exists()
+
+
+def test_rust_plugin_install_refuses_a_linked_state_directory(tmp_path, monkeypatch):
+    linked_root = tmp_path / "linked-root"
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(linked_root.resolve()))
+    plugin = plugins.get_plugin("codex")
+    root = plugins.dest_root(plugin)
+    destination = root / plugin.files[0].dest
+    destination.parent.mkdir(parents=True)
+    destination.write_text("user-authored guidance", encoding="utf-8")
 
     state_directory = root / ".agentrouter-state"
     outside = tmp_path / "outside-state"

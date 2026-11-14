@@ -2,15 +2,14 @@
 
 ## Current checkpoint — 2026-11-14
 
-Product acceptance remains **not granted**. PR #16 is the sole open PR. At
-`132151d`, Rust workspace and Python/Rust compatibility jobs pass on Linux,
-Windows, and macOS; full Windows and macOS Python jobs also pass. The latest
-Linux Python regression passes with 2,237 passed and 4 skipped at 92.83% line,
-88.63% branch, and 91.87% combined coverage. TASK-111 annotation integer
-parity is hosted-green. TASK-112 Rust plugin uninstall passes 230 focused
-plugin checks and the full local suite, and awaits hosted validation after the
-RC push. The frozen context-band gate remains 0.6667 < 0.90. Rust R4 and R5–R13 remain incomplete;
-no production deployment or paid OpenAI request occurred.
+Product acceptance remains **not granted**. PR #16 is the sole open PR. The
+current local TASK-113 candidate passes 116 focused plugin tests, the full
+Python regression (2,257 passed, 4 skipped; 91.97% statement, 87.69% branch,
+90.99% combined coverage), the Rust workspace, and strict Clippy. Hosted checks
+at `08c019e` exposed Windows plugin rename/staging failures; the local repair
+awaits cross-platform confirmation. The frozen context-band gate remains
+0.6667 < 0.90. Rust R4 and R5–R13 remain incomplete; no production deployment
+or paid OpenAI request occurred.
 The table below is historical.
 
 ## Historical assessment
