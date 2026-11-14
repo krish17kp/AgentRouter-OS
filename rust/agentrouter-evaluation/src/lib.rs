@@ -457,7 +457,9 @@ pub fn evaluate_routing(
             match recommendation.as_deref() {
                 None => (false, Some("no recommendation".to_owned())),
                 Some(key) => {
-                    let model = models.iter().find(|model| model.key() == key);
+                    // Python builds `by_key` with a dict comprehension, so the
+                    // last duplicate key supplies the constraint metadata.
+                    let model = models.iter().rev().find(|model| model.key() == key);
                     let Some(model) = model else {
                         failures.push(json!({
                             "id": case.id,

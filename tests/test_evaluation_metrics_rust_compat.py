@@ -35,6 +35,7 @@ from agentrouter.evaluation.schema import (
     SafetyExpectation,
     normalized_hash,
 )
+from agentrouter.schema import Ability
 
 pytestmark = pytest.mark.skipif(shutil.which("cargo") is None, reason="cargo not on PATH")
 
@@ -846,6 +847,61 @@ def test_rust_routing_evaluator_matches_python_gold_and_proxy_cases():
             dataset="rust-routing-eval",
             task="Summarize the public launch announcement",
         ),
+    ]
+    expected = evaluate_python_routing(cases, models)
+    payload = {
+        "cases": [case.model_dump(mode="json") for case in cases],
+        "models": [model.model_dump(mode="json") for model in models],
+    }
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_routing_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+        check=True,
+    )
+    assert json.loads(process.stdout) == expected
+
+
+def test_rust_routing_evaluator_uses_last_duplicate_model_key_like_python():
+    seed_model = load_seed_models()[0]
+    first_model = seed_model.model_copy(
+        update={
+            "ability": Ability(
+                coding=0,
+                reasoning=seed_model.ability.reasoning,
+                writing=seed_model.ability.writing,
+            )
+        }
+    )
+    last_model = seed_model.model_copy(
+        update={
+            "ability": Ability(
+                coding=10,
+                reasoning=seed_model.ability.reasoning,
+                writing=seed_model.ability.writing,
+            )
+        }
+    )
+    models = [first_model, last_model]
+    cases = [
+        EvaluationCase(
+            id="duplicate-key-last-wins",
+            dataset="rust-routing-eval",
+            task="Refactor the payment module and add unit tests",
+            routing=RoutingExpectation(minimum_ability={"coding": 10}),
+        )
     ]
     expected = evaluate_python_routing(cases, models)
     payload = {

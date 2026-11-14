@@ -2195,15 +2195,13 @@ fn rename_sibling_no_replace_windows(
     use fs_at::os::windows::OpenOptionsExt;
     use std::os::windows::io::AsRawHandle;
     use windows_sys::Win32::Storage::FileSystem::{
-        FileRenameInfo, SetFileInformationByHandle, FILE_FLAG_BACKUP_SEMANTICS,
-        FILE_FLAG_OPEN_REPARSE_POINT, FILE_READ_ATTRIBUTES, FILE_RENAME_INFO,
+        FileRenameInfo, SetFileInformationByHandle, FILE_READ_ATTRIBUTES, FILE_RENAME_INFO,
     };
 
     const DELETE_ACCESS: u32 = 0x0001_0000;
     let parent_file = parent.try_clone()?.into_std_file();
     let mut source_options = fs_at::OpenOptions::default();
     source_options.desired_access(DELETE_ACCESS | FILE_READ_ATTRIBUTES);
-    source_options.custom_flags(FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT);
     let source = source_options
         .open_path_at(&parent_file, Path::new(from))
         .map_err(|error| {
@@ -3497,6 +3495,72 @@ impl Drop for PluginMutationLock {
     }
 }
 
+#[cfg(windows)]
+fn mutation_lock_path_matches(
+    parent: &cap_std::fs::Dir,
+    filename: &str,
+    expected_identity: (u64, u64),
+) -> Result<bool, String> {
+    let before = match parent.symlink_metadata(filename) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(error) => return Err(format!("could not inspect plugin mutation lock: {error}")),
+    };
+    if cap_metadata_is_link_or_reparse(&before)
+        || !before.is_file()
+        || before.len() != 1
+        || super::has_multiple_links(parent, filename, &before)?
+    {
+        return Ok(false);
+    }
+
+    let parent_file = parent
+        .try_clone()
+        .map_err(|error| format!("could not verify plugin mutation lock: {error}"))?
+        .into_std_file();
+    let mut options = fs_at::OpenOptions::default();
+    options.read(true).follow(false);
+    let first = options
+        .open_at(&parent_file, filename)
+        .map_err(|error| format!("could not verify plugin mutation lock: {error}"))?;
+    let first_metadata = first
+        .metadata()
+        .map_err(|error| format!("could not inspect plugin mutation lock: {error}"))?;
+    if !first_metadata.is_file()
+        || super::is_link_or_reparse(&first_metadata)
+        || first_metadata.len() != 1
+        || file_identity(&first, &first_metadata)? != expected_identity
+    {
+        return Ok(false);
+    }
+
+    let after = match parent.symlink_metadata(filename) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(error) => return Err(format!("could not inspect plugin mutation lock: {error}")),
+    };
+    if cap_metadata_is_link_or_reparse(&after)
+        || !after.is_file()
+        || after.len() != 1
+        || super::has_multiple_links(parent, filename, &after)?
+    {
+        return Ok(false);
+    }
+
+    // Re-open after the path check to ensure the locked handle still names the
+    // file installed at this path. Metadata queries do not read the locked byte.
+    let final_file = options
+        .open_at(&parent_file, filename)
+        .map_err(|error| format!("could not verify plugin mutation lock: {error}"))?;
+    let final_metadata = final_file
+        .metadata()
+        .map_err(|error| format!("could not inspect plugin mutation lock: {error}"))?;
+    Ok(final_metadata.is_file()
+        && !super::is_link_or_reparse(&final_metadata)
+        && final_metadata.len() == 1
+        && file_identity(&final_file, &final_metadata)? == expected_identity)
+}
+
 fn acquire_plugin_mutation_lock(
     root: &Path,
     root_dir: &cap_std::fs::Dir,
@@ -3587,22 +3651,14 @@ fn acquire_plugin_mutation_lock(
     {
         use std::os::windows::io::AsRawHandle;
         use windows_sys::Win32::Storage::FileSystem::{LockFileEx, LOCKFILE_EXCLUSIVE_LOCK};
-        use windows_sys::Win32::System::IO::{OVERLAPPED_0, OVERLAPPED_0_0};
 
         if verified.bytes != [0] {
             return Err("plugin mutation lock contains unexpected data".to_owned());
         }
-        let mut overlapped: windows_sys::Win32::System::IO::OVERLAPPED =
-            unsafe { std::mem::zeroed() };
-        // Keep the coordination byte immediately after the one-byte lock-file
-        // marker. The locked range may extend beyond EOF; this lets us safely
-        // re-open and verify the marker through another handle while locked.
-        overlapped.Anonymous = OVERLAPPED_0 {
-            Anonymous: OVERLAPPED_0_0 {
-                Offset: 1,
-                OffsetHigh: 0,
-            },
-        };
+        // Keep byte zero so older AgentRouter processes share the same mutex.
+        // Re-reading it through another handle while locked can fail with
+        // ERROR_LOCK_VIOLATION, so validate the path and file identity only.
+        let mut overlapped = unsafe { std::mem::zeroed() };
         let locked = unsafe {
             LockFileEx(
                 file.as_raw_handle().cast(),
@@ -3619,9 +3675,7 @@ fn acquire_plugin_mutation_lock(
                 std::io::Error::last_os_error()
             ));
         }
-        let after_lock = read_verified_file_at(&state_dir, &filename, &path)?
-            .ok_or_else(|| "plugin mutation lock disappeared while waiting".to_owned())?;
-        if after_lock.identity != verified.identity {
+        if !mutation_lock_path_matches(&state_dir, &filename, verified.identity)? {
             return Err("plugin mutation lock changed while waiting".to_owned());
         }
         Ok(PluginMutationLock {

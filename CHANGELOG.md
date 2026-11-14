@@ -50,6 +50,8 @@ All notable changes to AgentRouter OS. Format loosely follows
   explicit model-list probe used for exact offline comparisons.
 
 ### Fixed
+- Match Python's routing evaluator lookup when a caller supplies duplicate model
+  keys: the last model entry now provides the routing constraint metadata.
 - Add Rust OpenAPI canonicalization and bounded `$ref` validation with stable,
   Unicode-preserving JSON output and Python differential fixtures for the live
   document, order-insensitive fields, missing/external references, and cycles.

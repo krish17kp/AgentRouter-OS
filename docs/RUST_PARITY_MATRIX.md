@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-14 (TASK-082–111). This inventory covers every Python source module under
+Updated: 2026-11-14 (TASK-082–117). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -192,6 +192,10 @@ release authority until the full set is complete.
   scoring and caller-supplied/default input paths. Performance summary values
   match exactly for fixed samples; measured latency values are machine-specific
   by contract. Runtime-wide evaluator orchestration remains partial.
+- The Rust routing evaluator preserves Python's insertion-order dictionary
+  behavior for duplicate model keys: the last supplied entry is used to check
+  routing constraints, even though routing may return that shared key from an
+  earlier entry. A differential fixture covers this edge case.
 - Provider metadata scoring supports caller-supplied model records and a
   no-argument path that loads and validates the packaged seed registry, matching
   Python's default evaluator behavior.
