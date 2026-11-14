@@ -3581,6 +3581,7 @@ fn acquire_plugin_mutation_lock(
             .map_err(|error| format!("could not inspect plugin state directory: {error}"))?,
     );
     let filename = format!("{}.lock", plugin.name);
+    #[cfg(unix)]
     let path = root.join(".agentrouter-state").join(&filename);
 
     let mut create = fs_at::OpenOptions::default();

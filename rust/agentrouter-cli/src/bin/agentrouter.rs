@@ -299,8 +299,25 @@ fn write_setup_preference(home: &Path, preference: &str) -> Result<(), String> {
     }
     #[cfg(windows)]
     {
-        use std::os::windows::fs::MetadataExt;
-        if metadata.number_of_links() > 1 || metadata.file_attributes() & 0x400 != 0 {
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::Foundation::HANDLE;
+        use windows_sys::Win32::Storage::FileSystem::{
+            GetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION,
+        };
+
+        let mut information = std::mem::MaybeUninit::<BY_HANDLE_FILE_INFORMATION>::uninit();
+        let handle: HANDLE = file.as_raw_handle();
+        // SAFETY: `file` owns a valid handle for the call, and the Win32 API
+        // initializes `information` on success before we read its attributes.
+        if unsafe { GetFileInformationByHandle(handle, information.as_mut_ptr()) } == 0 {
+            return Err(format!(
+                "could not verify config.yaml file links: {}",
+                std::io::Error::last_os_error()
+            ));
+        }
+        // SAFETY: the successful API call above initialized the structure.
+        let information = unsafe { information.assume_init() };
+        if information.nNumberOfLinks > 1 || information.dwFileAttributes & 0x400 != 0 {
             return Err(
                 "config.yaml is linked or reparse-pointed; refusing to overwrite it".to_owned(),
             );
