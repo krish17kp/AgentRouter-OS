@@ -432,8 +432,18 @@ impl SoakResult {
 /// Run repeated batches against an already-running API process and sample its
 /// local database/WAL files. Resource trends and latency are indicative only.
 pub fn soak(url: &str, home: &Path, seconds: f64, workers: usize, batch: usize) -> SoakResult {
+    soak_from(url, home, seconds, workers, batch, Instant::now())
+}
+
+fn soak_from(
+    url: &str,
+    home: &Path,
+    seconds: f64,
+    workers: usize,
+    batch: usize,
+    started: Instant,
+) -> SoakResult {
     let mut result = SoakResult::default();
-    let started = Instant::now();
     while started.elapsed().as_secs_f64() < seconds {
         let outcome = run_load(
             url,
@@ -461,6 +471,21 @@ pub fn soak(url: &str, home: &Path, seconds: f64, workers: usize, batch: usize) 
         });
     }
     result
+}
+
+/// Initialize and run the complete local soak lifecycle against this API.
+pub fn soak_app(
+    home: impl Into<PathBuf>,
+    seconds: f64,
+    workers: usize,
+    batch: usize,
+) -> Result<SoakResult, String> {
+    let home = home.into();
+    let started = Instant::now();
+    let mut app = serve_app(home.clone())?;
+    let result = soak_from(&app.url, &home, seconds, workers, batch, started);
+    app.stop()?;
+    Ok(result)
 }
 
 fn file_size(path: &Path) -> u64 {

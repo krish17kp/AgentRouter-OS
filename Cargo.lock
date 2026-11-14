@@ -46,6 +46,7 @@ dependencies = [
  "agentrouter-mcp",
  "agentrouter-policy",
  "agentrouter-registry",
+ "agentrouter-reliability",
  "agentrouter-routing",
  "agentrouter-storage",
  "agentrouter-usage",

@@ -14,6 +14,11 @@ a concurrent HTTP load runner. It is a migration slice for the Python
   reported and never used as a release threshold.
 - `Sample`, `SoakResult`, and `soak` produce resource trend reports while
   repeatedly calling an already-running API process.
+- `agentrouter reliability soak` initializes a local home, serves the Rust API
+  on loopback, runs bounded request batches, and writes the JSON report to
+  stdout and optionally `--out`. With no `--home`, it uses a fresh temporary
+  directory. The command clears `AGENTROUTER_API_KEY` in its own process and
+  makes no live-provider calls.
 - `serve_app` starts the Rust API router on an ephemeral loopback port;
   `serve_router` accepts a caller-supplied Axum router for local tests. The
   returned `RunningApp` owns graceful shutdown, joins its server thread, and
@@ -21,13 +26,14 @@ a concurrent HTTP load runner. It is a migration slice for the Python
 - Redirects are not followed, matching the Python HTTP client's default and
   preventing a local test request from being forwarded to another host.
 
-The reliability crate has the in-process server lifecycle needed for local
-load tests, but it does not yet match the Python soak CLI's initialization,
-output, and exit-code behavior. Rust groups transport failures under
-`TransportError` instead of reproducing each `httpx` exception class. Resource
-sampling is also intentionally platform-limited (`/proc` file descriptors and
-Unix `getrusage`); timing and resource measurements remain report-only. The
-parity matrix therefore keeps these modules Partial.
+The local soak command matches the Python tool's success report, optional file
+output, default temporary home, initialization behavior, and failure status.
+Rust groups load transport failures under `TransportError` instead of
+reproducing each `httpx` exception class. Per-request callback exception names
+and the exact Python module invocation remain different. Resource sampling is
+platform-limited (`/proc` file descriptors and Unix `getrusage`); timing and
+resource measurements remain report-only. The parity matrix therefore keeps
+the reliability harness Partial.
 
 ## Differential verification
 
@@ -37,9 +43,11 @@ uniqueness, and verifies that a redirect target is not contacted. The same
 file runs in the Linux, Windows, and macOS Python/Rust compatibility workflow.
 The lifecycle check separately starts the built-in Rust API, drives `/health`,
 stops it twice, and confirms that the loopback endpoint is closed afterward.
+The CLI check initializes a home, runs `/v1/route` batches against its owned
+server, and verifies the stdout report and `--out` file.
 
-The `reliability_from_json` binary is a test bridge, not a stable user-facing
-command. It accepts one JSON object on standard input. For example:
+The `reliability_from_json` binary remains a test bridge. It accepts one JSON
+object on standard input. For example:
 
 ```json
 {"operation":"summarize_load","outcome":{"statuses":{"200":12},"transport_errors":{},"latencies_ms":[4,5,6],"elapsed_seconds":0.5,"request_ids":["a","b","c"]}}

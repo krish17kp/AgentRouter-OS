@@ -128,6 +128,92 @@ def test_rust_reliability_harness_starts_and_stops_its_local_api(tmp_path, monke
     assert outcome["distinct_request_ids"] == 12
 
 
+def test_rust_cli_runs_a_local_soak_and_writes_the_report(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_API_KEY", "test-key-that-must-not-be-used")
+    home = tmp_path / "soak-home"
+    home.mkdir()
+    config = home / "config.yaml"
+    config.write_text("user_setting: preserve-me\n", encoding="utf-8")
+    report_path = tmp_path / "reports" / "soak.json"
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "-p",
+            "agentrouter-cli",
+            "--bin",
+            "agentrouter",
+            "--",
+            "reliability",
+            "soak",
+            "--seconds",
+            "0.5",
+            "--workers",
+            "2",
+            "--batch",
+            "3",
+            "--home",
+            str(home),
+            "--out",
+            str(report_path),
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=ROOT,
+        timeout=120,
+        check=False,
+    )
+
+    assert process.returncode == 0, process.stderr
+    result = json.loads(process.stdout)
+    assert json.loads(report_path.read_text(encoding="utf-8")) == result
+    assert result["cycles"] >= 1
+    assert result["total_ok"] > 0
+    assert result["total_server_errors"] == 0
+    assert result["transport_errors"] == {}
+    assert sum(sample["ok"] for sample in result["samples"]) == result["total_ok"]
+    assert config.read_text(encoding="utf-8") == "user_setting: preserve-me\n"
+    assert "SOAK OK:" in process.stderr
+
+
+def test_rust_cli_reports_a_home_initialization_failure(tmp_path, monkeypatch):
+    monkeypatch.delenv("AGENTROUTER_API_KEY", raising=False)
+    invalid_home = tmp_path / "file-instead-of-home"
+    invalid_home.write_text("preserve this file", encoding="utf-8")
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "-p",
+            "agentrouter-cli",
+            "--bin",
+            "agentrouter",
+            "--",
+            "reliability",
+            "soak",
+            "--seconds",
+            "0",
+            "--home",
+            str(invalid_home),
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=ROOT,
+        timeout=120,
+        check=False,
+    )
+
+    assert process.returncode == 1
+    assert "could not initialise a soak home" in process.stderr
+    assert invalid_home.read_text(encoding="utf-8") == "preserve this file"
+
+
 def test_rust_load_runner_does_not_follow_redirects():
     redirect_target_hit = threading.Event()
 

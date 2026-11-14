@@ -440,6 +440,18 @@ Rust also has an offline provider-catalog mapping slice. Live provider refresh
 still runs through the Python CLI; see
 [`docs/RUST_PROVIDER_REFRESH.md`](docs/RUST_PROVIDER_REFRESH.md).
 
+The Cargo workspace also exposes a Rust local reliability soak for development
+and release checks:
+
+```bash
+cargo run -p agentrouter-cli --bin agentrouter -- reliability soak --seconds 120
+```
+
+It creates a fresh temporary home by default, binds only to loopback, removes
+`AGENTROUTER_API_KEY` from its own process, and writes an indicative JSON
+report. The supported Python CLI remains the release authority during the Rust
+migration. See [`docs/RUST_RELIABILITY.md`](docs/RUST_RELIABILITY.md).
+
 ---
 
 ## Troubleshooting
@@ -513,6 +525,7 @@ See [ROADMAP.md](ROADMAP.md) and [MILESTONES.md](MILESTONES.md) for the full bre
 | [ROUTING_RULES.md](ROUTING_RULES.md) | Scoring, classification, risk, fallback logic |
 | [docs/API.md](docs/API.md) | Local HTTP API endpoints, auth, CORS, and errors |
 | [docs/RUST_HTTP_SERVER.md](docs/RUST_HTTP_SERVER.md) | Rust HTTP migration preview and current limits |
+| [docs/RUST_RELIABILITY.md](docs/RUST_RELIABILITY.md) | Rust loopback load and soak tooling, safety scope, and parity limits |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Components, request lifecycle, data flow |
 | [docs/architecture](docs/architecture/README.md) | Target architecture diagrams (orchestration, agents, control plane) |
 | [MODEL_REGISTRY_SCHEMA.md](MODEL_REGISTRY_SCHEMA.md) | Model entry schema (source of truth) |

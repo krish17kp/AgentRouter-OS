@@ -14,7 +14,96 @@ use std::process::Command;
 use agentrouter_registry::{load_all_models, load_providers, ModelEntry};
 
 fn usage() -> &'static str {
-    "usage: agentrouter <init|setup|route|explain|feedback|execute|stats|evaluate|prompt|registry|providers|hosts|models|doctor|server|mcp|dashboard|plugin|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  setup [--preference quality|balanced|cheap|fast] [--sample TEXT]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  execute <decision-id> [--yes] [--dry-run]\n  stats [--json]\n  evaluate [--gold PATH] [--out-dir PATH] [--json] [--no-artifacts]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  server [--host HOST] [--port PORT]\n  mcp (stdio server)\n  dashboard [port]\n  plugin <list|install NAME [--dry-run] [--force] [--adopt-identical]|uninstall NAME|doctor [--json]>\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
+    "usage: agentrouter <init|setup|route|explain|feedback|execute|stats|evaluate|prompt|registry|providers|hosts|models|doctor|server|mcp|dashboard|reliability|plugin|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  setup [--preference quality|balanced|cheap|fast] [--sample TEXT]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  execute <decision-id> [--yes] [--dry-run]\n  stats [--json]\n  evaluate [--gold PATH] [--out-dir PATH] [--json] [--no-artifacts]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  server [--host HOST] [--port PORT]\n  mcp (stdio server)\n  dashboard [port]\n  reliability soak [--seconds N] [--workers N] [--batch N] [--home PATH] [--out PATH]\n  plugin <list|install NAME [--dry-run] [--force] [--adopt-identical]|uninstall NAME|doctor [--json]>\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
+}
+
+fn reliability_soak(args: &[String]) -> Result<i32, String> {
+    if args
+        .iter()
+        .any(|arg| matches!(arg.as_str(), "--help" | "-h"))
+    {
+        println!("Usage: agentrouter reliability soak [--seconds N] [--workers N] [--batch N] [--home PATH] [--out PATH]");
+        return Ok(0);
+    }
+    let unique = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|error| format!("could not read system clock: {error}"))?
+        .as_nanos();
+    let mut home =
+        std::env::temp_dir().join(format!("agentrouter-soak-{}-{unique}", std::process::id()));
+    let mut seconds = 60.0_f64;
+    let mut workers = 8_usize;
+    let mut batch = 50_usize;
+    let mut output = None;
+    let mut args = args.iter();
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "--seconds" => {
+                seconds = args
+                    .next()
+                    .ok_or("--seconds needs a value")?
+                    .parse()
+                    .map_err(|_| "--seconds must be a number")?;
+            }
+            "--workers" => {
+                workers = args
+                    .next()
+                    .ok_or("--workers needs a value")?
+                    .parse()
+                    .map_err(|_| "--workers must be a non-negative integer")?;
+            }
+            "--batch" => {
+                batch = args
+                    .next()
+                    .ok_or("--batch needs a value")?
+                    .parse()
+                    .map_err(|_| "--batch must be a non-negative integer")?;
+            }
+            "--home" => {
+                home = PathBuf::from(args.next().ok_or("--home needs a path")?);
+            }
+            "--out" => output = Some(PathBuf::from(args.next().ok_or("--out needs a path")?)),
+            unknown => return Err(format!("unknown reliability soak option '{unknown}'")),
+        }
+    }
+
+    if agentrouter_cli::init_home(&home).is_err() {
+        eprintln!("could not initialise a soak home");
+        return Ok(1);
+    }
+    // The soak server is a local test target. Match the Python command's
+    // behavior and never require or send a configured live API key.
+    std::env::remove_var("AGENTROUTER_API_KEY");
+    let result = agentrouter_reliability::soak_app(&home, seconds, workers, batch)?;
+    let payload = result.as_dict();
+    let text = serde_json::to_string_pretty(&payload)
+        .map_err(|error| format!("could not serialize soak report: {error}"))?;
+    if let Some(path) = output {
+        if let Some(parent) = path
+            .parent()
+            .filter(|parent| !parent.as_os_str().is_empty())
+        {
+            std::fs::create_dir_all(parent)
+                .map_err(|error| format!("could not create output directory: {error}"))?;
+        }
+        std::fs::write(path, &text)
+            .map_err(|error| format!("could not write soak report: {error}"))?;
+    }
+    println!("{text}");
+    if result.total_server_errors > 0 || !result.transport_errors.is_empty() {
+        eprintln!(
+            "SOAK FAILED: {} server error(s), {} transport error(s)",
+            result.total_server_errors,
+            result.transport_errors.values().sum::<usize>()
+        );
+        return Ok(1);
+    }
+    eprintln!(
+        "SOAK OK: {} requests over {} cycles, no server or transport errors",
+        result.total_ok,
+        result.samples.len()
+    );
+    Ok(0)
 }
 
 fn home() -> Result<PathBuf, String> {
@@ -1133,6 +1222,12 @@ fn run() -> Result<i32, String> {
     if command == "setup" {
         let home = home()?;
         return setup(&home, &tail);
+    }
+    if command == "reliability" {
+        if tail.first().map(String::as_str) != Some("soak") {
+            return Err("usage: agentrouter reliability soak [options]".to_owned());
+        }
+        return reliability_soak(&tail[1..]);
     }
 
     let home = home()?;

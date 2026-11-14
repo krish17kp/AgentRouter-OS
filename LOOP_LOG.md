@@ -2553,3 +2553,18 @@ clean/idempotent stop, and a closed port afterward. Full Rust workspace tests,
 strict Clippy, and format pass locally. Soak CLI initialization/output/exit
 parity, `httpx` transport exception names, and full platform resource sampling
 remain Partial. Frozen release evaluation is unchanged at 0.6667 < 0.90.
+
+## 2026-11-14 — TASK-137 Rust soak command
+
+Added `agentrouter reliability soak` to the unified Rust CLI. It creates or
+reuses an initialized home without overwriting existing seed files, clears the
+live API key from its own process, serves the Rust API on loopback, runs
+repeated bounded `/v1/route` batches, and writes the structured report to
+stdout and an optional output file. It uses a fresh temporary home by default,
+starts the timer before server startup like Python, and exits nonzero on server
+or transport failures. Eight focused reliability compatibility tests pass,
+including the complete CLI command, credential isolation, preservation of
+existing config, and report file. Full Rust workspace tests, strict Clippy,
+formatting, Ruff, and diff checks pass locally. Hosted validation follows this
+RC push. Transport exception names remain a harness parity gap; evaluation
+holdout is untouched.

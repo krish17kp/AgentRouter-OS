@@ -78,7 +78,7 @@ release authority until the full set is complete.
 | `agentrouter/registry.py` | `agentrouter-registry` | Parity |
 | `agentrouter/reliability/__init__.py` | `agentrouter-reliability` | Partial |
 | `agentrouter/reliability/harness.py` | `agentrouter-reliability::{LoadSpec,LoadOutcome,run_load,serve_app,serve_router,RunningApp}` | Partial |
-| `agentrouter/reliability/soak.py` | `agentrouter-reliability::{Sample,SoakResult,soak}` | Partial |
+| `agentrouter/reliability/soak.py` | `agentrouter-reliability::{Sample,SoakResult,soak,soak_app}` and `agentrouter reliability soak` | Partial |
 | `agentrouter/safety.py` | `agentrouter-policy` | Parity |
 | `agentrouter/schema.py` | `agentrouter-core + agentrouter-registry` | Parity |
 | `agentrouter/sdk.py` | `agentrouter-cli::sdk` | Partial |
@@ -152,10 +152,11 @@ release authority until the full set is complete.
   CLI-output parity plus live OpenAI visibility validation remain outstanding,
   so the module is Partial.
 - Rust reliability summarizes load/soak results, drives bounded HTTP load, and
-  now owns a loopback API lifecycle through `serve_app`/`serve_router` and
-  `RunningApp`. The Python soak CLI initialization/output/exit-code behavior,
-  per-`httpx` transport exception names, and full platform resource sampling
-  remain Partial. See [`RUST_RELIABILITY.md`](RUST_RELIABILITY.md) for scope.
+  owns a loopback API lifecycle through `serve_app`/`serve_router` and
+  `RunningApp`. `agentrouter reliability soak` initializes a local home, runs
+  the Rust API, and writes the soak report. Per-`httpx` transport exception
+  names and Python module invocation details remain Partial. See
+  [`RUST_RELIABILITY.md`](RUST_RELIABILITY.md) for scope.
 - Rust quota status normalization and one-step exhausted-model reranking are
   compared with Python for all declared states, Unicode sanitization, invalid
   states, missing recommendations, ranking output, timeout, and typed adapter
