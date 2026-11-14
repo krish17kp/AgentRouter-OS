@@ -396,6 +396,49 @@ def test_response_requires_a_2xx_http_status(monkeypatch, status):
         assert str(error.value) == f"OpenAI request failed with HTTP {status}"
 
 
+def test_response_without_http_status_fails_closed(monkeypatch):
+    payload = {
+        "status": "completed",
+        "output": [
+            {
+                "type": "message",
+                "role": "assistant",
+                "content": [{"type": "output_text", "text": "ok"}],
+            }
+        ],
+    }
+    response = _Response(payload)
+    del response.status
+    monkeypatch.setattr(openai_adapter, "urlopen", lambda *_args, **_kwargs: response)
+
+    with pytest.raises(openai_adapter.OpenAIAdapterError) as error:
+        openai_adapter.run_text_response("model", "prompt", "secret", max_output_tokens=10)
+
+    assert str(error.value) == "OpenAI response had no valid HTTP status"
+
+
+@pytest.mark.parametrize("status", [None, True, 200.0, "200"])
+def test_response_with_non_integer_http_status_fails_closed(monkeypatch, status):
+    payload = {
+        "status": "completed",
+        "output": [
+            {
+                "type": "message",
+                "role": "assistant",
+                "content": [{"type": "output_text", "text": "ok"}],
+            }
+        ],
+    }
+    monkeypatch.setattr(
+        openai_adapter, "urlopen", lambda *_args, **_kwargs: _Response(payload, status)
+    )
+
+    with pytest.raises(openai_adapter.OpenAIAdapterError) as error:
+        openai_adapter.run_text_response("model", "prompt", "secret", max_output_tokens=10)
+
+    assert str(error.value) == "OpenAI response had no valid HTTP status"
+
+
 def test_openai_request_does_not_follow_redirects_or_forward_credentials():
     class RedirectHandler(BaseHTTPRequestHandler):
         visited = []

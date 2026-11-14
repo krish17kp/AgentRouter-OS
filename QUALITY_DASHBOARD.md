@@ -2,17 +2,17 @@
 
 ## Current checkpoint — 2026-11-14
 
-At pushed RC `d80a6df`, build-smoke and release-readiness-report have passed;
-platform, Rust, Python, security, and mutation checks are pending. PR #16 has
-no GitHub reviews. The last critical mutation run at `0d3ea70` passed numeric
-scores (0.9641 overall, 0.9601 safety, 0.9815 routing) but failed its
-no-unreviewed-survivor gate on ten OpenAI status mutants. Direct boundary tests
-are now in the selected adapter test file locally. The last enforcing release
-run failed on frozen context-band accuracy 0.6667 < 0.90; its new run is
-pending.
+At pushed RC `0d0a662`, supported Python, Windows/macOS, Rust, compatibility,
+API, build, security, and site checks pass. The critical mutation gate fails on
+one unreviewed OpenAI missing-status mutant; the enforcing release gate fails on
+frozen context-band accuracy 0.6667 < 0.90. TASK-146 now rejects missing and
+malformed statuses and locally kills the exact mutant. TASK-147 locally bounds
+the Rust SDK connect phase. PR #16 has no GitHub reviews.
 
-The latest full Python regression on the local TASK-141 changes passes 2,550 / skips 5, with 92.025% statement,
-87.690% branch, and 91.030% combined coverage. TASK-140's new Rust SDK
+The latest full Python regression passes 2,570 / skips 5. The committed
+coverage report currently measures the earlier TASK-141 baseline at 92.025%
+statement, 87.690% branch, and 91.030% combined; a fresh coverage run remains
+open to include TASK-146's five additional regression cases. TASK-140's Rust SDK
 wire differential passes all nine endpoints across authenticated, absent, and
 blank API-key cases. TASK-141 adds injected transport and timeout parity, four
 matched HTTPX failure categories, malformed-fixture rejection, and client close
@@ -20,8 +20,10 @@ behavior; 52 focused SDK/reliability Python tests and nine Rust SDK unit tests
 pass locally. TASK-142 and TASK-143 close evaluator seed-contract and runtime
 platform-discovery gaps. TASK-144's non-2xx OpenAI status differential passes
 68 Python tests and three Rust unit tests locally, and is pushed at `0d3ea70`.
-TASK-145 adds three full-output CLINC150 real-row differentials and is pushed at
-`d80a6df`. Python remains the shipping authority and the Rust migration is
+TASK-145 adds three full-output CLINC150 real-row differentials. The parity
+inventory now contains 48/77 full modules, with 29 Partial. TASK-147's focused
+Rust SDK tests (10 Rust, 41 Python differential) and full Rust workspace pass
+locally. Python remains the shipping authority and the Rust migration is
 incomplete.
 
 ## Historical dashboard

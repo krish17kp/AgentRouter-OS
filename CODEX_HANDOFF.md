@@ -2,16 +2,17 @@
 
 ## Current checkpoint — 2026-11-14
 
-Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `d80a6df`
-(TASK-145). Build-smoke and readiness-report checks pass; Rust, Python, platform,
-security, and mutation jobs are running. PR #16 is the only open PR and has no
-GitHub reviews. Its last completed enforcing run measured frozen context-band
-accuracy 0.6667 < 0.90; the new run is pending.
+Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `0d0a662`.
+Python, Rust, Windows/macOS, compatibility, API, build, security, and site checks
+pass. The critical mutation check fails on one unreviewed missing-status mutant;
+the enforcing gate fails on frozen context-band accuracy 0.6667 < 0.90. PR #16
+is the only open PR and has no GitHub reviews.
 Do not merge, tag, publish, or deploy while the release gate remains unmet.
 
-TASK-141 passes its 52-case focused SDK/reliability selection, nine Rust SDK
-unit tests, full workspace/Clippy, and full Python regression (2,550 passed,
-5 skipped; 92.025% statement, 87.690% branch, 91.030% combined coverage).
+TASK-141's 52-case focused SDK/reliability selection, Rust workspace/Clippy,
+and full Python regression pass. The latest full Python run is 2,570 passed,
+5 skipped; the committed coverage report still reflects the earlier 2,550-case
+run (92.025% statement, 87.690% branch, 91.030% combined) and needs refresh.
 TASK-142 compares every evaluator seed model field and Rust exports against
 Python's live `__all__`. TASK-143 makes the Rust full-scorecard CLI discover the
 actual sibling CLI surface at runtime. TASK-144 is pushed at `0d3ea70`: both
@@ -23,9 +24,13 @@ with three complete serialized CLINC150 raw-row differentials; external dataset
 fetching remains Partial. SDK, evaluator orchestration, and multiple CLI/API/MCP
 modules also remain Partial in `docs/RUST_PARITY_MATRIX.md`.
 
-Next: push TASK-146, inspect the hosted reruns while continuing the next parity
-slice, and keep human evaluation, bounded OpenAI live validation, and production
-credentials under **Needs Krish**.
+TASK-146 now rejects missing/malformed OpenAI response statuses; a focused local
+mutation run kills the exact hosted survivor. TASK-147 bounds Rust SDK TCP
+connection setup by the configured timeout and passes SDK differential plus
+workspace checks locally. The parity matrix has 48/77 full modules; 29 remain
+Partial. Next: push these verified changes, inspect hosted reruns, continue the
+next parity slice, and keep human evaluation, bounded OpenAI live validation,
+and production credentials under **Needs Krish**.
 
 ## Historical narrative
 

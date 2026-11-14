@@ -2686,3 +2686,25 @@ does not include the Rust bridge differential. Added direct 199/200/299/300/
 302/399/400/429/500/599 response-status cases to `tests/test_openai_adapter.py`,
 which is in the critical selection. The full OpenAI adapter selection passes 78
 tests locally; hosted mutation revalidation is pending. No threshold changed.
+
+### Follow-up — root cause and repair
+
+The hosted rerun at `0d0a662` reduced ten unreviewed status mutants to one:
+`agentrouter.openai_adapter.x_run_text_response__mutmut_65`. Its exact mutation
+removed the default from `getattr(response, "status", None)`. Added fail-closed
+handling for absent and non-integer statuses, plus tests for absent, null,
+boolean, float, and string status values. The OpenAI adapter tests pass 60
+locally, Ruff passes, and local mutmut 3.6.0 confirms the exact survivor is
+killed. Full hosted mutation validation is pending the next push.
+
+## 2026-11-14 — TASK-147 native Rust SDK connection timeout
+
+The pinned `ureq` 2.10.1 defaults TCP connection setup to 30 seconds; setting
+the SDK's overall request timeout alone does not replace that independent
+limit. The native SDK agent now applies the configured timeout to both TCP
+connection setup and the overall request. A deterministic zero-connect-budget
+regression passes. All 10 Rust SDK unit tests, 41 Python/Rust and Python SDK
+compatibility tests, the full Rust workspace, strict Clippy, Rust formatting,
+Ruff, and diff checks pass locally. Keep SDK parity Partial for its remaining
+timeout-model and generic I/O-category differences. Hosted validation awaits
+the authorized push.

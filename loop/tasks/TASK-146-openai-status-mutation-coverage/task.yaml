@@ -12,6 +12,8 @@ dependencies:
   - TASK-144
 acceptance_criteria:
   - Status tests cover 199, 200, 299, 300, 302, 399, 400, 429, 500, and 599.
+  - Missing, null, boolean, float, and string statuses fail closed with a stable adapter error.
+  - The selected suite kills the exact mutation that removes the missing-status fallback.
   - The focused OpenAI adapter selection passes without a live provider call.
   - Hosted critical mutation has no unreviewed survivors and all configured gates pass.
 verification_commands:

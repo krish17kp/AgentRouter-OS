@@ -72,7 +72,9 @@ def run_text_response(model_id: str, prompt: str, api_key: str, *, max_output_to
     try:
         with _open_url(request, timeout=TIMEOUT_SECONDS) as response:
             status = getattr(response, "status", None)
-            if isinstance(status, int) and not 200 <= status < 300:
+            if not isinstance(status, int) or isinstance(status, bool):
+                raise OpenAIAdapterError("OpenAI response had no valid HTTP status")
+            if not 200 <= status < 300:
                 raise OpenAIAdapterError(f"OpenAI request failed with HTTP {status}")
             raw = response.read(MAX_RESPONSE_BYTES + 1)
     except HTTPError as exc:
