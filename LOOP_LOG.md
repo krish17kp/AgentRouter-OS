@@ -2540,3 +2540,16 @@ the new parameterized enum-case list before Python test execution. Applied
 `ruff format` to the compatibility test; Ruff check/format and all 104 focused
 schema cases pass locally. Pushing the correction and waiting for the hosted
 re-run before marking this slice complete.
+
+## 2026-11-14 — TASK-136 Rust reliability server lifecycle
+
+Added a Rust-owned local API lifecycle to the reliability crate. `serve_app`
+starts the built-in API router on an ephemeral loopback port; `serve_router`
+accepts a custom Axum router; `RunningApp` signals graceful shutdown, joins the
+server thread, and makes repeated shutdown safe. The JSON compatibility bridge
+can start the API, drive a bounded `/health` load, and stop it. Six focused
+Python/Rust reliability cases pass, including a Rust unit test for health,
+clean/idempotent stop, and a closed port afterward. Full Rust workspace tests,
+strict Clippy, and format pass locally. Soak CLI initialization/output/exit
+parity, `httpx` transport exception names, and full platform resource sampling
+remain Partial. Frozen release evaluation is unchanged at 0.6667 < 0.90.

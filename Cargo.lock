@@ -159,9 +159,12 @@ dependencies = [
 name = "agentrouter-reliability"
 version = "0.1.0"
 dependencies = [
+ "agentrouter-api",
+ "axum",
  "libc",
  "serde",
  "serde_json",
+ "tokio",
  "ureq",
 ]
 

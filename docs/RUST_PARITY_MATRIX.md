@@ -77,7 +77,7 @@ release authority until the full set is complete.
 | `agentrouter/refresh.py` | `agentrouter-registry::refresh` | Partial |
 | `agentrouter/registry.py` | `agentrouter-registry` | Parity |
 | `agentrouter/reliability/__init__.py` | `agentrouter-reliability` | Partial |
-| `agentrouter/reliability/harness.py` | `agentrouter-reliability::{LoadSpec,LoadOutcome,run_load}` | Partial |
+| `agentrouter/reliability/harness.py` | `agentrouter-reliability::{LoadSpec,LoadOutcome,run_load,serve_app,serve_router,RunningApp}` | Partial |
 | `agentrouter/reliability/soak.py` | `agentrouter-reliability::{Sample,SoakResult,soak}` | Partial |
 | `agentrouter/safety.py` | `agentrouter-policy` | Parity |
 | `agentrouter/schema.py` | `agentrouter-core + agentrouter-registry` | Parity |
@@ -151,11 +151,11 @@ release authority until the full set is complete.
   transport, and generated-file behavior have Rust tests. Full exception and
   CLI-output parity plus live OpenAI visibility validation remain outstanding,
   so the module is Partial.
-- Rust reliability currently summarizes load/soak results and drives bounded
-  HTTP load against an already-running server. It does not yet own server
-  startup/shutdown, arbitrary Python request factories, or complete transport
-  exception naming; those Python harness and CLI contracts remain Partial. See
-  [`RUST_RELIABILITY.md`](RUST_RELIABILITY.md) for the supported surface.
+- Rust reliability summarizes load/soak results, drives bounded HTTP load, and
+  now owns a loopback API lifecycle through `serve_app`/`serve_router` and
+  `RunningApp`. The Python soak CLI initialization/output/exit-code behavior,
+  per-`httpx` transport exception names, and full platform resource sampling
+  remain Partial. See [`RUST_RELIABILITY.md`](RUST_RELIABILITY.md) for scope.
 - Rust quota status normalization and one-step exhausted-model reranking are
   compared with Python for all declared states, Unicode sanitization, invalid
   states, missing recommendations, ranking output, timeout, and typed adapter

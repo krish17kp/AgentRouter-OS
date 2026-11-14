@@ -108,6 +108,26 @@ def test_rust_load_runner_exercises_real_loopback_and_records_request_ids(home):
     }
 
 
+def test_rust_reliability_harness_starts_and_stops_its_local_api(tmp_path, monkeypatch):
+    monkeypatch.delenv("AGENTROUTER_API_KEY", raising=False)
+    outcome = _rust(
+        {
+            "operation": "serve_and_load",
+            "home": str(tmp_path / "rust-home"),
+            "total": 12,
+            "workers": 3,
+            "timeout_seconds": 5,
+        }
+    )
+
+    assert outcome["requests"] == 12
+    assert outcome["statuses"] == {"200": 12}
+    assert outcome["transport_errors"] == {}
+    assert outcome["unexpected_statuses"] == {}
+    assert outcome["server_errors"] == 0
+    assert outcome["distinct_request_ids"] == 12
+
+
 def test_rust_load_runner_does_not_follow_redirects():
     redirect_target_hit = threading.Event()
 

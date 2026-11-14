@@ -6,10 +6,11 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::path::Path;
+use std::net::SocketAddr;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
-use std::thread;
+use std::sync::{mpsc, Arc, Mutex};
+use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
@@ -40,6 +41,121 @@ impl Request {
             body: Some(body),
         }
     }
+}
+
+/// A local API server managed by the Rust reliability harness.
+///
+/// The server binds only to loopback and an ephemeral port. Dropping this value
+/// requests graceful shutdown and joins the server thread.
+pub struct RunningApp {
+    pub url: String,
+    pub home: PathBuf,
+    shutdown: Option<tokio::sync::oneshot::Sender<()>>,
+    server_thread: Option<JoinHandle<Result<(), String>>>,
+}
+
+impl RunningApp {
+    pub fn stop(&mut self) -> Result<(), String> {
+        if let Some(shutdown) = self.shutdown.take() {
+            let _ = shutdown.send(());
+        }
+        let Some(server_thread) = self.server_thread.take() else {
+            return Ok(());
+        };
+        server_thread
+            .join()
+            .map_err(|_| "local API server thread panicked".to_string())?
+    }
+}
+
+impl Drop for RunningApp {
+    fn drop(&mut self) {
+        let _ = self.stop();
+    }
+}
+
+/// Start the built-in Rust API router on an ephemeral loopback port.
+pub fn serve_app(home: impl Into<PathBuf>) -> Result<RunningApp, String> {
+    let home = home.into();
+    fs::create_dir_all(&home)
+        .map_err(|error| format!("could not prepare local API home: {error}"))?;
+    let router = agentrouter_api::server::router(home.clone());
+    serve_router(home, router)
+}
+
+/// Start a caller-supplied Axum router, the Rust equivalent of Python's
+/// `serve_app(home, app=...)` test seam.
+pub fn serve_router(home: PathBuf, router: axum::Router) -> Result<RunningApp, String> {
+    let (ready_sender, ready_receiver) = mpsc::sync_channel(1);
+    let (shutdown_sender, shutdown_receiver) = tokio::sync::oneshot::channel();
+    let server_thread = thread::Builder::new()
+        .name("agentrouter-reliability-server".to_string())
+        .spawn(move || {
+            let runtime = match tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+            {
+                Ok(runtime) => runtime,
+                Err(error) => {
+                    let message = format!("could not start local API runtime: {error}");
+                    let _ = ready_sender.send(Err(message.clone()));
+                    return Err(message);
+                }
+            };
+            runtime.block_on(async move {
+                let listener = match tokio::net::TcpListener::bind("127.0.0.1:0").await {
+                    Ok(listener) => listener,
+                    Err(error) => {
+                        let message = format!("could not bind local API server: {error}");
+                        let _ = ready_sender.send(Err(message.clone()));
+                        return Err(message);
+                    }
+                };
+                let address: SocketAddr = match listener.local_addr() {
+                    Ok(address) => address,
+                    Err(error) => {
+                        let message = format!("could not read local API address: {error}");
+                        let _ = ready_sender.send(Err(message.clone()));
+                        return Err(message);
+                    }
+                };
+                let app = router.into_make_service_with_connect_info::<SocketAddr>();
+                if ready_sender.send(Ok(address.to_string())).is_err() {
+                    return Ok(());
+                }
+                axum::serve(listener, app)
+                    .with_graceful_shutdown(async move {
+                        let _ = shutdown_receiver.await;
+                    })
+                    .await
+                    .map_err(|error| format!("local API server failed: {error}"))
+            })
+        })
+        .map_err(|error| format!("could not create local API server thread: {error}"))?;
+
+    let address = match ready_receiver.recv_timeout(Duration::from_secs(60)) {
+        Ok(Ok(address)) => address,
+        Ok(Err(error)) => {
+            let _ = server_thread.join();
+            return Err(error);
+        }
+        Err(mpsc::RecvTimeoutError::Timeout) => {
+            let _ = shutdown_sender.send(());
+            let _ = server_thread.join();
+            return Err("local API server did not start within 60 seconds".to_string());
+        }
+        Err(mpsc::RecvTimeoutError::Disconnected) => {
+            let _ = server_thread.join();
+            return Err("local API server stopped before becoming ready".to_string());
+        }
+    };
+
+    Ok(RunningApp {
+        url: format!("http://{address}"),
+        home,
+        shutdown: Some(shutdown_sender),
+        server_thread: Some(server_thread),
+    })
 }
 
 pub type RequestFactory = Arc<dyn Fn(usize) -> Request + Send + Sync>;
@@ -384,6 +500,31 @@ fn rss_kb() -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn managed_loopback_server_stops_and_can_be_stopped_again() {
+        let home = std::env::temp_dir().join(format!(
+            "agentrouter-reliability-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("system clock is after the Unix epoch")
+                .as_nanos()
+        ));
+        let mut app = serve_app(&home).expect("loopback API server starts");
+        let url = format!("{}/health", app.url);
+        let response = ureq::get(&url)
+            .timeout(Duration::from_secs(2))
+            .call()
+            .expect("health endpoint responds");
+        assert_eq!(response.status(), 200);
+
+        app.stop().expect("server shuts down cleanly");
+        app.stop().expect("shutdown is idempotent");
+        let stopped = ureq::get(&url).timeout(Duration::from_secs(2)).call();
+        assert!(matches!(stopped, Err(ureq::Error::Transport(_))));
+        fs::remove_dir_all(home).expect("temporary API home is removed");
+    }
 
     #[test]
     fn load_summary_preserves_correctness_and_indicative_timing_fields() {

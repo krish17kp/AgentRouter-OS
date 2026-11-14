@@ -65,6 +65,38 @@ fn run(request: &Value) -> Result<Value, Box<dyn std::error::Error>> {
             );
             outcome.as_dict()
         }
+        "serve_and_load" => {
+            let home = request
+                .get("home")
+                .and_then(Value::as_str)
+                .ok_or("home must be a path")?;
+            let total = request
+                .get("total")
+                .and_then(Value::as_u64)
+                .and_then(|value| usize::try_from(value).ok())
+                .ok_or("total must be a non-negative integer")?;
+            let workers = request
+                .get("workers")
+                .and_then(Value::as_u64)
+                .and_then(|value| usize::try_from(value).ok())
+                .ok_or("workers must be a non-negative integer")?;
+            let timeout_seconds = request
+                .get("timeout_seconds")
+                .and_then(Value::as_f64)
+                .unwrap_or(30.0);
+            let mut app = agentrouter_reliability::serve_app(PathBuf::from(home))?;
+            let outcome = agentrouter_reliability::run_load(
+                &app.url,
+                &LoadSpec {
+                    total,
+                    workers,
+                    timeout_seconds,
+                    request: Some(Arc::new(|_| Request::get("/health"))),
+                },
+            );
+            app.stop()?;
+            outcome.as_dict()
+        }
         "soak" => {
             let url = request
                 .get("url")
