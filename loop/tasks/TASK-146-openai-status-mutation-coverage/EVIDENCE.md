@@ -27,3 +27,17 @@ mutmut 3.6.0 run. The complete hosted mutation campaign awaits the next RC
 push. The release gate independently remains failed at the unchanged frozen
 context-band result 0.6667 < 0.90. The full Python suite passes 2,570 tests
 with 5 skips locally; fresh coverage percentages are being measured separately.
+
+## Addendum — hosted repair and refreshed coverage
+
+The fix was pushed in `db2c67d`. Hosted critical mutation run `43618274518`
+passes all selected-result and survivor-review gates: 1,706 mutants, 0.9701
+overall, 0.9674 safety/policy/execution, 0.9815 routing, and zero unreviewed
+survivors. The full Linux/Python 3.12 suite passes 2,570 tests with 5 skips.
+Coverage is 92.030% statements, 87.712% branches, and 91.038% combined in
+[`docs/COVERAGE_REPORT_2026-11-14-TASK-147.md`](../../../docs/COVERAGE_REPORT_2026-11-14-TASK-147.md).
+The later `c1b6750` evidence-only push repeats the passing result in hosted run
+`43619491827`, with 1,706 mutants, 0.9701 overall, 0.9674
+safety/policy/execution, 0.9815 routing, and zero unreviewed survivors. The
+separate enforcing release gate still fails at frozen context-band accuracy
+0.6667 against the unchanged 0.90 threshold.

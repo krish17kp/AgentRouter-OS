@@ -2,11 +2,11 @@
 
 ## Current migration and release limits (2026-11-14)
 
-- The latest critical mutation run at `0d0a662` passes its numeric thresholds
-  but fails because one OpenAI missing-status mutant is unreviewed. The exact
-  change removed `getattr(response, "status", None)`'s fallback. TASK-146 now
-  rejects absent and malformed statuses; local focused mutation testing kills
-  the exact mutant. Hosted full-campaign revalidation awaits push.
+- TASK-146 rejects absent and malformed OpenAI HTTP statuses. Hosted critical
+  mutation run `43618274518` passes 1,706 selected mutants (0.9701 overall,
+  0.9674 safety/policy/execution, 0.9815 routing, zero unreviewed survivors).
+  The newer evidence-only head `c1b6750` repeats the passing campaign at the same
+  scores with zero unreviewed survivors.
 - TASK-145 adds full serialized Python/Rust CLINC150 real-row normalization
   differentials, including ordered intent mapping, `oos`, Unicode, source-row
   IDs, and duplicate semantics. The module remains Partial because Rust does
@@ -14,8 +14,9 @@
 - TASK-144 makes Python and Rust OpenAI Responses adapters reject injected or
   native responses outside HTTP 200–299. Offline differential cases cover 300,
   302, and 399; the existing redirect protection remains in place. Hosted
-  validation follows the next RC push. Live provider validation still needs a
-  bounded owner-authorized request and credential.
+  the latest API compatibility and cross-platform Rust checks pass. Live
+  provider validation still needs a bounded owner-authorized request and
+  credential.
 - TASK-141 adds a public Rust transport seam with request timeout propagation,
   typed error categories, close-once behavior, and injected all-endpoint
   comparisons against Python `httpx.MockTransport`. Malformed fixture input

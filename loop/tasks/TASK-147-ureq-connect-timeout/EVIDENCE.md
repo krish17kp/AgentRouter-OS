@@ -21,7 +21,11 @@
 - Rust formatting and strict Clippy: passed.
 - Ruff check and formatting for the Python SDK differential test module: passed.
 - `git diff --check`: passed.
-- Cross-platform hosted checks are pending the authorized RC push.
+- The change is pushed at `aafede0`. Hosted Rust workspace and Python/Rust
+  compatibility checks pass on Linux, Windows, and macOS at `c1b6750`.
+- The refreshed Linux/Python 3.12 full suite passes 2,570 tests with 5 skips;
+  statement/branch/combined coverage is 92.030%/87.712%/91.038% in
+  [`docs/COVERAGE_REPORT_2026-11-14-TASK-147.md`](../../../docs/COVERAGE_REPORT_2026-11-14-TASK-147.md).
 
 ## Remaining contract gap
 

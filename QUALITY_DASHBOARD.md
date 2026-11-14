@@ -2,17 +2,17 @@
 
 ## Current checkpoint — 2026-11-14
 
-At pushed RC `0d0a662`, supported Python, Windows/macOS, Rust, compatibility,
-API, build, security, and site checks pass. The critical mutation gate fails on
-one unreviewed OpenAI missing-status mutant; the enforcing release gate fails on
-frozen context-band accuracy 0.6667 < 0.90. TASK-146 now rejects missing and
-malformed statuses and locally kills the exact mutant. TASK-147 locally bounds
-the Rust SDK connect phase. PR #16 has no GitHub reviews.
+At pushed RC evidence commit `c1b6750` (code head `db2c67d`), Linux Python
+3.10–3.13, API, build, security, website, release-readiness, and Rust workspace
+checks on Linux/Windows/macOS pass. The full Python matrix, Python/Rust
+compatibility on all three platforms, hosted mutation, API, build, security,
+website, and release-readiness checks all pass. The only failed required check
+is the enforcing release gate, at frozen context-band accuracy 0.6667 < 0.90.
+PR #16 has no GitHub reviews.
 
-The latest full Python regression passes 2,570 / skips 5. The committed
-coverage report currently measures the earlier TASK-141 baseline at 92.025%
-statement, 87.690% branch, and 91.030% combined; a fresh coverage run remains
-open to include TASK-146's five additional regression cases. TASK-140's Rust SDK
+The latest full Python regression passes 2,570 / skips 5. The TASK-147 coverage
+report measures 92.030% statement, 87.712% branch, and 91.038% combined.
+TASK-140's Rust SDK
 wire differential passes all nine endpoints across authenticated, absent, and
 blank API-key cases. TASK-141 adds injected transport and timeout parity, four
 matched HTTPX failure categories, malformed-fixture rejection, and client close

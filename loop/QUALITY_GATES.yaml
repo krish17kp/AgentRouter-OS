@@ -34,7 +34,7 @@ mutation:
   safety_execution_policy: 0.9674
   routing: 0.9815
   unreviewed_survivors: 0
-  evidence: "Critical Mutation Testing run 43618274518 at db2c67d; 1,706 selected mutants; report artifact critical-mutation-report"
+  evidence: "Critical Mutation Testing run 43619491827 at c1b6750; 1,706 selected mutants; report artifact critical-mutation-report"
   fabricated_score: false
 
 evaluation:
@@ -93,9 +93,9 @@ packaging:
 
 platforms:
   windows_local_green: pending
-  github_linux_green: in_progress_on_db2c67d
-  github_windows_green: in_progress_on_db2c67d
-  github_macos_green: in_progress_on_db2c67d
+  github_linux_green: pass_on_c1b6750
+  github_windows_green: pass_on_c1b6750
+  github_macos_green: pass_on_c1b6750
 
 open:
   - id: context_band_generalization
@@ -106,7 +106,7 @@ open:
   - id: release_branch_ci
     blocking: true
     reason: >-
-      Critical mutation passes on db2c67d; PR #16's enforcing gate remains failed because frozen context-band accuracy is 0.6667 below the unchanged 0.90 threshold, while the remaining cross-platform CI jobs are still running
+      All required tests and cross-platform CI checks pass on c1b6750; the only failed required check is PR #16's enforcing gate because frozen context-band accuracy is 0.6667 below the unchanged 0.90 threshold
 
 historical_corrections:
   - claim: context_band_accuracy_0.945_release_ready

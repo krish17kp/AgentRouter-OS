@@ -2,13 +2,15 @@
 
 ## Current checkpoint — 2026-11-14
 
-**NOT release ready.** The latest pushed RC head is `0d0a662`. Supported Python,
-Windows/macOS, Rust, compatibility, API, build, security, and site checks pass.
-The critical mutation job fails on one unreviewed missing-status mutant, and the
-enforcing release gate fails at frozen context-band accuracy 0.6667 versus 0.90.
-TASK-146 now rejects missing/malformed statuses and locally kills that exact
-mutant; TASK-147 sets the Rust SDK's explicit connect timeout. PR #16 has no
-GitHub reviews. Live smoke skips without an OpenAI credential.
+**NOT release ready.** The latest pushed RC evidence commit is `c1b6750` on code
+head `db2c67d`. Linux Python 3.10–3.13, Rust workspace on Linux/Windows/macOS,
+API, build, security, website, release-readiness, full Python, and
+Python/Rust compatibility checks pass on Linux, Windows, and macOS. TASK-146's
+hosted critical mutation campaign passes with zero unreviewed survivors. The
+only failed required check is the enforcing release gate, at
+frozen context-band accuracy 0.6667 versus 0.90. TASK-147 sets the Rust SDK's
+explicit connect timeout. PR #16 has no GitHub reviews. Live smoke skips without
+an OpenAI credential.
 
 TASK-140's Rust SDK wire-contract comparison passes all nine endpoints with
 present, absent, and blank API keys. TASK-141 adds an injected transport and
@@ -17,12 +19,13 @@ transport categories, idempotent close, fail-closed fixture input validation,
 and credential-safe URL/body diagnostics. The focused SDK/reliability selection
 passes 52 Python tests and ten Rust SDK unit tests; full Rust workspace, strict
 Clippy, formatting, Ruff, and the full Python suite pass locally. The latest
-Python regression is 2,570 / 5; the committed coverage report currently measures
-the 2,550-case baseline at 92.025% statement, 87.690% branch, and 91.030%
-combined coverage. Refresh the report to include the new cases before release.
-Hosted cross-platform validation is pending. TASK-144 locally aligns Python and Rust OpenAI adapters
-for every non-2xx response; its offline differential cases and 68 focused
-Python tests pass, and hosted validation for TASK-144 is running on `0d3ea70`.
+Python regression is 2,570 / 5; the committed TASK-147 coverage report measures
+92.030% statement, 87.712% branch, and 91.038% combined coverage.
+Current hosted cross-platform validation is still running; the latest completed
+code-head run passes the Python Linux 3.10–3.13 matrix and Rust/Python
+compatibility on all three platforms. TASK-144 locally aligns Python and Rust
+OpenAI adapters for every non-2xx response; its offline differential cases and
+68 focused Python tests pass.
 TASK-145 adds three direct CLINC150 normalization comparisons; the Rust adapter
 transformation matches Python, while external Hugging Face loading remains
 Partial. TASK-147 bounds native TCP connection setup using the configured SDK
