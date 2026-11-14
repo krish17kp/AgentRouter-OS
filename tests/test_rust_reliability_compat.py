@@ -6,6 +6,7 @@ import json
 import shutil
 import subprocess
 import threading
+import time
 from collections import Counter
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -270,6 +271,77 @@ def test_rust_load_runner_does_not_follow_redirects():
     assert rust["statuses"] == {"302": 1}
     assert rust["unexpected_statuses"] == {"302": 1}
     assert not redirect_target_hit.is_set()
+
+
+def test_rust_transport_connect_error_matches_httpx():
+    probe = ThreadingHTTPServer(("127.0.0.1", 0), BaseHTTPRequestHandler)
+    port = probe.server_port
+    probe.server_close()
+    url = f"http://127.0.0.1:{port}"
+    python = run_load(
+        url,
+        LoadSpec(total=1, workers=1, timeout_seconds=2, request=lambda _index: ("GET", "/", None)),
+    )
+    rust = _rust(
+        {
+            "operation": "run_load",
+            "url": url,
+            "total": 1,
+            "workers": 1,
+            "timeout_seconds": 2,
+            "request": {"method": "GET", "path": "/"},
+        }
+    )
+
+    assert python.transport_errors == {"ConnectError": 1}
+    assert rust["transport_errors"] == {"ConnectError": 1}
+    assert rust["requests"] == 1
+
+
+def test_rust_transport_read_timeout_matches_httpx():
+    class SlowHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            time.sleep(0.3)
+            try:
+                self.send_response(200)
+                self.end_headers()
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+
+        def log_message(self, _format, *_args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), SlowHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    url = f"http://127.0.0.1:{server.server_port}"
+    try:
+        python = run_load(
+            url,
+            LoadSpec(
+                total=1,
+                workers=1,
+                timeout_seconds=0.08,
+                request=lambda _index: ("GET", "/", None),
+            ),
+        )
+        rust = _rust(
+            {
+                "operation": "run_load",
+                "url": url,
+                "total": 1,
+                "workers": 1,
+                "timeout_seconds": 0.08,
+                "request": {"method": "GET", "path": "/"},
+            }
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+    assert python.transport_errors == {"ReadTimeout": 1}
+    assert rust["transport_errors"] == {"ReadTimeout": 1}
 
 
 def test_rust_soak_runs_batches_and_reports_resource_samples(home):

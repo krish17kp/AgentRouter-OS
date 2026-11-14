@@ -28,12 +28,14 @@ a concurrent HTTP load runner. It is a migration slice for the Python
 
 The local soak command matches the Python tool's success report, optional file
 output, default temporary home, initialization behavior, and failure status.
-Rust groups load transport failures under `TransportError` instead of
-reproducing each `httpx` exception class. Per-request callback exception names
-and the exact Python module invocation remain different. Resource sampling is
-platform-limited (`/proc` file descriptors and Unix `getrusage`); timing and
-resource measurements remain report-only. The parity matrix therefore keeps
-the reliability harness Partial.
+Common transport failures map to matching `httpx` names: DNS/refused
+connections, read timeouts/errors, URL/scheme, proxy, and malformed-protocol
+cases. `ureq` does not preserve direction for every generic I/O error, so rare
+write failures may be reported as `ReadError`; it also has no pool-timeout
+state. Rust request-factory panics do not have Python exception class names.
+Resource sampling is platform-limited (`/proc` file descriptors and Unix
+`getrusage`); timing and resource measurements remain report-only. The parity
+matrix therefore keeps the reliability harness Partial.
 
 ## Differential verification
 
@@ -45,6 +47,8 @@ The lifecycle check separately starts the built-in Rust API, drives `/health`,
 stops it twice, and confirms that the loopback endpoint is closed afterward.
 The CLI check initializes a home, runs `/v1/route` batches against its owned
 server, and verifies the stdout report and `--out` file.
+Transport differentials compare connection refusal and a delayed response
+against Python's `ConnectError` and `ReadTimeout` categories.
 
 The `reliability_from_json` binary remains a test bridge. It accepts one JSON
 object on standard input. For example:

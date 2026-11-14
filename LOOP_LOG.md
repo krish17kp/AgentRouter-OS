@@ -2579,3 +2579,13 @@ overstating the separately tracked partial harness behavior. All nine focused
 reliability compatibility tests, the full Rust workspace, strict Clippy, Rust
 formatting, Ruff, and diff checks pass locally. Hosted platform validation
 follows this RC push.
+
+## 2026-11-14 — TASK-139 transport error categories
+
+Mapped common `ureq` transport errors to Python `httpx` class names without
+including provider or operating-system error messages in reports. Connection
+refusal and a slow response now match `ConnectError` and `ReadTimeout` in direct
+Python/Rust tests. All 11 focused reliability tests, the full Rust workspace,
+strict Clippy, formatting, Ruff, and diff checks pass locally. Generic `ureq`
+I/O failures do not preserve read-versus-write direction, so the harness remains
+Partial for that case; hosted validation follows push.

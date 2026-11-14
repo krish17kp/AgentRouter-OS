@@ -5,7 +5,9 @@
 //! suitable for release gates; timing thresholds deliberately do not.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::error::Error as _;
 use std::fs;
+use std::io;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -329,11 +331,9 @@ pub fn run_load(url: &str, spec: &LoadSpec) -> LoadOutcome {
                             response.header("X-Request-ID"),
                             request_started.elapsed(),
                         ),
-                        Err(ureq::Error::Transport(_)) => {
-                            *outcome
-                                .transport_errors
-                                .entry("TransportError".into())
-                                .or_default() += 1;
+                        Err(ureq::Error::Transport(error)) => {
+                            let name = transport_error_name(&error);
+                            *outcome.transport_errors.entry(name.into()).or_default() += 1;
                         }
                     }
                 }
@@ -360,6 +360,47 @@ fn record_response(
     if let Some(request_id) = request_id {
         outcome.request_ids.push(request_id.to_string());
     }
+}
+
+fn transport_error_name(error: &ureq::Transport) -> &'static str {
+    use ureq::ErrorKind;
+
+    match error.kind() {
+        ErrorKind::InvalidUrl => "InvalidURL",
+        ErrorKind::UnknownScheme => "UnsupportedProtocol",
+        ErrorKind::Dns | ErrorKind::ConnectionFailed => {
+            if transport_io_kind(error) == Some(io::ErrorKind::TimedOut) {
+                "ConnectTimeout"
+            } else {
+                "ConnectError"
+            }
+        }
+        ErrorKind::InsecureRequestHttpsOnly => "ConnectError",
+        ErrorKind::TooManyRedirects => "TooManyRedirects",
+        ErrorKind::BadStatus | ErrorKind::BadHeader => "RemoteProtocolError",
+        ErrorKind::Io => {
+            if transport_io_kind(error) == Some(io::ErrorKind::TimedOut) {
+                "ReadTimeout"
+            } else {
+                "ReadError"
+            }
+        }
+        ErrorKind::InvalidProxyUrl | ErrorKind::ProxyConnect | ErrorKind::ProxyUnauthorized => {
+            "ProxyError"
+        }
+        ErrorKind::HTTP => "HTTPStatusError",
+    }
+}
+
+fn transport_io_kind(error: &ureq::Transport) -> Option<io::ErrorKind> {
+    let mut source = error.source();
+    while let Some(current) = source {
+        if let Some(io_error) = current.downcast_ref::<io::Error>() {
+            return Some(io_error.kind());
+        }
+        source = current.source();
+    }
+    None
 }
 
 fn valid_timeout(timeout_seconds: f64) -> f64 {
