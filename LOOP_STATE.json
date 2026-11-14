@@ -1,12 +1,12 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-14",
-  "current_phase": "TASK-144 is pushed at 0d3ea70. API, build-smoke, site, readiness-report, security, Python 3.10\u20133.13, and Rust workspace checks pass; some platform checks remain pending. The critical mutation job fails because ten newly introduced OpenAI status-check mutants are unreviewed by its selected tests, although numeric scores pass (overall 0.9641, safety 0.9601, routing 0.9815). Direct status boundary cases were added locally to tests/test_openai_adapter.py, which is in the mutation selection; TASK-146 is awaiting a push and hosted rerun. The frozen release gate remains 0.6667 < 0.90. TASK-144 local suite passes 78 tests and 3 Rust unit tests; TASK-145 CLINC150 differentials pass 3 cases.",
+  "current_phase": "TASK-145 was pushed at d80a6df. Build-smoke and release-readiness-report checks pass; platform, Rust, Python, security and mutation jobs are pending. The last critical mutation run at 0d3ea70 failed its unreviewed-survivor gate on ten OpenAI response-status mutants, although numeric scores passed (0.9641 overall, 0.9601 safety, 0.9815 routing). TASK-146 adds direct 199/200/299/300/302/399/400/429/500/599 cases to tests/test_openai_adapter.py, which is included in the critical selection; the focused OpenAI adapter suite passes 78 tests. This repair awaits push. The last enforcing run measured frozen context_band_accuracy 0.6667 < 0.90.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
-    "main": "Main remains unchanged. PR #16 is the sole open PR against main; it has no submitted reviews or review requests and merge state is UNSTABLE. The critical mutation job fails its all-survivors-reviewed check on ten OpenAI status mutants at 0d3ea70; numeric thresholds pass. The enforcing gate fails at unchanged frozen context_band_accuracy 0.6667 < 0.90. No promotion or gate bypass.",
-    "release/agentrouter-v0.5-rc1": "Latest pushed head 0d3ea70 includes TASK-144. API, build-smoke, site, readiness-report, security, Python 3.10\u20133.13, and Rust workspace checks pass; some platform jobs remain pending. Critical mutation fails its no-unreviewed-survivor gate on ten OpenAI response-status mutants, with numeric scores 0.9641 overall, 0.9601 safety and 0.9815 routing. Direct status tests were added locally to its selected suite. The frozen context-band gate remains 0.6667 < 0.90. TASK-145 CLINC150 differential passes three cases locally.",
+    "main": "Main remains unchanged. PR #16 is the sole open PR against main; it has no submitted reviews or review requests. The last completed enforcing run failed at unchanged frozen context_band_accuracy 0.6667 < 0.90. The critical mutation run at 0d3ea70 failed only its all-survivors-reviewed gate on ten OpenAI status mutants; numeric thresholds passed. Current d80a6df checks are running. No promotion or gate bypass.",
+    "release/agentrouter-v0.5-rc1": "Latest pushed head d80a6df includes TASK-145. Build-smoke and release-readiness-report pass; platform, Rust, Python, security and mutation checks are pending. TASK-144's prior critical mutation run failed with ten unreviewed OpenAI status mutants, with numeric scores 0.9641 overall, 0.9601 safety and 0.9815 routing. TASK-146's selected-suite boundary tests pass locally and await push. The prior enforcing run measured frozen context-band 0.6667 < 0.90. PR #16 has no GitHub reviews.",
     "task/rust-r1-workspace": "PR #25 open against RC; 6ee8d3e passed complete GitHub CI; 32eee6f forced-init push failed Windows compile, file-handle repair awaits remote recheck; SQLite path-race blocker remains; Rust R4 partial and OpenAI execution hardening",
     "task/repo-cleanup-architecture-ponytail": "MERGED to RC (PR #14, merge commit 1ae3155); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/dynamic-skill-discovery": "MERGED to RC (PR #15, merge commit 62d5289); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
@@ -29,9 +29,9 @@
   "repo_sha_at_takeover": "602321af91ff298c0d5b59d6d36c24f845557fc1",
   "canonical_release_ready": false,
   "in_progress": [
-    "Commit and push TASK-145 and the TASK-146 selected-suite mutation regression to the authorized RC branch; inspect and repair the new hosted mutation, platform, and release-gate runs.",
-    "Continue the next actionable Rust parity gap while CI runs, update the 77-module matrix honestly, and preserve exact external blockers.",
-    "Keep PR #16 open; do not merge, tag, publish, deploy, edit frozen labels, or lower thresholds while context-band accuracy is below 0.90 or required checks/reviews are absent."
+    "Commit and push TASK-146 selected-suite HTTP status tests and updated evidence to the authorized RC branch; inspect mutation, release-gate, platform, Rust and Python reruns.",
+    "Continue the next actionable Rust parity gap while CI runs; update the full module parity matrix honestly.",
+    "Keep PR #16 open while release readiness and formal reviews are absent; do not merge, tag, publish, deploy, edit frozen labels or lower thresholds."
   ],
   "completed_iter25": [
     "TASK-015 trusted catalogs MERGED to RC (PR #6 -> merge commit 8661629; task branch deleted local+remote). Closes TASK-013's deferred scope: file-level provenance block (provider, source_url, fetched_at UTC, count, tool_version, cli_args) ignored by the registry loader; atomic refresh via tempfile.mkstemp + os.replace; candidate-deprecation reporting on refresh (report-only, never auto-deletes); rollback with non-destructive backup rotation + new `providers restore`; new `providers doctor` that schema-validates every generated catalog and exits 3 only on real corruption (not staleness).",
@@ -132,7 +132,7 @@
       "focused_python_rust_differentials": "3 passed",
       "external_network": "not used",
       "full_adapter_module_parity": "partial; Python Hugging Face data loader is not implemented in Rust",
-      "hosted_validation": "awaiting authorized RC push"
+      "hosted_validation": "running at RC d80a6df"
     },
     "task144_hosted_mutation": {
       "head": "0d3ea70",
@@ -145,7 +145,9 @@
       "hosted_rerun": "awaiting next push"
     },
     "task146_local": {
-  "openai_adapter_selection": "78 passed after final formatting",
+      "openai_adapter_selection": "78 passed after final formatting",
+      "ruff_check": "pass",
+      "ruff_format": "pass",
       "selected_test_file": "tests/test_openai_adapter.py",
       "statuses": [
         199,
@@ -159,7 +161,7 @@
         500,
         599
       ],
-      "hosted_mutation": "awaiting push"
+      "hosted_mutation": "awaiting TASK-146 push"
     }
   },
   "release_blockers": [
@@ -177,7 +179,7 @@
     "historical task records remain under loop/tasks and loop/reports",
     "historical TASK-004 0.945 result is retained as in-sample evidence but no longer treated as canonical held-out readiness"
   ],
-  "next_action": "Push the TASK-145 CLINC150 differential and TASK-146 status-boundary mutation tests. Re-check all hosted jobs after the push; do not wait idle, continue parity work.",
+  "next_action": "Push TASK-146 direct status-boundary tests. Inspect the hosted matrix after the push and continue parity work while it runs.",
   "completed_iter26": [
     "TASK-016 verified execution-host states MERGED to RC (PR #7 -> merge commit 5847c22; task branch deleted local+remote). hosts.py gained a readiness state vocabulary (missing/installed/configured/authenticated/authorized/degraded/unknown) plus a per-host remedy; `availability` keeps its exact prior meaning and is now derived from state. hosts list/doctor/show, the setup wizard and the execute refusal all report state + fix; hosts doctor ends with the cheapest concrete fix and exits non-zero only when no real host is ready. REST/MCP gained additive state/remedy and host_state/host_remedy keys. docs: new USER_GUIDE section 8 with the state table and the honesty note on `authorized`.",
     "BUG FIXED: host detection tested the API-key env var for truthiness, so a set-but-blank key (OPENAI_API_KEY='   ') reported available and `execute` would target a host that cannot authenticate. Now degraded/unavailable with a fix-it message, pinned by a parametrised test.",
@@ -364,5 +366,8 @@
   },
   "completed_iter66": [
     "TASK-145 adds full serialized Python/Rust differentials for CLINC150 real-row normalization: all curated intent hints, unknown labels, oos, ordered substring precedence, Unicode text, source-row IDs, case-insensitive duplicate suppression, and punctuation-insensitive hash deduplication. Three focused tests pass offline. Keep the module Partial because Python external Hugging Face loading remains unmatched."
+  ],
+  "completed_iter67": [
+    "TASK-145 expanded the existing CLINC150 real-row differential to compare full serialized EvaluationCase outputs for all intent hints, unknown labels, oos, ordered substring precedence, Unicode, source IDs and duplicate semantics. Three offline cases pass; module remains Partial because the Python Hugging Face loader has no Rust counterpart. Pushed at d80a6df; hosted checks are running."
   ]
 }

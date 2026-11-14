@@ -16,3 +16,4 @@ normalized-hash duplicates. Comparison includes every serialized
 The Rust transformation matches the tested Python behavior. The parity matrix
 remains Partial because the Python module's external Hugging Face dataset
 loading path has no Rust-equivalent loader contract.
+The differential was pushed at `d80a6df`; hosted validation is pending.

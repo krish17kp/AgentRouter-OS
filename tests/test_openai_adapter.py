@@ -316,8 +316,9 @@ def test_api_execution_sanitizes_provider_output(home, monkeypatch):
 
 
 class _Response:
-    def __init__(self, payload):
+    def __init__(self, payload, status=200):
         self.payload = payload
+        self.status = status
 
     def __enter__(self):
         return self
@@ -366,6 +367,33 @@ def test_response_request_is_private_bounded_and_text_only(monkeypatch):
         "store": False,
         "stream": False,
     }
+
+
+@pytest.mark.parametrize("status", [199, 200, 299, 300, 302, 399, 400, 429, 500, 599])
+def test_response_requires_a_2xx_http_status(monkeypatch, status):
+    payload = {
+        "status": "completed",
+        "output": [
+            {
+                "type": "message",
+                "role": "assistant",
+                "content": [{"type": "output_text", "text": "ok"}],
+            }
+        ],
+    }
+    monkeypatch.setattr(
+        openai_adapter, "urlopen", lambda *_args, **_kwargs: _Response(payload, status)
+    )
+
+    if 200 <= status < 300:
+        assert (
+            openai_adapter.run_text_response("model", "prompt", "secret", max_output_tokens=10)
+            == "ok"
+        )
+    else:
+        with pytest.raises(openai_adapter.OpenAIAdapterError) as error:
+            openai_adapter.run_text_response("model", "prompt", "secret", max_output_tokens=10)
+        assert str(error.value) == f"OpenAI request failed with HTTP {status}"
 
 
 def test_openai_request_does_not_follow_redirects_or_forward_credentials():

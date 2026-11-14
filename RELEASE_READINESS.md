@@ -2,14 +2,14 @@
 
 ## Current checkpoint — 2026-11-14
 
-**NOT release ready.** The latest pushed RC head is `0d3ea70`. API, build-smoke,
-site, release-report, security, Python 3.10–3.13, and Rust workspace checks
-pass; some platform checks remain pending. PR #16 has no GitHub reviews. The
-critical mutation job fails its unreviewed-survivor gate for ten OpenAI status
-mutants, although its numeric thresholds pass. A direct boundary regression
-set is being added to the suite used by that job. The enforcing run remains
-blocked by frozen context-band accuracy 0.6667 versus 0.90. Live smoke skips
-without an OpenAI credential.
+**NOT release ready.** The latest pushed RC head is `d80a6df`. Build-smoke and
+release-readiness-report have passed; platform, Rust, Python, security, and
+mutation jobs remain pending. PR #16 has no GitHub reviews. The previous
+critical mutation job failed its unreviewed-survivor gate for ten OpenAI status
+mutants, although its numeric thresholds passed; TASK-146 adds direct boundary
+cases to the selected suite. The previous enforcing run was blocked by frozen
+context-band accuracy 0.6667 versus 0.90; its new run is pending. Live smoke
+skips without an OpenAI credential.
 
 TASK-140's Rust SDK wire-contract comparison passes all nine endpoints with
 present, absent, and blank API keys. TASK-141 adds an injected transport and
@@ -23,9 +23,10 @@ regression passes 2,550 / 5 with
 in `docs/COVERAGE_REPORT_2026-11-14-TASK-141.md`. Hosted cross-platform
 validation is pending. TASK-144 locally aligns Python and Rust OpenAI adapters
 for every non-2xx response; its offline differential cases and 68 focused
-Python tests pass, and hosted validation is running on `0d3ea70`. TASK-145 adds
-three direct CLINC150 normalization comparisons; the Rust adapter transformation
-matches Python, while external Hugging Face loading remains Partial. The SDK
+Python tests pass, and hosted validation for TASK-144 is running on `0d3ea70`.
+TASK-145 adds three direct CLINC150 normalization comparisons and is pushed at
+`d80a6df`; the Rust adapter transformation matches Python, while external
+Hugging Face loading remains Partial. The SDK
 remains Partial for native `ureq` timeout and generic read/write behavior. PR
 #16 remains the sole open PR. Rust
 CLI/HTTP/MCP parity, provider execution, external dataset loaders, evaluation

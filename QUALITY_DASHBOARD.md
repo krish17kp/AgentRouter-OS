@@ -2,14 +2,14 @@
 
 ## Current checkpoint — 2026-11-14
 
-At pushed RC `0d3ea70`, API, build-smoke, site, release-report, security, Python
-3.10–3.13, and Rust workspace checks pass; some platform checks remain pending.
-PR #16 has no GitHub reviews. The critical mutation run fails its no-unreviewed-
-survivor gate: overall/safety/routing scores pass at 0.9641/0.9601/0.9815, but
-ten OpenAI status mutants survived because the selected suite lacks direct
-status cases. Direct boundary tests are now in the selected adapter test file
-locally. The enforcing release gate also fails on frozen context-band accuracy
-0.6667 < 0.90; live smoke skips without credentials.
+At pushed RC `d80a6df`, build-smoke and release-readiness-report have passed;
+platform, Rust, Python, security, and mutation checks are pending. PR #16 has
+no GitHub reviews. The last critical mutation run at `0d3ea70` passed numeric
+scores (0.9641 overall, 0.9601 safety, 0.9815 routing) but failed its
+no-unreviewed-survivor gate on ten OpenAI status mutants. Direct boundary tests
+are now in the selected adapter test file locally. The last enforcing release
+run failed on frozen context-band accuracy 0.6667 < 0.90; its new run is
+pending.
 
 The latest full Python regression on the local TASK-141 changes passes 2,550 / skips 5, with 92.025% statement,
 87.690% branch, and 91.030% combined coverage. TASK-140's new Rust SDK
@@ -20,8 +20,9 @@ behavior; 52 focused SDK/reliability Python tests and nine Rust SDK unit tests
 pass locally. TASK-142 and TASK-143 close evaluator seed-contract and runtime
 platform-discovery gaps. TASK-144's non-2xx OpenAI status differential passes
 68 Python tests and three Rust unit tests locally, and is pushed at `0d3ea70`.
-TASK-145 adds three full-output CLINC150 real-row differentials. Python remains
-the shipping authority and the Rust migration is incomplete.
+TASK-145 adds three full-output CLINC150 real-row differentials and is pushed at
+`d80a6df`. Python remains the shipping authority and the Rust migration is
+incomplete.
 
 ## Historical dashboard
 
