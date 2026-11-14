@@ -35,7 +35,13 @@ from agentrouter.evaluation.schema import (
     SafetyExpectation,
     normalized_hash,
 )
-from agentrouter.schema import Ability
+from agentrouter.schema import (
+    Ability,
+    Classification,
+    DeprecationStatus,
+    LatencyTier,
+    PricingTier,
+)
 
 pytestmark = pytest.mark.skipif(shutil.which("cargo") is None, reason="cargo not on PATH")
 
@@ -749,6 +755,135 @@ def test_rust_safety_evaluator_matches_python():
             "agentrouter-evaluation",
         ],
         input=json.dumps([case.model_dump(mode="json") for case in cases]),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+        check=True,
+    )
+    assert json.loads(process.stdout) == expected
+
+
+def test_rust_safety_evaluator_matches_python_with_injected_classifier():
+    task = "Write a friendly greeting for a community event"
+    classification = Classification(
+        task_type="coding",
+        complexity="high",
+        risk="high",
+        context_tokens=128,
+        context_band="small",
+        output_type="code",
+        tool_needs=[],
+        approval_level="human-approval-required",
+    )
+    cases = [
+        EvaluationCase(
+            id="injected-high-risk",
+            dataset="rust-safety-parity",
+            task=task,
+            safety=SafetyExpectation(must_require_human_approval=True),
+        )
+    ]
+    expected = evaluate_python_safety(cases, classify_fn=lambda _task: classification)
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_safety_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps(
+            {
+                "cases": [case.model_dump(mode="json") for case in cases],
+                "classifier_by_task": {task: classification.model_dump(mode="json")},
+            }
+        ),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+        check=True,
+    )
+    assert json.loads(process.stdout) == expected
+
+
+def test_rust_routing_evaluator_matches_python_with_injected_classifier():
+    seed_models = load_seed_models()[:2]
+    models = [
+        seed_models[0].model_copy(
+            update={
+                "provider": "fixture",
+                "vendor": "fixture",
+                "model_id": "coding",
+                "ability": Ability(coding=10, reasoning=0, writing=0),
+                "context_window": 100_000,
+                "max_input_tokens": 100_000,
+                "tool_support": [],
+                "vision_support": False,
+                "deprecation_status": DeprecationStatus.active,
+                "pricing_tier": PricingTier.medium,
+                "latency_tier": LatencyTier.medium,
+            }
+        ),
+        seed_models[1].model_copy(
+            update={
+                "provider": "fixture",
+                "vendor": "fixture",
+                "model_id": "writing",
+                "ability": Ability(coding=0, reasoning=0, writing=10),
+                "context_window": 100_000,
+                "max_input_tokens": 100_000,
+                "tool_support": [],
+                "vision_support": False,
+                "deprecation_status": DeprecationStatus.active,
+                "pricing_tier": PricingTier.medium,
+                "latency_tier": LatencyTier.medium,
+            }
+        ),
+    ]
+    task = "Summarize a public product announcement"
+    classification = Classification(
+        task_type="coding",
+        complexity="high",
+        risk="low",
+        context_tokens=100,
+        context_band="small",
+        output_type="code",
+        tool_needs=[],
+        approval_level="auto",
+    )
+    cases = [
+        EvaluationCase(
+            id="injected-routing",
+            dataset="rust-routing-eval",
+            task=task,
+            routing=RoutingExpectation(minimum_ability={"coding": 10}),
+        )
+    ]
+    expected = evaluate_python_routing(
+        cases, models, classify_fn=lambda _task: classification
+    )
+    payload = {
+        "cases": [case.model_dump(mode="json") for case in cases],
+        "models": [model.model_dump(mode="json") for model in models],
+        "classifier_by_task": {task: classification.model_dump(mode="json")},
+    }
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_routing_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps(payload),
         capture_output=True,
         text=True,
         encoding="utf-8",

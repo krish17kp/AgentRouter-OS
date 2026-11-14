@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-14 (TASK-082–117). This inventory covers every Python source module under
+Updated: 2026-11-14 (TASK-082–118). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -56,8 +56,8 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/evaluators/performance.py` | `agentrouter-evaluation::{evaluate_performance,evaluate_performance_with,evaluate_default_performance,summarize_performance}` | Parity |
 | `agentrouter/evaluation/evaluators/platform.py` | `agentrouter-evaluation::evaluate_platform` | Partial |
 | `agentrouter/evaluation/evaluators/provider.py` | `agentrouter-evaluation::{evaluate_provider,evaluate_provider_default}` | Parity |
-| `agentrouter/evaluation/evaluators/routing.py` | `agentrouter-evaluation::evaluate_routing` | Partial |
-| `agentrouter/evaluation/evaluators/safety.py` | `agentrouter-evaluation::evaluate_safety` | Partial |
+| `agentrouter/evaluation/evaluators/routing.py` | `agentrouter-evaluation::{evaluate_routing,evaluate_routing_with}` | Parity |
+| `agentrouter/evaluation/evaluators/safety.py` | `agentrouter-evaluation::{evaluate_safety,evaluate_safety_with}` | Parity |
 | `agentrouter/evaluation/grading.py` | `agentrouter-evaluation::{grade_classification,runner::run_all_dimensions}` | Partial |
 | `agentrouter/evaluation/metrics.py` | `agentrouter-evaluation::classification_metrics` | Parity |
 | `agentrouter/evaluation/provenance.py` | `agentrouter-evaluation::{dataset_quality,environment_snapshot}` | Parity |
@@ -196,6 +196,10 @@ release authority until the full set is complete.
   behavior for duplicate model keys: the last supplied entry is used to check
   routing constraints, even though routing may return that shared key from an
   earlier entry. A differential fixture covers this edge case.
+- Routing and safety evaluators accept the same injected-classifier seam as
+  Python. Differential probes supply task-keyed classifications and verify the
+  complete score and failure reports while retaining their existing default
+  classifier behavior.
 - Provider metadata scoring supports caller-supplied model records and a
   no-argument path that loads and validates the packaged seed registry, matching
   Python's default evaluator behavior.

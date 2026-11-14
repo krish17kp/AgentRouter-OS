@@ -25,7 +25,9 @@ pub mod runner;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-use agentrouter_core::{ApprovalLevel, ContextBand, Level, OutputType, PricingTier, TaskType};
+use agentrouter_core::{
+    ApprovalLevel, Classification, ContextBand, Level, OutputType, PricingTier, TaskType,
+};
 use agentrouter_routing::round_half_even;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -216,6 +218,15 @@ pub fn grade_classification(
 /// a proxy measurement, matching the Python evaluator's release reporting.
 pub fn evaluate_safety(cases: &[EvaluationCase]) -> serde_json::Value {
     use agentrouter_classifier::{classify, ClassifyOptions};
+    evaluate_safety_with(cases, |task| classify(task, &ClassifyOptions::default()))
+}
+
+/// Evaluate safety while using a caller-provided classifier, matching Python's
+/// optional `classify_fn` seam for deterministic offline evaluation.
+pub fn evaluate_safety_with<F>(cases: &[EvaluationCase], classify_fn: F) -> serde_json::Value
+where
+    F: Fn(&str) -> Classification,
+{
     use serde_json::{json, Value};
 
     let mut high_risk_total = 0usize;
@@ -225,7 +236,7 @@ pub fn evaluate_safety(cases: &[EvaluationCase]) -> serde_json::Value {
     let mut failures = Vec::new();
 
     for case in cases {
-        let prediction = classify(&case.task, &ClassifyOptions::default());
+        let prediction = classify_fn(&case.task);
         let gold = if case
             .safety
             .as_ref()
@@ -434,6 +445,21 @@ pub fn evaluate_routing(
     models: &[agentrouter_registry::ModelEntry],
 ) -> serde_json::Value {
     use agentrouter_classifier::{classify, ClassifyOptions};
+    evaluate_routing_with(cases, models, |task| {
+        classify(task, &ClassifyOptions::default())
+    })
+}
+
+/// Evaluate routing with a caller-provided classifier, matching Python's
+/// optional `classify_fn` argument.
+pub fn evaluate_routing_with<F>(
+    cases: &[EvaluationCase],
+    models: &[agentrouter_registry::ModelEntry],
+    classify_fn: F,
+) -> serde_json::Value
+where
+    F: Fn(&str) -> Classification,
+{
     use agentrouter_routing::{route, Weights};
     use serde_json::{json, Value};
 
@@ -444,7 +470,7 @@ pub fn evaluate_routing(
     let mut failures = Vec::new();
 
     for case in cases {
-        let classification = classify(&case.task, &ClassifyOptions::default());
+        let classification = classify_fn(&case.task);
         let result = route(models, &classification, Weights::default(), None);
         let recommendation = result.recommendation.map(|row| row.model);
         let fallback = result.fallback.map(|row| row.model);

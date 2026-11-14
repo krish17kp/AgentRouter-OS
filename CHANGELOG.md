@@ -48,6 +48,9 @@ All notable changes to AgentRouter OS. Format loosely follows
 - Complete the Rust provider evaluator's no-argument behavior by loading the
   validated packaged seed registry when models are omitted, while retaining the
   explicit model-list probe used for exact offline comparisons.
+- Match the injected `classify_fn` seam in the Rust routing and safety
+  evaluators, keeping default classifier behavior and adding deterministic
+  Python/Rust report comparisons for caller-supplied classifications.
 
 ### Fixed
 - Match Python's routing evaluator lookup when a caller supplies duplicate model

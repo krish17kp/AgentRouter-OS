@@ -4,10 +4,10 @@ Updated: 2026-11-14
 
 ## Definition of done
 
-- [ ] PR review and hosted checks: PR #16 is the sole open PR against `main`. The preceding RC head `71bddba` passes Linux/macOS Rust and Python compatibility, security, site, Rust 1.89, and critical mutation jobs. Windows CI exposed an unsupported `fs_at::OpenOptions` method in the local rename repair. The follow-up removes that call and verifies the lock-file identity without rereading its locked byte; hosted Windows compilation and execution are still required. The unchanged context-band gate remains 0.6667 < 0.90; live smoke skips without credentials.
+- [ ] PR review and hosted checks: PR #16 is the sole open PR against `main`. RC head `be7b003` passes Linux/macOS Rust and Python compatibility, security, site, Rust 1.89, and critical mutation jobs. Windows CI now compiles but reports `CrossesDevices` for the no-replace rename because the legacy class treats a null-root leaf as process-relative. The local follow-up uses `FileRenameInfoEx` with the pinned parent handle and no replace flags; hosted execution is still required. The mutation lock now verifies file identity without rereading the locked byte. The unchanged context-band gate remains 0.6667 < 0.90; live smoke skips without credentials.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
-- [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md); current gaps are explicit, and 42 modules currently meet the full-module differential bar. TASK-089–091 closed the Python/Rust storage contract with shared-database and concurrency evidence.
-- [x] Full Python suite: 2,264 passed, 4 skipped on Linux/Python 3.12.15 with pytest 9.0.3; coverage is 91.96% statement, 87.65% branch, and 90.97% combined. The unchanged 90% statement / 85% branch thresholds pass; evidence is in `docs/COVERAGE_REPORT_2026-11-14-TASK-114.md`.
+- [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md); current gaps are explicit, and 44 modules currently meet the full-module differential bar. TASK-089–091 closed the Python/Rust storage contract with shared-database and concurrency evidence.
+- [x] Full Python suite: 2,266 passed, 4 skipped on Linux/Python 3.12.15 with pytest 9.0.3; coverage is 91.96% statement, 87.65% branch, and 90.97% combined. The unchanged 90% statement / 85% branch thresholds pass; latest evidence is in `docs/COVERAGE_REPORT_2026-11-14-TASK-118.md`.
 - [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations; the Rust release benchmark now runs the same 10/100/1,000 candidate fleets, with a paired local p50 ratio of 2.70×–3.25× under stated synthetic conditions.
 - [x] Changelog, coverage evidence, and local latency measurements are committed to the release candidate. Candidate package version is now `0.5.0rc1`, with draft release notes in `docs/RELEASE_NOTES_v0.5.0rc1.md`; final `0.5.0` packaging and publication remain blocked on parity and all release gates.
 - [ ] Release candidate promoted to `main` with a tagged release.
@@ -125,6 +125,7 @@ Updated: 2026-11-14
 - [x] TASK-115 completes the Rust performance smoke evaluator contract: default tasks, packaged seed loading, classifier injection, aggregate-runner task reuse, and stable report fields. Six Python/Rust performance checks, the full Rust workspace and strict Clippy pass locally. The full Python regression and coverage also pass; hosted cross-platform confirmation remains part of the release candidate check.
 - [x] TASK-116 adds default seed-catalog loading to the Rust provider evaluator while preserving the existing explicit-catalog JSON probe. Both focused Python/Rust cases and the refreshed full Python suite pass locally; hosted cross-platform confirmation remains part of the release-candidate checks.
 - [x] TASK-117 aligns the Rust routing evaluator with Python's last-entry behavior for duplicate model keys. A differential fixture reproduced the mismatch before the fix and passes after it.
+- [x] TASK-118 adds Rust classifier injection paths for the Python routing and safety evaluator seams. Complete Python regression passes with 2,266 tests and 4 skips; the routing and safety evaluator modules now meet the differential parity bar. The full Rust workspace, strict Clippy, formatting, Ruff, and diff checks pass locally; hosted Windows confirmation is pending.
 - [ ] TASK-056 adds the `agentrouter-evaluate` Rust CLI for listing/validating datasets, running fixture profiles, writing/rendering/comparing reports, availability, explicit external prepare blockers, and context-band generalization. Four smoke/differential tests pass. The Rust command does not yet replace the Python `agentrouter evaluate` surface or load real datasets, so CLI module parity remains Partial.
 - [x] PR #31 upgraded bundled SQLite to 3.54.1, replaced `unsafe-libyaml`, and raised the Rust minimum to 1.89; workspace tests, Clippy, security audit, and cross-platform CI passed before merge at `a246cf6`.
 - [x] Website product-truth fixes, font hierarchy/motion redesign, unused shadcn CLI removal, server limits/API tests, and website lint/build CI merged via PR #27. npm build/lint and production dependency audit passed; full npm audit still reports moderate dev-tool advisories.
@@ -137,12 +138,12 @@ Updated: 2026-11-14
 - OpenAI live validation: provide `OPENAI_API_KEY` through a local environment or a protected secret store and authorize one bounded Responses API smoke request, which may incur usage charges. Offline request/response fixtures are ready; no key is stored in the repository.
 - Production release/deployment: after the local and hosted release gates pass, provide the production hosting/domain credentials and authorize any paid infrastructure and deployment. The Rust server is loopback-only and no production deployment has run.
 
-Latest full local verification: Python 3.12 passes 2,264 tests with 4 skips on
+Latest full local verification: Python 3.12 passes 2,266 tests with 4 skips on
 pytest 9.0.3 at 91.96% statement (6,894/7,497), 87.65% branch (1,958/2,234),
-and 90.97% combined coverage. The provider defaults and routing duplicate-key
-differentials pass. The full Rust workspace and strict Clippy pass locally after
-these changes; the Windows-only rename and lock branches await hosted
-compile/runtime validation. Formatting, Ruff, Bandit,
+and 90.97% combined coverage. The provider defaults, routing duplicate-key,
+and injected-classifier evaluator differentials pass. The full Rust workspace
+and strict Clippy pass locally after these changes; the Windows-only rename and
+lock branches await hosted compile/runtime validation. Formatting, Ruff, Bandit,
 cargo audit, package wheel/sdist build, Twine metadata checks, and diff checks
 passed for the preceding candidate. `pip-audit` initially exposed pytest
 8.4.2 (CVE-2025-71176); the dev constraint selects patched pytest 9.0.3–9.0.x
@@ -152,7 +153,7 @@ corrected same-directory rename or lock paths. The unchanged release gate
 remains 0.6667 against 0.90; live smoke skips without credentials. PR #16
 remains promotion-blocked by the frozen context-band result and required
 independent human annotations. Coverage evidence is in
-`docs/COVERAGE_REPORT_2026-11-14-TASK-114.md`.
+`docs/COVERAGE_REPORT_2026-11-14-TASK-118.md`.
 
 PR #16 was reviewed against its release contract and code standards: no
 separate implementation defect was identified in the reviewed diff, but the
