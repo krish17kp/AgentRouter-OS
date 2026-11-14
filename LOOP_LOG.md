@@ -2430,6 +2430,20 @@ nested values. Full Python regression passes 2,405/4 in 416.38 seconds at
 The full Rust workspace and strict Clippy pass; formatting, targeted Ruff,
 diff checks, and JSON state validation pass. RC `83fd7dc` has hosted Rust and
 Python/Rust compatibility checks passing across Linux, Windows, and macOS;
-some Python Windows jobs remain in progress. TASK-130 hosted checks await this
-commit. `agentrouter/schema.py` remains Partial pending all public enums,
-models, defaults, validators, and derived properties.
+some Python Windows jobs remain in progress. TASK-130 is committed and pushed
+as `4738a01`; its hosted checks are running. `agentrouter/schema.py` remains
+Partial pending all public enums, models, defaults, validators, and derived
+properties.
+
+## 2026-11-14 — TASK-131 direct schema enum parity
+
+Extended the Rust schema JSON probe to all twelve enums declared in
+`agentrouter/schema.py`, covering every one of the 45 accepted string values
+and 36 rejected string/null/number inputs against Pydantic `TypeAdapter`.
+All 104 focused schema tests pass. The full Python suite passes 2,486/4 in
+362.34 seconds at 91.970% statement, 87.690% branch, and 90.988% weighted
+combined coverage. Full Rust workspace and strict Clippy pass; Rust formatting,
+targeted Ruff, `git diff --check`, and loop-state JSON validation pass. Hosted
+validation for the combined changes awaits the authorized RC push. Direct
+`ModelEntry` defaults, field constraints, and derived-property parity remain
+the next schema slice; the module stays Partial.

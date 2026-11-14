@@ -8,9 +8,25 @@ import shutil
 import subprocess
 
 import pytest
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
-from agentrouter.schema import Ability, ExecutionTarget, Provider
+from agentrouter.schema import (
+    Ability,
+    AbilitySource,
+    ApprovalLevel,
+    ContextBand,
+    DeprecationStatus,
+    ExecutionMode,
+    ExecutionTarget,
+    LatencyTier,
+    Level,
+    OutputType,
+    PricingTier,
+    Provider,
+    ReleaseChannel,
+    SnapshotType,
+    TaskType,
+)
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 pytestmark = pytest.mark.skipif(shutil.which("cargo") is None, reason="cargo not on PATH")
@@ -201,5 +217,53 @@ def test_rust_schema_rejects_values_pydantic_rejects(kind, model, payload):
     with pytest.raises(ValidationError):
         model.model_validate(payload)
     process = _rust_schema(kind, payload)
+    assert process.returncode != 0
+    assert process.stdout == ""
+
+
+SCHEMA_ENUMS = [
+    ("task_type", TaskType),
+    ("level", Level),
+    ("output_type", OutputType),
+    ("approval_level", ApprovalLevel),
+    ("context_band", ContextBand),
+    ("pricing_tier", PricingTier),
+    ("latency_tier", LatencyTier),
+    ("deprecation_status", DeprecationStatus),
+    ("release_channel", ReleaseChannel),
+    ("snapshot_type", SnapshotType),
+    ("ability_source", AbilitySource),
+    ("execution_mode", ExecutionMode),
+]
+
+
+@pytest.mark.parametrize(
+    ("kind", "enum_type", "value"),
+    [
+        (kind, enum_type, member.value)
+        for kind, enum_type in SCHEMA_ENUMS
+        for member in enum_type
+    ],
+)
+def test_rust_schema_enum_values_match_pydantic(kind, enum_type, value):
+    adapter = TypeAdapter(enum_type)
+    expected = adapter.dump_python(adapter.validate_python(value), mode="json")
+    process = _rust_schema(kind, value)
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == expected
+
+
+@pytest.mark.parametrize(
+    ("kind", "enum_type", "value"),
+    [
+        (kind, enum_type, value)
+        for kind, enum_type in SCHEMA_ENUMS
+        for value in ("not-a-schema-enum-value", None, 7)
+    ],
+)
+def test_rust_schema_enums_reject_values_pydantic_rejects(kind, enum_type, value):
+    with pytest.raises(ValidationError):
+        TypeAdapter(enum_type).validate_python(value)
+    process = _rust_schema(kind, value)
     assert process.returncode != 0
     assert process.stdout == ""

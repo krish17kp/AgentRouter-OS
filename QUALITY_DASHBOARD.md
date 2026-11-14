@@ -2,16 +2,17 @@
 
 ## Current checkpoint — 2026-11-14
 
-The latest pushed RC head is `83fd7dc`. Rust 1.89, the Rust workspace across
-Linux/Windows/macOS, Python/Rust compatibility on Linux/Windows/macOS, and the
-Python 3.10–3.13 matrix have passed in hosted checks, apart from still-running
-Windows jobs. The promotion gate remains blocked by the unchanged frozen
-context accuracy of 0.6667 < 0.90. TASK-130 passes locally: 2,405 Python tests
-passed and 4 skipped, with 91.970% statement, 87.690% branch, and 90.988%
-weighted combined coverage; the full Rust workspace and strict Clippy pass.
-The new direct `Provider` and `ExecutionTarget` schema differentials pass 101
-focused cases. Python remains the shipping authority and the Rust migration is
-incomplete.
+The latest pushed RC head is `4738a01`; Rust workspace and Python/Rust
+compatibility pass across Linux, Windows, and macOS, as do Python 3.10–3.13 and
+macOS test jobs. Windows full-suite jobs remain in progress. The promotion gate
+remains blocked by the unchanged frozen
+context accuracy of 0.6667 < 0.90. The latest full suite passes 2,486 tests and
+skips 4, at 91.970% statement, 87.690% branch, and 90.988% weighted combined
+coverage; full Rust workspace and strict Clippy pass locally. TASK-130's direct
+`Provider` and `ExecutionTarget` schema differentials pass 101 focused cases.
+TASK-131 directly checks all declared values of the twelve public schema enums;
+104 focused cases and the full regression pass. Python remains the shipping
+authority and the Rust migration is incomplete.
 
 ## Historical dashboard
 

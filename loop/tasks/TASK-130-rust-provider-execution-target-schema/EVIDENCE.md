@@ -27,6 +27,5 @@ input behavior unverified independently of `load_models`/`load_providers`.
 - `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`:
   passed.
 - `cargo fmt --all -- --check`, targeted Ruff, and `git diff --check`: passed.
-- Hosted Python/Rust and Python platform checks are running at `83fd7dc`; the
-  frozen context-band gate remains below threshold, and hosted validation of
-  this unpushed TASK-130 change is pending.
+- Hosted validation is running at `4738a01`; the frozen context-band gate
+  remains below threshold and live OpenAI smoke has no configured credential.

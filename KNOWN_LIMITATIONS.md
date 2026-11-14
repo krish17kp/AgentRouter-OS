@@ -34,7 +34,7 @@
   nested inputs. Focused schema/registry suites pass 101 cases; the full suite
   passes 2,405/4 with 91.970% statement, 87.690% branch, and 90.988% weighted
   combined coverage. Local Rust workspace, strict Clippy, format, and Ruff pass;
-  hosted validation of this unpushed change is pending. The broader
+  hosted validation is running at `4738a01`. The broader
   `agentrouter/schema.py` public-module parity review remains open.
 - The Rust evaluation crate now matches the full `agentrouter/evaluation/adapters/agentrouter_gold.py` module surface: metadata, availability, describe, loading, checksum and deterministic sampling. Its Python/Rust differential test covers all 165 committed cases plus Unicode/default handling. External adapter base behavior and the other dataset adapters remain Python-only; see `docs/RUST_PARITY_MATRIX.md`.
 - A Rust fixture-mode adapter base now covers metadata, availability, description, JSONL loading/checksums, deterministic sampling, and explicit real-mode skips for six external fixtures. Real dataset downloads and dataset-specific row transformations still require Python's optional `datasets` integration.
@@ -72,7 +72,7 @@
   keep that annotation schema module Partial.
 - Latest full Python coverage is 91.970% statement / 87.690% branch / 90.988%
   weighted combined, meeting the unchanged 90%/85% thresholds; see
-  `docs/COVERAGE_REPORT_2026-11-14-TASK-130.md` (pytest 9.0.3).
+  `docs/COVERAGE_REPORT_2026-11-14-TASK-131.md` (pytest 9.0.3).
   `pip-audit` also identified pytest 8.4.2 as affected by CVE-2025-71176. The
   dev constraint now selects patched pytest 9.0.x, and `pip-audit` plus the
   full pytest 9.0.3 regression pass.

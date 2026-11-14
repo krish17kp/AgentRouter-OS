@@ -3,12 +3,13 @@
 ## Current checkpoint — 2026-11-14
 
 Product acceptance remains **not granted**. PR #16 is the sole open PR. The
-latest pushed `83fd7dc` has passed Rust workspace and Python/Rust compatibility
-checks on Linux, Windows, and macOS, along with the hosted Python 3.10–3.13
-matrix; a few Windows jobs remain in progress. The prior PR check remains
+latest pushed `4738a01` has passed Rust workspace and Python/Rust compatibility
+on Linux, Windows, and macOS, and the Python 3.10–3.13 plus macOS test jobs.
+The Windows full-suite jobs remain in progress. The prior PR check remains
 blocked by the unchanged context-band promotion gate at 0.6667 < 0.90.
 TASK-130's full local regression passes 2,405 tests with 4 skips and its schema
-suite passes 101 focused cases. Rust migration and product acceptance remain
+suite passes 101 focused cases. TASK-131's 104 enum-focused cases and full
+2,486/4 Python regression pass locally. Rust migration and product acceptance remain
 incomplete; no production deployment or paid OpenAI request occurred.
 The table below is historical.
 
