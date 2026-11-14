@@ -80,7 +80,7 @@ release authority until the full set is complete.
 | `agentrouter/reliability/harness.py` | `agentrouter-reliability::{LoadSpec,LoadOutcome,run_load}` | Partial |
 | `agentrouter/reliability/soak.py` | `agentrouter-reliability::{Sample,SoakResult,soak}` | Partial |
 | `agentrouter/safety.py` | `agentrouter-policy` | Parity |
-| `agentrouter/schema.py` | `agentrouter-core + agentrouter-registry` | Partial |
+| `agentrouter/schema.py` | `agentrouter-core + agentrouter-registry` | Parity |
 | `agentrouter/sdk.py` | `agentrouter-cli::sdk` | Partial |
 | `agentrouter/server/__init__.py` | `agentrouter-evaluation::package_markers::SERVER_PUBLIC_EXPORTS` | Parity |
 | `agentrouter/server/app.py` | `agentrouter-api::server` + `agentrouter-api-server` | Partial |
@@ -209,10 +209,14 @@ release authority until the full set is complete.
   targets, unknown fields, normalized serialization, and its `vendor`, `key`,
   `vendor_key`, and `name` properties. Python also rejects non-finite price and
   confidence metadata at validation, matching Rust's safety constraints.
-  `schema.py` remains Partial pending direct coverage for Classification's
-  omitted-default and missing-required-field cases and a final review of all
-  public models and validators; the individual parity slices do not by
-  themselves close that inventory.
+  TASK-133 closes the public schema inventory: direct differentials now cover
+  every required field and omitted defaults for `Ability`, `ExecutionTarget`,
+  `Provider`, `ModelEntry`, and `Classification`; populated Classification
+  optionals and its alternative task enum; all twelve enums; scalar coercions,
+  invalid values, bounds, unknown-field rejection, nested values, normalized
+  serialization, model-derived properties, and the `ModelEntry` vendor
+  validator. The Python/Rust probes and the full Python regression pass, so
+  `agentrouter/schema.py` meets the module parity bar.
 - Context-band model inference is ported but remains disabled in the default
   classifier. The frozen evaluation gate still controls whether learned routing
   can be enabled.

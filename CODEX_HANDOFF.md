@@ -2,13 +2,12 @@
 
 ## Current checkpoint — 2026-11-14
 
-Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `16c0a04`.
-TASK-132 is locally verified and ready to push: 2,509 Python tests pass and 4
-skip; 211 focused ModelEntry schema/registry cases, the full Rust workspace,
-strict Clippy, formatting, Ruff, and diff checks pass. Coverage is 91.970%
-statement, 87.690% branch, and 90.988% weighted combined. TASK-131 now passes
-hosted Rust and Python/Rust compatibility on Linux, Windows, and macOS, plus
-Python 3.10–3.13 and macOS/Windows full suites. The frozen context gate remains
+Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `ea1f875`
+(TASK-132), and TASK-133 is locally verified and ready for the next RC push.
+The full Python regression passes 2,525 tests with 5 skips; 260 focused
+schema/registry/classification cases and the full Rust workspace pass. Strict
+Clippy, formatting, Ruff, and diff checks pass. Coverage is 91.970%
+statement, 87.690% branch, and 90.988% weighted combined. The frozen context gate remains
 unchanged at 0.6667 < 0.90. Continue schema parity while hosted checks run.
 Human annotation, bounded OpenAI live validation, main promotion, and deployment
 credentials remain owner-gated in `PRODUCTION_STATUS.md`.

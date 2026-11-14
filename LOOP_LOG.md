@@ -1,5 +1,28 @@
 # LOOP_LOG
 
+## 2026-11-14 — TASK-133 direct public schema required/default parity
+
+Completed the direct contract inventory for `agentrouter/schema.py`. Python
+and Rust now have differential cases for every required field and omitted
+defaults across `Ability`, `ExecutionTarget`, `Provider`, `ModelEntry`, and
+`Classification`; Classification's optional values and alternative task enum;
+all twelve enums; coercion and invalid-value boundaries; unknown fields;
+nested values; serialization; and `ModelEntry` properties/vendor defaulting.
+The finite model-confidence checks now also reject positive and negative
+infinity in both runtimes.
+
+The focused schema/registry/classification suite passes 260 cases. Full Python
+regression passes 2,525/5 with 91.970% statement, 87.690% branch, and 90.988%
+weighted combined coverage; `schema.py` is 100% covered. Rust workspace tests,
+strict Clippy, Ruff, Rust formatting, and diff checks pass. The
+parity matrix now marks `agentrouter/schema.py` complete. The successful full
+test run used a `/data` Cargo target because the prior temporary filesystem
+filled during the first attempt. Hosted validation awaits the RC push; PR #16's
+frozen gate remains blocked at 0.6667 < 0.90.
+
+Next: push the verified slice, check hosted results, then start the MCP
+current-protocol compatibility work.
+
 ## 2026-11-14 — TASK-132 direct ModelEntry schema contract
 
 Added a direct Python/Rust JSON probe for `ModelEntry` and checked normalized

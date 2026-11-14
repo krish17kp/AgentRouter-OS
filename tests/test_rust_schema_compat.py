@@ -113,6 +113,8 @@ def test_rust_ability_roundtrip_matches_pydantic(payload):
         {"coding": 1.5, "reasoning": 0, "writing": 0},
         {"coding": "not-a-score", "reasoning": 0, "writing": 0},
         {"coding": 0, "reasoning": 0, "writing": 0, "extra": 1},
+        {"reasoning": 0, "writing": 0},
+        {"coding": 0, "writing": 0},
         {"coding": 0, "reasoning": 0},
     ],
 )
@@ -179,6 +181,11 @@ def test_rust_schema_defaults_and_coercions_match_pydantic(kind, model, payload)
         (
             "execution_target",
             ExecutionTarget,
+            {"host": "local"},
+        ),
+        (
+            "execution_target",
+            ExecutionTarget,
             {"host": "local", "host_model_id": "small", "execution_mode": "shell"},
         ),
         (
@@ -201,6 +208,7 @@ def test_rust_schema_defaults_and_coercions_match_pydantic(kind, model, payload)
             {"host": "local", "host_model_id": "small", "unknown": True},
         ),
         ("provider", Provider, {"adapter": "manual"}),
+        ("provider", Provider, {"id": "local"}),
         ("provider", Provider, {"id": "local", "adapter": "manual", "extra": 1}),
         (
             "provider",
@@ -356,6 +364,8 @@ def test_rust_model_entry_defaults_fields_and_properties_match_pydantic(payload)
         {"ability_confidence": -0.01},
         {"ability_confidence": 1.01},
         {"ability_confidence": "NaN"},
+        {"ability_confidence": "Infinity"},
+        {"ability_confidence": "-Infinity"},
         {"ability": {"coding": 11, "reasoning": 7, "writing": 6}},
         {"pricing_tier": "unknown-tier"},
         {"tool_support": [1]},

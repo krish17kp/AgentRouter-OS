@@ -46,6 +46,30 @@ def _python_classification_json() -> dict:
     return json.loads(c.model_dump_json())
 
 
+CLASSIFICATION_REQUIRED = {
+    "task_type": "coding",
+    "complexity": "medium",
+    "risk": "low",
+    "context_tokens": 1200,
+    "context_band": "small",
+    "output_type": "code+tests",
+    "tool_needs": ["filesystem"],
+    "approval_level": "human-approval-required",
+}
+
+
+def _rust_classification_from_json(payload: dict) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["cargo", "run", "--quiet", "--bin", "classification_from_json"],
+        cwd=RUST_CRATE_DIR,
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+
+
 def _rust_classification_json() -> dict:
     result = subprocess.run(
         ["cargo", "run", "--quiet", "--bin", "print_classification"],
@@ -90,6 +114,39 @@ def test_classification_schema_roundtrip_and_extra_field_rejection_match():
     )
     assert rejected.returncode != 0
     assert rejected.stdout == ""
+
+
+def test_classification_omitted_optional_fields_use_pydantic_defaults():
+    payload = dict(CLASSIFICATION_REQUIRED)
+    expected = Classification.model_validate(payload).model_dump(mode="json")
+    result = _rust_classification_from_json(payload)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == expected
+
+
+@pytest.mark.parametrize("missing_field", tuple(CLASSIFICATION_REQUIRED))
+def test_classification_rejects_each_missing_required_field(missing_field):
+    payload = dict(CLASSIFICATION_REQUIRED)
+    del payload[missing_field]
+    with pytest.raises(ValidationError):
+        Classification.model_validate(payload)
+    result = _rust_classification_from_json(payload)
+    assert result.returncode != 0
+    assert result.stdout == ""
+
+
+def test_classification_optional_fields_and_alternative_enum_match():
+    payload = {
+        **CLASSIFICATION_REQUIRED,
+        "confidence": "0.75",
+        "needs_clarification": "yes",
+        "alternative_task_type": "analysis",
+        "ambiguity_reason": "The prompt has two plausible intents.",
+    }
+    expected = Classification.model_validate(payload).model_dump(mode="json")
+    result = _rust_classification_from_json(payload)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == expected
 
 
 @pytest.mark.parametrize(
