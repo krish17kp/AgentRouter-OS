@@ -934,7 +934,7 @@ mod tests {
             task_type: TaskType::Coding,
             complexity: Level::High,
             risk: Level::High,
-            context_tokens: 4_000,
+            context_tokens: 4_000.into(),
             context_band: ContextBand::Medium,
             output_type: OutputType::CodeTests,
             tool_needs: vec!["file-edit".to_owned(), "shell".to_owned()],

@@ -10,7 +10,7 @@ fn main() {
         task_type: TaskType::Coding,
         complexity: Level::Medium,
         risk: Level::Low,
-        context_tokens: 1200,
+        context_tokens: 1200.into(),
         context_band: ContextBand::Small,
         output_type: OutputType::CodeTests,
         tool_needs: vec!["filesystem".to_string()],

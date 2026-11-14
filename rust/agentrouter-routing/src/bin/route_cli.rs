@@ -13,10 +13,10 @@ use agentrouter_core::{
 use agentrouter_registry::ModelEntry;
 use agentrouter_routing::{route, Weights};
 
-fn band(tokens: u32) -> ContextBand {
-    if tokens < 8_000 {
+fn band(tokens: &serde_json::Number) -> ContextBand {
+    if tokens.to_string().starts_with('-') || tokens.as_u64().is_some_and(|tokens| tokens < 8_000) {
         ContextBand::Small
-    } else if tokens < 64_000 {
+    } else if tokens.as_u64().is_some_and(|tokens| tokens < 64_000) {
         ContextBand::Medium
     } else {
         ContextBand::Large
@@ -69,8 +69,12 @@ fn build_classification(d: &serde_yaml::Mapping) -> Classification {
     let risk = parse_level(&risk_str);
     let context_tokens = d
         .get("context_tokens")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(4000) as u32;
+        .and_then(|value| {
+            let encoded = serde_yaml::to_string(value).ok()?;
+            let value = serde_json::from_str::<serde_json::Value>(encoded.trim()).ok()?;
+            agentrouter_core::pydantic_integer_from_value(&value).ok()
+        })
+        .unwrap_or_else(|| 4000.into());
     let output_type = parse_output_type(&get_str("output_type", "code"));
     let tool_needs: Vec<String> = d
         .get("tool_needs")
@@ -90,7 +94,7 @@ fn build_classification(d: &serde_yaml::Mapping) -> Classification {
             "large" => ContextBand::Large,
             _ => panic!("unknown context_band {s}"),
         })
-        .unwrap_or_else(|| band(context_tokens));
+        .unwrap_or_else(|| band(&context_tokens));
     let approval_level = d
         .get("approval_level")
         .and_then(|v| v.as_str())

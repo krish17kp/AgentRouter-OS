@@ -2,15 +2,16 @@
 
 ## Current checkpoint — 2026-11-14
 
-Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `6223871`.
-TASK-125's serde_json arbitrary-precision fix passes hosted Rust workspace and
-Python/Rust compatibility on Linux, Windows, and macOS; the Python version
-matrix, platform jobs, security, site, and mutation checks also pass. The only
-failed required PR check is the frozen context-band gate at 0.6667 < 0.90.
-Local TASK-126 adds Classification confidence/boolean coercion and exact
-underscored-float whitespace behavior. It passes 22 focused checks, the
-2,352-pass/4-skip full Python suite, full Rust workspace, strict Clippy,
-formatting, Ruff, Bandit, pip-audit, and cargo audit. Push it and revalidate CI.
+Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `2e14606`.
+TASK-125 and TASK-126 pass hosted Rust workspace and Python/Rust compatibility
+on Linux, Windows, and macOS; the Python version/platform matrix, security,
+site, and mutation checks also pass. The only failed required PR check is the
+frozen context-band gate at 0.6667 < 0.90. Local TASK-127 carries arbitrary-
+precision context token values through Classification, classifier, routing,
+HTTP, MCP, and SDK paths. Focused differentials, Rust workspace, strict Clippy,
+formatting, Ruff, Bandit, pip-audit, and cargo audit pass; the full Python suite
+passes 2,378 tests with 4 skips at 91.970% statement, 87.690% branch, and
+90.988% combined coverage. Commit and push TASK-127, then monitor hosted checks.
 Human annotation, bounded OpenAI live validation, main promotion, and deployment
 credentials remain owner-gated in `PRODUCTION_STATUS.md`.
 

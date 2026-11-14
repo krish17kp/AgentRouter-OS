@@ -47,8 +47,8 @@ pub fn first_validation_message(value: &Value, kind: RequestKind) -> Option<Stri
                 .get("context_tokens")
                 .filter(|value| !value.is_null())
             {
-                if let Some(number) = pydantic_integer(value) {
-                    if number <= 0 {
+                if let Some(number) = pydantic_context_integer(value) {
+                    if !is_positive_integer(&number) {
                         return Some(field_error(
                             "context_tokens",
                             "Input should be greater than 0",
@@ -229,6 +229,32 @@ fn pydantic_integer(value: &Value) -> Option<i64> {
     }
 }
 
+fn pydantic_context_integer(value: &Value) -> Option<serde_json::Number> {
+    agentrouter_core::pydantic_integer_from_value(value).ok()
+}
+
+fn is_positive_integer(value: &serde_json::Number) -> bool {
+    if let Some(value) = value.as_i64() {
+        return value > 0;
+    }
+    if let Some(value) = value.as_u64() {
+        return value > 0;
+    }
+    let text = value.to_string();
+    text != "0" && !text.starts_with('-')
+}
+
+fn optional_context_tokens<'de, D>(deserializer: D) -> Result<Option<serde_json::Number>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Option::<Value>::deserialize(deserializer)?
+        .map(|value| {
+            agentrouter_core::pydantic_integer_from_value(&value).map_err(serde::de::Error::custom)
+        })
+        .transpose()
+}
+
 fn pydantic_boolean(value: &Value) -> bool {
     match value {
         Value::Bool(_) => true,
@@ -250,8 +276,8 @@ fn pydantic_boolean(value: &Value) -> bool {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ClassifyRequest {
     pub task: String,
-    #[serde(default, deserialize_with = "crate::pydantic::optional_i64")]
-    pub context_tokens: Option<i64>,
+    #[serde(default, deserialize_with = "optional_context_tokens")]
+    pub context_tokens: Option<serde_json::Number>,
     #[serde(default)]
     pub risk: Option<Level>,
     #[serde(default)]
@@ -269,7 +295,11 @@ impl ClassifyRequest {
                 "is longer than 100000 characters",
             ));
         }
-        if self.context_tokens.is_some_and(|value| value <= 0) {
+        if self
+            .context_tokens
+            .as_ref()
+            .is_some_and(|value| !is_positive_integer(value))
+        {
             return Err(ValidationError::new(
                 "context_tokens",
                 "must be greater than 0",
@@ -418,7 +448,7 @@ mod tests {
             .to_string()
             .contains("100000"));
         let mut request = classify("task");
-        request.context_tokens = Some(0);
+        request.context_tokens = Some(0.into());
         assert!(request
             .validate()
             .unwrap_err()

@@ -1,7 +1,7 @@
 //! The scalar coercions used by Pydantic's non-strict request/response fields.
 
 use serde::de::{self, Visitor};
-use serde::{Deserialize, Deserializer};
+use serde::Deserializer;
 use std::fmt;
 
 pub(crate) fn i64<'de, D>(deserializer: D) -> Result<i64, D::Error>
@@ -56,13 +56,6 @@ where
     }
 
     deserializer.deserialize_any(IntegerVisitor)
-}
-
-pub(crate) fn optional_i64<'de, D>(deserializer: D) -> Result<Option<i64>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    Option::<PydanticInteger>::deserialize(deserializer).map(|value| value.map(|n| n.0))
 }
 
 pub(crate) fn boolean<'de, D>(deserializer: D) -> Result<bool, D::Error>
@@ -128,17 +121,6 @@ where
     }
 
     deserializer.deserialize_any(BooleanVisitor)
-}
-
-struct PydanticInteger(i64);
-
-impl<'de> Deserialize<'de> for PydanticInteger {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        i64(deserializer).map(Self)
-    }
 }
 
 pub(crate) fn parse_integer(value: &str) -> Result<i64, String> {

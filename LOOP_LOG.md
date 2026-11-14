@@ -2368,5 +2368,18 @@ acceptance mismatch. Twenty-two focused schema/registry differentials pass.
 The full Python suite passes 2,352/4 at 91.970% statement, 87.690% branch,
 90.988% combined. Full Rust workspace, strict Clippy, format, Ruff, Bandit,
 pip-audit, cargo audit, and diff checks pass locally. Hosted validation is
-pending push; Rust `context_tokens` remains bounded to `u32` and `schema.py`
-remains Partial. The frozen release gate remains 0.6667 < 0.90.
+pending push. The frozen release gate remains 0.6667 < 0.90.
+
+## 2026-11-14 — TASK-127 Classification arbitrary-precision integers
+
+Replaced Rust's `u32` Classification token count with exact arbitrary-precision
+integer handling and Pydantic-compatible coercion. The exact value now flows
+through text classification estimates, classifier overrides, routing capacity
+checks, HTTP request validation and service calls, MCP classification, and the
+Rust SDK. Added Python/Rust differentials for signed values beyond `u64`,
+integral float/string forms, bools, and invalid coercions; added Rust routing
+boundary checks. The 295 focused cases pass. Full Python passes 2,378/4 at
+91.970% statement, 87.690% branch, and 90.988% combined coverage. The full Rust
+workspace, strict Clippy, formatting, Ruff, Bandit, pip-audit, and cargo audit
+pass. Hosted validation is pending the authorized RC push; PR #16's frozen
+context gate remains 0.6667 < 0.90.

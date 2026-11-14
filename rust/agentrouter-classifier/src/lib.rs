@@ -732,45 +732,63 @@ fn complexity(text: &str, task: TaskType, is_build: bool) -> Level {
     }
 }
 
-fn context_tokens(text: &str, task: TaskType) -> u32 {
+fn context_token_number(digits: &str, multiplier: &str) -> serde_json::Number {
+    let digits = agentrouter_core::pydantic_integer_from_value(&serde_json::Value::String(
+        digits.to_owned(),
+    ))
+    .expect("classifier token regex captures decimal digits")
+    .to_string();
+    if digits == "0" {
+        return 0.into();
+    }
+    format!("{digits}{multiplier}")
+        .parse::<serde_json::Number>()
+        .expect("arbitrary-precision serde_json accepts classifier token counts")
+}
+
+fn decimal_digits_at_least(digits: &str, threshold: &str) -> bool {
+    let digits = digits.trim_start_matches('0');
+    digits.len() > threshold.len() || (digits.len() == threshold.len() && digits >= threshold)
+}
+
+fn context_tokens(text: &str, task: TaskType) -> serde_json::Number {
     if let Some(m) = token_re().captures(text) {
-        let n = m[1].parse::<u64>().unwrap_or(u64::MAX);
-        return n.saturating_mul(1000).min(u32::MAX as u64) as u32;
+        return context_token_number(&m[1], "000");
     }
     if let Some(m) = token_plain_re().captures(text) {
-        return m[1].parse::<u64>().unwrap_or(u64::MAX).min(u32::MAX as u64) as u32;
+        return context_token_number(&m[1], "");
     }
     if let Some(m) = quantified_context_re().captures(text) {
-        let amount: u64 = m[1].replace(',', "").parse().unwrap_or(u64::MAX);
+        let amount = m[1].replace(',', "");
         let unit = m[2].to_lowercase();
         if (unit.contains("page") || unit.contains("file") || unit.contains("document"))
-            && amount >= 250
+            && decimal_digits_at_least(&amount, "250")
         {
-            return 100_000;
+            return 100_000.into();
         }
-        if amount >= 50_000 {
-            return 100_000;
+        if decimal_digits_at_least(&amount, "50000") {
+            return 100_000.into();
         }
     }
     if hit(m_large_context(), text) {
-        return 100_000;
+        return 100_000.into();
     }
     if hit(m_document_report(), text) {
-        return 30000;
+        return 30000.into();
     }
     let existing_context = hit(m_existing_context(), text);
     if hit(m_conceptual_context(), text) && !existing_context {
-        return 2000;
+        return 2000.into();
     }
     if existing_context
         || hit(m_review_existing(), text)
         || hit(m_act_on_existing(), text)
         || hit(m_data_pipeline(), text)
     {
-        return 12000;
+        return 12000.into();
     }
     if definite_existing_re().is_match(text) && !hit(m_conceptual_context(), text) {
-        return 12000;
+        return 12000.into();
     }
     if hit(m_existing_code(), text)
         && matches!(
@@ -778,15 +796,16 @@ fn context_tokens(text: &str, task: TaskType) -> u32 {
             TaskType::Coding | TaskType::Analysis | TaskType::Summarization
         )
     {
-        return 12000;
+        return 12000.into();
     }
-    2000
+    2000.into()
 }
 
-fn band(tokens: u32) -> ContextBand {
-    if tokens < 8_000 {
+fn band(tokens: &serde_json::Number) -> ContextBand {
+    let text = tokens.to_string();
+    if text.starts_with('-') || tokens.as_u64().is_some_and(|tokens| tokens < 8_000) {
         ContextBand::Small
-    } else if tokens < 64_000 {
+    } else if tokens.as_u64().is_some_and(|tokens| tokens < 64_000) {
         ContextBand::Medium
     } else {
         ContextBand::Large
@@ -799,13 +818,15 @@ fn band(tokens: u32) -> ContextBand {
 fn resolve_context(
     text: &str,
     task: TaskType,
-    context_tokens_override: Option<u32>,
-) -> (u32, ContextBand) {
+    context_tokens_override: Option<serde_json::Number>,
+) -> (serde_json::Number, ContextBand) {
     if let Some(t) = context_tokens_override {
-        return (t, band(t));
+        let context_band = band(&t);
+        return (t, context_band);
     }
     let tokens = context_tokens(text, task);
-    (tokens, band(tokens))
+    let context_band = band(&tokens);
+    (tokens, context_band)
 }
 
 fn output_type(text: &str, task: TaskType) -> OutputType {
@@ -936,10 +957,29 @@ fn task_type_value(t: TaskType) -> &'static str {
 #[derive(Debug, Default, Clone, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct ClassifyOptions {
-    pub context_tokens: Option<u32>,
+    #[serde(deserialize_with = "deserialize_optional_pydantic_integer")]
+    pub context_tokens: Option<serde_json::Number>,
     pub risk: Option<Level>,
     pub tools: Option<Vec<String>>,
     pub uncertainty_threshold: Option<f64>,
+}
+
+fn deserialize_optional_pydantic_integer<'de, D>(
+    deserializer: D,
+) -> Result<Option<serde_json::Number>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Option::<serde_json::Value>::deserialize(deserializer)?
+        .map(|value| {
+            if value.is_string() {
+                return Err(serde::de::Error::custom(
+                    "classifier context_tokens overrides must be numeric",
+                ));
+            }
+            agentrouter_core::pydantic_integer_from_value(&value).map_err(serde::de::Error::custom)
+        })
+        .transpose()
 }
 
 pub fn classify(task: &str, opts: &ClassifyOptions) -> Classification {
@@ -947,7 +987,7 @@ pub fn classify(task: &str, opts: &ClassifyOptions) -> Classification {
     let is_build = is_software_build(&text);
     let ttype = task_type(&text, is_build);
     let resolved_risk = opts.risk.unwrap_or_else(|| risk(&text));
-    let (tokens, ctx_band) = resolve_context(&text, ttype, opts.context_tokens);
+    let (tokens, ctx_band) = resolve_context(&text, ttype, opts.context_tokens.clone());
     let (conf, alternative, ambiguity) = confidence(&text, ttype, is_build);
     let threshold = opts
         .uncertainty_threshold
@@ -1050,7 +1090,12 @@ mod tests {
             "summarize this 999999999999999999999999999999 tokens file",
         ] {
             let c = classify_default(task);
-            assert_eq!(c.context_tokens, u32::MAX);
+            let expected = if task.contains("9999999999k") {
+                "9999999999000"
+            } else {
+                "999999999999999999999999999999"
+            };
+            assert_eq!(c.context_tokens.to_string(), expected);
             assert_eq!(c.context_band, ContextBand::Large);
         }
     }

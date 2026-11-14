@@ -8,10 +8,16 @@
   on Linux, Windows, and macOS at `6223871`.
 - TASK-126 adds Pydantic confidence/boolean coercion to Rust Classification and
   matches the whitespace boundary for digit-separated float strings. Local
-  focused tests, the 2,352-pass/4-skip full suite, Rust workspace, strict
-  Clippy, Ruff, format, Bandit, pip-audit, and cargo audit pass; hosted
-  revalidation is pending. `schema.py` remains Partial because Rust
-  `context_tokens` remains bounded to `u32`.
+  focused tests, full Python regression, Rust workspace, strict Clippy, Ruff,
+  format, Bandit, pip-audit, and cargo audit pass; hosted cross-platform
+  revalidation passed at `2e14606`.
+- TASK-127 changes Rust classification token counts to arbitrary-precision
+  integers with Pydantic-compatible input coercion, carries exact values through
+  classifier estimation, routing, HTTP, MCP, and the Rust SDK, and tests values
+  beyond both `u32` and `u64`. Its 295 focused differential cases, 2,378-pass /
+  4-skip full Python suite, Rust workspace, strict Clippy, formatting, Ruff,
+  Bandit, pip-audit, and cargo audit pass locally; hosted checks are pending.
+  `agentrouter/schema.py` remains Partial pending full-module contract coverage.
 - The Rust evaluation crate now matches the full `agentrouter/evaluation/adapters/agentrouter_gold.py` module surface: metadata, availability, describe, loading, checksum and deterministic sampling. Its Python/Rust differential test covers all 165 committed cases plus Unicode/default handling. External adapter base behavior and the other dataset adapters remain Python-only; see `docs/RUST_PARITY_MATRIX.md`.
 - A Rust fixture-mode adapter base now covers metadata, availability, description, JSONL loading/checksums, deterministic sampling, and explicit real-mode skips for six external fixtures. Real dataset downloads and dataset-specific row transformations still require Python's optional `datasets` integration.
 - Python is still the shipping router. Rust R4 has route, SQLite,
@@ -48,7 +54,7 @@
   keep that annotation schema module Partial.
 - Latest full Python coverage is 91.970% statement / 87.690% branch / 90.988%
   combined, meeting the unchanged 90%/85% thresholds; see
-  `docs/COVERAGE_REPORT_2026-11-14-TASK-126.md` (pytest 9.0.3).
+  `docs/COVERAGE_REPORT_2026-11-14-TASK-127.md` (pytest 9.0.3).
   `pip-audit` also identified pytest 8.4.2 as affected by CVE-2025-71176. The
   dev constraint now selects patched pytest 9.0.x, and `pip-audit` plus the
   full pytest 9.0.3 regression pass.

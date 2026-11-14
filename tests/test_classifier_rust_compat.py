@@ -74,6 +74,8 @@ PROMPTS = [
     "do it",
     "summarize and refactor this",
     "summarize the repo and refactor the auth module",
+    "Summarize this 999999999999999999999999999999 tokens file",
+    "Summarize this 9999999999k token repository",
 ]
 
 
@@ -129,7 +131,30 @@ def test_classifier_explicit_overrides_match_python():
     assert json.loads(completed.stdout) == expected.model_dump(mode="json")
 
 
-@pytest.mark.parametrize("input_payload", [{"task": ""}, {"task": "hi", "overrides": {"extra": 1}}])
+@pytest.mark.parametrize("context_tokens", [True, 123.0, 2**100, -(2**100)])
+def test_classifier_context_integer_coercions_match_python(context_tokens):
+    task = "Review this repository for security issues"
+    expected = classify(task, context_tokens=context_tokens)
+    completed = subprocess.run(
+        ["cargo", "run", "--quiet", "-p", "agentrouter-classifier", "--bin", "classify_from_json"],
+        cwd=ROOT,
+        input=json.dumps({"task": task, "overrides": {"context_tokens": context_tokens}}),
+        text=True,
+        capture_output=True,
+        timeout=120,
+        check=True,
+    )
+    assert json.loads(completed.stdout) == expected.model_dump(mode="json")
+
+
+@pytest.mark.parametrize(
+    "input_payload",
+    [
+        {"task": ""},
+        {"task": "hi", "overrides": {"extra": 1}},
+        {"task": "hi", "overrides": {"context_tokens": "1_000"}},
+    ],
+)
 def test_classifier_json_rejects_invalid_request(input_payload):
     completed = subprocess.run(
         ["cargo", "run", "--quiet", "-p", "agentrouter-classifier", "--bin", "classify_from_json"],

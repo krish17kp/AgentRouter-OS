@@ -248,6 +248,8 @@ def test_rust_http_response_schema_roundtrips_like_python(kind, model, payload):
         ("classify", {"task": "x", "context_tokens": 3.0}),
         ("classify", {"task": "x", "context_tokens": "1_000"}),
         ("classify", {"task": "x", "context_tokens": "12.0"}),
+        ("classify", {"task": "x", "context_tokens": 2**100}),
+        ("classify", {"task": "x", "context_tokens": "123456789012345678901234567890"}),
         ("route", {"task": "x", "no_log": "yes"}),
         ("route", {"task": "x", "no_log": 0.0}),
         ("feedback", {"decision_id": "d_1", "rating": True}),
@@ -272,6 +274,7 @@ def test_rust_http_request_schema_matches_supported_pydantic_coercions(kind, pay
     [
         ("classify", {"task": "x", "context_tokens": 2.5}),
         ("classify", {"task": "x", "context_tokens": "1e3"}),
+        ("classify", {"task": "x", "context_tokens": 1e19}),
         ("route", {"task": "x", "no_log": "sometimes"}),
         ("feedback", {"decision_id": "d_1", "rating": 1.5}),
     ],
@@ -322,6 +325,19 @@ def test_rust_api_service_classification_matches_python(home):
         risk=payload["risk"],
         tools=payload["tools"],
     )
+    process = _rust_service(home, "classify", payload)
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == expected
+
+
+def test_rust_api_service_preserves_unbounded_context_tokens(home):
+    from agentrouter.server import service
+
+    payload = {
+        "task": "review this repository for security issues",
+        "context_tokens": 2**100,
+    }
+    expected = service.classify_task(payload["task"], context_tokens=payload["context_tokens"])
     process = _rust_service(home, "classify", payload)
     assert process.returncode == 0, process.stderr
     assert json.loads(process.stdout) == expected

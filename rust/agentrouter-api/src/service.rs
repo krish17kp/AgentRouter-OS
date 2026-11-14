@@ -42,16 +42,8 @@ fn classifier_options(request: &ClassifyRequest) -> Result<ClassifyOptions, Serv
     request
         .validate()
         .map_err(|error| ServiceError::Validation(error.to_string()))?;
-    let context_tokens = request
-        .context_tokens
-        .map(|tokens| {
-            u32::try_from(tokens).map_err(|_| {
-                ServiceError::Validation("context_tokens exceeds Rust classifier range".to_string())
-            })
-        })
-        .transpose()?;
     Ok(ClassifyOptions {
-        context_tokens,
+        context_tokens: request.context_tokens.clone(),
         risk: request.risk,
         tools: request.tools.clone(),
         uncertainty_threshold: None,

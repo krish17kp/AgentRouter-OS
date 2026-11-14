@@ -152,7 +152,7 @@ impl AgentRouterClient {
     pub fn classify(
         &self,
         task: &str,
-        context_tokens: Option<i64>,
+        context_tokens: Option<serde_json::Number>,
         risk: Option<&str>,
         tools: Option<&[String]>,
     ) -> Result<Value, ClientError> {
@@ -172,7 +172,7 @@ impl AgentRouterClient {
         &self,
         task: &str,
         prefer: Option<&str>,
-        context_tokens: Option<i64>,
+        context_tokens: Option<serde_json::Number>,
         risk: Option<&str>,
         tools: Option<&[String]>,
         no_log: bool,
@@ -285,7 +285,7 @@ mod tests {
         let (url, server) = serve_once("200 OK", r#"{"decision_id":"d_1"}"#);
         let client = AgentRouterClient::new(Some(&url), Some("secret"), None);
         let result = client
-            .route("write docs", None, Some(0), None, None, false)
+            .route("write docs", None, Some(0.into()), None, None, false)
             .unwrap();
         assert_eq!(result["decision_id"], "d_1");
         let request = server.join().unwrap();

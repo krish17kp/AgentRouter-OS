@@ -827,7 +827,7 @@ mod tests {
             task_type: TaskType::Coding,
             complexity: Level::Medium,
             risk,
-            context_tokens: 2000,
+            context_tokens: 2000.into(),
             context_band: ContextBand::Small,
             output_type: OutputType::Code,
             tool_needs: vec![],

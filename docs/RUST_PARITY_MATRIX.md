@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-14 (TASK-082–125). This inventory covers every Python source module under
+Updated: 2026-11-14 (TASK-082–127). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -171,7 +171,10 @@ release authority until the full set is complete.
   checks against Pydantic. Its `confidence` field now matches Pydantic number,
   numeric-string, and boolean coercion with the 0–1 bound; `needs_clarification`
   matches boolean, 0/1 numeric, and recognized string forms. `context_tokens`
-  remains `u32` in Rust while Python accepts unbounded signed integers.
+  now preserves Python's signed arbitrary-precision integer values and Pydantic
+  numeric/string/boolean coercions. Classifier estimates and routing capacity
+  checks also preserve the exact integer rather than truncating to `u32`.
+  The module remains Partial pending full-module differential coverage.
   Annotation manifest schema versions and count maps
   now preserve Python-compatible arbitrary-precision integers exactly in
   schema validation and JSON storage. Raw timestamp differentials now exercise

@@ -34,7 +34,7 @@ fn classification() -> Classification {
         task_type: TaskType::Coding,
         complexity: Level::Medium,
         risk: Level::Low,
-        context_tokens: 12_000,
+        context_tokens: 12_000.into(),
         context_band: ContextBand::Small,
         output_type: OutputType::Code,
         tool_needs: vec!["file-edit".to_owned()],

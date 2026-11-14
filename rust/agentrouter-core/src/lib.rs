@@ -95,7 +95,8 @@ pub struct Classification {
     pub task_type: TaskType,
     pub complexity: Level,
     pub risk: Level,
-    pub context_tokens: u32,
+    #[serde(deserialize_with = "deserialize_pydantic_integer")]
+    pub context_tokens: serde_json::Number,
     pub context_band: ContextBand,
     pub output_type: OutputType,
     pub tool_needs: Vec<String>,
@@ -311,6 +312,97 @@ where
         .ok_or_else(|| serde::de::Error::custom("invalid boolean value"))
 }
 
+fn deserialize_pydantic_integer<'de, D>(deserializer: D) -> Result<serde_json::Number, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = serde_json::Value::deserialize(deserializer)?;
+    pydantic_integer_from_value(&value).map_err(serde::de::Error::custom)
+}
+
+/// Coerce one JSON value using Pydantic's non-strict `int` rules.
+///
+/// Keeping this shared lets the HTTP request schema and Classification model
+/// use identical arbitrary-precision handling for Python's unbounded ints.
+pub fn pydantic_integer_from_value(
+    value: &serde_json::Value,
+) -> Result<serde_json::Number, String> {
+    match value {
+        serde_json::Value::Bool(value) => Ok(serde_json::Number::from(u8::from(*value))),
+        serde_json::Value::Number(number) => pydantic_integer_from_number(number),
+        serde_json::Value::String(value) => {
+            let integer = parse_pydantic_integer_text(value)
+                .ok_or_else(|| "value must be an integer".to_owned())?;
+            integer
+                .parse::<serde_json::Number>()
+                .map_err(|_| "value must be an integer".to_owned())
+        }
+        _ => Err("value must be an integer".to_owned()),
+    }
+}
+
+fn pydantic_integer_from_number(number: &serde_json::Number) -> Result<serde_json::Number, String> {
+    let text = number.to_string();
+    if let Some(integer) = canonical_integer_text(&text) {
+        return integer
+            .parse::<serde_json::Number>()
+            .map_err(|_| "value must be an integer".to_owned());
+    }
+
+    let value = text
+        .parse::<f64>()
+        .map_err(|_| "value must be an integer".to_owned())?;
+    if value.is_finite()
+        && value.fract() == 0.0
+        && value > i64::MIN as f64
+        && value < -(i64::MIN as f64)
+    {
+        return Ok(serde_json::Number::from(value as i64));
+    }
+    Err("value must be an integer".to_owned())
+}
+
+fn parse_pydantic_integer_text(value: &str) -> Option<String> {
+    let value = value.trim();
+    let normalized = strip_valid_digit_separators(value)?;
+    if let Some(integer) = canonical_integer_text(&normalized) {
+        return Some(integer);
+    }
+
+    // Pydantic accepts strings such as "12.0" as ints, but rejects exponent
+    // notation, empty decimal parts, and underscore separators in the fraction.
+    let (whole, fraction) = value.split_once('.')?;
+    if fraction.is_empty()
+        || fraction.contains('.')
+        || fraction.starts_with(['+', '-'])
+        || !fraction.bytes().all(|byte| byte.is_ascii_digit())
+        || fraction.bytes().any(|byte| byte != b'0')
+    {
+        return None;
+    }
+    let whole = strip_valid_digit_separators(whole)?;
+    canonical_integer_text(&whole)
+}
+
+fn canonical_integer_text(value: &str) -> Option<String> {
+    let (negative, digits) = match value.strip_prefix('-') {
+        Some(digits) => (true, digits),
+        None => (false, value.strip_prefix('+').unwrap_or(value)),
+    };
+    if digits.is_empty() || !digits.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    let digits = digits.trim_start_matches('0');
+    if digits.is_empty() {
+        return Some("0".to_owned());
+    }
+    Some(if negative {
+        format!("-{digits}")
+    } else {
+        digits.to_owned()
+    })
+}
+
 /// Errors shared across crates. Downstream crates extend this via
 /// `#[from]`/wrapping rather than inventing parallel error enums, matching
 /// the "fail closed on unknown controls, malformed registries" invariant in
@@ -361,7 +453,7 @@ mod tests {
             task_type: TaskType::Coding,
             complexity: Level::Medium,
             risk: Level::Low,
-            context_tokens: 0,
+            context_tokens: 0.into(),
             context_band: ContextBand::Small,
             output_type: OutputType::CodeTests,
             tool_needs: vec![],

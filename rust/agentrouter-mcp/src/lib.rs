@@ -263,12 +263,10 @@ fn classify_request(arguments: &Value) -> Result<ClassifyRequest, String> {
     let task = required_string(arguments, "task")?.to_string();
     let context_tokens = match arguments.get("context_tokens") {
         None | Some(Value::Null) => None,
-        Some(Value::Number(number)) => number
-            .as_i64()
-            .or_else(|| number.as_u64().and_then(|value| i64::try_from(value).ok()))
-            .map(Some)
-            .ok_or_else(|| "context_tokens must be a supported integer".to_string())?,
-        Some(_) => return Err("context_tokens must be an integer".to_string()),
+        Some(value) => Some(
+            agentrouter_core::pydantic_integer_from_value(value)
+                .map_err(|_| "context_tokens must be an integer".to_string())?,
+        ),
     };
     let risk = match arguments.get("risk") {
         None | Some(Value::Null) => None,

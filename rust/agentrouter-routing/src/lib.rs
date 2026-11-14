@@ -182,7 +182,7 @@ pub fn eligibility<'a>(
             });
             continue;
         }
-        if m.context_window < cls.context_tokens {
+        if context_window_is_too_small(m.context_window, &cls.context_tokens) {
             excluded.push(Excluded {
                 model: m.key(),
                 reason: format!("context {} < {}", m.context_window, cls.context_tokens),
@@ -216,6 +216,17 @@ pub fn eligibility<'a>(
     (eligible, excluded)
 }
 
+fn context_window_is_too_small(context_window: u32, context_tokens: &serde_json::Number) -> bool {
+    if let Some(context_tokens) = context_tokens.as_u64() {
+        u64::from(context_window) < context_tokens
+    } else {
+        // A negative prompt estimate is valid in Python's Classification
+        // schema; no non-negative model window is too small for it. Positive
+        // values larger than u64 exceed every registry context window.
+        !context_tokens.to_string().starts_with('-')
+    }
+}
+
 fn capability_match(m: &ModelEntry, task_type: TaskType) -> f64 {
     cap_blend(task_type)
         .iter()
@@ -232,7 +243,10 @@ fn capability_match(m: &ModelEntry, task_type: TaskType) -> f64 {
 }
 
 fn context_fit(m: &ModelEntry, cls: &Classification) -> f64 {
-    let ratio = m.context_window as f64 / (cls.context_tokens.max(1) as f64);
+    // Eligibility has excluded positive values beyond the registry window;
+    // Python's max(context_tokens, 1) maps negative values to one.
+    let denominator = cls.context_tokens.as_u64().unwrap_or(0).max(1) as f64;
+    let ratio = m.context_window as f64 / denominator;
     if ratio < 2.0 {
         0.7
     } else if ratio < 16.0 {
@@ -438,7 +452,7 @@ mod tests {
             task_type,
             complexity,
             risk: Level::Low,
-            context_tokens,
+            context_tokens: context_tokens.into(),
             context_band: ContextBand::Small,
             output_type: OutputType::Code,
             tool_needs: vec![],
@@ -448,6 +462,21 @@ mod tests {
             alternative_task_type: None,
             ambiguity_reason: None,
         }
+    }
+
+    #[test]
+    fn context_window_checks_preserve_arbitrary_precision_and_sign() {
+        let above_u32 = "4294967296".parse::<serde_json::Number>().unwrap();
+        let above_u64 = "184467440737095516160000"
+            .parse::<serde_json::Number>()
+            .unwrap();
+        let negative = "-1267650600228229401496703205376"
+            .parse::<serde_json::Number>()
+            .unwrap();
+
+        assert!(context_window_is_too_small(128_000, &above_u32));
+        assert!(context_window_is_too_small(u32::MAX, &above_u64));
+        assert!(!context_window_is_too_small(1, &negative));
     }
 
     #[test]

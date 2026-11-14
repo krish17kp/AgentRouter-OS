@@ -123,6 +123,59 @@ def test_classification_pydantic_scalar_coercions_match(confidence, needs_clarif
 
 
 @pytest.mark.parametrize(
+    "context_tokens",
+    [
+        True,
+        False,
+        1.0,
+        1e18,
+        "12",
+        "1_000",
+        " 1_000.0 ",
+        -(2**100),
+        2**100,
+    ],
+)
+def test_classification_pydantic_integer_coercions_match(context_tokens):
+    payload = _python_classification_json()
+    payload["context_tokens"] = context_tokens
+    expected = Classification.model_validate(payload).model_dump(mode="json")
+    result = subprocess.run(
+        ["cargo", "run", "--quiet", "--bin", "classification_from_json"],
+        cwd=RUST_CRATE_DIR,
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == expected
+
+
+@pytest.mark.parametrize(
+    "context_tokens",
+    [1.5, 1e19, -(2**63 * 1.0), "1e3", "1.0_0", "1_000.0_0"],
+)
+def test_classification_rejects_invalid_pydantic_integer_values(context_tokens):
+    payload = _python_classification_json()
+    payload["context_tokens"] = context_tokens
+    with pytest.raises(ValidationError):
+        Classification.model_validate(payload)
+    result = subprocess.run(
+        ["cargo", "run", "--quiet", "--bin", "classification_from_json"],
+        cwd=RUST_CRATE_DIR,
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert result.stdout == ""
+
+
+@pytest.mark.parametrize(
     "field,value",
     [
         ("confidence", -0.1),
