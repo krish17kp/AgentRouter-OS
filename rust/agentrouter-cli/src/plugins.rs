@@ -2193,20 +2193,17 @@ fn rename_sibling_no_replace_windows(
     to: &str,
 ) -> std::io::Result<()> {
     use fs_at::os::windows::OpenOptionsExt;
-    use std::os::windows::io::{AsRawHandle, FromRawHandle};
-    use windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE;
+    use std::os::windows::io::AsRawHandle;
     use windows_sys::Win32::Storage::FileSystem::{
-        CreateFileW, FileRenameInfo, GetFinalPathNameByHandleW, SetFileInformationByHandle,
-        FILE_ADD_FILE, FILE_ADD_SUBDIRECTORY, FILE_FLAG_BACKUP_SEMANTICS,
-        FILE_FLAG_OPEN_REPARSE_POINT, FILE_LIST_DIRECTORY, FILE_NAME_NORMALIZED,
-        FILE_READ_ATTRIBUTES, FILE_RENAME_INFO, FILE_SHARE_DELETE, FILE_SHARE_READ,
-        FILE_SHARE_WRITE, FILE_TRAVERSE, OPEN_EXISTING, VOLUME_NAME_DOS,
+        FileRenameInfo, SetFileInformationByHandle, FILE_FLAG_BACKUP_SEMANTICS,
+        FILE_FLAG_OPEN_REPARSE_POINT, FILE_READ_ATTRIBUTES, FILE_RENAME_INFO,
     };
 
     const DELETE_ACCESS: u32 = 0x0001_0000;
     let parent_file = parent.try_clone()?.into_std_file();
     let mut source_options = fs_at::OpenOptions::default();
     source_options.desired_access(DELETE_ACCESS | FILE_READ_ATTRIBUTES);
+    source_options.custom_flags(FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT);
     let source = source_options
         .open_path_at(&parent_file, Path::new(from))
         .map_err(|error| {
@@ -2219,54 +2216,6 @@ fn rename_sibling_no_replace_windows(
     if super::is_link_or_reparse(&source_metadata) {
         return Err(std::io::Error::other(
             "refusing to rename a plugin link or reparse point",
-        ));
-    }
-
-    let parent_identity = directory_identity(&parent_file).map_err(std::io::Error::other)?;
-    let mut final_path = vec![0_u16; 32_768];
-    let path_length = unsafe {
-        GetFinalPathNameByHandleW(
-            parent_file.as_raw_handle().cast(),
-            final_path.as_mut_ptr(),
-            final_path.len() as u32,
-            FILE_NAME_NORMALIZED | VOLUME_NAME_DOS,
-        )
-    } as usize;
-    if path_length == 0 || path_length >= final_path.len() {
-        return Err(std::io::Error::last_os_error());
-    }
-    final_path.truncate(path_length);
-    final_path.push(0);
-    let destination_access = if source_metadata.is_dir() {
-        FILE_ADD_SUBDIRECTORY
-    } else {
-        FILE_ADD_FILE
-    };
-    let destination_handle = unsafe {
-        CreateFileW(
-            final_path.as_ptr(),
-            destination_access | FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES | FILE_TRAVERSE,
-            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-            std::ptr::null(),
-            OPEN_EXISTING,
-            FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
-            std::ptr::null_mut(),
-        )
-    };
-    if destination_handle == INVALID_HANDLE_VALUE {
-        let error = std::io::Error::last_os_error();
-        return Err(std::io::Error::new(
-            error.kind(),
-            format!("could not open plugin rename parent: {error}"),
-        ));
-    }
-    let destination_parent = unsafe { std::fs::File::from_raw_handle(destination_handle.cast()) };
-    if !destination_parent.metadata()?.is_dir()
-        || directory_identity(&destination_parent).map_err(std::io::Error::other)?
-            != parent_identity
-    {
-        return Err(std::io::Error::other(
-            "plugin staging parent changed while opening it for rename",
         ));
     }
 
@@ -2290,7 +2239,10 @@ fn rename_sibling_no_replace_windows(
     let mut buffer = vec![0_u64; word_count];
     let info = buffer.as_mut_ptr().cast::<FILE_RENAME_INFO>();
     unsafe {
-        (*info).RootDirectory = destination_parent.as_raw_handle().cast();
+        // A null root keeps the rename in the source handle's own parent
+        // directory. Plugin staging moves are always same-directory.
+        (*info).Anonymous.ReplaceIfExists = 0;
+        (*info).RootDirectory = std::ptr::null_mut();
         (*info).FileNameLength = filename_bytes;
         std::ptr::copy_nonoverlapping(
             filename.as_ptr(),
@@ -3635,11 +3587,22 @@ fn acquire_plugin_mutation_lock(
     {
         use std::os::windows::io::AsRawHandle;
         use windows_sys::Win32::Storage::FileSystem::{LockFileEx, LOCKFILE_EXCLUSIVE_LOCK};
+        use windows_sys::Win32::System::IO::{OVERLAPPED_0, OVERLAPPED_0_0};
 
         if verified.bytes != [0] {
             return Err("plugin mutation lock contains unexpected data".to_owned());
         }
-        let mut overlapped = unsafe { std::mem::zeroed() };
+        let mut overlapped: windows_sys::Win32::System::IO::OVERLAPPED =
+            unsafe { std::mem::zeroed() };
+        // Keep the coordination byte immediately after the one-byte lock-file
+        // marker. The locked range may extend beyond EOF; this lets us safely
+        // re-open and verify the marker through another handle while locked.
+        overlapped.Anonymous = OVERLAPPED_0 {
+            Anonymous: OVERLAPPED_0_0 {
+                Offset: 1,
+                OffsetHigh: 0,
+            },
+        };
         let locked = unsafe {
             LockFileEx(
                 file.as_raw_handle().cast(),

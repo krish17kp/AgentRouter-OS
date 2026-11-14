@@ -781,6 +781,29 @@ def test_rust_provider_evaluator_matches_python_seed_registry():
     assert json.loads(process.stdout) == expected
 
 
+def test_rust_provider_evaluator_matches_python_default_seed_loading():
+    expected = evaluate_python_provider()
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_provider_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input="{}",
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+        check=True,
+    )
+    assert json.loads(process.stdout) == expected
+
+
 def test_rust_feedback_storage_evaluator_matches_python():
     expected = evaluate_python_feedback()
     process = subprocess.run(

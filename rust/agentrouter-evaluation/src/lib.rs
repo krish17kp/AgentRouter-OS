@@ -344,6 +344,13 @@ pub fn evaluate_provider(models: &[agentrouter_registry::ModelEntry]) -> serde_j
     })
 }
 
+/// Evaluate the packaged seed registry, matching Python's no-argument
+/// `evaluate_provider()` call.
+pub fn evaluate_provider_default() -> Result<serde_json::Value, String> {
+    let models = evaluators_api::load_seed_models()?;
+    Ok(evaluate_provider(&models))
+}
+
 /// Exercise the decision + feedback SQLite round-trip from
 /// `evaluation.evaluators.feedback` using an isolated temporary home.
 pub fn evaluate_feedback() -> Result<serde_json::Value, Box<dyn std::error::Error>> {

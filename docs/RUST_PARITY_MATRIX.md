@@ -55,7 +55,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/evaluators/feedback.py` | `agentrouter-evaluation::evaluate_feedback` | Parity |
 | `agentrouter/evaluation/evaluators/performance.py` | `agentrouter-evaluation::{evaluate_performance,evaluate_performance_with,evaluate_default_performance,summarize_performance}` | Parity |
 | `agentrouter/evaluation/evaluators/platform.py` | `agentrouter-evaluation::evaluate_platform` | Partial |
-| `agentrouter/evaluation/evaluators/provider.py` | `agentrouter-evaluation::evaluate_provider` | Partial |
+| `agentrouter/evaluation/evaluators/provider.py` | `agentrouter-evaluation::{evaluate_provider,evaluate_provider_default}` | Parity |
 | `agentrouter/evaluation/evaluators/routing.py` | `agentrouter-evaluation::evaluate_routing` | Partial |
 | `agentrouter/evaluation/evaluators/safety.py` | `agentrouter-evaluation::evaluate_safety` | Partial |
 | `agentrouter/evaluation/grading.py` | `agentrouter-evaluation::{grade_classification,runner::run_all_dimensions}` | Partial |
@@ -192,8 +192,9 @@ release authority until the full set is complete.
   scoring and caller-supplied/default input paths. Performance summary values
   match exactly for fixed samples; measured latency values are machine-specific
   by contract. Runtime-wide evaluator orchestration remains partial.
-- Provider metadata scoring is ported over caller-supplied model records; Rust
-  does not load the packaged seed registry for this evaluator yet.
+- Provider metadata scoring supports caller-supplied model records and a
+  no-argument path that loads and validates the packaged seed registry, matching
+  Python's default evaluator behavior.
 - The feedback/storage evaluator now uses the Rust SQLite store in a unique
   temporary home and compares the same decision, feedback, and aggregation
   checks. The platform evaluator matches scoring for a caller-supplied CLI

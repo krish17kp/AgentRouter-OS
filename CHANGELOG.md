@@ -45,6 +45,9 @@ All notable changes to AgentRouter OS. Format loosely follows
   injected classifier, and use the shared task set from the aggregate runner.
   Stable summary fields and default sample counts have Python/Rust coverage;
   machine-specific timings are checked by contract rather than compared.
+- Complete the Rust provider evaluator's no-argument behavior by loading the
+  validated packaged seed registry when models are omitted, while retaining the
+  explicit model-list probe used for exact offline comparisons.
 
 ### Fixed
 - Add Rust OpenAPI canonicalization and bounded `$ref` validation with stable,
