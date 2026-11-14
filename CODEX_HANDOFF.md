@@ -2,13 +2,13 @@
 
 ## Current checkpoint — 2026-11-14
 
-Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `04c483d`.
-TASK-128 hosted Rust workspace, Rust 1.89 minimum, and Python/Rust compatibility
-pass on Linux, Windows, and macOS. Standard PR checks pass apart from the frozen
-context gate. TASK-129 closes direct Rust `Ability` 0–10 bound parity; 88
-focused cases, 23 registry crate tests, the 2,392-pass/4-skip full Python suite,
-Rust workspace, strict Clippy, Rust format, and Ruff pass locally. Push TASK-129,
-inspect hosted results, then continue the schema parity inventory.
+Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `83fd7dc`.
+TASK-130 is locally verified: 2,405 Python tests pass and 4 skip; Rust workspace,
+strict Clippy, formatting, Ruff, and diff checks pass; 101 focused direct schema
+differentials cover `Provider` and `ExecutionTarget`. Hosted Rust and
+Python/Rust Linux/Windows/macOS checks pass; the PR Windows full-suite jobs are
+still running. The frozen context gate remains unchanged at 0.6667 < 0.90.
+Continue the public schema parity inventory while TASK-130 hosted checks run.
 Human annotation, bounded OpenAI live validation, main promotion, and deployment
 credentials remain owner-gated in `PRODUCTION_STATUS.md`.
 

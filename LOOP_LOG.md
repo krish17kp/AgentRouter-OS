@@ -2418,3 +2418,18 @@ boundary checks. The 295 focused cases pass. Full Python passes 2,378/4 at
 workspace, strict Clippy, formatting, Ruff, Bandit, pip-audit, and cargo audit
 pass. Hosted validation is pending the authorized RC push; PR #16's frozen
 context gate remains 0.6667 < 0.90.
+
+## 2026-11-14 — TASK-130 direct Provider and ExecutionTarget schema parity
+
+Added a generic Rust JSON value probe for public `Provider` and
+`ExecutionTarget` types and enabled canonical Rust `Provider` serialization.
+The 101 focused schema/registry differential cases pass for defaults, enum
+selection, Pydantic boolean coercion, required and extra fields, and invalid
+nested values. Full Python regression passes 2,405/4 in 416.38 seconds at
+91.970% statement, 87.690% branch, and 90.988% weighted combined coverage.
+The full Rust workspace and strict Clippy pass; formatting, targeted Ruff,
+diff checks, and JSON state validation pass. RC `83fd7dc` has hosted Rust and
+Python/Rust compatibility checks passing across Linux, Windows, and macOS;
+some Python Windows jobs remain in progress. TASK-130 hosted checks await this
+commit. `agentrouter/schema.py` remains Partial pending all public enums,
+models, defaults, validators, and derived properties.

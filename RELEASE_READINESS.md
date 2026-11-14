@@ -2,14 +2,16 @@
 
 ## Current checkpoint — 2026-11-14
 
-**NOT release ready.** The latest pushed RC head `04c483d` passes hosted Rust
-workspace, Rust 1.89 minimum, and Python/Rust compatibility on Linux, Windows,
-and macOS. Standard PR checks pass except the unchanged context-band promotion
-gate at 0.6667 < 0.90; live smoke is skipped without credentials. TASK-128 is
-hosted-green. TASK-129 passes locally: full Rust workspace, strict Clippy,
-format, Ruff, dependency audits, and the 2,392-pass/4-skip Python suite with
-91.970% statement, 87.690% branch, and 90.988% weighted combined coverage.
-Its hosted validation awaits its RC push. PR #16 is the sole open PR. Full Rust
+**NOT release ready.** The latest pushed RC head `83fd7dc` passes Rust 1.89,
+cross-platform Rust workspace, and hosted Python/Rust compatibility checks on
+Linux, Windows, and macOS; the PR Windows Python matrix and Python/Rust Windows
+job are still running. The prior PR check remains blocked by the unchanged
+context-band promotion gate at 0.6667 < 0.90; live smoke is skipped because no
+OpenAI credential is configured. TASK-130 passes locally: the full Rust
+workspace, strict Clippy, format, targeted Ruff, and the 2,405-pass/4-skip
+Python suite with 91.970% statement, 87.690% branch, and 90.988% weighted
+combined coverage. Hosted validation of TASK-130 is pending its push. PR #16
+is the sole open PR. Full Rust
 CLI/HTTP/MCP parity, provider execution, external dataset loaders, evaluation
 runner, and R5–R13 remain incomplete. Human annotation, live OpenAI validation,
 main promotion, and production credentials remain owner inputs. No paid request

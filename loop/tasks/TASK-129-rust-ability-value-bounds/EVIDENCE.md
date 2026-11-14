@@ -31,4 +31,4 @@ accepted values that Python rejected.
   passes.
 - Strict package Clippy, full Rust formatting check, Ruff check and format for
   the new test pass.
-- Hosted TASK-129 checks are pending its RC push.
+- Hosted TASK-129 checks are running at RC commit `83fd7dc`.
