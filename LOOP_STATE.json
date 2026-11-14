@@ -1,12 +1,12 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-14",
-  "current_phase": "IN_PROGRESS: TASK-141 is pushed at af3c699 and TASK-142 at 11f99b9; hosted platform matrices are still running. Completed tasks on 11f99b9 include site, security, API compatibility, build smoke, and readiness report. TASK-141 local evidence: 52 SDK/reliability Python cases, 9 Rust SDK tests, full Rust workspace/strict Clippy/format/Ruff, and 2,550/5 full Python regression. TASK-142 compares every evaluator seed ModelEntry field and live Python __all__. TASK-143 locally fixes the evaluation CLI's placeholder platform inputs by querying the sibling Rust CLI manifest; end-to-end test and strict Clippy pass. Frozen context-band gate stays 0.6667 < 0.90; live OpenAI smoke skips without credentials.",
+  "current_phase": "TASK-143 is pushed at 75fbe39; Rust workspace checks pass on Linux/Windows/macOS and completed API, security, site, build, and readiness-report checks pass. Full Python, compatibility, and critical mutation jobs are still running; PR #16's enforcing release gate remains failed at frozen context_band_accuracy 0.6667 < 0.90. TASK-144 is locally verified: 68 OpenAI adapter tests, 3 Rust OpenAI unit tests, strict Clippy, formatting, Ruff, and diff checks pass; it awaits commit/push. No GitHub reviews are recorded. Human annotation, bounded live OpenAI validation, and production credentials remain external.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
-    "main": "Main remains unchanged. PR #16 is the sole open PR against main. At RC ae47a76, Rust workspace and Python/Rust compatibility pass on Linux/Windows/macOS, alongside MCP SDK, Python 3.10-3.13, macOS suite, and critical-module mutation checks. One Windows full Python suite is still running. The immutable context-band gate fails at 0.6667 < 0.90. Live smoke skips without an OpenAI credential. No gate bypass.",
-    "release/agentrouter-v0.5-rc1": "Latest pushed head 11f99b9 adds TASK-142 on top of TASK-141. On 11f99b9 site, security, API compatibility, build-smoke, and readiness report pass; cross-platform compatibility, full Python, Rust workspace/MSRV, and mutation checks remain in progress. TASK-141 local evidence: 52 focused Python cases, 9 Rust SDK tests, full workspace/Clippy/format/Ruff, and 2,550/5 full Python regression. TASK-142 locally validates every evaluator seed ModelEntry field and exact Python __all__ exports. TASK-143 is locally validated but not yet pushed. Frozen gate 0.6667 < 0.90; live smoke skips without credentials.",
+    "main": "Main remains unchanged. PR #16 is the sole open PR against main; it has no submitted reviews or review requests and merge state is UNSTABLE. At RC 75fbe39 the required enforcing gate fails at the unchanged frozen context_band_accuracy 0.6667 < 0.90. Live smoke skips without an OpenAI credential. No gate bypass or promotion.",
+    "release/agentrouter-v0.5-rc1": "Latest pushed head 75fbe39 includes TASK-143. Rust workspace checks pass on Linux/Windows/macOS; completed security, site, API, MCP, build-smoke, release-readiness, Rust 1.89 and multiple Python checks pass. Full Python, Windows/macOS compatibility, and mutation jobs remain pending. TASK-144 is locally verified and unpushed. PR #16 release gate remains failed at frozen context-band 0.6667 < 0.90; no reviews are recorded.",
     "task/rust-r1-workspace": "PR #25 open against RC; 6ee8d3e passed complete GitHub CI; 32eee6f forced-init push failed Windows compile, file-handle repair awaits remote recheck; SQLite path-race blocker remains; Rust R4 partial and OpenAI execution hardening",
     "task/repo-cleanup-architecture-ponytail": "MERGED to RC (PR #14, merge commit 1ae3155); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/dynamic-skill-discovery": "MERGED to RC (PR #15, merge commit 62d5289); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
@@ -29,8 +29,8 @@
   "repo_sha_at_takeover": "602321af91ff298c0d5b59d6d36c24f845557fc1",
   "canonical_release_ready": false,
   "in_progress": [
-    "Commit and push the locally validated TASK-141 transport parity and Windows fixture repair to the authorized release-candidate branch; inspect hosted checks and continue the next actionable parity gap while they run.",
-    "Inspect all hosted checks after push, repair failures, and continue the next actionable Rust parity gap from docs/RUST_PARITY_MATRIX.md; preserve human annotation, live credentials, and infrastructure as exact Needs Krish blockers.",
+    "Commit and push the locally verified TASK-144 OpenAI non-2xx parity increment to the authorized release-candidate branch; refresh task metadata and handoffs with the resulting SHA.",
+    "Inspect all hosted checks after the push, repair failures, and continue the next actionable Rust parity gap from docs/RUST_PARITY_MATRIX.md while CI runs.",
     "Keep PR #16 open while the immutable context-band gate remains below 0.90; do not merge, tag, publish, deploy, change frozen data, or lower release gates."
   ],
   "completed_iter25": [
@@ -117,7 +117,17 @@
     "ci_status_593e375": "Rust workspace jobs pass on Linux, Windows, and macOS. Python/Rust compatibility fails on all three platforms due to TASK-125 serde_json arbitrary-precision deserialization. Python CI matrix jobs fail with the same compatibility regressions. Security, website, build smoke, and critical mutation pass. enforce-release-gate fails honestly at context-band 0.6667 < 0.90; live smoke skips without OPENAI_API_KEY.",
     "ci_status_6223871": "Rust workspace and non-skipping Python/Rust compatibility pass on Linux, Windows, and macOS. Python 3.10-3.13, Windows/macOS Python, API, build smoke, security, website, and critical mutation checks pass. The only failed required PR check is the unchanged enforce-release-gate at context-band 0.6667 < 0.90; live smoke is skipped without credentials.",
     "rust_schema_scalar_compat_2026_11_14": "TASK-127 Classification.context_tokens and TASK-128 ModelEntry token limits preserve arbitrary precision with Pydantic-compatible coercion and flow. TASK-128 hosted Rust workspace, Rust 1.89 minimum, and Python/Rust compatibility pass Linux/Windows/macOS at 04c483d. TASK-129 direct Ability 0\u201310 bounds pass with 88 focused cases, 23 registry crate tests, 2,392/4 full Python at 91.970% statements / 87.690% branches / 90.988% weighted combined, full Rust workspace, strict Clippy, format, and Ruff. Hosted Rust and completed compatibility/Python checks pass at 83fd7dc; Windows Python jobs still running. schema.py remains Partial pending exhaustive module coverage.",
-    "ci_status_2e14606": "Rust Migration CI passed: Rust 1.89 minimum plus Linux, Windows, macOS workspace and Python/Rust compatibility jobs all green. CI Python 3.10\u20133.13, Windows/macOS, API, build-smoke, report, security, website, and critical mutation jobs pass. Live smoke skipped without credentials. The sole failed required check is enforce-release-gate: frozen context-band score 0.6667 < 0.90."
+    "ci_status_2e14606": "Rust Migration CI passed: Rust 1.89 minimum plus Linux, Windows, macOS workspace and Python/Rust compatibility jobs all green. CI Python 3.10\u20133.13, Windows/macOS, API, build-smoke, report, security, website, and critical mutation jobs pass. Live smoke skipped without credentials. The sole failed required check is enforce-release-gate: frozen context-band score 0.6667 < 0.90.",
+    "task144_local": {
+      "python_openai_adapter_tests": "68 passed",
+      "rust_openai_unit_tests": "3 passed",
+      "strict_clippy": "pass",
+      "rust_format": "pass",
+      "ruff": "pass",
+      "diff_check": "pass",
+      "hosted_validation": "awaiting authorized RC push",
+      "live_openai": "not run; owner credential and bounded smoke authorization required"
+    }
   },
   "release_blockers": [
     "Frozen context-band accuracy 0.6667 remains below unchanged 0.90. Independent human annotation by two annotators plus adjudication under TASK_012_OWNER_ACTIONS.md is required; AI labels cannot substitute.",
@@ -134,7 +144,7 @@
     "historical task records remain under loop/tasks and loop/reports",
     "historical TASK-004 0.945 result is retained as in-sample evidence but no longer treated as canonical held-out readiness"
   ],
-  "next_action": "Commit and push TASK-143 to the authorized RC branch; inspect 11f99b9 checks while continuing the next actionable Rust parity item. Keep PR #16 open and preserve frozen gates.",
+  "next_action": "Commit and push locally verified TASK-144 to the authorized RC branch; inspect new hosted checks while starting the next parity task. Keep PR #16 held for the unchanged context-band gate, missing reviews, and remaining CI.",
   "completed_iter26": [
     "TASK-016 verified execution-host states MERGED to RC (PR #7 -> merge commit 5847c22; task branch deleted local+remote). hosts.py gained a readiness state vocabulary (missing/installed/configured/authenticated/authorized/degraded/unknown) plus a per-host remedy; `availability` keeps its exact prior meaning and is now derived from state. hosts list/doctor/show, the setup wizard and the execute refusal all report state + fix; hosts doctor ends with the cheapest concrete fix and exits non-zero only when no real host is ready. REST/MCP gained additive state/remedy and host_state/host_remedy keys. docs: new USER_GUIDE section 8 with the state table and the honesty note on `authorized`.",
     "BUG FIXED: host detection tested the API-key env var for truthiness, so a set-but-blank key (OPENAI_API_KEY='   ') reported available and `execute` would target a host that cannot authenticate. Now degraded/unavailable with a fix-it message, pinned by a parametrised test.",
@@ -291,7 +301,8 @@
     "TASK-138 adds exact Python/Rust reliability package export inventory for the five __all__ names, with bridge-side compile-time signature checks for run_load and serve_app. Nine focused compatibility tests, full Rust workspace, strict Clippy, format, Ruff, and diff checks pass. Only the initializer export row is Parity; harness behavior remains Partial."
   ],
   "completed_iter65": [
-    "TASK-139 maps common ureq failures to Python HTTPX class names. Connection refusal and a delayed response directly compare as ConnectError and ReadTimeout. Eleven focused reliability compatibility tests and full Rust workspace/strict Clippy pass; generic write-versus-read I/O errors remain ambiguous, so the harness stays Partial."
+    "TASK-144 local implementation and focused verification: Python and Rust OpenAI Responses adapters now reject every non-2xx status even when returned by an injected transport. Differential cases cover 300, 302, and 399; 68 Python adapter tests and 3 Rust OpenAI unit tests pass, along with strict Clippy, Rust formatting, Ruff, and diff checks. No live OpenAI request was made. Task remains in verify pending RC CI and a separate review.",
+    "PR #16 review disposition recorded as HOLD at 75fbe399: no GitHub reviews/review requests, enforcing frozen context-band gate fails 0.6667 < 0.90, and full Python/platform/mutation jobs remain in progress. No promotion or gate change."
   ],
   "events": {
     "python_full_latest": "2026-11-14 TASK-140 full regression after Windows fixture repair: 2,538 passed, 5 skipped; 6,900/7,498 statements (92.025%), 1,959/2,234 branches (87.690%), 8,859/9,732 combined (91.030%); Linux Python 3.12.15, pytest 9.0.3, MCP 2.3.0; 468.91 seconds.",

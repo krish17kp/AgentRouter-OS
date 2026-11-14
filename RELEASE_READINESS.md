@@ -2,15 +2,13 @@
 
 ## Current checkpoint — 2026-11-14
 
-**NOT release ready.** The latest pushed RC head is `1959548`. Rust workspace
-checks pass on Linux, Windows, and macOS. Security, site, build smoke, release
-report, Rust 1.89, MCP, API, and critical mutation checks pass. Linux/macOS
-Python/Rust compatibility passes. Windows compatibility fails because port zero
-is not a deterministic transport error there; the local test now uses an
-unsupported URL scheme and passes before socket access. Hosted validation of
-this repair and the full Python matrix is pending. The enforce-release-gate fails at the
-unchanged frozen context-band score 0.6667
-versus 0.90; live smoke skips without an OpenAI credential.
+**NOT release ready.** The latest pushed RC head is `75fbe39`. Rust workspace
+checks pass on Linux, Windows, and macOS. Completed security, site, build smoke,
+release report, Rust 1.89, MCP, and API checks pass; full Python,
+cross-platform compatibility, and mutation jobs are still pending. PR #16 has
+no GitHub reviews. The enforce-release-gate fails at the unchanged frozen
+context-band score 0.6667 versus 0.90; live smoke skips without an OpenAI
+credential.
 
 TASK-140's Rust SDK wire-contract comparison passes all nine endpoints with
 present, absent, and blank API keys. TASK-141 adds an injected transport and
@@ -22,8 +20,11 @@ Clippy, formatting, Ruff, and the full Python suite pass locally. Python
 regression passes 2,550 / 5 with
 92.025% statement, 87.690% branch, and 91.030% combined coverage; details are
 in `docs/COVERAGE_REPORT_2026-11-14-TASK-141.md`. Hosted cross-platform
-validation is pending. The SDK remains Partial for native `ureq` timeout and
-generic read/write behavior. PR #16 remains the sole open PR. Rust
+validation is pending. TASK-144 locally aligns Python and Rust OpenAI adapters
+for every non-2xx response; its offline differential cases and 68 focused
+Python tests pass, and hosted validation will follow the next push. The SDK
+remains Partial for native `ureq` timeout and generic read/write behavior. PR
+#16 remains the sole open PR. Rust
 CLI/HTTP/MCP parity, provider execution, external dataset loaders, evaluation
 runner, and R5–R13 remain incomplete. Human annotation, live OpenAI validation,
 main promotion, and production credentials remain owner inputs. No paid request

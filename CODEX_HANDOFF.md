@@ -2,35 +2,28 @@
 
 ## Current checkpoint — 2026-11-14
 
-Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `1959548`
-(security-scan dependency fix). Linux/Windows/macOS Rust workspace, security,
-site, build-smoke, release report, Rust 1.89, MCP, and API checks pass. Linux/macOS
-Python/Rust compatibility passes; Windows compatibility exposed that port zero
-is not a deterministic transport failure. The local test now uses an unsupported
-scheme and passes before socket access. The frozen
-context gate remains 0.6667 < 0.90; live smoke skips without an OpenAI key.
+Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `75fbe39`
+(TASK-143). Rust workspace checks pass on Linux, Windows, and macOS; completed
+API, security, site, build, and readiness-report checks pass. Full Python,
+compatibility, and mutation jobs are still running. PR #16 is the only open PR,
+has no GitHub reviews, and remains blocked by the unchanged frozen context-band
+score 0.6667 < 0.90. Do not merge, tag, publish, or deploy while the release
+gate fails.
 
-Pushed TASK-140 adds nine-endpoint Rust/Python SDK wire-contract comparisons.
-TASK-141 adds injectable transport, typed errors, timeout propagation, close
-parity, malformed-fixture rejection, base URL redaction, and the deterministic
-unsupported-scheme repair. Close now waits for active sends and releases the
-default `ureq` agent promptly. The focused SDK/reliability selection passes 52
-tests; nine Rust SDK unit tests, the full Rust workspace, and strict Clippy
-pass. The final full Python regression after these review fixes passes 2,550
-tests with 5 skipped; coverage evidence is in
-`docs/COVERAGE_REPORT_2026-11-14-TASK-141.md`.
-TASK-142 expands evaluator seed loading compatibility to every serialized
-`ModelEntry` field and compares Rust exports with the live Python `__all__`;
-its focused test and formatting checks pass locally. Runtime evaluator
-orchestration remains a parity gap.
-TASK-143 fixes `agentrouter-evaluate run --all` to query the real sibling Rust
-CLI manifest; the local end-to-end scorecard test, strict Clippy, and formatting
-pass. The latest pushed head is `11f99b9`; hosted checks are still running.
-Keep `agentrouter/sdk.py` Partial until native `ureq` timeout and generic I/O
-semantics match the full HTTPX contract. Hosted revalidation remains pending;
-continue the remaining Rust parity work. Human annotation, bounded OpenAI live
-validation, main promotion, and deployment credentials remain listed in
-`PRODUCTION_STATUS.md`.
+TASK-141 passes its 52-case focused SDK/reliability selection, nine Rust SDK
+unit tests, full workspace/Clippy, and full Python regression (2,550 passed,
+5 skipped; 92.025% statement, 87.690% branch, 91.030% combined coverage).
+TASK-142 compares every evaluator seed model field and Rust exports against
+Python's live `__all__`. TASK-143 makes the Rust full-scorecard CLI discover the
+actual sibling CLI surface at runtime. TASK-144 is locally verified and awaits
+push: both OpenAI adapters reject non-2xx responses, with 68 focused Python
+tests and Rust adapter tests passing; offline differential cases cover 300,
+302, and 399. SDK, evaluator orchestration, and multiple CLI/API/MCP modules
+remain Partial in `docs/RUST_PARITY_MATRIX.md`.
+
+Next: commit and push TASK-144 to the authorized RC, inspect hosted checks while
+continuing the next parity slice, and keep human evaluation, bounded OpenAI
+live validation, and production credentials under **Needs Krish**.
 
 ## Historical narrative
 

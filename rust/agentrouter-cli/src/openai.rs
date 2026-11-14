@@ -178,7 +178,7 @@ pub fn run_text_response<T: OpenAITransport>(
             TransportError::HttpStatus(code) => OpenAIAdapterError::HttpStatus(code),
             TransportError::Network => OpenAIAdapterError::Transport,
         })?;
-    if response.status >= 400 {
+    if !(200..300).contains(&response.status) {
         return Err(OpenAIAdapterError::HttpStatus(response.status));
     }
     if response.body.len() > MAX_RESPONSE_BYTES {

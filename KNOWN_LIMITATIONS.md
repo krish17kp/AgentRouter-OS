@@ -2,6 +2,11 @@
 
 ## Current migration and release limits (2026-11-14)
 
+- TASK-144 makes Python and Rust OpenAI Responses adapters reject injected or
+  native responses outside HTTP 200–299. Offline differential cases cover 300,
+  302, and 399; the existing redirect protection remains in place. Hosted
+  validation follows the next RC push. Live provider validation still needs a
+  bounded owner-authorized request and credential.
 - TASK-141 adds a public Rust transport seam with request timeout propagation,
   typed error categories, close-once behavior, and injected all-endpoint
   comparisons against Python `httpx.MockTransport`. Malformed fixture input

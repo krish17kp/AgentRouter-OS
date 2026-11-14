@@ -2,14 +2,12 @@
 
 ## Current checkpoint — 2026-11-14
 
-At pushed RC `1959548`, Rust workspace passes on Linux, Windows, and macOS;
-security scan, site, build smoke, release report, Rust 1.89, MCP, API, and
-critical-module mutation checks pass. Linux/macOS Python/Rust compatibility
-passes; Windows compatibility fails because port zero is not a deterministic
-transport failure on that runner. The local test now uses an unsupported scheme
-and passes before socket access. The
-enforce-release-gate correctly fails on frozen context-band
-accuracy 0.6667 < 0.90, and live smoke skips without credentials.
+At pushed RC `75fbe39`, Rust workspace passes on Linux, Windows, and macOS;
+completed security, site, build-smoke, release-report, Rust 1.89, MCP, and API
+checks pass. Some full Python, cross-platform compatibility, and mutation jobs
+are pending. PR #16 has no GitHub reviews and its enforcing release gate fails
+on the unchanged frozen context-band accuracy 0.6667 < 0.90; live smoke skips
+without credentials.
 
 The latest full Python regression on the local TASK-141 changes passes 2,550 / skips 5, with 92.025% statement,
 87.690% branch, and 91.030% combined coverage. TASK-140's new Rust SDK
@@ -17,7 +15,9 @@ wire differential passes all nine endpoints across authenticated, absent, and
 blank API-key cases. TASK-141 adds injected transport and timeout parity, four
 matched HTTPX failure categories, malformed-fixture rejection, and client close
 behavior; 52 focused SDK/reliability Python tests and nine Rust SDK unit tests
-pass locally. Python
+pass locally. TASK-142 and TASK-143 close evaluator seed-contract and runtime
+platform-discovery gaps. TASK-144's non-2xx OpenAI status differential passes
+68 focused tests locally; that slice still awaits push and hosted checks. Python
 remains the shipping authority and the Rust migration is incomplete.
 
 ## Historical dashboard

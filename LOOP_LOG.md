@@ -2652,3 +2652,16 @@ its sibling executable. Missing/invalid discovery now fails closed. The new
 end-to-end test runs the full scorecard and confirms its platform score/detail
 reflect the live Rust command surface. Focused evaluator tests, strict Clippy,
 formatting, and diff checks pass locally.
+
+## 2026-11-14 — TASK-144 OpenAI response status parity
+
+The bounded OpenAI adapter now rejects any non-2xx response returned by an
+injected or native transport, preventing a custom Rust transport from treating
+a 3xx redirect response as a successful completion. Python and Rust fixture
+tests cover 300, 302, and 399; the existing loopback redirect test continues to
+verify credentials are not forwarded. The full OpenAI adapter selection passes
+68 tests; three Rust OpenAI unit tests, strict Clippy, Rust formatting, Ruff,
+and diff checks also pass. No live API request was made. The implementation is
+locally verified and awaits RC CI plus a separate review. PR #16 remains held:
+its frozen context-band score is 0.6667 < 0.90, it has no GitHub reviews, and
+some platform and mutation jobs were still running at the last hosted check.

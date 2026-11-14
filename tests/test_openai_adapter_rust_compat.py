@@ -38,8 +38,9 @@ def rust_openai_probe():
 
 
 class _Response:
-    def __init__(self, body: bytes):
+    def __init__(self, body: bytes, status: int):
         self.body = body
+        self.status = status
 
     def __enter__(self):
         return self
@@ -76,7 +77,7 @@ def _python(case: dict, monkeypatch) -> dict:
             raise URLError("fixture network detail")
         if transport_error == "http_status" or status >= 400:
             raise HTTPError(openai_adapter.RESPONSES_URL, status, "fixture", {}, None)
-        return _Response(body)
+        return _Response(body, status)
 
     monkeypatch.setattr(openai_adapter, "urlopen", fake_open)
     try:
@@ -138,6 +139,9 @@ def test_success_request_and_text_match_python_without_exposing_key(rust_openai_
 @pytest.mark.parametrize(
     "case",
     [
+        {"status": 300, "response_body": '{"status":"completed","output":[]}'},
+        {"status": 302, "response_body": '{"status":"completed","output":[]}'},
+        {"status": 399, "response_body": '{"status":"completed","output":[]}'},
         {"transport_error": "http_status", "status": 429},
         {"transport_error": "network"},
         {"status": 503},
