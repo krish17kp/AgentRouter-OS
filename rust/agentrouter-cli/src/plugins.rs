@@ -3574,6 +3574,8 @@ fn acquire_plugin_mutation_lock(
     root_dir: &cap_std::fs::Dir,
     plugin: &PluginSpec,
 ) -> Result<PluginMutationLock, String> {
+    #[cfg(not(unix))]
+    let _ = root;
     let (state_directory, _) = ensure_relative_directory(root_dir, ".agentrouter-state")?;
     let state_dir = cap_std::fs::Dir::from_std_file(
         state_directory
