@@ -2,13 +2,15 @@
 
 ## Current checkpoint — 2026-11-14
 
-**NOT release ready.** The latest pushed RC head is `52c9565`; hosted Rust
-workspace jobs pass on Linux, Windows, and macOS. Python 3.10–3.13, macOS
-full-suite, Linux/macOS Python/Rust compatibility, scan, site, build smoke,
-release report, and critical-module mutation checks pass. Windows
-Python/Rust compatibility and full-suite jobs failed because a closed
-ephemeral port was filtered as a timeout; an invalid loopback destination port-zero fixture passes
-locally and awaits hosted revalidation. The enforce-release-gate fails at the
+**NOT release ready.** The latest pushed RC head is `36809f5`. Linux/macOS Rust
+workspace jobs, MCP compatibility, API compatibility, build smoke, site,
+release report, and the Rust 1.89 minimum check pass; most platform and full-suite
+checks are pending. Two security scan runs fail during test collection because
+the job installs `dev,security` but the SDK contract test imports `httpx` from
+the optional `server` extra. The workflow dependency fix is prepared locally.
+Windows full-suite and Python/Rust compatibility failed at `52c9565` because a
+closed ephemeral port was filtered as a timeout; `36809f5` uses invalid loopback
+destination port zero and is awaiting hosted revalidation. The enforce-release-gate fails at the
 unchanged frozen context-band score 0.6667
 versus 0.90; live smoke skips without an OpenAI credential.
 

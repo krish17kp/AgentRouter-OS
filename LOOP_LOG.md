@@ -2603,6 +2603,6 @@ checks pass locally. Full Python passes 2,538 tests with 5 skips in 468.91s;
 coverage is 92.025% statement, 87.690% branch, and 91.030% combined in
 `docs/COVERAGE_REPORT_2026-11-14-TASK-140.md`. The SDK stays
 Partial because Python's injectable `httpx` transport and native transport
-exception contract remain unmatched; the parity matrix is unchanged. Hosted
-validation follows the RC push. The bridge emits only a generic transport-failure
+exception contract remain unmatched; the parity matrix is unchanged. Pushed as `36809f5`; hosted
+Linux/Windows/macOS validation is running. The bridge emits only a generic transport-failure
 label so URLs or other transport details cannot leak into test output.

@@ -2,19 +2,20 @@
 
 ## Current checkpoint — 2026-11-14
 
-Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `52c9565`
-(TASK-139). Rust workspace checks pass on Linux, Windows, and macOS. Python
-3.10–3.13, macOS full-suite, Linux/macOS Python/Rust compatibility, site, scan,
-build smoke, release report, and critical-module mutation checks pass. Windows
-Python/Rust compatibility and full-suite jobs failed at 52c9565 because a
-closed ephemeral port was filtered as a timeout. The test now uses invalid
-loopback destination port zero and passes locally; hosted revalidation follows push. The frozen
+Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `36809f5`
+(TASK-139 Windows repair and TASK-140 SDK wire parity). Linux/macOS Rust workspace,
+MCP, API, site, build-smoke, release report, and Rust 1.89 checks pass; other
+platform and full-suite checks are still running. Two security scan runs failed
+because the workflow omitted the SDK's optional `httpx` dependency; the workflow
+fix is local and its security suite passes. Windows Python/Rust compatibility and full-suite jobs failed at
+`52c9565` because a closed ephemeral port was filtered as a timeout. `36809f5`
+uses invalid loopback destination port zero; its hosted workflows are running. The frozen
 context gate remains 0.6667 < 0.90; live smoke skips without an OpenAI key.
 
-Unpushed TASK-140 currently adds nine-endpoint Rust/Python SDK wire-contract
-comparisons. Its 3 credential variants, response/error parity, full Rust
+Pushed TASK-140 adds nine-endpoint Rust/Python SDK wire-contract comparisons.
+Its 3 credential variants, response/error parity, full Rust
 workspace, strict Clippy, formatting, Ruff, and 29 focused Python SDK cases
-pass locally. Full Python regression passed 2,538 / skipped 5, with 92.025%
+pass locally. Full Python regression passes 2,538 / skips 5, with 92.025%
 statement, 87.690% branch, and 91.030% combined coverage after the Windows test
 repair. Keep
 `agentrouter/sdk.py` Partial until Python's injectable transport and transport

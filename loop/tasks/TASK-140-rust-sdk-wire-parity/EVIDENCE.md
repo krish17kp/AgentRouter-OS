@@ -18,12 +18,12 @@
   5 skipped, 0 failed** in 468.91s.
   Statement coverage 92.025%, branch coverage 87.690%, combined coverage
   91.030%; evidence is in `docs/COVERAGE_REPORT_2026-11-14-TASK-140.md`.
-- Hosted validation is pending the authorized release-candidate push.
+- Pushed as `36809f5`; hosted Linux/Windows/macOS validation is running.
 - The previous pushed base `52c9565` exposed one unrelated portability issue:
   Windows filtered a just-closed ephemeral TCP port as a timeout, while Python
   categorized it as a connection error. The test now targets invalid loopback
   destination port zero; the focused differential and full Python rerun pass.
-  Hosted cross-platform validation is pending for the combined repair.
+  Hosted cross-platform validation for the combined repair is running at `36809f5`.
 
 ## Review and remaining contract gap
 

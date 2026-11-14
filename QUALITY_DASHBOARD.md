@@ -2,12 +2,12 @@
 
 ## Current checkpoint — 2026-11-14
 
-At pushed RC `52c9565`, Rust workspace passes on Linux, Windows, and macOS;
+At pushed RC `36809f5`, Rust workspace passes on Linux, Windows, and macOS;
 Python 3.10–3.13, macOS full-suite, Linux/macOS Python/Rust compatibility,
 security scan, site, build smoke, release report, and critical-module mutation
-pass. Windows Python/Rust compatibility and full-suite jobs failed because a
-closed ephemeral port was filtered as a timeout; the test now uses invalid
-loopback destination port zero and passes locally, pending hosted revalidation. The
+pass. Windows Python/Rust compatibility and full-suite jobs failed at `52c9565`
+because a closed ephemeral port was filtered as a timeout. `36809f5` uses
+invalid loopback destination port zero; hosted Linux/Windows/macOS checks are running. The
 enforce-release-gate correctly fails on frozen context-band
 accuracy 0.6667 < 0.90, and live smoke skips without credentials.
 
