@@ -171,6 +171,10 @@ def test_rust_annotation_schema_rejects_invalid_models(model, value):
         "2026-11-11T12:30:00+0530",
         "2026-11-11T12:30:00.123+05:30",
         "2026-11-11T12:30",
+        "2026-11-11T12:30Z",
+        "2026-11-11T12:30z",
+        "2026-11-11 12:30+05:30",
+        "2026-11-11_12:30-0330",
         "2026-11-11T12:30:00,25+05:30",
         0,
         1.5,
@@ -183,15 +187,16 @@ def test_rust_annotation_schema_rejects_invalid_models(model, value):
     ],
 )
 def test_rust_annotation_datetime_matches_python_parse_and_serialization(timestamp):
-    value = AnnotatorLabel(
-        annotator="reviewer-a",
-        band="medium",
-        rationale="timestamp fixture",
-        confidence=0.75,
-        at=timestamp,
-    )
-    expected = value.model_dump(mode="json")
-    process = _rust("annotator_label", expected)
+    value = {
+        "annotator": "reviewer-a",
+        "band": "medium",
+        "abstain": False,
+        "rationale": "timestamp fixture",
+        "confidence": 0.75,
+        "at": timestamp,
+    }
+    expected = AnnotatorLabel.model_validate(value).model_dump(mode="json")
+    process = _rust("annotator_label", value)
     assert process.returncode == 0, process.stderr
     assert json.loads(process.stdout) == {"value": expected}
 

@@ -385,6 +385,10 @@ mod optional_datetime {
             iso.replace_range(10..11, "T");
         }
         iso = iso.replace(',', ".");
+        if iso.ends_with('z') {
+            iso.pop();
+            iso.push('Z');
+        }
 
         // chrono accepts at most nanoseconds; Python truncates longer
         // fractional-second input to its six-digit microsecond precision.
@@ -398,7 +402,7 @@ mod optional_datetime {
         if let Some(t_pos) = iso.find('T') {
             let time_start = t_pos + 1;
             let zone_pos = iso[time_start..]
-                .find(['+', '-'])
+                .find(['+', '-', 'Z', 'z'])
                 .map(|pos| pos + time_start)
                 .unwrap_or(iso.len());
             let time = &iso[time_start..zone_pos];

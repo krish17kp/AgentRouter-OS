@@ -170,8 +170,10 @@ release authority until the full set is complete.
 - Rust `Classification` rejects unknown fields and has round-trip and rejection
   checks against Pydantic. Annotation manifest schema versions and count maps
   now preserve Python-compatible arbitrary-precision integers exactly in
-  schema validation and JSON storage. Remaining scalar coercions and datetime
-  grammar differences keep the annotation schema module Partial.
+  schema validation and JSON storage. Raw timestamp differentials now exercise
+  Pydantic's datetime parsing directly, including reduced-precision times with
+  `Z` and numeric offsets. The annotation schema module remains Partial while
+  broader timestamp grammar coverage is unfinished.
 - Context-band model inference is ported but remains disabled in the default
   classifier. The frozen evaluation gate still controls whether learned routing
   can be enabled.
