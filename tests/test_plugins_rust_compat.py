@@ -751,7 +751,13 @@ def test_rust_mutation_waits_for_python_process_lock(tmp_path, monkeypatch):
             encoding="utf-8",
         )
         time.sleep(0.3)
-        assert mutation.poll() is None, "Rust mutation bypassed the Python-held lock"
+        early_exit = mutation.poll()
+        if early_exit is not None:
+            stdout, stderr = mutation.communicate()
+            pytest.fail(
+                "Rust mutation exited before the Python-held lock was released "
+                f"(exit={early_exit})\nstdout:\n{stdout}\nstderr:\n{stderr}"
+            )
     finally:
         release.set()
         holder.join(20)

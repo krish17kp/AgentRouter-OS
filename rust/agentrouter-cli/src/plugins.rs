@@ -6,6 +6,8 @@
 
 use std::fs::File;
 use std::io::{Read, Write};
+#[cfg(windows)]
+use std::io::{Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
@@ -3647,6 +3649,7 @@ fn acquire_plugin_mutation_lock(
             return Err("plugin mutation lock contains unexpected data".to_owned());
         }
     }
+    #[cfg(unix)]
     let verified = read_verified_file_at(&state_dir, &filename, &path)?
         .ok_or_else(|| "plugin mutation lock disappeared while opening it".to_owned())?;
     #[cfg(unix)]
@@ -3654,16 +3657,25 @@ fn acquire_plugin_mutation_lock(
         return Err("plugin mutation lock contains unexpected data".to_owned());
     }
     #[cfg(windows)]
+    let verified_identity = {
+        let metadata = file
+            .metadata()
+            .map_err(|error| format!("could not inspect plugin mutation lock: {error}"))?;
+        let identity = file_identity(&file, &metadata)?;
+        if !mutation_lock_path_matches(&state_dir, &filename, identity)? {
+            return Err("plugin mutation lock changed while opening it".to_owned());
+        }
+        identity
+    };
+    #[cfg(windows)]
     {
         use std::os::windows::io::AsRawHandle;
         use windows_sys::Win32::Storage::FileSystem::{LockFileEx, LOCKFILE_EXCLUSIVE_LOCK};
 
-        if verified.bytes != [0] {
-            return Err("plugin mutation lock contains unexpected data".to_owned());
-        }
         // Keep byte zero so older AgentRouter processes share the same mutex.
-        // Re-reading it through another handle while locked can fail with
-        // ERROR_LOCK_VIOLATION, so validate the path and file identity only.
+        // Do not read it before locking: msvcrt denies reads of this byte while
+        // another process owns the range lock. Validate the byte through this
+        // same handle after we acquire the interoperable lock.
         let mut overlapped = unsafe { std::mem::zeroed() };
         let locked = unsafe {
             LockFileEx(
@@ -3681,13 +3693,28 @@ fn acquire_plugin_mutation_lock(
                 std::io::Error::last_os_error()
             ));
         }
-        if !mutation_lock_path_matches(&state_dir, &filename, verified.identity)? {
-            return Err("plugin mutation lock changed while waiting".to_owned());
-        }
-        Ok(PluginMutationLock {
+        let mut mutation_lock = PluginMutationLock {
             _file: file,
             overlapped,
-        })
+        };
+        if !mutation_lock_path_matches(&state_dir, &filename, verified_identity)? {
+            return Err("plugin mutation lock changed while waiting".to_owned());
+        }
+        mutation_lock
+            ._file
+            .seek(SeekFrom::Start(0))
+            .and_then(|()| {
+                let mut byte = [0_u8; 1];
+                mutation_lock._file.read_exact(&mut byte)?;
+                if byte != [0] {
+                    return Err(std::io::Error::other(
+                        "plugin mutation lock contains unexpected data",
+                    ));
+                }
+                Ok(())
+            })
+            .map_err(|error| format!("could not verify plugin mutation lock: {error}"))?;
+        Ok(mutation_lock)
     }
     #[cfg(unix)]
     {

@@ -19,6 +19,7 @@ import yaml
 
 from agentrouter.annotation import candidates as candidate_mod
 from agentrouter.annotation import store
+from agentrouter.controls import PREFERENCE_WEIGHTS
 
 pytestmark = pytest.mark.skipif(shutil.which("cargo") is None, reason="cargo not on PATH")
 ROOT = Path(__file__).resolve().parents[1]
@@ -134,6 +135,69 @@ def test_init_and_route_dispatch_to_rust_implementations(tmp_path, unified_binar
     assert stats_text.returncode == 0, stats_text.stderr
     assert "Decisions logged: 1" in stats_text.stdout
     assert "Feedback: 1 rating(s), avg 4" in stats_text.stdout
+
+
+def test_setup_runs_onboarding_and_persists_selected_preference(
+    tmp_path, unified_binary, monkeypatch
+):
+    home = tmp_path / "agentrouter-home"
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-setup-secret-must-not-be-printed")
+    setup = _run(
+        unified_binary,
+        "setup",
+        "--preference",
+        "cheap",
+        "--sample",
+        "Summarize this PDF and list action items",
+        home=home,
+    )
+    assert setup.returncode == 0, setup.stderr
+    config = yaml.safe_load((home / "config.yaml").read_text(encoding="utf-8"))
+    assert config["weights"] == PREFERENCE_WEIGHTS["cheap"]
+    assert "1. Home directory" in setup.stdout
+    assert "2. Execution hosts" in setup.stdout
+    assert "3. Preference: cheap" in setup.stdout
+    assert '4. Sample route: "Summarize this PDF and list action items"' in setup.stdout
+    assert "5. Install a host integration:" in setup.stdout
+    assert "sk-setup-secret-must-not-be-printed" not in setup.stdout + setup.stderr
+
+    config["custom_setting"] = "preserve-me"
+    (home / "config.yaml").write_text(
+        yaml.safe_dump(config, sort_keys=False), encoding="utf-8"
+    )
+    repeated = _run(unified_binary, "setup", "--preference", "quality", home=home)
+    assert repeated.returncode == 0, repeated.stderr
+    assert "exists, skipped" in repeated.stdout
+    config = yaml.safe_load((home / "config.yaml").read_text(encoding="utf-8"))
+    assert config["weights"] == PREFERENCE_WEIGHTS["quality"]
+    assert config["custom_setting"] == "preserve-me"
+
+
+def test_setup_rejects_unknown_preference_without_initializing_home(tmp_path, unified_binary):
+    home = tmp_path / "agentrouter-home"
+    setup = _run(unified_binary, "setup", "--preference", "unknown", home=home)
+    assert setup.returncode == 2
+    assert "Unknown --preference 'unknown'" in setup.stderr
+    assert not home.exists()
+
+
+def test_evaluate_alias_matches_rust_legacy_gold_command(unified_binary):
+    legacy_binary = unified_binary.with_name(
+        "agentrouter-evaluate" + (".exe" if os.name == "nt" else "")
+    )
+    arguments = ["--json", "--no-artifacts"]
+    direct = subprocess.run(
+        [str(legacy_binary), "legacy-gold", *arguments],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=60,
+        check=False,
+    )
+    alias = _run(unified_binary, "evaluate", *arguments)
+    assert alias.returncode == direct.returncode == 0
+    assert json.loads(alias.stdout) == json.loads(direct.stdout)
 
 
 def test_dataset_is_available_from_unified_entrypoint(tmp_path, unified_binary):

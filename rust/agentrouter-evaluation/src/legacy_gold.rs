@@ -338,10 +338,26 @@ pub fn write_artifacts(report: &Value, out_dir: &Path) -> Result<Vec<PathBuf>, S
     if let Some(object) = slim.as_object_mut() {
         object.remove("cases");
     }
-    fs::write(&json_path, python_json_dumps_pretty(&slim)?).map_err(|error| error.to_string())?;
-    fs::write(&markdown_path, render_markdown(report)).map_err(|error| error.to_string())?;
+    fs::write(
+        &json_path,
+        python_text_bytes(python_json_dumps_pretty(&slim)?),
+    )
+    .map_err(|error| error.to_string())?;
+    fs::write(&markdown_path, python_text_bytes(render_markdown(report)))
+        .map_err(|error| error.to_string())?;
     fs::write(&csv_path, render_failures_csv(report)).map_err(|error| error.to_string())?;
     Ok(vec![json_path, markdown_path, csv_path])
+}
+
+fn python_text_bytes(value: String) -> Vec<u8> {
+    #[cfg(windows)]
+    {
+        value.replace('\n', "\r\n").into_bytes()
+    }
+    #[cfg(not(windows))]
+    {
+        value.into_bytes()
+    }
 }
 
 fn python_json_dumps_pretty(value: &Value) -> Result<String, String> {

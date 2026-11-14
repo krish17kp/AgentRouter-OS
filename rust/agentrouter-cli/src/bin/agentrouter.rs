@@ -7,13 +7,14 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::env;
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use agentrouter_registry::{load_all_models, load_providers, ModelEntry};
 
 fn usage() -> &'static str {
-    "usage: agentrouter <init|route|explain|feedback|execute|stats|prompt|registry|providers|hosts|models|doctor|server|mcp|dashboard|plugin|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  execute <decision-id> [--yes] [--dry-run]\n  stats [--json]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  server [--host HOST] [--port PORT]\n  mcp (stdio server)\n  dashboard [port]\n  plugin <list|install NAME [--dry-run] [--force] [--adopt-identical]|uninstall NAME|doctor [--json]>\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
+    "usage: agentrouter <init|setup|route|explain|feedback|execute|stats|evaluate|prompt|registry|providers|hosts|models|doctor|server|mcp|dashboard|plugin|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  setup [--preference quality|balanced|cheap|fast] [--sample TEXT]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  execute <decision-id> [--yes] [--dry-run]\n  stats [--json]\n  evaluate [--gold PATH] [--out-dir PATH] [--json] [--no-artifacts]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  server [--host HOST] [--port PORT]\n  mcp (stdio server)\n  dashboard [port]\n  plugin <list|install NAME [--dry-run] [--force] [--adopt-identical]|uninstall NAME|doctor [--json]>\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
 }
 
 fn home() -> Result<PathBuf, String> {
@@ -260,6 +261,182 @@ fn models_show(home: &Path, key: &str) -> Result<i32, String> {
             status.reason
         );
     }
+    Ok(0)
+}
+
+fn write_setup_preference(home: &Path, preference: &str) -> Result<(), String> {
+    let preferences = agentrouter_policy::preference_weights();
+    let weights = preferences
+        .get(preference)
+        .ok_or_else(|| format!("unknown routing preference {preference}"))?;
+    let home_dir = cap_std::fs::Dir::open_ambient_dir(home, cap_std::ambient_authority())
+        .map_err(|error| format!("could not open AgentRouter home: {error}"))?;
+    let home_file = home_dir
+        .try_clone()
+        .map_err(|error| format!("could not inspect AgentRouter home: {error}"))?
+        .into_std_file();
+    let mut options = fs_at::OpenOptions::default();
+    options
+        .read(true)
+        .write(fs_at::OpenOptionsWriteMode::Write)
+        .create(true)
+        .follow(false);
+    let mut file = options
+        .open_at(&home_file, Path::new("config.yaml"))
+        .map_err(|error| format!("could not open config.yaml safely: {error}"))?;
+    let metadata = file
+        .metadata()
+        .map_err(|error| format!("could not inspect config.yaml: {error}"))?;
+    if !metadata.is_file() || metadata.file_type().is_symlink() {
+        return Err("config.yaml must be a regular, unlinked file".to_owned());
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        if metadata.nlink() > 1 {
+            return Err("config.yaml has multiple hard links; refusing to overwrite it".to_owned());
+        }
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        if metadata.number_of_links() > 1 || metadata.file_attributes() & 0x400 != 0 {
+            return Err(
+                "config.yaml is linked or reparse-pointed; refusing to overwrite it".to_owned(),
+            );
+        }
+    }
+
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)
+        .map_err(|error| format!("could not read config.yaml: {error}"))?;
+    let mut config: serde_yaml::Value = if contents.trim().is_empty() {
+        serde_yaml::Value::Mapping(serde_yaml::Mapping::new())
+    } else {
+        serde_yaml::from_str(&contents)
+            .map_err(|error| format!("Config error: invalid YAML in config.yaml: {error}"))?
+    };
+    if config.is_null() {
+        config = serde_yaml::Value::Mapping(serde_yaml::Mapping::new());
+    }
+    let mapping = config
+        .as_mapping_mut()
+        .ok_or_else(|| "Config error: config.yaml must be a YAML mapping.".to_owned())?;
+    let mut preference_mapping = serde_yaml::Mapping::new();
+    for name in ["w_cap", "w_cost", "w_lat", "w_ctx"] {
+        let value = weights
+            .get(name)
+            .ok_or_else(|| format!("routing preference {preference} is missing {name}"))?;
+        preference_mapping.insert(
+            name,
+            serde_yaml::to_value(value).map_err(|error| error.to_string())?,
+        );
+    }
+    mapping.insert("weights", serde_yaml::Value::Mapping(preference_mapping));
+    let rendered = serde_yaml::to_string(&config).map_err(|error| error.to_string())?;
+    file.set_len(0)
+        .map_err(|error| format!("could not update config.yaml: {error}"))?;
+    file.seek(SeekFrom::Start(0))
+        .map_err(|error| format!("could not update config.yaml: {error}"))?;
+    file.write_all(rendered.as_bytes())
+        .map_err(|error| format!("could not update config.yaml: {error}"))
+}
+
+fn setup(home: &Path, args: &[String]) -> Result<i32, String> {
+    if args
+        .iter()
+        .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
+    {
+        println!(
+            "Usage: agentrouter setup [--preference quality|balanced|cheap|fast] [--sample TEXT]"
+        );
+        return Ok(0);
+    }
+    let mut preference = "balanced".to_owned();
+    let mut sample = "summarize this PDF and list the action items".to_owned();
+    let mut args = args.iter();
+    while let Some(argument) = args.next() {
+        match argument.as_str() {
+            "--preference" => {
+                preference = args.next().ok_or("--preference needs a value")?.clone();
+            }
+            "--sample" => sample = args.next().ok_or("--sample needs text")?.clone(),
+            unknown => return Err(format!("unknown setup option '{unknown}'")),
+        }
+    }
+    const PREFERENCE_ORDER: [&str; 4] = ["quality", "cheap", "fast", "balanced"];
+    let available_preferences = agentrouter_policy::preference_weights();
+    if !available_preferences.contains_key(preference.as_str()) {
+        eprintln!(
+            "Unknown --preference '{preference}'. Choose: {}.",
+            PREFERENCE_ORDER.join(", ")
+        );
+        return Ok(2);
+    }
+
+    println!("AgentRouter setup - everything runs locally; no task text leaves this machine.\n");
+    println!("1. Home directory");
+    for line in agentrouter_cli::init_home_with_force(home, false)? {
+        println!("{line}");
+    }
+
+    println!("\n2. Execution hosts (credentials detected by presence only; values never read)");
+    let mut real_available = 0;
+    for host in agentrouter_hosts::known_hosts() {
+        let status = agentrouter_hosts::detect_host(host, None);
+        let mark = if status.availability == agentrouter_hosts::AVAILABLE {
+            "OK "
+        } else {
+            "-- "
+        };
+        println!(
+            "   [{mark}] {host:<16} {:<14} {}",
+            status.state, status.reason
+        );
+        if host != "manual" && status.availability == agentrouter_hosts::AVAILABLE {
+            real_available += 1;
+        }
+    }
+    if real_available == 0 {
+        println!("   Note: no host available yet - install Claude Code/Codex or set an API key.");
+        println!("   Run 'agentrouter hosts doctor' for the exact next step per host.");
+    }
+
+    println!("\n3. Preference: {preference}");
+    write_setup_preference(home, &preference)?;
+    println!(
+        "   Saved scoring weights to {}",
+        home.join("config.yaml").display()
+    );
+
+    println!("\n4. Sample route: \"{sample}\"");
+    let models = load_catalog(home)?;
+    let (weights, _learning, max_tier) = agentrouter_cli::load_route_config(home)
+        .map_err(|error| format!("Config error: {error}"))?;
+    let models = agentrouter_cli::apply_policy(models, max_tier.as_deref())?;
+    let classification = agentrouter_classifier::classify(
+        &sample,
+        &agentrouter_classifier::ClassifyOptions::default(),
+    );
+    let route =
+        agentrouter_cli::route_payload(&sample, &models, &classification, weights, None, None);
+    if route["recommendation"].is_object() {
+        println!(
+            "   -> {}  (score {:.2})",
+            route["recommendation"]["model"]
+                .as_str()
+                .unwrap_or_default(),
+            route["recommendation"]["score"]
+                .as_f64()
+                .unwrap_or_default()
+        );
+    } else {
+        println!("   -> no eligible model (check your registry)");
+    }
+
+    println!("\n5. Install a host integration:");
+    println!("   agentrouter plugin install claude-code    # or: codex");
+    println!("\nDone. Next: agentrouter route \"<your task>\"");
     Ok(0)
 }
 
@@ -915,8 +1092,25 @@ fn run() -> Result<i32, String> {
             .map_err(|error| error.to_string())?;
         return Ok(status.code().unwrap_or(1));
     }
+    if command == "evaluate" {
+        if tail
+            .iter()
+            .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
+        {
+            println!("Usage: agentrouter evaluate [--gold PATH] [--out-dir PATH] [--json] [--no-artifacts]");
+            return Ok(0);
+        }
+        return run_sibling(
+            "agentrouter-evaluate",
+            std::iter::once("legacy-gold".to_owned()).chain(tail),
+        );
+    }
     if command == "plugin" {
         return plugin(&tail);
+    }
+    if command == "setup" {
+        let home = home()?;
+        return setup(&home, &tail);
     }
 
     let home = home()?;
