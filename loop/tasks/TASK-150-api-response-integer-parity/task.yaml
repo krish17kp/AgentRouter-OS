@@ -1,0 +1,31 @@
+id: TASK-150
+title: Preserve API response arbitrary-precision integer parity
+source: Rust parity matrix Partial row for agentrouter/server/schemas.py
+priority: 2
+status: in_progress
+risk: low
+customer_impact: Prevents large registry context windows from being truncated or rejected by Rust API response schemas.
+affected_surfaces:
+  - rust/agentrouter-api/src/responses.rs
+  - tests/test_rust_http_schemas_compat.py
+  - loop/tasks/TASK-150-api-response-integer-parity
+dependencies:
+  - Shared Pydantic-compatible integer coercion in agentrouter-core
+acceptance_criteria:
+  - Large signed integers serialize identically to Python ModelSummary responses.
+  - Integer strings and booleans follow Pydantic's non-strict integer behavior.
+  - Fractional, exponent-string, null, and non-scalar inputs are rejected.
+  - Frozen data and release thresholds remain unchanged.
+verification_commands:
+  - ./.venv/bin/python -m pytest -q tests/test_rust_http_schemas_compat.py
+  - cargo test -p agentrouter-api
+  - cargo clippy -p agentrouter-api --all-targets --all-features -- -D warnings
+  - cargo fmt --all -- --check
+  - git diff --check
+required_reviewers:
+  - rust-api-response-contract
+repair_iteration: 0
+external_blockers: []
+owner_blockers: []
+created_at: "2026-11-14"
+updated_at: "2026-11-14"

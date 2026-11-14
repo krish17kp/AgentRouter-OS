@@ -2,19 +2,19 @@
 
 ## Current checkpoint — 2026-11-14
 
-Active branch `release/agentrouter-v0.5-rc1`; latest pushed code is `7f29015`.
-TASK-149's nested JSON redaction differential and full Linux/Python 3.12
-regression pass locally. The suite passes 2,572 tests, 5 skipped, with 92.030% statement, 87.712%
+Active branch `release/agentrouter-v0.5-rc1`; latest pushed code is `9a7dc7a`.
+TASK-150's arbitrary-precision API response differential and full Linux/Python
+3.12 regression pass locally. The suite passes 2,580 tests, 5 skipped, with 92.030% statement, 87.712%
 branch, and 91.038% combined coverage. Hosted critical mutation passes 1,706
 selected mutants with zero unreviewed survivors. Rust workspace passes Linux,
-Windows, and macOS; Linux Python/Rust compatibility passes. macOS compatibility
-and Windows/macOS full Python jobs are running. The enforcing gate fails at
-frozen context-band accuracy 0.6667 < 0.90. PR #16 is the only open PR and has
-no GitHub reviews. Keep the PR held.
+Windows, and macOS; Linux/macOS Python/Rust compatibility passes. Windows
+compatibility and most Python jobs are still running. The PR enforcing gate
+fails at frozen context-band accuracy 0.6667 < 0.90. PR #16 is the only open PR
+and has no GitHub reviews. Keep the PR held.
 
 TASK-141's SDK/reliability selection, Rust workspace/Clippy, and full Python
 regression pass. Current coverage evidence is
-[`docs/COVERAGE_REPORT_2026-11-14-TASK-149.md`](docs/COVERAGE_REPORT_2026-11-14-TASK-149.md).
+[`docs/COVERAGE_REPORT_2026-11-14-TASK-150.md`](docs/COVERAGE_REPORT_2026-11-14-TASK-150.md).
 TASK-142 compares every evaluator seed model field and Rust exports against
 Python's live `__all__`. TASK-143 makes the Rust full-scorecard CLI discover the
 actual sibling CLI surface at runtime. TASK-144 is pushed at `0d3ea70`: both

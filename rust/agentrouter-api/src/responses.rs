@@ -27,9 +27,17 @@ pub struct ModelSummary {
     pub model_id: String,
     pub key: String,
     pub release_channel: String,
-    #[serde(deserialize_with = "crate::pydantic::i64")]
-    pub context_window: i64,
+    #[serde(deserialize_with = "deserialize_pydantic_integer")]
+    pub context_window: serde_json::Number,
     pub host_availability: String,
+}
+
+fn deserialize_pydantic_integer<'de, D>(deserializer: D) -> Result<serde_json::Number, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = Value::deserialize(deserializer)?;
+    agentrouter_core::pydantic_integer_from_value(&value).map_err(serde::de::Error::custom)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

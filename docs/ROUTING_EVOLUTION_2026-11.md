@@ -1,6 +1,6 @@
 # Routing evolution and Rust delivery plan
 
-Research date: 2026-11-09. This is an engineering plan, not a release-readiness claim.
+Research date: 2026-11-14. This is an engineering plan, not a release-readiness claim.
 Python remains the shipping implementation. The current Rust branch has shared
 types, classifier, registry, policy, routing, host discovery, usage state,
 SQLite storage, and a partial route CLI. It is not a complete Rust router.
@@ -23,6 +23,28 @@ copied wholesale: real latency, cost, failure, and quality signals require real 
 and current provider adapters do not supply them. Vendor marketing numbers are not
 accepted as AgentRouter benchmarks.
 
+## Findings from current router research
+
+- [LLMRouterBench](https://arxiv.org/abs/2601.07206) evaluates 10 routing
+  baselines across 21 datasets and 33 models. It reports that several newer and
+  commercial routers do not reliably beat a best-single-model baseline on its
+  evaluated pools, that model-pool curation matters, and that latency adds a
+  useful third axis to quality/cost comparisons. Its results are specific to
+  its datasets and pool; they do not establish performance for AgentRouter.
+- [RouterBench](https://arxiv.org/abs/2403.12031) provides over 405K model
+  inference outcomes and a common evaluation framework. The practical lesson is
+  to compare methods under the same model outputs, workload split, and scoring
+  rules rather than compare headline numbers from separate experiments.
+- [RouteLLM's calibration guidance](https://github.com/lm-sys/RouteLLM) says
+  routing thresholds should be calibrated on queries representative of the
+  target workload; the desired stronger-model share changes with the query mix.
+  AgentRouter must not copy a threshold calibrated on a different workload.
+- [LiteLLM's failure handling](https://docs.litellm.ai/docs/router/learn/reliability)
+  treats retry, cross-group fallback, and deployment cooldown as separate
+  mechanisms. If AgentRouter adds live failover, one layer should own retries,
+  every hop should recheck policy and approval constraints, and each action
+  should be visible in the decision record.
+
 ## Delivery sequence
 
 1. **Parity first.** Build Rust crates behind existing Python contracts: registry
@@ -42,8 +64,11 @@ accepted as AgentRouter benchmarks.
    cross-model fallback must recheck every hard constraint and approval gate.
 4. **Measured optimization.** Add offline replay and shadow evaluation with
    quality, cost, latency, abstention, fallback rate, and safety violations.
-   Compare fixed weights to cost-sensitive and learned candidates. Promote only
-   on a separate untouched test set and preserve the existing seven release gates.
+   Compare fixed weights to cost-sensitive and learned candidates alongside
+   best-single, cheapest, strongest, and random baselines. Keep workload, model
+   pool, pricing snapshot, split, and seeds identical. Report per-domain and
+   high-risk outcomes, quality, cost, latency, and Pareto points. Promote only on
+   a separate untouched test set and preserve the existing seven release gates.
 5. **Operational completion.** Ship execution only after adapter lifecycle tests
    cover cancellation, timeout, retries, budgets, malformed output, and audit
    redaction. Then complete orchestration, annotation tooling, and the Rust-only

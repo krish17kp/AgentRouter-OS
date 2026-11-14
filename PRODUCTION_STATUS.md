@@ -4,10 +4,10 @@ Updated: 2026-11-14
 
 ## Definition of done
 
-- [ ] PR review and hosted checks: PR #16 is the sole open PR against `main`, with no GitHub reviews or review requests. At the latest completed check head `c1b6750`, every required Python, Rust, compatibility, API, build, security, website, mutation, and release-readiness check passes except `enforce-release-gate`. The newer evidence commit `19dccfe` rerun is still completing platform jobs; its release gate fails at the same frozen context-band result, `0.6667 < 0.90`. Live smoke skips without credentials. TASK-146's hosted mutation run passes with zero unreviewed survivors.
+- [ ] PR review and hosted checks: PR #16 is the sole open PR against `main`, with no GitHub reviews or review requests. At code head `9a7dc7a`, Rust workspace checks pass Linux/Windows/macOS and Python/Rust compatibility passes Linux/macOS; Windows compatibility and most Python platform jobs are still running. The PR workflow fails only at `enforce-release-gate` on frozen context-band accuracy `0.6667 < 0.90`; its push workflow skips that gate. Live smoke skips without credentials. Critical mutation passes with zero unreviewed survivors.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md): 48 rows meet the full-module differential bar and 29 remain Partial. TASK-089–091 closed the Python/Rust storage contract with shared-database and concurrency evidence. TASK-136/137 add Rust reliability server lifecycle and a user-facing soak command; TASK-139 aligns common transport-error categories; TASK-141 adds an injectable Rust SDK transport; TASK-144 closes OpenAI non-2xx status parity. TASK-147 locally aligns the native Rust SDK TCP connect timeout with its configured timeout; broader timeout and generic I/O differences remain.
-- [x] Full Python suite: Linux/Python 3.12 passes 2,572 tests and skips 5. The TASK-148 coverage refresh measures 92.030% statement, 87.712% branch, and 91.038% combined; both required thresholds pass. Evidence is in [`docs/COVERAGE_REPORT_2026-11-14-TASK-148.md`](docs/COVERAGE_REPORT_2026-11-14-TASK-148.md).
+- [x] Full Python suite: Linux/Python 3.12 passes 2,580 tests and skips 5. The TASK-150 coverage refresh measures 92.030% statement, 87.712% branch, and 91.038% combined; both required thresholds pass. Evidence is in [`docs/COVERAGE_REPORT_2026-11-14-TASK-150.md`](docs/COVERAGE_REPORT_2026-11-14-TASK-150.md).
 - [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations; the Rust release benchmark now runs the same 10/100/1,000 candidate fleets, with a paired local p50 ratio of 2.70×–3.25× under stated synthetic conditions.
 - [x] Changelog, coverage evidence, and local latency measurements are committed to the release candidate. Candidate package version is now `0.5.0rc1`, with draft release notes in `docs/RELEASE_NOTES_v0.5.0rc1.md`; final `0.5.0` packaging and publication remain blocked on parity and all release gates.
 - [ ] Release candidate promoted to `main` with a tagged release.
@@ -20,8 +20,10 @@ Updated: 2026-11-14
 - [x] Rust doctor quota checks share `agentrouter-hosts::detect_host`, provider mapping, and the bounded usage state machine; nine diagnostic compatibility tests pass. Full local regression passes; overall doctor parity remains partial.
 - [x] `agentrouter/learning.py` now has a dedicated `agentrouter-learning` Rust crate; nine differential fixtures cover caps, sample thresholds, nullable ratings, exact explanations, and ties-to-even rounding. Route CLI learning-on/off parity remains covered.
 - [x] Rust evaluation scorer/report/comparison slices passed the RC's cross-platform Rust and Python/Rust checks. The gold adapter is now full-module parity across metadata, availability, description, all 165 records, checksum, and deterministic sampling. Shared adapter base methods, external adapters, evaluation CLI/runner, and annotation remain Python-only.
-- [ ] TASK-148 expands the Rust API service differential across high-risk gates and explicit model preferences; the focused route-envelope selection passes 3 tests locally, and the full Python suite passes 2,572/5. The service module remains Partial for logging/spans and full FastAPI lifecycle/middleware behavior; the new hosted matrix is pending.
-- [ ] TASK-149 adds exact Python/Rust differential coverage for nested JSON secret redaction; the focused case and full Python suite pass locally (2,572 passed, 5 skipped; 92.030% statement, 87.712% branch, 91.038% combined). Hosted validation is pending this push. The observability module remains Partial for structured logging, request context, spans, API-error records, and OTel.
+- [x] TASK-148 expands the Rust API service differential across high-risk gates and explicit model preferences; the focused route-envelope selection passes 3 tests locally, and the full Python suite passes 2,572/5. Rust workspace, compatibility, and full Python checks pass on Linux/Windows/macOS at `7f29015`; the PR's frozen evaluation gate remains blocked. The service module remains Partial for logging/spans and full FastAPI lifecycle/middleware behavior.
+- [ ] TASK-149 adds exact Python/Rust differential coverage for nested JSON secret redaction; the focused case and full Python suite pass locally (2,572 passed, 5 skipped; 92.030% statement, 87.712% branch, 91.038% combined). Rust workspace passes all three OSes and Rust/Python compatibility passes Linux/macOS at `9a7dc7a`; Windows compatibility and full Python platform checks are still running. The observability module remains Partial for structured logging, request context, spans, API-error records, and OTel.
+- [ ] TASK-150 removes a real Rust API response narrowing bug: `ModelSummary.context_window` now uses shared Pydantic integer coercion and preserves integers beyond `i64`. Large positive/negative integers, integer strings, booleans, and invalid inputs match Python in the new differential cases. Focused API schema suite passes 57 cases; full Rust workspace tests/Clippy pass locally. Full Python regression passes 2,580/5 with 92.030% statement, 87.712% branch, and 91.038% combined coverage. Hosted checks await the RC push.
+- [x] TASK-151 refreshes routing research from LiteLLM, RouteLLM, RouterBench, and LLMRouterBench primary sources. Future candidates must beat best-single, cheapest, strongest, and random baselines on the same workload/pool and report quality, cost, latency, per-domain, and high-risk outcomes. Learned/cascade routing remains disabled pending consented labels and independent evaluation; no gate or frozen data changed.
 
 - [x] PR #22 MCP dependency bound merged to release candidate.
 - [x] PR #25 staged Rust migration, registry and provider-status probes merged to release candidate as `99f5b76`; Python remains the shipping authority.
@@ -168,44 +170,21 @@ Updated: 2026-11-14
 - OpenAI live validation: provide `OPENAI_API_KEY` through a local environment or a protected secret store and authorize one bounded Responses API smoke request, which may incur usage charges. Offline request/response fixtures are ready; no key is stored in the repository.
 - Production release/deployment: after the local and hosted release gates pass, provide the production hosting/domain credentials and authorize any paid infrastructure and deployment. The Rust server is loopback-only and no production deployment has run.
 
-Latest completed full local verification: Python 3.12 passes 2,550 tests with 5 skips on
-pytest 9.0.3 at 92.025% statement (6,900/7,498), 87.690% branch (1,959/2,234),
-and 91.030% weighted combined coverage; current evidence is in
-`docs/COVERAGE_REPORT_2026-11-14-TASK-141.md`. This run includes the Windows
-transport-test repair and fail-closed fixture validation. The provider defaults, routing duplicate-key,
-injected-classifier evaluator, legacy gold, and the registry date differentials
-pass. For TASK-121,
-the Rust workspace and strict Clippy pass locally, as do three setup/evaluate
-parity cases, three legacy-gold artifact cases, and the plugin cross-process
-lock case. The full Python suite includes the setup/evaluate additions. For
-TASK-122, all 13 diagnostic compatibility cases pass, along with the full Rust
-workspace and strict Clippy. TASK-123's 54 annotation schema compatibility
-cases, Rust workspace, and strict Clippy also pass locally. TASK-124's 49
-registry differential cases, full Python suite, Rust workspace, and strict
-Clippy also passed locally. TASK-125's 108 registry/evaluation differential
-cases, full Python suite, full Rust workspace, and strict Clippy pass with
-the JSON-streaming repair; hosted cross-platform checks pass at `6223871`.
-TASK-126's 22 focused cases pass hosted Rust and Python/Rust validation across
-the supported platforms. TASK-127's 295 focused cases and cross-platform hosted
-checks pass. TASK-128's local regression and hosted cross-platform checks pass.
-TASK-129's 88 focused registry/schema cases, 23 registry crate tests, full
-2,392/4 regression, workspace tests, strict Clippy, Rust format, and Ruff pass
-locally. TASK-130 adds 101 direct `Provider`/`ExecutionTarget` differentials;
-its full 2,405/4 regression, full Rust workspace, strict Clippy, Rust format,
-Ruff, and diff checks pass locally. The full crate cannot cross-compile locally
-because the MinGW C compiler needed by bundled SQLite is absent; hosted Windows
-Rust and Python/Rust checks passed at `83fd7dc`; its Windows Python jobs were
-still running at that historical checkpoint. Later candidate checks pass on
-Windows. Formatting, Ruff, Bandit, cargo audit, package wheel/sdist build,
-Twine metadata checks, and diff checks passed for the preceding candidate.
-`pip-audit` initially exposed pytest 8.4.2 (CVE-2025-71176); the dev constraint
-selects patched pytest 9.0.3–9.0.x and `pip-audit` now passes. The full mutation
-run passes at 0.9698 overall and kills the six unreviewed plugin mutants; hosted
-critical mutation also passes at `83fd7dc`. The unchanged release gate remains
-0.6667 against 0.90; live smoke skips because no OpenAI credential is
-configured. PR #16 remains promotion-blocked by the frozen context-band result
-and required independent human annotations. Latest coverage evidence is in
-`docs/COVERAGE_REPORT_2026-11-14-TASK-135.md`.
+Latest completed full local verification: Python 3.12 passes 2,580 tests with 5
+skips on pytest 9.0.3 in 237.14 seconds. Coverage is 92.030% statement
+(6,905/7,503), 87.712% branch (1,963/2,238), and 91.038% combined
+(8,868/9,741), above required thresholds; evidence is in
+[`docs/COVERAGE_REPORT_2026-11-14-TASK-150.md`](docs/COVERAGE_REPORT_2026-11-14-TASK-150.md).
+The run includes the API large-integer response differential, nested JSON
+redaction, route-envelope cases, and earlier regressions. Rust workspace tests
+pass locally, as do API crate tests, strict API Clippy, the full API schema
+differential selection (57 tests), Rust formatting, Ruff, and `git diff --check`.
+The last pushed code head `9a7dc7a` passes all Rust workspace OS jobs and Linux
+and macOS Python/Rust compatibility; Windows compatibility and most Python jobs
+were running at the time of this update. PR #16's enforcing gate continues to
+fail honestly at frozen context-band accuracy 0.6667 < 0.90. Human annotation,
+live OpenAI validation, deployment credentials, and GitHub PR reviews remain
+open; no threshold or holdout was changed.
 
 PR #16 was reviewed against its release contract and code standards: no
 separate implementation defect was identified in the reviewed diff, but the

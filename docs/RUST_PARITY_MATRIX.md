@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-14 (TASK-082–149). This inventory covers every Python source module under
+Updated: 2026-11-14 (TASK-082–150). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -123,6 +123,10 @@ release authority until the full set is complete.
   fields, and ordinary paths. The observability module remains Partial because
   structured logging, request context, spans, API-error records, and OTel are
   still not ported.
+- TASK-150 preserves Pydantic's arbitrary-precision `ModelSummary.context_window`
+  response value in Rust, including values outside signed 64-bit range, and
+  differentially checks accepted and rejected coercions. The schema module stays
+  Partial until every public model and FastAPI behavior is covered.
 - The Rust workspace has no `TODO`, `todo!()`, or `unimplemented!()` markers in
   shipped Rust source, but that does not make unported Python behavior complete.
 - The Python modules marked **Partial** and **Not ported** remain production

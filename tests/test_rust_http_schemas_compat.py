@@ -203,6 +203,54 @@ def test_rust_http_request_schema_rejects_python_invalid_values(kind, model, pay
             },
         ),
         (
+            "model",
+            ModelSummary,
+            {
+                "vendor": None,
+                "model_id": "large-context",
+                "key": "vendor/large-context",
+                "release_channel": "stable",
+                "context_window": 2**100,
+                "host_availability": "available",
+            },
+        ),
+        (
+            "model",
+            ModelSummary,
+            {
+                "vendor": "vendor",
+                "model_id": "boolean-context",
+                "key": "vendor/boolean-context",
+                "release_channel": "stable",
+                "context_window": True,
+                "host_availability": "available",
+            },
+        ),
+        (
+            "model",
+            ModelSummary,
+            {
+                "vendor": "vendor",
+                "model_id": "negative-context-contract",
+                "key": "vendor/negative-context-contract",
+                "release_channel": "stable",
+                "context_window": -(2**100),
+                "host_availability": "available",
+            },
+        ),
+        (
+            "model",
+            ModelSummary,
+            {
+                "vendor": "vendor",
+                "model_id": "integer-string-context",
+                "key": "vendor/integer-string-context",
+                "release_channel": "stable",
+                "context_window": "123456789012345678901234567890",
+                "host_availability": "available",
+            },
+        ),
+        (
             "host",
             HostStatusResponse,
             {"host": "local", "availability": "available", "reason": "ready"},
@@ -239,6 +287,23 @@ def test_rust_http_response_schema_roundtrips_like_python(kind, model, payload):
     process = _rust_response(kind, payload)
     assert process.returncode == 0, process.stderr
     assert json.loads(process.stdout) == expected
+
+
+@pytest.mark.parametrize("context_window", [1.5, "1e3", None, []])
+def test_rust_model_summary_rejects_invalid_python_integer_values(context_window):
+    payload = {
+        "vendor": "vendor",
+        "model_id": "invalid-context",
+        "key": "vendor/invalid-context",
+        "release_channel": "stable",
+        "context_window": context_window,
+        "host_availability": "available",
+    }
+    with pytest.raises(ValidationError):
+        ModelSummary.model_validate(payload)
+    process = _rust_response("model", payload)
+    assert process.returncode != 0
+    assert process.stdout == ""
 
 
 @pytest.mark.parametrize(

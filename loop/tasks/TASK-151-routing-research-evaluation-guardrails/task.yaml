@@ -1,0 +1,24 @@
+id: TASK-151
+title: Apply routing research to production evaluation guardrails
+source: User request to research peer routers and strengthen AgentRouter routing with measured evidence
+priority: 1
+status: verify
+risk: low
+customer_impact: Prevents unmeasured routing complexity and makes future model selection improvements comparable and explainable.
+affected_surfaces:
+  - docs/ROUTING_EVOLUTION_2026-11.md
+  - loop/tasks/TASK-151-routing-research-evaluation-guardrails
+acceptance_criteria:
+  - Primary sources support the documented design observations.
+  - Best-single and fixed workload/model-pool baselines are required.
+  - Frozen holdout and existing release thresholds remain unchanged.
+verification_commands:
+  - git diff --check
+  - ./.venv/bin/python -c 'import yaml; yaml.safe_load(open("loop/tasks/TASK-151-routing-research-evaluation-guardrails/task.yaml"))'
+required_reviewers:
+  - routing-research-methodology
+repair_iteration: 0
+external_blockers: []
+owner_blockers: []
+created_at: "2026-11-14"
+updated_at: "2026-11-14"
