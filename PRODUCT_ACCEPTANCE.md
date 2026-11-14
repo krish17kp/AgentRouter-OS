@@ -2,16 +2,21 @@
 
 ## Current checkpoint — 2026-11-14
 
-Product acceptance remains **not granted**. PR #16 is the sole open PR. The
-latest pushed `ac6e9fd` had Python jobs stop at Ruff format before test
-execution. The test file is formatted locally and its 104 focused cases pass;
-the fix push will rerun hosted checks. Preceding head `4738a01` passed Rust
-workspace and Python/Rust compatibility on Linux, Windows, and macOS. The prior PR check remains
-blocked by the unchanged context-band promotion gate at 0.6667 < 0.90.
-TASK-130's full local regression passes 2,405 tests with 4 skips and its schema
-suite passes 101 focused cases. TASK-131's 104 enum-focused cases and full
-2,486/4 Python regression pass locally. Rust migration and product acceptance remain
-incomplete; no production deployment or paid OpenAI request occurred.
+Product acceptance remains **not granted**. PR #16 is the sole open PR. At
+pushed head `52c9565`, Rust workspace passes on Linux, Windows, and macOS;
+Python 3.10–3.13, macOS full-suite, Linux/macOS Python/Rust compatibility,
+site, scan, build smoke, release report, and critical-module mutation checks
+pass. Windows Python/Rust compatibility and full-suite jobs failed because a
+closed ephemeral port was filtered as a timeout; a reserved port-zero fixture
+passes locally and awaits hosted revalidation. The enforce-release-gate remains blocked by context-band accuracy
+0.6667 < 0.90; live smoke skips without an OpenAI credential.
+
+TASK-140's local SDK differential covers every Rust SDK endpoint and passes
+three API-key variants; the full Rust workspace, strict Clippy, format, Ruff,
+and 29 focused Python SDK tests pass. Full Python passes 2,538 tests with 5
+skips at 92.025% statement, 87.690% branch, and 91.030% combined coverage.
+The Rust migration and product acceptance remain incomplete; no production
+deployment or paid OpenAI request occurred.
 The table below is historical.
 
 ## Historical assessment

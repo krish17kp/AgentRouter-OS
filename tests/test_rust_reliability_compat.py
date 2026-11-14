@@ -274,10 +274,9 @@ def test_rust_load_runner_does_not_follow_redirects():
 
 
 def test_rust_transport_connect_error_matches_httpx():
-    probe = ThreadingHTTPServer(("127.0.0.1", 0), BaseHTTPRequestHandler)
-    port = probe.server_port
-    probe.server_close()
-    url = f"http://127.0.0.1:{port}"
+    # Port zero is an invalid destination port rejected locally; a just-closed
+    # ephemeral port can be silently filtered on Windows and become a timeout.
+    url = "http://127.0.0.1:0"
     python = run_load(
         url,
         LoadSpec(total=1, workers=1, timeout_seconds=2, request=lambda _index: ("GET", "/", None)),

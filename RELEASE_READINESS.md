@@ -2,20 +2,22 @@
 
 ## Current checkpoint — 2026-11-14
 
-**NOT release ready.** The latest pushed RC head is `ac6e9fd`; its hosted Python
-jobs stopped at Ruff format before test execution. The test file has been
-formatted locally and all 104 focused cases re-pass; the fix push will rerun
-hosted checks. Preceding head `4738a01` passed Rust workspace and Python/Rust
-compatibility across Linux, Windows, and macOS. The prior PR check remains
-blocked by the unchanged context-band promotion gate at 0.6667 < 0.90;
-live smoke is skipped because no OpenAI credential is configured. TASK-130's
-2,405-pass/4-skip Python suite, full Rust workspace, strict Clippy, format, and
-targeted Ruff pass locally. TASK-131 directly checks all twelve schema enums;
-104 focused cases and the full 2,486-pass/4-skip suite pass, with 91.970%
-statement, 87.690% branch, and 90.988% weighted combined coverage. The Rust
-workspace, strict Clippy, format, Ruff, and diff checks pass locally. Hosted
-validation of the combined candidate is pending its push. PR #16 is the sole
-open PR. Full Rust
+**NOT release ready.** The latest pushed RC head is `52c9565`; hosted Rust
+workspace jobs pass on Linux, Windows, and macOS. Python 3.10–3.13, macOS
+full-suite, Linux/macOS Python/Rust compatibility, scan, site, build smoke,
+release report, and critical-module mutation checks pass. Windows
+Python/Rust compatibility and full-suite jobs failed because a closed
+ephemeral port was filtered as a timeout; an invalid loopback destination port-zero fixture passes
+locally and awaits hosted revalidation. The enforce-release-gate fails at the
+unchanged frozen context-band score 0.6667
+versus 0.90; live smoke skips without an OpenAI credential.
+
+TASK-140's Rust SDK wire-contract comparison passes all nine endpoints with
+present, absent, and blank API keys. Its local full Rust workspace, strict
+Clippy, formatting, Ruff, and 29 focused Python SDK cases pass. A full Python
+coverage regression passes 2,538 / 5 with 92.025% statement, 87.690% branch,
+and 91.030% combined coverage. The 29-case SDK-focused suite passes. The SDK remains Partial for injectable
+transport and transport-error behavior. PR #16 remains the sole open PR. Rust
 CLI/HTTP/MCP parity, provider execution, external dataset loaders, evaluation
 runner, and R5–R13 remain incomplete. Human annotation, live OpenAI validation,
 main promotion, and production credentials remain owner inputs. No paid request

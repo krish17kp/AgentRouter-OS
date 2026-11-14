@@ -2,18 +2,21 @@
 
 ## Current checkpoint — 2026-11-14
 
-The latest pushed RC head is `ac6e9fd`; its hosted Python jobs stopped at Ruff
-format before test execution. The enum compatibility file has been formatted
-locally and the 104 focused cases re-pass; a fix push will trigger hosted
-revalidation. Preceding head `4738a01` passed Rust workspace and Python/Rust
-compatibility across Linux, Windows, and macOS. The promotion gate remains blocked by the unchanged frozen
-context accuracy of 0.6667 < 0.90. The latest full suite passes 2,486 tests and
-skips 4, at 91.970% statement, 87.690% branch, and 90.988% weighted combined
-coverage; full Rust workspace and strict Clippy pass locally. TASK-130's direct
-`Provider` and `ExecutionTarget` schema differentials pass 101 focused cases.
-TASK-131 directly checks all declared values of the twelve public schema enums;
-104 focused cases and the full regression pass. Python remains the shipping
-authority and the Rust migration is incomplete.
+At pushed RC `52c9565`, Rust workspace passes on Linux, Windows, and macOS;
+Python 3.10–3.13, macOS full-suite, Linux/macOS Python/Rust compatibility,
+security scan, site, build smoke, release report, and critical-module mutation
+pass. Windows Python/Rust compatibility and full-suite jobs failed because a
+closed ephemeral port was filtered as a timeout; the test now uses invalid
+loopback destination port zero and passes locally, pending hosted revalidation. The
+enforce-release-gate correctly fails on frozen context-band
+accuracy 0.6667 < 0.90, and live smoke skips without credentials.
+
+The latest full Python regression passes 2,538 / skips 5, with 92.025% statement,
+87.690% branch, and 91.030% combined coverage. TASK-140's new Rust SDK
+differential passes all nine endpoints across authenticated, absent, and blank
+API-key cases; full Rust workspace, strict Clippy, format, Ruff, and the
+29-case combined SDK-focused suite pass locally. Python
+remains the shipping authority and the Rust migration is incomplete.
 
 ## Historical dashboard
 

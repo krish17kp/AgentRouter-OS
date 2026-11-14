@@ -2589,3 +2589,20 @@ Python/Rust tests. All 11 focused reliability tests, the full Rust workspace,
 strict Clippy, formatting, Ruff, and diff checks pass locally. Generic `ureq`
 I/O failures do not preserve read-versus-write direction, so the harness remains
 Partial for that case; hosted validation follows push.
+
+## 2026-11-14 — TASK-140 Rust SDK wire-contract parity
+
+Added a JSON bridge for the synchronous Rust SDK and a local fixture differential
+that runs the same operations through Python and Rust. All nine endpoints match
+request method/path/body, response decoding, API-key behavior, and structured
+API error status/code/display across present, absent, and blank API-key cases.
+The cases include a trailing-slash base URL, explicit zero/empty optional values,
+and `no_log=true`. The Rust SDK differential plus existing Python SDK tests pass
+29 cases. Full Rust workspace tests, strict Clippy, formatting, Ruff, and diff
+checks pass locally. Full Python passes 2,538 tests with 5 skips in 468.91s;
+coverage is 92.025% statement, 87.690% branch, and 91.030% combined in
+`docs/COVERAGE_REPORT_2026-11-14-TASK-140.md`. The SDK stays
+Partial because Python's injectable `httpx` transport and native transport
+exception contract remain unmatched; the parity matrix is unchanged. Hosted
+validation follows the RC push. The bridge emits only a generic transport-failure
+label so URLs or other transport details cannot leak into test output.

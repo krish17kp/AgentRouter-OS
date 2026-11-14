@@ -2,6 +2,14 @@
 
 ## Current migration and release limits (2026-11-14)
 
+- TASK-140 adds Rust/Python SDK wire-contract comparisons for all nine
+  endpoints, including no-key and blank-key behavior and structured HTTP API
+  errors. Local SDK and Rust workspace checks pass. `agentrouter/sdk.py` stays
+  Partial because Rust does not yet model the Python client's injectable
+  `httpx` transport or its native transport exception types.
+- TASK-139 maps common `ureq` connection and timeout failures to the corresponding
+  Python `httpx` category names in the reliability harness. Generic I/O errors
+  still do not retain read-versus-write direction; that harness stays Partial.
 - TASK-125 registry scalar coercions now cover Pydantic-compatible integer,
   float, and boolean forms. Its arbitrary-precision JSON visitor and reserved
   YAML marker rejection pass hosted Rust workspace and Python/Rust compatibility

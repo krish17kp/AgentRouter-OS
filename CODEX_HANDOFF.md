@@ -2,19 +2,25 @@
 
 ## Current checkpoint — 2026-11-14
 
-Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `934fe17`
-(TASK-135). It adds direct concurrent Python/Rust idempotency evidence.
-The full Python regression passes 2,529 tests with 5 skips; 23 focused MCP
-cases pass on Python 3.10/MCP 1.30 and Python 3.11/3.12/MCP 2.3. The full Rust
-workspace, strict Clippy, formatting, Ruff, package build, and diff checks pass.
-Coverage is 91.971% statement, 87.690% branch, and 90.988% weighted combined.
-At `934fe17`, push-workflow MCP, Rust workspace, Python/Rust compatibility,
-Python-version and macOS checks pass; one Windows test and duplicate
-PR-workflow Windows/macOS tests are still running. The frozen context gate
-remains unchanged at 0.6667 < 0.90. Continue hosted validation and the
-remaining Rust parity work.
-Human annotation, bounded OpenAI live validation, main promotion, and deployment
-credentials remain owner-gated in `PRODUCTION_STATUS.md`.
+Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `52c9565`
+(TASK-139). Rust workspace checks pass on Linux, Windows, and macOS. Python
+3.10–3.13, macOS full-suite, Linux/macOS Python/Rust compatibility, site, scan,
+build smoke, release report, and critical-module mutation checks pass. Windows
+Python/Rust compatibility and full-suite jobs failed at 52c9565 because a
+closed ephemeral port was filtered as a timeout. The test now uses invalid
+loopback destination port zero and passes locally; hosted revalidation follows push. The frozen
+context gate remains 0.6667 < 0.90; live smoke skips without an OpenAI key.
+
+Unpushed TASK-140 currently adds nine-endpoint Rust/Python SDK wire-contract
+comparisons. Its 3 credential variants, response/error parity, full Rust
+workspace, strict Clippy, formatting, Ruff, and 29 focused Python SDK cases
+pass locally. Full Python regression passed 2,538 / skipped 5, with 92.025%
+statement, 87.690% branch, and 91.030% combined coverage after the Windows test
+repair. Keep
+`agentrouter/sdk.py` Partial until Python's injectable transport and transport
+error semantics are represented. Continue hosted validation and remaining
+Rust parity work. Human annotation, bounded OpenAI live validation, main
+promotion, and deployment credentials remain listed in `PRODUCTION_STATUS.md`.
 
 ## Historical narrative
 

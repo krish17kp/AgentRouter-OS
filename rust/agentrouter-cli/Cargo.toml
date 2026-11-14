@@ -107,6 +107,10 @@ name = "harness_cli"
 path = "src/bin/harness_cli.rs"
 
 [[bin]]
+name = "sdk_from_json"
+path = "src/bin/sdk_from_json.rs"
+
+[[bin]]
 name = "doctor_cli"
 path = "src/bin/doctor_cli.rs"
 
