@@ -72,7 +72,7 @@ release authority until the full set is complete.
 | `agentrouter/mcp_server.py` | `agentrouter-mcp::{Server,run_stdio}` | Partial |
 | `agentrouter/observability.py` | `agentrouter-cli::observability` | Partial |
 | `agentrouter/openai_adapter.py` | `agentrouter-cli::openai` | Parity |
-| `agentrouter/plugins.py` | `agentrouter-cli::plugins` (inventory, destination roots, portable paths, ownership-record shape and no-follow state reads, list/status/doctor/install plan, no-force create/adopt/pre-existing install) | Partial |
+| `agentrouter/plugins.py` | `agentrouter-cli::plugins` (inventory, portable paths, no-follow state, list/status/doctor/plan, safe no-force install, ownership-checked uninstall and backup restore) | Partial |
 | `agentrouter/prompts.py` | `agentrouter-cli::generate_prompt` | Parity |
 | `agentrouter/refresh.py` | `agentrouter-registry::refresh` | Partial |
 | `agentrouter/registry.py` | `agentrouter-registry` | Parity |
@@ -254,10 +254,13 @@ release authority until the full set is complete.
 - The Rust plugin module ports the bundled manifest, portable path trust
   boundary, no-follow ownership-state reads, read-only list/doctor and dry-run
   planning, plus safe no-force installation of missing and byte-identical
-  files. Rust-created ownership state is byte-compatible with Python and can
-  be read and uninstalled by Python. Rust still refuses differing-file
-  replacement, managed upgrades, transaction recovery, and uninstall; those
-  lifecycle operations and full CLI parity remain Python responsibilities.
+  files and ownership-checked uninstall. Rust-created ownership state is
+  byte-compatible with Python. Differential checks cover owned and unmanaged
+  files, pre-existing/adopted files, edited and missing destinations, verified
+  backup restoration and crash recovery, historical paths, hard-link refusal,
+  and identity-checked empty-directory cleanup. Rust still refuses differing-
+  file replacement, managed upgrades, and interrupted transaction recovery;
+  those lifecycle operations and full CLI parity remain incomplete.
   Windows parity uses the CPython-compatible file-ID query where supported and
   fails closed for 128-bit identities the current state schema cannot encode.
 - Routing evaluation now scores caller-supplied model catalogs against gold

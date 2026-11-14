@@ -2,15 +2,18 @@
 
 ## Current checkpoint — 2026-11-14
 
-Active RC branch `release/agentrouter-v0.5-rc1`; latest pushed head is
-`f81d2d1`. PR #16 is the only open PR and remains blocked by the unchanged
-frozen context-band score 0.6667 < 0.90. TASK-110 plugin path and file-identity
-fixes pass hosted Rust and Python/Rust checks on Linux, Windows, and macOS; the
-full Windows and macOS Python jobs pass. TASK-111's 71 focused annotation
-schema/store/CLI cases, full Python regression (2,229 passed/4 skipped; 92.85%
-statement, 88.68% branch, 91.90% combined), Rust workspace, strict Clippy,
-formatting, and Ruff pass locally. Push TASK-111 to the authorized RC and
-inspect every hosted check, then continue Rust plugin uninstall parity.
+Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `132151d`.
+PR #16 is the only open PR and remains blocked by the unchanged frozen
+context-band score 0.6667 < 0.90. TASK-111 is hosted-green. TASK-112 Rust plugin
+uninstall and Python recovery advice are locally verified: focused plugin suite
+230 passed/3 skipped, full Python regression 2,237 passed/4 skipped (92.83%
+line, 88.63% branch, 91.87% combined), Rust workspace 153 passed and strict
+Clippy pass;
+Bandit, pip-audit, cargo audit, Ruff, formatting, and diff checks pass. Its
+Windows rename API type-checks in isolation; full local cross-compilation is
+blocked by the missing MinGW C compiler. Cross-platform CI awaits pushing the
+reviewed changes to the authorized RC. Next: commit/push this slice, inspect
+every hosted check, and continue Rust force-install/transaction-recovery parity.
 Human annotation, bounded OpenAI live validation, main promotion, and
 deployment credentials remain owner-gated in `PRODUCTION_STATUS.md`.
 

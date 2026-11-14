@@ -13,7 +13,7 @@ use std::process::Command;
 use agentrouter_registry::{load_all_models, load_providers, ModelEntry};
 
 fn usage() -> &'static str {
-    "usage: agentrouter <init|route|explain|feedback|execute|stats|prompt|registry|providers|hosts|models|doctor|server|mcp|dashboard|plugin|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  execute <decision-id> [--yes] [--dry-run]\n  stats [--json]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  server [--host HOST] [--port PORT]\n  mcp (stdio server)\n  dashboard [port]\n  plugin <list|install NAME [--dry-run] [--force] [--adopt-identical]|doctor [--json]>\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
+    "usage: agentrouter <init|route|explain|feedback|execute|stats|prompt|registry|providers|hosts|models|doctor|server|mcp|dashboard|plugin|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  execute <decision-id> [--yes] [--dry-run]\n  stats [--json]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  server [--host HOST] [--port PORT]\n  mcp (stdio server)\n  dashboard [port]\n  plugin <list|install NAME [--dry-run] [--force] [--adopt-identical]|uninstall NAME|doctor [--json]>\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
 }
 
 fn home() -> Result<PathBuf, String> {
@@ -767,9 +767,37 @@ fn plugin_install(args: &[String]) -> Result<i32, String> {
             println!("  {name:<28} {destination}");
         }
         println!(
-            "Installed '{}'. Rust uninstall is not migrated yet; use the Python CLI to uninstall it.",
-            plugin.name
+            "Installed '{}'. Uninstall with: agentrouter plugin uninstall {}",
+            plugin.name, plugin.name
         );
+    }
+    Ok(0)
+}
+
+fn plugin_uninstall(args: &[String]) -> Result<i32, String> {
+    let mut names = args.iter().skip(1);
+    let name = names
+        .next()
+        .ok_or_else(|| "usage: agentrouter plugin uninstall NAME".to_owned())?;
+    if let Some(extra) = names.next() {
+        return Err(format!("unexpected plugin uninstall argument: {extra}"));
+    }
+    let plugin = agentrouter_cli::plugins::get_plugin(name)?;
+    let root = plugin_roots()?
+        .into_iter()
+        .find(|(candidate, _)| candidate.name == plugin.name)
+        .map(|(_, root)| root)
+        .ok_or_else(|| "plugin destination root is unavailable".to_owned())?;
+    for result in agentrouter_cli::plugins::uninstall(plugin, &root)? {
+        let name = result
+            .get("result")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("blocked");
+        let destination = result
+            .get("dest")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("");
+        println!("  {name:<28} {destination}");
     }
     Ok(0)
 }
@@ -848,19 +876,15 @@ fn plugin(args: &[String]) -> Result<i32, String> {
         .iter()
         .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
     {
-        println!("Usage: agentrouter plugin <list|install NAME [--dry-run] [--force] [--adopt-identical]|doctor [--json]>");
+        println!("Usage: agentrouter plugin <list|install NAME [--dry-run] [--force] [--adopt-identical]|uninstall NAME|doctor [--json]>");
         return Ok(0);
     }
     match args {
         [command] if command == "list" => plugin_list(),
         [command, ..] if command == "install" => plugin_install(args),
+        [command, ..] if command == "uninstall" => plugin_uninstall(args),
         [command] if command == "doctor" => plugin_doctor(false),
         [command, flag] if command == "doctor" && flag == "--json" => plugin_doctor(true),
-        [command, ..] if command == "uninstall" => Err(
-            format!(
-                "Rust agentrouter plugin {command} is not migrated yet; use the Python CLI for this operation."
-            ),
-        ),
         _ => Err("usage: agentrouter plugin list".to_owned()),
     }
 }

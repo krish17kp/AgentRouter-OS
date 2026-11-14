@@ -13,10 +13,10 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 2,229 passed, 4 skipped |
-| Statement coverage | 92.85% (6,717 / 7,234 statements) |
-| Branch coverage | 88.68% (1,896 / 2,138 branch outcomes) |
-| Combined coverage reported by pytest-cov | 91.90% |
+| Python regression | 2,237 passed, 4 skipped |
+| Statement/line coverage | 92.83% (6,715 / 7,234 statements) |
+| Branch coverage | 88.63% (1,895 / 2,138 branch outcomes) |
+| Combined coverage reported by pytest-cov | 91.87% |
 | Project line / branch thresholds | 90% / 85% — both passed |
 | CI total-coverage threshold | 80% — passed |
 | Warnings | 1 Starlette/httpx deprecation warning |
@@ -34,8 +34,12 @@ corrupt-state, and linked destinations, and `plugin install --dry-run`
 comparisons for absent, identical, adoptable, user-authored, and managed files.
 Rust plugin installation also covers new managed files, idempotent installs,
 Python-compatible serialized ownership state, pre-existing and adopted file
-ownership, Python uninstall interoperability, linked state-directory refusal,
-and safe rejection of differing user content and `--force`. It is paired with
+ownership, linked state-directory refusal, and safe rejection of differing
+user content and `--force`. Rust uninstall now covers ownership-checked
+removal, preserving edits and hard links, restoring Python-created backups
+with their original identity and mode, recovering a completed backup restore,
+historical managed paths, retained non-empty directories, and refusal of
+interrupted transactions with the correct Python recovery command. It is paired with
 the arbitrary-precision annotation manifest schema/store compatibility cases,
 including byte-identical Python/Rust JSON persistence for 80-digit values. The
 serializer feature's provider-catalog YAML integration is also exercised,

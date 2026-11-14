@@ -26,33 +26,14 @@ All notable changes to AgentRouter OS. Format loosely follows
   replaces artifacts, and refuses symlinked or hard-linked targets. Python/Rust
   fixtures compare canonical bytes and manifest fields. The unified
   `agentrouter contract export` command remains to be integrated.
-- Start the Rust plugin-system port with the exact bundled Claude Code and Codex
-  inventory, bounded error echoing, destination-root resolution, and portable
-  path validation that rejects traversal, device names, controls, and Windows
-  path aliases. Filesystem transactions and the user-facing `agentrouter
-  plugin` commands remain Python-only until their safety behavior is ported.
-- Add fail-closed Rust validation for plugin ownership-record shape, allowed
-  dispositions, destination and backup paths, digests, and file/directory
-  identities. This validates untrusted JSON only; it does not read or trust a
-  record from disk until the no-follow filesystem reader is ported.
-- Add a read-only Rust `agentrouter plugin list` command with Python-compatible
-  installed/partial/not-installed summaries and fail-closed link/reparse-point
-  handling. Plugin install and uninstall remain on the Python CLI until their
-  filesystem transaction behavior is ported.
-- Add a Rust no-follow ownership-state reader that pins the plugin root and
-  private state directory, rejects links, hard links, unstable reads, and
-  invalid claims, and returns the validated record with its SHA-256 digest.
-- Add read-only Rust `agentrouter plugin doctor` text and `--json` reports with
-  Python-compatible findings for missing, unmanaged, managed, corrupt-state,
-  and unsafe linked destinations. Plugin install and uninstall transactions
-  remain on the Python CLI.
-- Add a Rust `agentrouter plugin install NAME --dry-run` preview with
-  Python-compatible create, preserve, adopt, managed-skip, overwrite, and
-  blocked actions. The preview does not modify host files. Add no-force Rust
-  installation for missing and byte-identical files with Python-compatible
-  ownership-state bytes and safe no-clobber writes. Differing files, force
-  replacement, managed upgrades, transaction recovery, and uninstall remain
-  Python-only until their lifecycle safeguards are ported.
+- Port the Rust plugin inventory, portable path validation, no-follow
+  ownership-state reader, list/doctor commands, install planning, safe no-force
+  install, and ownership-checked uninstall. Python and Rust share ownership
+  state; uninstall preserves user edits and unmanaged files, restores verified
+  backups, handles historical managed paths, and prunes only identity-matched
+  empty directories. Forced replacement, managed upgrades, and interrupted
+  transaction recovery remain Python-owned until their Rust safeguards are
+  complete.
 - Preserve Python-compatible arbitrary-precision annotation manifest integers
   in Rust schema validation and JSON storage, including exact large schema
   versions and count-map values. Keep the serializer's YAML paths safe under

@@ -1,5 +1,24 @@
 # LOOP_LOG
 
+## 2026-11-14 — TASK-112 Rust plugin uninstall local verification
+
+- Rust `agentrouter plugin uninstall NAME` now removes only unchanged,
+  ownership-recorded files; verifies and restores Python-created backups with
+  their original identity and mode; handles historical paths and owned empty
+  directories; and preserves ambiguous, edited, linked, or concurrent content.
+- Rust refuses interrupted install journals without mutation. Python and Rust
+  doctor advice now names `python -m agentrouter plugin install NAME` as the
+  recovery path, with a regression fixture for the documented command.
+- Focused plugin suite: 230 passed, 3 skipped. Full Python suite: 2,237 passed,
+  4 skipped; 92.83% line, 88.63% branch, 91.87% combined coverage. Rust
+  workspace, strict Clippy, formatting, Ruff, diff checks, and `cargo audit`
+  pass locally.
+- Rust workspace tests report 153 passing tests. The Windows rename helper
+  type-checks in isolation; the full local cross-target build needs MinGW.
+- TASK-112 cross-platform hosted validation awaits the authorized RC push.
+  Force replacement and Rust-side transaction recovery remain subsequent work;
+  the frozen context-band gate remains unchanged.
+
 ## 2026-11-14 — TASK-110 hosted closeout and TASK-111 annotation integer precision
 
 - TASK-110's path separator and Windows file-identity repairs are hosted-green
@@ -2283,3 +2302,25 @@ representation mismatch. Local fixes use component-wise joins and CPython 3.12+
 `FILE_ID_INFO` with fail-closed handling for identities the state schema cannot
 represent. Push the fix to RC and verify the complete cross-platform CI before
 marking this increment complete. The frozen release gate remains 0.6667 < 0.90.
+
+## 2026-11-14 — TASK-111 hosted validation
+
+TASK-111 passed hosted Rust workspace and non-skipping Python/Rust compatibility
+checks on Linux, Windows, and macOS at `132151d`; the Python version matrix,
+Windows/macOS Python suites, API, build, site, security, and critical-module
+mutation checks also pass. The only failing required check is the immutable
+context-band release gate (0.6667 < 0.90). Live smoke is skipped because no
+OpenAI credential was supplied. PR #16 remains open and promotion-blocked.
+
+## TASK-112 — Rust plugin uninstall
+
+Added the unified Rust uninstall command with ownership and inode/digest checks,
+verified backup restoration, crash-after-restore recognition, preservation of
+edited/unmanaged/hard-linked paths, historical state-path cleanup, and retryable
+empty-directory pruning. Backup restoration retains the canonical backup until
+the no-clobber destination link is verified and removes it afterward; restart
+recovery recognizes the shared identity if cleanup is interrupted. Focused
+plugin tests pass (230/3); the full Python regression passes
+2,237/4 with 92.83% line, 88.63% branch, and 91.87% combined coverage. The Rust
+workspace and strict Clippy pass locally; hosted cross-platform validation
+awaits the RC push.

@@ -2,20 +2,24 @@
 
 ## Current checkpoint — 2026-11-14
 
-**NOT release ready.** RC `release/agentrouter-v0.5-rc1` is at pushed head
-`f81d2d1`; PR #16 is the sole open PR. TASK-110 Rust workspace and Python/Rust
-compatibility pass on Linux, Windows, and macOS, and full Python CI passes on
-Windows and macOS. Full Linux Python regression passes with 2,229 passed and 4
-skipped; statement coverage is 92.85%, branch coverage 88.68%, and combined
-coverage 91.90%. TASK-111's arbitrary-precision annotation implementation
-passes locally (71 focused cases, full Python suite, Rust workspace, strict
-Clippy, formatting, and Ruff); hosted checks are pending. `enforce-release-gate`
+**NOT release ready.** The RC was at `132151d` before the current unpushed
+TASK-112 slice; PR #16 remains the sole open PR. The hosted matrix at
+`132151d` passes Rust workspace and Python/Rust compatibility on Linux,
+Windows, and macOS, full Python CI on Windows and macOS, API compatibility,
+build, site, security, and critical-module mutation checks. The current local
+Python regression passes with 2,237 passed and 4 skipped; line coverage is
+92.83%, branch coverage 88.63%, and combined coverage 91.87%. TASK-112 Rust
+plugin uninstall and Python recovery guidance pass 230 focused plugin cases
+(3 skipped), plus the full Python suite, Rust workspace, strict Clippy,
+formatting, Ruff, and
+dependency audit; hosted checks are pending the RC push. `enforce-release-gate`
 still fails on the unchanged context-band score 0.6667 < 0.90; live smoke is
 skipped because no credential was supplied. Full Rust CLI/HTTP/MCP parity,
-provider execution, plugin forced replacement/recovery/uninstall, external
-dataset loaders, evaluation runner, and R5–R13 remain incomplete. Human
-annotation, live OpenAI validation, main promotion, and production credentials
-remain owner inputs. No paid request or production deployment occurred.
+provider execution, plugin forced replacement and Rust transaction recovery,
+external dataset loaders, evaluation runner, and R5–R13 remain incomplete.
+Human annotation, live OpenAI validation, main promotion, and production
+credentials remain owner inputs. No paid request or production deployment
+occurred.
 
 ## Historical v0.5 assessment
 

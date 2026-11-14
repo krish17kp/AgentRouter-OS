@@ -1235,7 +1235,9 @@ def diagnose(p: Plugin) -> list[dict]:
                 "check": "transaction",
                 "status": DIAG_ATTENTION,
                 "summary": "a previous install or uninstall did not finish",
-                "remedy": f"re-run it to recover: agentrouter plugin install {p.name}",
+                "remedy": (
+                    f"recover with the Python CLI: python -m agentrouter plugin install {p.name}"
+                ),
             }
         )
 

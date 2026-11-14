@@ -21,17 +21,22 @@
   tests; full CLI parity, Windows ACL restrictions, and cross-platform CI for
   this change remain open.
 - Rust provider-status parity is a new probe, not full `providers` CLI parity.
-- Rust plugin install now handles missing and byte-identical files without
-  replacement and writes Python-readable ownership state. Forced replacement,
-  managed upgrades, transaction recovery, and Rust uninstall remain Python-only.
--  The path-format and CPython file-identity fixes pass hosted Rust and
-  Python/Rust jobs on Linux, Windows, and macOS at `f81d2d1`; Windows and macOS
+- Rust plugin install supports safe no-force creation and byte-identical
+  ownership; uninstall now removes only identity/digest-matched managed files,
+  verifies and restores backups, retains edits and ambiguous files, handles
+  historical paths, and prunes only identity-matched empty directories. The
+  TASK-112 implementation passes 230 focused plugin tests (3 skipped), the full
+  2,237-test Python suite, and 153 Rust workspace tests; its hosted matrix is
+  pending push. Forced replacement, managed upgrades, and Rust transaction
+  recovery remain Python-owned.
+- The path-format and CPython file-identity fixes pass hosted Rust and
+  Python/Rust jobs on Linux, Windows, and macOS at `132151d`; Windows and macOS
   Python CI also pass.
 - Rust annotation manifest integers now preserve arbitrary precision exactly
   in schema validation and JSON storage under TASK-111. Datetime grammar and
   remaining Pydantic scalar coercions still keep that schema module Partial;
   hosted validation of TASK-111 is pending.
-- Latest full Python coverage is 92.85% statement / 88.68% branch / 91.90%
+- Latest full Python coverage is 92.83% line / 88.63% branch / 91.87%
   combined, meeting the unchanged 90%/85% thresholds; see
   `docs/COVERAGE_REPORT_2026-11-14.md`.
 - The frozen context-band release gate remains 0.6667 < 0.90. The 63-candidate
