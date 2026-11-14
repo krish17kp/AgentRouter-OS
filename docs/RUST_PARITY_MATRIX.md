@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-14 (TASK-082–131). This inventory covers every Python source module under
+Updated: 2026-11-14 (TASK-082–132). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -204,10 +204,15 @@ release authority until the full set is complete.
   fields, unknown fields, and invalid nested values. TASK-131 directly checks
   every one of the twelve public schema enums: all 45 declared values serialize
   identically and representative invalid strings, nulls, and numbers are
-  rejected by both runtimes. `schema.py` remains Partial because direct
-  `ModelEntry` validation/default/property behavior and a complete module-level
-  probe of every model and validator are still outstanding; the individual
-  parity slices above do not close that inventory.
+  rejected by both runtimes. TASK-132 now directly checks `ModelEntry` defaults,
+  all required fields, coercions, numeric constraints, dates, nested execution
+  targets, unknown fields, normalized serialization, and its `vendor`, `key`,
+  `vendor_key`, and `name` properties. Python also rejects non-finite price and
+  confidence metadata at validation, matching Rust's safety constraints.
+  `schema.py` remains Partial pending direct coverage for Classification's
+  omitted-default and missing-required-field cases and a final review of all
+  public models and validators; the individual parity slices do not by
+  themselves close that inventory.
 - Context-band model inference is ported but remains disabled in the default
   classifier. The frozen evaluation gate still controls whether learned routing
   can be enabled.

@@ -183,9 +183,15 @@ pub struct ModelEntry {
     pub max_output_tokens: serde_json::Number,
     pub pricing_tier: PricingTier,
     pub latency_tier: LatencyTier,
-    #[serde(default, deserialize_with = "deserialize_optional_pydantic_f64")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_nonnegative_pydantic_f64"
+    )]
     pub input_price_per_million: Option<f64>,
-    #[serde(default, deserialize_with = "deserialize_optional_pydantic_f64")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_nonnegative_pydantic_f64"
+    )]
     pub output_price_per_million: Option<f64>,
     pub pricing_basis: Option<String>,
     #[serde(default, deserialize_with = "deserialize_pydantic_date")]
@@ -193,7 +199,10 @@ pub struct ModelEntry {
     pub ability: Ability,
     #[serde(default = "default_ability_source")]
     pub ability_source: AbilitySource,
-    #[serde(default, deserialize_with = "deserialize_optional_pydantic_f64")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_unit_interval_pydantic_f64"
+    )]
     pub ability_confidence: Option<f64>,
     pub tool_support: Vec<String>,
     #[serde(deserialize_with = "deserialize_pydantic_bool")]
@@ -715,14 +724,32 @@ where
     parse_pydantic_bool(value).ok_or_else(|| serde::de::Error::custom("invalid boolean value"))
 }
 
-fn deserialize_optional_pydantic_f64<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
+fn deserialize_optional_nonnegative_pydantic_f64<'de, D>(
+    deserializer: D,
+) -> Result<Option<f64>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
     Option::<PydanticScalar>::deserialize(deserializer)?
         .map(|value| {
             parse_pydantic_float(value)
-                .ok_or_else(|| serde::de::Error::custom("invalid float value"))
+                .filter(|number| number.is_finite() && *number >= 0.0)
+                .ok_or_else(|| serde::de::Error::custom("value must be finite and non-negative"))
+        })
+        .transpose()
+}
+
+fn deserialize_optional_unit_interval_pydantic_f64<'de, D>(
+    deserializer: D,
+) -> Result<Option<f64>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Option::<PydanticScalar>::deserialize(deserializer)?
+        .map(|value| {
+            parse_pydantic_float(value)
+                .filter(|number| number.is_finite() && (0.0..=1.0).contains(number))
+                .ok_or_else(|| serde::de::Error::custom("value must be finite and between 0 and 1"))
         })
         .transpose()
 }
@@ -805,7 +832,10 @@ impl ModelEntry {
     }
 
     pub fn name(&self) -> &str {
-        self.display_name.as_deref().unwrap_or(&self.model_id)
+        self.display_name
+            .as_deref()
+            .filter(|name| !name.is_empty())
+            .unwrap_or(&self.model_id)
     }
 
     pub fn last_updated_date(&self) -> Option<NaiveDate> {

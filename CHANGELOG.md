@@ -56,6 +56,8 @@ All notable changes to AgentRouter OS. Format loosely follows
   keys and values.
 
 ### Fixed
+- Reject non-finite registry prices and ability-confidence values in Python,
+  matching Rust validation and keeping invalid numeric metadata out of routing.
 - Keep Windows plugin staging renames relative to the pinned parent directory
   while using the standard no-replace rename information class.
 - Match Python's routing evaluator lookup when a caller supplies duplicate model

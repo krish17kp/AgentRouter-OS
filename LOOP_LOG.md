@@ -1,5 +1,24 @@
 # LOOP_LOG
 
+## 2026-11-14 — TASK-132 direct ModelEntry schema contract
+
+Added a direct Python/Rust JSON probe for `ModelEntry` and checked normalized
+defaults, required fields, populated fields, Pydantic scalar coercions and
+bounds, dates, nested execution targets, unknown fields, and the `vendor`,
+`key`, `vendor_key`, and `name` properties. Python now rejects non-finite
+prices and `ability_confidence`, matching Rust's finite-value constraints and
+keeping non-finite metadata out of routing.
+
+Focused schema/registry checks: 211 passed. Full Python regression: 2,509
+passed / 4 skipped, 91.970% statement, 87.690% branch, and 90.988% weighted
+combined coverage. Rust workspace tests, strict Clippy, Rust format, Ruff, and
+diff checks pass. Hosted validation is pending the authorized RC push. The
+current PR #16 promotion check remains blocked by the unchanged frozen context
+score, 0.6667 < 0.90; live provider smoke remains skipped without credentials.
+
+Next: directly verify Classification omitted-default and missing-required
+schema cases, then continue closing the remaining Python/Rust module contracts.
+
 ## 2026-11-14 — TASK-129 direct Rust Ability bounds
 
 Python's public `Ability` schema rejects scores above 10 on direct

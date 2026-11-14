@@ -20,6 +20,7 @@ from agentrouter.schema import (
     ExecutionTarget,
     LatencyTier,
     Level,
+    ModelEntry,
     OutputType,
     PricingTier,
     Provider,
@@ -261,5 +262,144 @@ def test_rust_schema_enums_reject_values_pydantic_rejects(kind, enum_type, value
     with pytest.raises(ValidationError):
         TypeAdapter(enum_type).validate_python(value)
     process = _rust_schema(kind, value)
+    assert process.returncode != 0
+    assert process.stdout == ""
+
+
+MODEL_ENTRY_BASE = {
+    "provider": "openai",
+    "model_id": "gpt-test",
+    "context_window": 128000,
+    "max_output_tokens": 16384,
+    "pricing_tier": "medium",
+    "latency_tier": "fast",
+    "ability": {"coding": 8, "reasoning": 7, "writing": 6},
+    "tool_support": ["function_call"],
+    "vision_support": False,
+    "deprecation_status": "active",
+}
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        MODEL_ENTRY_BASE,
+        {
+            **MODEL_ENTRY_BASE,
+            "vendor": "model-maker",
+            "display_name": "Friendly Model",
+        },
+        {
+            **MODEL_ENTRY_BASE,
+            "vendor": None,
+            "display_name": "",
+            "family": "gpt",
+            "release_channel": "preview",
+            "snapshot_type": "pinned",
+            "context_window": "1000000000000000000000000000000",
+            "max_input_tokens": "8192",
+            "input_price_per_million": True,
+            "output_price_per_million": "0",
+            "pricing_basis": "api_list",
+            "pricing_effective_date": "2026-11-14",
+            "ability_source": "benchmark",
+            "ability_confidence": True,
+            "vision_support": "yes",
+            "audio_support": 1,
+            "video_support": False,
+            "reasoning_support": "true",
+            "ideal_use_cases": ["analysis"],
+            "avoid_use_cases": ["unsafe"],
+            "deprecation_status": "deprecated",
+            "fallback": ["gpt-fallback"],
+            "execution_targets": [
+                {
+                    "host": "openai-api",
+                    "host_model_id": "gpt-test",
+                    "execution_mode": "api",
+                }
+            ],
+            "notes": "fixture",
+            "source": "curated",
+            "source_url_or_identifier": "model-card",
+            "last_updated": "2026-11-13",
+            "last_verified": "2026-11-14",
+        },
+    ],
+)
+def test_rust_model_entry_defaults_fields_and_properties_match_pydantic(payload):
+    model = ModelEntry.model_validate(payload)
+    expected = {
+        "model": model.model_dump(mode="json"),
+        "properties": {
+            "key": model.key,
+            "vendor_key": model.vendor_key,
+            "name": model.name,
+        },
+    }
+    process = _rust_schema("model_entry", payload)
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == expected
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"context_window": 0},
+        {"max_input_tokens": 0},
+        {"max_output_tokens": -1},
+        {"input_price_per_million": -0.01},
+        {"input_price_per_million": "NaN"},
+        {"input_price_per_million": "Infinity"},
+        {"output_price_per_million": "Infinity"},
+        {"output_price_per_million": "-Infinity"},
+        {"ability_confidence": -0.01},
+        {"ability_confidence": 1.01},
+        {"ability_confidence": "NaN"},
+        {"ability": {"coding": 11, "reasoning": 7, "writing": 6}},
+        {"pricing_tier": "unknown-tier"},
+        {"tool_support": [1]},
+        {
+            "execution_targets": [
+                {
+                    "host": "openai-api",
+                    "host_model_id": "gpt-test",
+                    "execution_mode": "shell",
+                }
+            ]
+        },
+        {"unknown_field": True},
+    ],
+)
+def test_rust_model_entry_rejects_values_pydantic_rejects(changes):
+    payload = {**MODEL_ENTRY_BASE, **changes}
+    with pytest.raises(ValidationError):
+        ModelEntry.model_validate(payload)
+    process = _rust_schema("model_entry", payload)
+    assert process.returncode != 0
+    assert process.stdout == ""
+
+
+@pytest.mark.parametrize(
+    "missing_field",
+    [
+        "provider",
+        "model_id",
+        "context_window",
+        "max_output_tokens",
+        "pricing_tier",
+        "latency_tier",
+        "ability",
+        "tool_support",
+        "vision_support",
+        "deprecation_status",
+    ],
+)
+def test_rust_model_entry_rejects_missing_required_fields(missing_field):
+    payload = {**MODEL_ENTRY_BASE}
+    del payload[missing_field]
+    with pytest.raises(ValidationError):
+        ModelEntry.model_validate(payload)
+    process = _rust_schema("model_entry", payload)
     assert process.returncode != 0
     assert process.stdout == ""

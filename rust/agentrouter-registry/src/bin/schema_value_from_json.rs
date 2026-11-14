@@ -2,8 +2,8 @@ use std::io::{self, Read};
 
 use agentrouter_core::{ApprovalLevel, ContextBand, Level, OutputType, TaskType};
 use agentrouter_registry::{
-    AbilitySource, DeprecationStatus, ExecutionMode, ExecutionTarget, LatencyTier, PricingTier,
-    Provider, ReleaseChannel, SnapshotType,
+    AbilitySource, DeprecationStatus, ExecutionMode, ExecutionTarget, LatencyTier, ModelEntry,
+    PricingTier, Provider, ReleaseChannel, SnapshotType,
 };
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
@@ -27,6 +27,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let output = match kind {
         "execution_target" => {
             serde_json::to_value(serde_json::from_value::<ExecutionTarget>(value)?)?
+        }
+        "model_entry" => {
+            let model = serde_json::from_value::<ModelEntry>(value)?;
+            let mut model_value = serde_json::to_value(&model)?;
+            model_value["vendor"] = json!(model.vendor());
+            json!({
+                "model": model_value,
+                "properties": {
+                    "key": model.key(),
+                    "vendor_key": model.vendor_key(),
+                    "name": model.name(),
+                }
+            })
         }
         "provider" => serde_json::to_value(serde_json::from_value::<Provider>(value)?)?,
         "task_type" => roundtrip::<TaskType>(value)?,

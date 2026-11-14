@@ -21,6 +21,7 @@ required independent human annotation and adjudication round is incomplete.
 - Rust `route_cli --verify-live` mirrors Python's one-step rerank when a live quota check confirms the top model is exhausted; no live quota adapter is enabled by default.
 - Rust doctor `--verify-live` now uses the shared host detector and bounded usage state machine; it checks only authenticated hosts and reports `unsupported` until a provider adapter exists.
 - Feedback-driven route weight adjustments now live in a dedicated Rust crate and match Python across minimum-sample, cap, null-rating, and ties-to-even cases.
+- Registry validation now rejects non-finite price and ability-confidence metadata consistently in Python and Rust.
 
 ## Release gates still open
 
