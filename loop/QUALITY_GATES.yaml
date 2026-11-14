@@ -7,7 +7,7 @@ testing:
   mandatory_tests_pass:
     required: true
     current: pass_local
-    last_full_baseline_passed: 2237
+    last_full_baseline_passed: 2570
   unexplained_failures:
     required: 0
     current: 0
@@ -21,20 +21,20 @@ coverage:
   safety_execution_gateway_branch: 1.00
   policy_enforcement_branch: 1.00
   current: pass_local
-  line: 0.928255
-  branch: 0.886342
-  evidence: docs/COVERAGE_REPORT_2026-11-14.md
+  line: 0.920299
+  branch: 0.877122
+  evidence: docs/COVERAGE_REPORT_2026-11-14-TASK-147.md
 
 mutation:
   overall_min: 0.85
   safety_execution_policy_min: 0.95
   measured: true
-  current: fail_unreviewed_survivor
-  overall: 0.9694
-  safety_execution_policy: 0.9666
+  current: pass_hosted
+  overall: 0.9701
+  safety_execution_policy: 0.9674
   routing: 0.9815
-  unreviewed_survivors: 1
-  evidence: "Critical Mutation Testing at 0d0a662; exact mutant openai_adapter.x_run_text_response__mutmut_65"
+  unreviewed_survivors: 0
+  evidence: "Critical Mutation Testing run 43618274518 at db2c67d; 1,706 selected mutants; report artifact critical-mutation-report"
   fabricated_score: false
 
 evaluation:
@@ -93,9 +93,9 @@ packaging:
 
 platforms:
   windows_local_green: pending
-  github_linux_green: pass_on_0d0a662
-  github_windows_green: pass_on_0d0a662
-  github_macos_green: pass_on_0d0a662
+  github_linux_green: in_progress_on_db2c67d
+  github_windows_green: in_progress_on_db2c67d
+  github_macos_green: in_progress_on_db2c67d
 
 open:
   - id: context_band_generalization
@@ -106,7 +106,7 @@ open:
   - id: release_branch_ci
     blocking: true
     reason: >-
-      Ordinary Python, Rust, security, API, build, and site jobs pass on 0d0a662; critical mutation has one unreviewed OpenAI missing-status survivor, and PR #16's enforcing gate remains failed because frozen context-band accuracy is 0.6667 below the unchanged 0.90 threshold
+      Critical mutation passes on db2c67d; PR #16's enforcing gate remains failed because frozen context-band accuracy is 0.6667 below the unchanged 0.90 threshold, while the remaining cross-platform CI jobs are still running
 
 historical_corrections:
   - claim: context_band_accuracy_0.945_release_ready
