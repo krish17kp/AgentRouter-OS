@@ -166,14 +166,19 @@ struct UreqTransport {
 impl UreqTransport {
     fn new(timeout: Duration) -> Self {
         Self {
-            agent: Mutex::new(Some(
-                ureq::AgentBuilder::new()
-                    .redirects(0)
-                    .timeout(timeout)
-                    .build(),
-            )),
+            agent: Mutex::new(Some(ureq_agent_builder(timeout).build())),
         }
     }
+}
+
+/// Build the native agent with the same explicit connection and overall
+/// request bounds. `ureq` defaults TCP connection establishment to 30 seconds;
+/// its overall timeout does not override that separate connection timeout.
+fn ureq_agent_builder(timeout: Duration) -> ureq::AgentBuilder {
+    ureq::AgentBuilder::new()
+        .redirects(0)
+        .timeout_connect(timeout)
+        .timeout(timeout)
 }
 
 impl SdkTransport for UreqTransport {
@@ -679,6 +684,34 @@ mod tests {
             })
             .unwrap_err();
         assert_eq!(error.kind, SdkTransportErrorKind::ClientClosed);
+    }
+
+    #[test]
+    fn native_agent_builder_keeps_explicit_connect_and_overall_timeout_bounds() {
+        // A zero connect budget deterministically expires before a local socket
+        // is opened, while the independent overall budget remains nonzero.
+        let agent = ureq_agent_builder(Duration::ZERO)
+            .timeout(Duration::from_secs(2))
+            .build();
+        let transport = UreqTransport {
+            agent: Mutex::new(Some(agent)),
+        };
+        let started = std::time::Instant::now();
+        let error = transport
+            .send(SdkRequest {
+                method: "GET".into(),
+                url: "http://127.0.0.1:9/".into(),
+                timeout: Duration::from_secs(2),
+                headers: Vec::new(),
+                body: None,
+            })
+            .unwrap_err();
+
+        assert!(matches!(
+            error.kind,
+            SdkTransportErrorKind::ConnectTimeout | SdkTransportErrorKind::ReadTimeout
+        ));
+        assert!(started.elapsed() < Duration::from_secs(1));
     }
 
     #[test]

@@ -97,9 +97,11 @@ release authority until the full set is complete.
   Rust SDKs, including API-key variants and structured API errors. TASK-141 adds
   a public Rust transport trait, timeout propagation, idempotent close, stable
   error categories, and all-nine-endpoint comparison against Python's injected
-  `httpx.MockTransport`. The SDK remains Partial because native `ureq` timeout
-  behavior and ambiguous generic read/write I/O categories do not yet match the
-  full HTTPX contract.
+  `httpx.MockTransport`. TASK-147 explicitly bounds native `ureq` TCP connection
+  setup from the client timeout, alongside its whole-request deadline. The SDK
+  remains Partial because the `ureq` global deadline differs from HTTPX's
+  per-operation timeout model and some native I/O failures do not preserve their
+  read/write phase.
 - TASK-142 expands the evaluator facade differential from model identity fields
   to every normalized `ModelEntry` JSON field and compares the Rust export list
   directly with Python's `__all__`. The row remains Partial because the facade's
