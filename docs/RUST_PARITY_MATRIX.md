@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-14 (TASK-082–109). This inventory covers every Python source module under
+Updated: 2026-11-14 (TASK-082–111). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -166,10 +166,11 @@ release authority until the full set is complete.
   the full checked-in gold sets. Python's typed `GoldError` surface and exact
   JSON text escaping still differ; the module remains Partial. See
   [`RUST_LEGACY_GOLD.md`](RUST_LEGACY_GOLD.md).
-- Rust `Classification` now rejects unknown fields and has round-trip and
-  rejection checks against Pydantic. Python's unbounded integer and scalar
-  coercion behavior is not fully represented by the Rust integer/serde types,
-  so the schema module remains Partial.
+- Rust `Classification` rejects unknown fields and has round-trip and rejection
+  checks against Pydantic. Annotation manifest schema versions and count maps
+  now preserve Python-compatible arbitrary-precision integers exactly in
+  schema validation and JSON storage. Remaining scalar coercions and datetime
+  grammar differences keep the annotation schema module Partial.
 - Context-band model inference is ported but remains disabled in the default
   classifier. The frozen evaluation gate still controls whether learned routing
   can be enabled.

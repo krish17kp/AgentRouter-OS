@@ -2,17 +2,14 @@
 
 ## Current checkpoint — 2026-11-14
 
-The latest pushed RC head is `e1e8f5c`. Rust workspace and Python/Rust
-compatibility checks pass on Linux, Windows, and macOS. The full Windows
-Python job found two TASK-110 plugin mismatches: destination separator
-rendering and Windows file identity. Local fixes now use component-wise path
-joins and CPython-compatible `FILE_ID_INFO` identity; the full Linux Python
-suite passes 2,228 tests with 4 skips at 92.85% statement, 88.68% branch, and
-91.90% combined coverage. Fifteen focused plugin compatibility cases, Rust
-workspace tests, strict Clippy, and Ruff pass locally. Hosted confirmation of
-the fixes is pending the next RC push. PR #16 remains blocked by the unchanged
-context-band score 0.6667 < 0.90; Python remains the shipping authority and the
-Rust migration is incomplete.
+The latest pushed RC head is `f81d2d1`. TASK-110's Rust workspace and
+Python/Rust compatibility checks pass on Linux, Windows, and macOS; full
+Python CI passes on Windows and macOS as well. The Linux full regression passes
+2,229 tests with 4 skips at 92.85% statement, 88.68% branch, and 91.90%
+combined coverage. TASK-111 adds exact arbitrary-precision annotation manifest
+integers; its 71 focused tests, Rust workspace, strict Clippy, formatting, and
+Ruff pass locally. PR #16's unchanged context-band gate remains 0.6667 < 0.90;
+Python remains the shipping authority and the Rust migration is incomplete.
 
 ## Historical dashboard
 

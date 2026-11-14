@@ -2,11 +2,11 @@
 
 ## Current checkpoint — 2026-11-14
 
-- Active RC branch `release/agentrouter-v0.5-rc1`; latest pushed head is `e1e8f5c`. Local TASK-110 fixes now address the Windows plugin path and file-identity mismatches; the complete Linux suite, focused parity suite, Rust workspace, strict Clippy, formatting, and Ruff pass. Hosted revalidation awaits this RC push.
+- Active RC branch `release/agentrouter-v0.5-rc1`; latest pushed head is `f81d2d1`. TASK-110 plugin path and CPython file-identity repairs pass hosted Rust and Python/Rust checks on Linux, Windows, and macOS; full Windows and macOS Python jobs also pass. TASK-111 is locally validated: 71 focused annotation schema/store/CLI compatibility tests, full Python regression (2,229 passed, 4 skipped), Rust workspace, strict Clippy, Rust formatting, Ruff, and diff checks pass. Commit/push TASK-111 next, then inspect hosted checks.
 - PR #16 is the only open PR and remains blocked by the unchanged frozen context-band score of 0.6667 against 0.90. Human evaluation, OpenAI live validation, and deployment credentials remain under **Needs Krish**.
-- TASK-108 added Rust read-only plugin doctor; TASK-109 adds the safe dry-run plan; TASK-110 adds non-forced creation/adoption with Python-readable ownership state. Force replacement, managed upgrade, recovery, and Rust uninstall remain Python-only. See `PRODUCTION_STATUS.md` and `docs/RUST_PARITY_MATRIX.md` for the remaining migration gaps.
+- TASK-108 added Rust read-only plugin doctor; TASK-109 adds the safe dry-run plan; TASK-110 adds non-forced creation/adoption with Python-readable ownership state. Forced replacement, managed upgrade, recovery, and Rust uninstall remain Python-only; continue with the uninstall lifecycle after TASK-111's hosted run.
 - The 77-module inventory is current in `docs/RUST_PARITY_MATRIX.md`; migration remains incomplete and Python remains the shipping authority. Continue the remaining module work, review current PR checks, and update `PRODUCTION_STATUS.md` after each slice.
-- The owner explicitly authorized iterative pushes to the release-candidate branch for this objective. The frozen evaluation threshold and holdout remain immutable; real human annotation, the bounded OpenAI live smoke, and production credentials are listed under **Needs Krish**.
+- The owner explicitly authorized iterative pushes to the release-candidate branch for this objective. The frozen evaluation threshold and holdout remain immutable. `enforce-release-gate` still fails at 0.6667 < 0.90; real human annotation, the bounded OpenAI live smoke, and production credentials are listed under **Needs Krish**.
 
 ## Historical checkpoint — 2026-11-11
 

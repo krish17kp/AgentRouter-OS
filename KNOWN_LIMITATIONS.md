@@ -24,8 +24,13 @@
 - Rust plugin install now handles missing and byte-identical files without
   replacement and writes Python-readable ownership state. Forced replacement,
   managed upgrades, transaction recovery, and Rust uninstall remain Python-only.
-  Hosted Windows Python CI found path-format and file-identity mismatches on
-  `e1e8f5c`; local fixes await hosted revalidation.
+-  The path-format and CPython file-identity fixes pass hosted Rust and
+  Python/Rust jobs on Linux, Windows, and macOS at `f81d2d1`; Windows and macOS
+  Python CI also pass.
+- Rust annotation manifest integers now preserve arbitrary precision exactly
+  in schema validation and JSON storage under TASK-111. Datetime grammar and
+  remaining Pydantic scalar coercions still keep that schema module Partial;
+  hosted validation of TASK-111 is pending.
 - Latest full Python coverage is 92.85% statement / 88.68% branch / 91.90%
   combined, meeting the unchanged 90%/85% thresholds; see
   `docs/COVERAGE_REPORT_2026-11-14.md`.

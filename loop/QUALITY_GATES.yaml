@@ -1,13 +1,13 @@
 # Machine-readable desired thresholds and current evidence for AgentRouter OS.
 version: 2
-updated: 2026-11-13
+updated: 2026-11-14
 canonical_release_ready: false
 
 testing:
   mandatory_tests_pass:
     required: true
     current: pass_local
-    last_full_baseline_passed: 2008
+    last_full_baseline_passed: 2229
   unexplained_failures:
     required: 0
     current: 0
@@ -21,9 +21,9 @@ coverage:
   safety_execution_gateway_branch: 1.00
   policy_enforcement_branch: 1.00
   current: pass_local
-  line: 0.924645
-  branch: 0.876068
-  evidence: docs/COVERAGE_REPORT_2026-11-13.md
+  line: 0.928529
+  branch: 0.886810
+  evidence: docs/COVERAGE_REPORT_2026-11-14.md
 
 mutation:
   overall_min: 0.85
@@ -75,13 +75,13 @@ evaluation:
 static_quality:
   ruff_clean: pass_local
   format_clean: pass_local
-  type_checker_green: pending_full_rerun
+  type_checker_green: pass_on_f81d2d1
   no_broad_new_ignores: true
 
 security:
   bandit_clean_or_justified: pass_local
   pip_audit_clean_or_mitigated: pass_local
-  secret_scan_clean: pass_on_2358ef3_pending_TASK070
+  secret_scan_clean: pass_on_f81d2d1
   plugin_permission_audit_pass: pass_PR_13
 
 packaging:
@@ -93,9 +93,9 @@ packaging:
 
 platforms:
   windows_local_green: pending
-  github_linux_green: pass_on_2358ef3_pending_TASK070
-  github_windows_green: pending_2358ef3_TASK069_fix_and_TASK070_matrix
-  github_macos_green: pass_on_2358ef3_pending_TASK070
+  github_linux_green: pass_on_f81d2d1
+  github_windows_green: pass_on_f81d2d1
+  github_macos_green: pass_on_f81d2d1
 
 open:
   - id: context_band_generalization
@@ -105,7 +105,7 @@ open:
       proved a dataset ceiling (rules 0.6667 / learned 0.6889 / hybrid 0.6444 all fail)
   - id: release_branch_ci
     blocking: true
-    reason: TASK-070 adds the TypeScript SDK to the three-platform Rust matrix; TASK-069 Windows fix needs confirmation and frozen context-band remains 0.6667 below the unchanged 0.90 gate
+    reason: Ordinary Python, Rust, security, mutation, API, build, and site jobs pass on f81d2d1; PR #16's enforcing gate remains failed because frozen context-band accuracy is 0.6667 below the unchanged 0.90 threshold
 
 historical_corrections:
   - claim: context_band_accuracy_0.945_release_ready

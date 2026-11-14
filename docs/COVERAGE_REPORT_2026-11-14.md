@@ -13,7 +13,7 @@ uv run pytest -q --cov=agentrouter --cov-branch --cov-report=term --cov-report=j
 
 | Measure | Result |
 |---|---:|
-| Python regression | 2,228 passed, 4 skipped |
+| Python regression | 2,229 passed, 4 skipped |
 | Statement coverage | 92.85% (6,717 / 7,234 statements) |
 | Branch coverage | 88.68% (1,896 / 2,138 branch outcomes) |
 | Combined coverage reported by pytest-cov | 91.90% |
@@ -36,8 +36,11 @@ Rust plugin installation also covers new managed files, idempotent installs,
 Python-compatible serialized ownership state, pre-existing and adopted file
 ownership, Python uninstall interoperability, linked state-directory refusal,
 and safe rejection of differing user content and `--force`. It is paired with
-the existing evaluation, API, CLI, and safety suites. Rust workspace tests and
-strict Clippy were run separately. The
+the arbitrary-precision annotation manifest schema/store compatibility cases,
+including byte-identical Python/Rust JSON persistence for 80-digit values. The
+serializer feature's provider-catalog YAML integration is also exercised,
+alongside the existing evaluation, API, CLI, and safety suites. Rust workspace
+tests and strict Clippy were run separately. The
 contract compatibility suite has 70 Python/Rust
 cases in total, including canonicalization, reference validation, and baseline
 loading. Surface-diff cases cover version/server/path/method changes, operation

@@ -12,10 +12,10 @@
   6,717 / 7,234 statements, 1,896 / 2,138 branches, 91.90% combined.
 - Ruff check/format and `git diff --check` pass.
 
-## Hosted findings to resolve
+## Hosted cross-platform verification
 
-The pushed `e1e8f5c` checkpoint exposed two Windows-only compatibility issues
-in the pre-existing plugin read/preview slice:
+The first pushed checkpoint `e1e8f5c` exposed two Windows-only compatibility
+issues in the plugin read/preview slice:
 
 1. Rust rendered a slash-separated manifest destination differently from
    Python on Windows; the corrected helper joins validated components one at a
@@ -26,8 +26,22 @@ in the pre-existing plugin read/preview slice:
    cannot fit the current ownership schema. The checked-in Python/Rust tests
    already cover doctor output and managed-state planning on Windows.
 
-The full local Python regression and plugin focused suite have been rerun
-after these fixes and pass. Hosted confirmation belongs to the next pushed
-implementation head.
+Both repairs were pushed in `f81d2d1`. Hosted Rust workspace and non-skipping
+Python/Rust compatibility pass on Linux, Windows, and macOS in [Rust migration
+CI run 43529847736](https://github.com/krish17kp/AgentRouter-OS/actions/runs/43529847736).
+The full Python matrix, including Windows and macOS, passes in [CI run
+43529848030](https://github.com/krish17kp/AgentRouter-OS/actions/runs/43529848030).
+API compatibility, build smoke, site, security, and mutation jobs pass on the
+same head. The only failed check is `enforce-release-gate`, which correctly
+holds PR #16 at the unchanged 0.6667 < 0.90 context-band result; live smoke is
+skipped because no credential was supplied.
+
+## Scope remaining
+
+Rust no-force install is complete for missing and byte-identical files with
+Python-compatible ownership state. Rust forced replacement, managed upgrade,
+transaction recovery, and uninstall remain unported; TASK-112 continues that
+lifecycle work.
+
 The release gate for PR #16 remains intentionally blocked at context-band
 accuracy 0.6667 < 0.90; no threshold or frozen data was changed.

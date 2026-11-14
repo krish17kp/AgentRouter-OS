@@ -1,12 +1,12 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-14",
-  "current_phase": "IN_PROGRESS: TASK-110 adds safe Rust plugin creation/adoption. The full Linux Python suite (2,228 passed, 4 skipped), 15 focused plugin parity cases, Rust workspace, strict Clippy, formatting, and Ruff pass locally. Windows path and CPython-compatible file-identity fixes are ready for hosted revalidation; commit/push to the authorized RC and continue the next local parity task. PR #16 remains blocked by frozen context-band accuracy 0.6667 < 0.90.",
+  "current_phase": "IN_PROGRESS: TASK-111 annotation manifest integer precision is locally complete. 71 focused schema/store/compare/packs/CLI Python-Rust tests pass; full Python regression passes 2,229/4 with 92.85% statement, 88.68% branch, and 91.90% combined coverage; Rust workspace, strict Clippy, formatting, Ruff, and diff checks pass. TASK-110 hosted validation is green across Linux/Windows/macOS at f81d2d1. Push TASK-111 to the authorized RC and inspect CI, then continue Rust plugin uninstall and remaining public-module parity. PR #16 remains blocked by the unchanged frozen context-band score 0.6667 < 0.90.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
     "main": "PR #16 is the sole open PR against main. Cross-platform Python/Rust, security, site, API, build and mutation checks pass; enforce-release-gate fails honestly at context-band 0.6667 < 0.90. No gate bypass.",
-    "release/agentrouter-v0.5-rc1": "Pushed head e1e8f5c. Rust workspace and Python/Rust compatibility pass on Linux/Windows/macOS; full Windows Python suite found TASK-110 destination separator and file-identity parity failures. Both fixes are local; hosted rerun is pending. Full Linux Python regression passes 2,228/4 at 92.85% statement, 88.68% branch, 91.90% combined coverage. PR #16 remains blocked by frozen context-band accuracy 0.6667 < 0.90; live smoke skips without credentials.",
+    "release/agentrouter-v0.5-rc1": "Pushed head f81d2d1. TASK-110 Rust workspace and non-skipping Python/Rust compatibility pass on Linux/Windows/macOS; Python 3.10-3.13, Windows, macOS, API, build, site, security, and mutation jobs pass. enforce-release-gate fails only because frozen context-band is 0.6667 < 0.90; live smoke skips without credentials. TASK-111 code and evidence are local and pass full local regression; hosted validation is pending.",
     "task/rust-r1-workspace": "PR #25 open against RC; 6ee8d3e passed complete GitHub CI; 32eee6f forced-init push failed Windows compile, file-handle repair awaits remote recheck; SQLite path-race blocker remains; Rust R4 partial and OpenAI execution hardening",
     "task/repo-cleanup-architecture-ponytail": "MERGED to RC (PR #14, merge commit 1ae3155); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/dynamic-skill-discovery": "MERGED to RC (PR #15, merge commit 62d5289); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
@@ -29,8 +29,8 @@
   "repo_sha_at_takeover": "602321af91ff298c0d5b59d6d36c24f845557fc1",
   "canonical_release_ready": false,
   "in_progress": [
-    "2026-11-14 TASK-110 safe Rust plugin install: local contract and full regression pass; commit/push the Windows parity repairs and inspect Linux/Windows/macOS CI before recording completion.",
-    "After TASK-110 hosted validation, continue public Python module parity; R4 public CLI/HTTP/MCP and R5-R13 remain incomplete."
+    "TASK-111 arbitrary-precision annotation manifest integers: local focused, full Python, Rust, Clippy, format, Ruff, and diff checks pass; update evidence, commit/push to authorized RC, inspect cross-platform CI.",
+    "After TASK-111 hosted checks, continue Rust plugin uninstall/backup lifecycle and remaining public Python module parity. Keep Python as shipping authority until parity and release gates pass."
   ],
   "completed_iter25": [
     "TASK-015 trusted catalogs MERGED to RC (PR #6 -> merge commit 8661629; task branch deleted local+remote). Closes TASK-013's deferred scope: file-level provenance block (provider, source_url, fetched_at UTC, count, tool_version, cli_args) ignored by the registry loader; atomic refresh via tempfile.mkstemp + os.replace; candidate-deprecation reporting on refresh (report-only, never auto-deletes); rollback with non-destructive backup rotation + new `providers restore`; new `providers doctor` that schema-validates every generated catalog and exits 3 only on real corruption (not staleness).",
@@ -95,7 +95,7 @@
     "graph": "graphifyy 0.9.47; 3623 nodes / 7084 edges / 309 communities from RC d81ad94; graphify-out/ is gitignored and local-only",
     "ci_status_3281c41": "All GitHub workflows passed on 3281c41: CI Python 3.10-3.13 plus Windows/build/API/report, Security, Rust Linux/Windows parity/MSRV, and Critical Mutation Testing. A subsequent route-persistence probe has not yet run in CI.",
     "ci_status_0ac4335": "PR workflows Security, Rust, Mutation failed before creating jobs; GitHub run pages show internal server errors, no code verdict. Prior 3281c41 all green; local route-persistence/init probes pass.",
-    "python_full_latest": "1,745 passed, 6 skipped; 6,532/7,166 statements (91.15%), 1,803/2,106 branches (85.61%), 89.89% combined; Linux Python 3.12.15",
+    "python_full_latest": "2026-11-14: 2,229 passed, 4 skipped; 6,717/7,234 statements (92.85%), 1,896/2,138 branches (88.68%), 91.90% combined; Python 3.12.15 Linux.",
     "evaluation_latest_2026_11_11": "Grade 98.23/100; 6/7 release gates pass; context_band_accuracy 0.6667 < 0.90 on the frozen 45-case holdout; release-ready NO.",
     "local_release_checks_2026_11_11": "Python full 1,730 passed/6 skipped; line 91.0056%, branch 85.2327%; Ruff/format, serial Rust workspace tests, Clippy and formatting pass. Commit 6186979 passed cross-platform Rust workspace and Python/Rust compatibility, Rust 1.89 minimum, API and Security; full Python/mutation workflows are finishing, while frozen context-band promotion failed unchanged.",
     "rust_usage_rerank": "Eight Rust unit tests and ten Python/Rust differential scenarios pass; full workspace, Clippy, formatting, Ruff and full Python suite pass locally. Fresh cross-platform CI pending.",
@@ -106,7 +106,8 @@
     "rust_evaluation_sampling": "Rust deterministic_sample uses the same SHA-256 seed/key rank and stable original-order result; six offline Python/Rust cases cover two seeds, duplicate keys, bounds, and negative limits. SHA2 0.10.9 is pinned. Full Python suite passes at 1,729/6; cross-platform CI pending.",
     "rust_evaluation_schema": "Partial Rust EvaluationCase schema matches JSON defaults, nested enums, task validation, task checksums, and Unicode normalized_hash. A full Python/Rust schema and hash fixture passes. Pydantic's permissive coercions and all boundary semantics remain to audit; latest local full suite 1,730 passed/6 skipped. CI pending.",
     "rust_evaluation_registry": "Rust evaluation registry mirrors all eight names and adapter module/class descriptors plus five evaluation profiles. Differential manifest test passes; Rust does not construct/load adapters, so the Python module remains partial. Full suite 1,730/6; CI pending.",
-    "python_full_release_candidate_2026-11-11": "1,812 passed, 6 skipped; 92.15% line (6,603/7,166), 87.22% branch (1,837/2,106), 91.03% combined; Python 3.12.15 Linux"
+    "python_full_release_candidate_2026-11-11": "1,812 passed, 6 skipped; 92.15% line (6,603/7,166), 87.22% branch (1,837/2,106), 91.03% combined; Python 3.12.15 Linux",
+    "annotation_integer_parity": "TASK-111 local: 71 focused schema/store/compare/packs/CLI differentials; exact 80-digit integer validation and manifest JSON persistence; provider/annotation YAML numeric serializer regressions covered; full Python, Rust workspace, strict Clippy, format, Ruff and diff checks pass; hosted pending."
   },
   "release_blockers": [
     "Frozen context-band accuracy 0.6667 remains below unchanged 0.90. Independent human annotation by two annotators plus adjudication under TASK_012_OWNER_ACTIONS.md is required; AI labels cannot substitute.",
@@ -123,7 +124,7 @@
     "historical task records remain under loop/tasks and loop/reports",
     "historical TASK-004 0.945 result is retained as in-sample evidence but no longer treated as canonical held-out readiness"
   ],
-  "next_action": "Commit/push TASK-043 and refresh CI; inspect platform jobs. Continue Rust implementation of the frozen context-band measurement and remaining annotation/evaluation public modules, keeping learned routing and the release gate unchanged.",
+  "next_action": "Commit and push TASK-111 to release/agentrouter-v0.5-rc1; inspect Python, Rust, security, mutation, API, build, site and cross-platform checks. Repair failures, record the hosted evidence, then continue TASK-112 Rust plugin uninstall and lifecycle parity.",
   "completed_iter26": [
     "TASK-016 verified execution-host states MERGED to RC (PR #7 -> merge commit 5847c22; task branch deleted local+remote). hosts.py gained a readiness state vocabulary (missing/installed/configured/authenticated/authorized/degraded/unknown) plus a per-host remedy; `availability` keeps its exact prior meaning and is now derived from state. hosts list/doctor/show, the setup wizard and the execute refusal all report state + fix; hosts doctor ends with the cheapest concrete fix and exits non-zero only when no real host is ready. REST/MCP gained additive state/remedy and host_state/host_remedy keys. docs: new USER_GUIDE section 8 with the state table and the honesty note on `authorized`.",
     "BUG FIXED: host detection tested the API-key env var for truthiness, so a set-but-blank key (OPENAI_API_KEY='   ') reported available and `execute` would target a host that cannot authenticate. Now degraded/unavailable with a fix-it message, pinned by a parametrised test.",
@@ -245,5 +246,8 @@
   ],
   "completed_iter53": [
     "Completed agentrouter.annotation.graph_signals parity: fallback/error behavior, Python iterable shape semantics, four-entry LRU including negative caching and eviction, and contextual Greek final-sigma lowercasing. Thirteen Python/Rust differential cases pass. Full Python suite 1,877 passed/6 skipped; coverage 92.15% line, 87.22% branch, 91.03% combined. Full Rust workspace/Clippy/format/Ruff pass locally."
+  ],
+  "completed_iter54": [
+    "TASK-110 Rust no-force plugin install and Windows path/file-identity repairs passed hosted Rust workspace and Python/Rust compatibility on Linux, Windows and macOS; full Windows/macOS Python jobs passed at f81d2d1. The only failing PR #16 check is the unchanged frozen context-band gate 0.6667 < 0.90; live smoke skips without credentials."
   ]
 }

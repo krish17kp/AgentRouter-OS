@@ -3,18 +3,19 @@
 ## Current checkpoint — 2026-11-14
 
 **NOT release ready.** RC `release/agentrouter-v0.5-rc1` is at pushed head
-`e1e8f5c`; PR #16 is the sole open PR. Rust workspace and Python/Rust
-compatibility pass on Linux, Windows, and macOS, but the full Windows Python
-job found two TASK-110 plugin path and file-identity mismatches. Local fixes
-are ready for hosted revalidation. Full Linux Python regression passes with
-2,228 passed and 4 skipped; statement coverage is 92.85%, branch coverage
-88.68%, and combined coverage 91.90%. `enforce-release-gate` still fails on the
-unchanged context-band score 0.6667 < 0.90; live smoke is skipped because no
-credential was supplied. Full Rust CLI/HTTP/MCP parity, provider execution,
-plugin recovery/uninstall, external dataset loaders, evaluation runner and
-annotation, and R5–R13 remain incomplete. Human annotation, live OpenAI
-validation, and production credentials remain owner inputs. No paid request or
-production deployment occurred.
+`f81d2d1`; PR #16 is the sole open PR. TASK-110 Rust workspace and Python/Rust
+compatibility pass on Linux, Windows, and macOS, and full Python CI passes on
+Windows and macOS. Full Linux Python regression passes with 2,229 passed and 4
+skipped; statement coverage is 92.85%, branch coverage 88.68%, and combined
+coverage 91.90%. TASK-111's arbitrary-precision annotation implementation
+passes locally (71 focused cases, full Python suite, Rust workspace, strict
+Clippy, formatting, and Ruff); hosted checks are pending. `enforce-release-gate`
+still fails on the unchanged context-band score 0.6667 < 0.90; live smoke is
+skipped because no credential was supplied. Full Rust CLI/HTTP/MCP parity,
+provider execution, plugin forced replacement/recovery/uninstall, external
+dataset loaders, evaluation runner, and R5–R13 remain incomplete. Human
+annotation, live OpenAI validation, main promotion, and production credentials
+remain owner inputs. No paid request or production deployment occurred.
 
 ## Historical v0.5 assessment
 

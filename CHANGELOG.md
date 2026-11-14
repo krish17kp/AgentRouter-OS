@@ -53,6 +53,11 @@ All notable changes to AgentRouter OS. Format loosely follows
   ownership-state bytes and safe no-clobber writes. Differing files, force
   replacement, managed upgrades, transaction recovery, and uninstall remain
   Python-only until their lifecycle safeguards are ported.
+- Preserve Python-compatible arbitrary-precision annotation manifest integers
+  in Rust schema validation and JSON storage, including exact large schema
+  versions and count-map values. Keep the serializer's YAML paths safe under
+  Cargo feature unification by converting supported numbers explicitly and
+  refusing inexact oversized integer narrowing.
 
 ### Fixed
 - Add Rust OpenAPI canonicalization and bounded `$ref` validation with stable,

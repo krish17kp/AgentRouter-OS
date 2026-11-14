@@ -282,3 +282,23 @@ def test_rust_annotation_manifest_rejects_non_integer_strings_like_python(schema
     assert process.returncode != 0
     with pytest.raises(ValidationError):
         DatasetManifest.model_validate(value)
+
+
+def test_rust_annotation_manifest_preserves_arbitrary_precision_integers():
+    large = 10**79 + 123456789
+    value = {
+        "schema_version": large,
+        "version": "large-integers",
+        "created": "2026-11-14T00:00:00Z",
+        "split_counts": {
+            "train": large,
+            "dev": str(-large),
+            "holdout": f"{large}.000",
+        },
+        "category_counts": {"review": 1e10, "coding": 1e18},
+        "band_counts": {"large": "000" + str(large)},
+    }
+    expected = DatasetManifest.model_validate(value).model_dump(mode="json")
+    process = _rust("dataset_manifest", value)
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == {"value": expected}

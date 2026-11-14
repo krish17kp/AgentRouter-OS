@@ -6,7 +6,7 @@ use std::io::Write;
 use std::path::Path;
 
 use serde::Serialize;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 
 use crate::annotation_schema::{AdjudicatedItem, Candidate, DatasetManifest, ItemLabels};
@@ -34,6 +34,52 @@ fn to_python_payload<T: Serialize>(value: &T) -> Result<Value, String> {
     let mut value = serde_json::to_value(value).map_err(|error| error.to_string())?;
     omit_nulls(&mut value);
     Ok(value)
+}
+
+fn to_python_yaml_payload<T: Serialize>(value: &T) -> Result<serde_yaml::Value, String> {
+    json_to_yaml(to_python_payload(value)?)
+}
+
+fn json_to_yaml(value: Value) -> Result<serde_yaml::Value, String> {
+    match value {
+        Value::Null => Ok(serde_yaml::Value::Null),
+        Value::Bool(value) => Ok(serde_yaml::Value::Bool(value)),
+        Value::Number(value) => {
+            let number = if let Some(value) = value.as_i64() {
+                serde_yaml::Number::from(value)
+            } else if let Some(value) = value.as_u64() {
+                serde_yaml::Number::from(value)
+            } else if value.is_f64() {
+                let value = value
+                    .as_f64()
+                    .ok_or("annotation YAML number is outside the supported range")?;
+                serde_yaml::Number::from(value)
+            } else {
+                return Err("annotation YAML number is outside the supported range".to_owned());
+            };
+            Ok(serde_yaml::Value::Number(number))
+        }
+        Value::String(value) => Ok(serde_yaml::Value::String(value)),
+        Value::Array(values) => values
+            .into_iter()
+            .map(json_to_yaml)
+            .collect::<Result<Vec<_>, _>>()
+            .map(serde_yaml::Value::Sequence),
+        Value::Object(values) => {
+            let mut mapping = serde_yaml::Mapping::new();
+            for (key, value) in values {
+                mapping.insert(key, json_to_yaml(value)?);
+            }
+            Ok(serde_yaml::Value::Mapping(mapping))
+        }
+    }
+}
+
+fn yaml_document(schema: &str, key: &str, items: Vec<serde_yaml::Value>) -> serde_yaml::Value {
+    let mut mapping = serde_yaml::Mapping::new();
+    mapping.insert("schema", serde_yaml::Value::String(schema.to_owned()));
+    mapping.insert(key, serde_yaml::Value::Sequence(items));
+    serde_yaml::Value::Mapping(mapping)
 }
 
 fn omit_nulls(value: &mut Value) {
@@ -159,9 +205,9 @@ pub fn save_candidates(path: &Path, candidates: &[Candidate]) -> Result<(), Stri
     mkdir_parent(path)?;
     let candidates = candidates
         .iter()
-        .map(to_python_payload)
+        .map(to_python_yaml_payload)
         .collect::<Result<Vec<_>, _>>()?;
-    let document = json!({"schema": "context-band-candidates", "candidates": candidates});
+    let document = yaml_document("context-band-candidates", "candidates", candidates);
     let yaml = serde_yaml::to_string(&document).map_err(|error| error.to_string())?;
     write_python_text(path, &yaml)
 }
@@ -215,9 +261,9 @@ pub fn save_dataset(path: &Path, items: &[AdjudicatedItem]) -> Result<(), String
     ordered.sort_by(|left, right| left.id.cmp(&right.id));
     let items = ordered
         .into_iter()
-        .map(to_python_payload)
+        .map(to_python_yaml_payload)
         .collect::<Result<Vec<_>, _>>()?;
-    let document = json!({"schema": "context-band-dataset", "items": items});
+    let document = yaml_document("context-band-dataset", "items", items);
     let yaml = serde_yaml::to_string(&document).map_err(|error| error.to_string())?;
     write_python_text(path, &yaml)
 }

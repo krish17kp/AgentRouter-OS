@@ -146,9 +146,12 @@ def test_rust_dataset_yaml_sorting_manifest_json_and_loaders(tmp_path):
     assert json.loads(process.stdout) == _dump(sorted(items, key=lambda item: item.id))
 
     manifest = DatasetManifest(
+        schema_version=10**79 + 123456789,
         version="v2.0.1",
         created="2026-11-11",
-        split_counts={"dev": 2, "train": 8},
+        split_counts={"dev": 2, "train": 8, "holdout": 10**79 + 123456789},
+        category_counts={"review": 10**79 + 123456789},
+        band_counts={"large": 10**79 + 123456789},
         provenance="human review — frozen holdout untouched",
     )
     rust_manifest = tmp_path / "manifest.json"

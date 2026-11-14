@@ -1,5 +1,32 @@
 # LOOP_LOG
 
+## 2026-11-14 — TASK-110 hosted closeout and TASK-111 annotation integer precision
+
+- TASK-110's path separator and Windows file-identity repairs are hosted-green
+  at `f81d2d1`: Rust workspace and non-skipping Python/Rust compatibility pass
+  on Linux, Windows, and macOS. Full Python Windows/macOS, Python 3.10–3.13,
+  API compatibility, build, site, security, and mutation jobs also pass. PR #16's
+  `enforce-release-gate` remains the sole failing job because the immutable
+  context-band result is 0.6667 < 0.90; live smoke skips without credentials.
+- TASK-111 reproduced a real parity mismatch: Python Pydantic accepted
+  arbitrary-precision integers in manifest schema versions/count maps while
+  Rust's `i64` fields rejected them. Rust now preserves exact integer JSON
+  numbers and Python-compatible string/bool/float coercions. Schema/store
+  differentials cover 80-digit positive and negative values and byte-identical
+  manifest JSON persistence.
+- Enabling serde_json arbitrary precision changes how numbers serialize into
+  YAML. Annotation and generated provider-catalog paths now convert supported
+  native YAML values explicitly and reject unsupported oversized integer
+  narrowing rather than emitting private markers or losing precision.
+- Local verification: 71 focused annotation schema/store/compare/packs/CLI
+  tests; full Python regression 2,229 passed/4 skipped, 92.85% statement,
+  88.68% branch, 91.90% combined; Rust workspace, strict Clippy, formatting,
+  Ruff check/format and `git diff --check` pass. TASK-111 hosted validation is
+  pending its RC push. Annotation datetime grammar remains partial.
+- Continue with hosted TASK-111 checks, then the Rust plugin uninstall and
+  backup lifecycle gaps. Python remains the shipping authority; do not merge
+  PR #16 or weaken/tune the frozen evaluation gate.
+
 ## 2026-11-10 — Rust R4 forced initialization
 
 - Prior pushed `6ee8d3e` passed GitHub Python 3.10–3.13/Windows CI, Rust

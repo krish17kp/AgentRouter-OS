@@ -3,17 +3,16 @@
 ## Current checkpoint — 2026-11-14
 
 Active RC branch `release/agentrouter-v0.5-rc1`; latest pushed head is
-`e1e8f5c`. PR #16 is the only open PR and is still blocked by the unchanged
-frozen context-band score 0.6667 < 0.90. At `e1e8f5c`, Rust workspace and
-Python/Rust compatibility pass on Linux, Windows, and macOS; the full Windows
-Python suite found plugin path-format and file-identity mismatches. TASK-110
-fixes are now local and await hosted revalidation. The complete Linux Python
-regression is 2,228 passed/4 skipped with 92.85% statement, 88.68% branch, and
-91.90% combined coverage. Rust workspace, strict Clippy, formatting, Ruff, and
-15 focused plugin tests pass locally.
-Human annotation, bounded OpenAI live validation, and deployment credentials
-remain under **Needs Krish** in `PRODUCTION_STATUS.md`. Continue after the
-hosted recheck; `AGENT_HANDOFF.md` remains authoritative.
+`f81d2d1`. PR #16 is the only open PR and remains blocked by the unchanged
+frozen context-band score 0.6667 < 0.90. TASK-110 plugin path and file-identity
+fixes pass hosted Rust and Python/Rust checks on Linux, Windows, and macOS; the
+full Windows and macOS Python jobs pass. TASK-111's 71 focused annotation
+schema/store/CLI cases, full Python regression (2,229 passed/4 skipped; 92.85%
+statement, 88.68% branch, 91.90% combined), Rust workspace, strict Clippy,
+formatting, and Ruff pass locally. Push TASK-111 to the authorized RC and
+inspect every hosted check, then continue Rust plugin uninstall parity.
+Human annotation, bounded OpenAI live validation, main promotion, and
+deployment credentials remain owner-gated in `PRODUCTION_STATUS.md`.
 
 ## Historical narrative
 

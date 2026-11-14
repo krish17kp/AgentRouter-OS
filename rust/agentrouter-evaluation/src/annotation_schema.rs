@@ -2,10 +2,9 @@
 //! `agentrouter.annotation.schema`.
 
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, SecondsFormat, Utc};
-use serde::de::{self, Visitor};
+use serde::de;
 use serde::{Deserialize, Serialize};
 use serde::{Deserializer, Serializer};
-use std::fmt;
 
 use agentrouter_core::ContextBand;
 
@@ -29,173 +28,81 @@ fn pydantic_float<'de, D>(deserializer: D) -> Result<f64, D::Error>
 where
     D: Deserializer<'de>,
 {
-    struct FloatVisitor;
-
-    impl<'de> Visitor<'de> for FloatVisitor {
-        type Value = f64;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            formatter.write_str("a float, numeric string, or boolean accepted by Pydantic")
-        }
-
-        fn visit_bool<E>(self, value: bool) -> Result<Self::Value, E> {
-            Ok(if value { 1.0 } else { 0.0 })
-        }
-
-        fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E> {
-            Ok(value as f64)
-        }
-
-        fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E> {
-            Ok(value as f64)
-        }
-
-        fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E> {
-            Ok(value)
-        }
-
-        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            value.trim().parse::<f64>().map_err(E::custom)
-        }
+    let value = serde_json::Value::deserialize(deserializer)?;
+    match value {
+        serde_json::Value::Bool(value) => Ok(if value { 1.0 } else { 0.0 }),
+        serde_json::Value::Number(value) => value
+            .as_f64()
+            .ok_or_else(|| de::Error::custom("value must be a finite number")),
+        serde_json::Value::String(value) => value.trim().parse::<f64>().map_err(de::Error::custom),
+        _ => Err(de::Error::custom(
+            "expected a float, numeric string, or boolean accepted by Pydantic",
+        )),
     }
-
-    deserializer.deserialize_any(FloatVisitor)
 }
 
 fn pydantic_bool<'de, D>(deserializer: D) -> Result<bool, D::Error>
 where
     D: Deserializer<'de>,
 {
-    struct BoolVisitor;
-
-    impl<'de> Visitor<'de> for BoolVisitor {
-        type Value = bool;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            formatter.write_str("a boolean accepted by Pydantic")
-        }
-
-        fn visit_bool<E>(self, value: bool) -> Result<Self::Value, E> {
-            Ok(value)
-        }
-
-        fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            match value {
-                0 => Ok(false),
-                1 => Ok(true),
-                _ => Err(E::custom("boolean integer must be 0 or 1")),
-            }
-        }
-
-        fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            match value {
-                0 => Ok(false),
-                1 => Ok(true),
-                _ => Err(E::custom("boolean integer must be 0 or 1")),
-            }
-        }
-
-        fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            match value {
-                0.0 => Ok(false),
-                1.0 => Ok(true),
-                _ => Err(E::custom("boolean number must be 0 or 1")),
-            }
-        }
-
-        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            match value.to_ascii_lowercase().as_str() {
-                "0" | "off" | "false" | "no" | "n" | "f" => Ok(false),
-                "1" | "on" | "true" | "yes" | "y" | "t" => Ok(true),
-                _ => Err(E::custom("invalid boolean string")),
-            }
-        }
+    let value = serde_json::Value::deserialize(deserializer)?;
+    match value {
+        serde_json::Value::Bool(value) => Ok(value),
+        serde_json::Value::Number(value) => match value.as_f64() {
+            Some(0.0) => Ok(false),
+            Some(1.0) => Ok(true),
+            _ => Err(de::Error::custom("boolean number must be 0 or 1")),
+        },
+        serde_json::Value::String(value) => match value.to_ascii_lowercase().as_str() {
+            "0" | "off" | "false" | "no" | "n" | "f" => Ok(false),
+            "1" | "on" | "true" | "yes" | "y" | "t" => Ok(true),
+            _ => Err(de::Error::custom("invalid boolean string")),
+        },
+        _ => Err(de::Error::custom(
+            "value must be a boolean accepted by Pydantic",
+        )),
     }
-
-    deserializer.deserialize_any(BoolVisitor)
 }
 
-fn pydantic_i64<'de, D>(deserializer: D) -> Result<i64, D::Error>
+fn pydantic_integer<'de, D>(deserializer: D) -> Result<serde_json::Number, D::Error>
 where
     D: Deserializer<'de>,
 {
-    struct IntegerVisitor;
-
-    impl<'de> Visitor<'de> for IntegerVisitor {
-        type Value = i64;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            formatter.write_str("an integer accepted by Pydantic")
+    let value = serde_json::Value::deserialize(deserializer)?;
+    match value {
+        serde_json::Value::Bool(value) => Ok(serde_json::Number::from(u8::from(value))),
+        serde_json::Value::Number(value) => {
+            integer_from_json_number(value).map_err(de::Error::custom)
         }
-
-        fn visit_bool<E>(self, value: bool) -> Result<Self::Value, E> {
-            Ok(i64::from(value))
-        }
-
-        fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            Ok(value)
-        }
-
-        fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            i64::try_from(value).map_err(E::custom)
-        }
-
-        fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            if value.is_finite()
-                && value.fract() == 0.0
-                && value >= i64::MIN as f64
-                && value < -(i64::MIN as f64)
-            {
-                Ok(value as i64)
-            } else {
-                Err(E::custom("value must be an integer"))
-            }
-        }
-
-        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            parse_pydantic_integer(value).map_err(E::custom)
-        }
+        serde_json::Value::String(value) => parse_pydantic_integer(&value)
+            .and_then(number_from_integer_text)
+            .map_err(de::Error::custom),
+        _ => Err(de::Error::custom("value must be an integer")),
     }
-
-    deserializer.deserialize_any(IntegerVisitor)
 }
 
-fn parse_pydantic_integer(value: &str) -> Result<i64, String> {
-    let value = value.trim();
-    if let Ok(integer) = value.parse::<i64>() {
-        return Ok(integer);
+fn integer_from_json_number(value: serde_json::Number) -> Result<serde_json::Number, String> {
+    let text = value.to_string();
+    if let Ok(integer) = canonical_integer_text(&text) {
+        return number_from_integer_text(integer);
     }
+    let value = text
+        .parse::<f64>()
+        .map_err(|_| "value must be an integer".to_owned())?;
+    if value.is_finite()
+        && value.fract() == 0.0
+        && value >= i64::MIN as f64
+        && value < -(i64::MIN as f64)
+    {
+        return Ok(serde_json::Number::from(value as i64));
+    }
+    Err("value must be an integer".to_owned())
+}
+
+fn parse_pydantic_integer(value: &str) -> Result<String, String> {
+    let value = value.trim();
     if let Ok(normalized) = normalize_python_digits(value) {
-        if let Ok(integer) = normalized.parse::<i64>() {
-            return Ok(integer);
-        }
+        return canonical_integer_text(&normalized);
     }
 
     // Pydantic accepts underscore-separated digits and decimal strings only
@@ -215,9 +122,32 @@ fn parse_pydantic_integer(value: &str) -> Result<i64, String> {
     if fraction.is_empty() || fraction.bytes().any(|digit| digit != b'0') {
         return Err("value must be an integer".to_owned());
     }
-    whole
-        .parse::<i64>()
-        .map_err(|_| "integer is outside the supported range".to_owned())
+    canonical_integer_text(&whole)
+}
+
+fn canonical_integer_text(value: &str) -> Result<String, String> {
+    let (negative, digits) = match value.strip_prefix('-') {
+        Some(digits) => (true, digits),
+        None => (false, value.strip_prefix('+').unwrap_or(value)),
+    };
+    if digits.is_empty() || !digits.bytes().all(|byte| byte.is_ascii_digit()) {
+        return Err("value must be an integer".to_owned());
+    }
+    let digits = digits.trim_start_matches('0');
+    if digits.is_empty() {
+        return Ok("0".to_owned());
+    }
+    Ok(if negative {
+        format!("-{digits}")
+    } else {
+        digits.to_owned()
+    })
+}
+
+fn number_from_integer_text(value: String) -> Result<serde_json::Number, String> {
+    value
+        .parse::<serde_json::Number>()
+        .map_err(|_| "value must be an integer".to_owned())
 }
 
 fn normalize_python_digits(value: &str) -> Result<String, String> {
@@ -245,20 +175,20 @@ fn normalize_python_digits(value: &str) -> Result<String, String> {
 }
 
 #[derive(Debug)]
-struct PythonInteger(i64);
+struct PythonInteger(serde_json::Number);
 
 impl<'de> Deserialize<'de> for PythonInteger {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        pydantic_i64(deserializer).map(Self)
+        pydantic_integer(deserializer).map(Self)
     }
 }
 
 fn pydantic_integer_map<'de, D>(
     deserializer: D,
-) -> Result<std::collections::BTreeMap<String, i64>, D::Error>
+) -> Result<std::collections::BTreeMap<String, serde_json::Number>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -335,7 +265,20 @@ mod optional_datetime {
             where
                 D: Deserializer<'de>,
             {
-                deserializer.deserialize_any(self)
+                match serde_json::Value::deserialize(deserializer)? {
+                    serde_json::Value::Number(value) => {
+                        let timestamp = value.as_f64().ok_or_else(|| {
+                            de::Error::custom("datetime timestamp must be numeric")
+                        })?;
+                        normalize_timestamp(timestamp)
+                            .map(Some)
+                            .map_err(de::Error::custom)
+                    }
+                    serde_json::Value::String(value) => self.visit_str(&value),
+                    _ => Err(de::Error::custom(
+                        "an ISO datetime, Unix timestamp, or null",
+                    )),
+                }
             }
 
             fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
@@ -699,22 +642,22 @@ impl AdjudicatedItem {
 #[serde(deny_unknown_fields)]
 pub struct DatasetManifest {
     #[serde(default = "default_schema_version")]
-    #[serde(deserialize_with = "pydantic_i64")]
-    pub schema_version: i64,
+    #[serde(deserialize_with = "pydantic_integer")]
+    pub schema_version: serde_json::Number,
     #[serde(default = "default_manifest_dataset")]
     pub dataset: String,
     pub version: String,
     pub created: String,
     #[serde(default)]
     #[serde(deserialize_with = "pydantic_integer_map")]
-    pub split_counts: std::collections::BTreeMap<String, i64>,
+    pub split_counts: std::collections::BTreeMap<String, serde_json::Number>,
     #[serde(default)]
     pub split_sha256: std::collections::BTreeMap<String, String>,
     #[serde(default)]
     #[serde(deserialize_with = "pydantic_integer_map")]
-    pub category_counts: std::collections::BTreeMap<String, i64>,
+    pub category_counts: std::collections::BTreeMap<String, serde_json::Number>,
     #[serde(default, deserialize_with = "pydantic_integer_map")]
-    pub band_counts: std::collections::BTreeMap<String, i64>,
+    pub band_counts: std::collections::BTreeMap<String, serde_json::Number>,
     #[serde(default = "default_true")]
     #[serde(deserialize_with = "pydantic_bool")]
     pub frozen_holdout_untouched: bool,
@@ -724,8 +667,8 @@ pub struct DatasetManifest {
     pub provenance: String,
 }
 
-fn default_schema_version() -> i64 {
-    i64::from(SCHEMA_VERSION)
+fn default_schema_version() -> serde_json::Number {
+    serde_json::Number::from(SCHEMA_VERSION)
 }
 
 fn default_true() -> bool {

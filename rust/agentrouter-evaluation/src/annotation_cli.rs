@@ -343,12 +343,15 @@ fn adjudication_pack(args: impl Iterator<Item = String>) -> Result<i32, String> 
     Ok(0)
 }
 
-fn count_values<'a>(values: impl Iterator<Item = &'a str>) -> BTreeMap<String, i64> {
-    let mut counts = BTreeMap::new();
+fn count_values<'a>(values: impl Iterator<Item = &'a str>) -> BTreeMap<String, serde_json::Number> {
+    let mut raw_counts = BTreeMap::<String, u64>::new();
     for value in values {
-        *counts.entry(value.to_owned()).or_insert(0) += 1;
+        *raw_counts.entry(value.to_owned()).or_default() += 1;
     }
-    counts
+    raw_counts
+        .into_iter()
+        .map(|(name, count)| (name, serde_json::Number::from(count)))
+        .collect()
 }
 
 fn build(args: impl Iterator<Item = String>) -> Result<i32, String> {
@@ -465,7 +468,10 @@ fn build(args: impl Iterator<Item = String>) -> Result<i32, String> {
             .map_err(|error| error.to_string())?;
         let path = out_dir.join(format!("context_band_{split}_{version}.yaml"));
         crate::annotation_store::save_dataset(&path, &items)?;
-        split_counts.insert(split.to_owned(), items.len() as i64);
+        split_counts.insert(
+            split.to_owned(),
+            serde_json::Number::from(items.len() as u64),
+        );
         split_sha.insert(
             split.to_owned(),
             crate::annotation_store::split_sha256(&items)?,
@@ -509,7 +515,7 @@ fn build(args: impl Iterator<Item = String>) -> Result<i32, String> {
             }),
     );
     let manifest = DatasetManifest {
-        schema_version: 1,
+        schema_version: serde_json::Number::from(1),
         dataset: "agentrouter-context-band-v2".to_owned(),
         version: version.clone(),
         created: Utc::now().date_naive().to_string(),
@@ -527,8 +533,8 @@ fn build(args: impl Iterator<Item = String>) -> Result<i32, String> {
         &manifest,
     )?;
     println!(
-        "Built dataset {version}: {:?}. Leakage report -> {}.",
-        manifest.split_counts,
+        "Built dataset {version}: {}. Leakage report -> {}.",
+        serde_json::to_string(&manifest.split_counts).map_err(|error| error.to_string())?,
         leak_path.display()
     );
     Ok(0)

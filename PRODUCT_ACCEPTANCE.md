@@ -3,14 +3,13 @@
 ## Current checkpoint — 2026-11-14
 
 Product acceptance remains **not granted**. PR #16 is the sole open PR. At
-`e1e8f5c`, Rust workspace and Python/Rust compatibility pass on Linux,
-Windows, and macOS, but the full Windows Python job found two TASK-110 plugin
-path and file-identity mismatches. Local fixes are ready for hosted
-revalidation. Full Linux Python regression passes with 2,228 passed and 4
-skipped; statement coverage is 92.85%, branch coverage 88.68%, and combined
-coverage 91.90%. The frozen context-band gate remains 0.6667 < 0.90. Rust R4
-and R5–R13 remain incomplete; no production deployment or paid OpenAI request
-occurred.
+`f81d2d1`, TASK-110 Rust and Python/Rust jobs pass on Linux, Windows, and
+macOS; full Windows and macOS Python jobs also pass. The Linux Python
+regression passes with 2,229 passed and 4 skipped at 92.85% statement, 88.68%
+branch, and 91.90% combined coverage. TASK-111 arbitrary-precision annotation
+parity passes locally and awaits hosted checks. The frozen context-band gate
+remains 0.6667 < 0.90. Rust R4 and R5–R13 remain incomplete; no production
+deployment or paid OpenAI request occurred.
 The table below is historical.
 
 ## Historical assessment
