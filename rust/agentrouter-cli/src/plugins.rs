@@ -2194,9 +2194,10 @@ fn rename_sibling_no_replace_windows(
 ) -> std::io::Result<()> {
     use fs_at::os::windows::OpenOptionsExt;
     use std::os::windows::io::AsRawHandle;
-    use windows_sys::Win32::Storage::FileSystem::{
-        FileRenameInfo, SetFileInformationByHandle, FILE_READ_ATTRIBUTES, FILE_RENAME_INFO,
-    };
+    use windows_sys::Wdk::Storage::FileSystem::{FileRenameInformation, NtSetInformationFile};
+    use windows_sys::Win32::Foundation::RtlNtStatusToDosError;
+    use windows_sys::Win32::Storage::FileSystem::{FILE_READ_ATTRIBUTES, FILE_RENAME_INFO};
+    use windows_sys::Win32::System::IO::IO_STATUS_BLOCK;
 
     const DELETE_ACCESS: u32 = 0x0001_0000;
     let parent_file = parent.try_clone()?.into_std_file();
@@ -2237,8 +2238,10 @@ fn rename_sibling_no_replace_windows(
     let mut buffer = vec![0_u64; word_count];
     let info = buffer.as_mut_ptr().cast::<FILE_RENAME_INFO>();
     unsafe {
-        // Resolve the simple destination leaf against the pinned parent
-        // handle. ReplaceIfExists=0 keeps the rename atomic and no-replace.
+        // SetFileInformationByHandle rejects a non-null RootDirectory on the
+        // supported Windows runner. The documented native call accepts a
+        // directory handle for a relative name, retaining atomic no-replace
+        // semantics without reopening the parent by path.
         (*info).Anonymous.ReplaceIfExists = 0;
         (*info).RootDirectory = parent_file.as_raw_handle().cast();
         (*info).FileNameLength = filename_bytes;
@@ -2247,9 +2250,10 @@ fn rename_sibling_no_replace_windows(
             (*info).FileName.as_mut_ptr(),
             filename.len(),
         );
-        if SetFileInformationByHandle(
+        let mut io_status: IO_STATUS_BLOCK = std::mem::zeroed();
+        let status = NtSetInformationFile(
             source.as_raw_handle().cast(),
-            FileRenameInfo,
+            &mut io_status,
             info.cast(),
             u32::try_from(buffer_bytes).map_err(|_| {
                 std::io::Error::new(
@@ -2257,9 +2261,11 @@ fn rename_sibling_no_replace_windows(
                     "plugin rename information is too large",
                 )
             })?,
-        ) == 0
-        {
-            let error = std::io::Error::last_os_error();
+            FileRenameInformation,
+        );
+        if status < 0 {
+            let error_code = RtlNtStatusToDosError(status);
+            let error = std::io::Error::from_raw_os_error(error_code as i32);
             return Err(std::io::Error::new(
                 error.kind(),
                 format!("could not rename plugin staging entry: {error}"),
