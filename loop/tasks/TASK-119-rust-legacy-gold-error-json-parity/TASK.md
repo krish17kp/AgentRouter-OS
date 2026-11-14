@@ -19,5 +19,7 @@ the Rust legacy gold evaluator and `agentrouter/evaluate.py`.
 ## Verification
 
 Focused legacy gold tests pass, as do the full Rust workspace, strict Clippy,
-formatting, Ruff, and diff checks. Full Python regression and hosted
-cross-platform verification are in progress.
+Rust formatting, Ruff checks/formatting, and diff checks. Hosted Python jobs
+found and stopped on two Ruff formatting mismatches; the local formatter repair
+is ready to push. Full Python regression and hosted cross-platform verification
+are in progress.

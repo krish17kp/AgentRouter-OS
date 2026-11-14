@@ -864,9 +864,7 @@ def test_rust_routing_evaluator_matches_python_with_injected_classifier():
             routing=RoutingExpectation(minimum_ability={"coding": 10}),
         )
     ]
-    expected = evaluate_python_routing(
-        cases, models, classify_fn=lambda _task: classification
-    )
+    expected = evaluate_python_routing(cases, models, classify_fn=lambda _task: classification)
     payload = {
         "cases": [case.model_dump(mode="json") for case in cases],
         "models": [model.model_dump(mode="json") for model in models],

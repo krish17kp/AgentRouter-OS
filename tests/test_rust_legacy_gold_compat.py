@@ -119,9 +119,7 @@ def test_rust_legacy_gold_json_artifact_uses_python_ascii_escaping(tmp_path):
     python_dir = tmp_path / "python-unicode"
     rust_dir = tmp_path / "rust-unicode"
     python_paths = python_evaluator.write_artifacts(report, python_dir)
-    _rust(
-        {"operation": "write_artifacts", "report": report, "out_dir": str(rust_dir)}
-    )
+    _rust({"operation": "write_artifacts", "report": report, "out_dir": str(rust_dir)})
     assert (rust_dir / "evaluation.json").read_bytes() == python_paths[0].read_bytes()
 
 
