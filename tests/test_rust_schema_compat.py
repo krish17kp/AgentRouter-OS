@@ -239,11 +239,7 @@ SCHEMA_ENUMS = [
 
 @pytest.mark.parametrize(
     ("kind", "enum_type", "value"),
-    [
-        (kind, enum_type, member.value)
-        for kind, enum_type in SCHEMA_ENUMS
-        for member in enum_type
-    ],
+    [(kind, enum_type, member.value) for kind, enum_type in SCHEMA_ENUMS for member in enum_type],
 )
 def test_rust_schema_enum_values_match_pydantic(kind, enum_type, value):
     adapter = TypeAdapter(enum_type)

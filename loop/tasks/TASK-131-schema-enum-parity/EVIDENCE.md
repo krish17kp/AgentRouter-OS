@@ -17,5 +17,7 @@
   passed.
 - `cargo fmt --all -- --check`, targeted Ruff, `git diff --check`, and
   `LOOP_STATE.json` parsing: passed.
-- Hosted checks for the combined candidate await the authorized RC push; the
-  frozen context-band release gate remains unchanged.
+- The first hosted run at `ac6e9fd` stopped Python jobs at Ruff's format check
+  before running tests. The test file has now been formatted; Ruff format/check
+  and all 104 focused cases pass locally. Hosted revalidation is pending this
+  fix push. The frozen context-band release gate remains unchanged.

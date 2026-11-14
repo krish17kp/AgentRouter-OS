@@ -19,4 +19,6 @@ types/values.
 
 All 45 enum variants and 36 invalid value/type cases match Pydantic in direct
 Python/Rust probes. The complete Python regression and Rust workspace pass
-locally; hosted checks are pending the RC push.
+locally. The first hosted Python checks at `ac6e9fd` stopped at Ruff formatting;
+the test file has been formatted and focused checks re-pass, pending hosted
+revalidation on the fix commit.

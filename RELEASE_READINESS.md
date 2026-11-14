@@ -2,10 +2,12 @@
 
 ## Current checkpoint — 2026-11-14
 
-**NOT release ready.** The latest pushed RC head is `4738a01`; Rust workspace
-and Python/Rust compatibility pass on Linux, Windows, and macOS, and Python
-3.10–3.13 plus macOS tests pass. Windows full-suite jobs are still running. The
-prior PR check remains blocked by the unchanged context-band promotion gate at 0.6667 < 0.90;
+**NOT release ready.** The latest pushed RC head is `ac6e9fd`; its hosted Python
+jobs stopped at Ruff format before test execution. The test file has been
+formatted locally and all 104 focused cases re-pass; the fix push will rerun
+hosted checks. Preceding head `4738a01` passed Rust workspace and Python/Rust
+compatibility across Linux, Windows, and macOS. The prior PR check remains
+blocked by the unchanged context-band promotion gate at 0.6667 < 0.90;
 live smoke is skipped because no OpenAI credential is configured. TASK-130's
 2,405-pass/4-skip Python suite, full Rust workspace, strict Clippy, format, and
 targeted Ruff pass locally. TASK-131 directly checks all twelve schema enums;

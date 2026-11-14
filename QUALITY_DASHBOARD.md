@@ -2,10 +2,11 @@
 
 ## Current checkpoint — 2026-11-14
 
-The latest pushed RC head is `4738a01`; Rust workspace and Python/Rust
-compatibility pass across Linux, Windows, and macOS, as do Python 3.10–3.13 and
-macOS test jobs. Windows full-suite jobs remain in progress. The promotion gate
-remains blocked by the unchanged frozen
+The latest pushed RC head is `ac6e9fd`; its hosted Python jobs stopped at Ruff
+format before test execution. The enum compatibility file has been formatted
+locally and the 104 focused cases re-pass; a fix push will trigger hosted
+revalidation. Preceding head `4738a01` passed Rust workspace and Python/Rust
+compatibility across Linux, Windows, and macOS. The promotion gate remains blocked by the unchanged frozen
 context accuracy of 0.6667 < 0.90. The latest full suite passes 2,486 tests and
 skips 4, at 91.970% statement, 87.690% branch, and 90.988% weighted combined
 coverage; full Rust workspace and strict Clippy pass locally. TASK-130's direct

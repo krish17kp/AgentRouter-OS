@@ -2,7 +2,7 @@
 
 ## Current checkpoint — 2026-11-14
 
-Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `4738a01`.
+Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `ac6e9fd`.
 TASK-130 is locally verified: 2,405 Python tests pass and 4 skip; Rust workspace,
 strict Clippy, formatting, Ruff, and diff checks pass; 101 focused direct schema
 differentials cover `Provider` and `ExecutionTarget`. At `4738a01`, hosted Rust
@@ -12,7 +12,9 @@ still running. TASK-131 checks all 45 declared
 values across the twelve schema enums and rejects 36 invalid strings/nulls/
 numbers; all 104 focused cases pass. Its full Python suite passes 2,486/4 and the
 full Rust workspace, strict Clippy, formatting, Ruff, and diff checks pass
-locally. Hosted validation for the combined changes is pending the next push.
+locally. The first hosted Python jobs stopped at Ruff format before tests; the
+test file has been formatted and focused checks re-pass. Hosted revalidation is
+pending the fix push.
 The frozen context gate remains
 unchanged at 0.6667 < 0.90. Continue schema parity while hosted checks run.
 Human annotation, bounded OpenAI live validation, main promotion, and deployment

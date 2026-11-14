@@ -2447,3 +2447,9 @@ targeted Ruff, `git diff --check`, and loop-state JSON validation pass. Hosted
 validation for the combined changes awaits the authorized RC push. Direct
 `ModelEntry` defaults, field constraints, and derived-property parity remain
 the next schema slice; the module stays Partial.
+
+The first hosted push `ac6e9fd` exposed a formatting-only failure: Ruff rejected
+the new parameterized enum-case list before Python test execution. Applied
+`ruff format` to the compatibility test; Ruff check/format and all 104 focused
+schema cases pass locally. Pushing the correction and waiting for the hosted
+re-run before marking this slice complete.
