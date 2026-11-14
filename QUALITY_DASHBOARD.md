@@ -2,20 +2,22 @@
 
 ## Current checkpoint — 2026-11-14
 
-At pushed RC `36809f5`, Rust workspace passes on Linux, Windows, and macOS;
-Python 3.10–3.13, macOS full-suite, Linux/macOS Python/Rust compatibility,
-security scan, site, build smoke, release report, and critical-module mutation
-pass. Windows Python/Rust compatibility and full-suite jobs failed at `52c9565`
-because a closed ephemeral port was filtered as a timeout. `36809f5` uses
-invalid loopback destination port zero; hosted Linux/Windows/macOS checks are running. The
+At pushed RC `1959548`, Rust workspace passes on Linux, Windows, and macOS;
+security scan, site, build smoke, release report, Rust 1.89, MCP, API, and
+critical-module mutation checks pass. Linux/macOS Python/Rust compatibility
+passes; Windows compatibility fails because port zero is not a deterministic
+transport failure on that runner. The local test now uses an unsupported scheme
+and passes before socket access. The
 enforce-release-gate correctly fails on frozen context-band
 accuracy 0.6667 < 0.90, and live smoke skips without credentials.
 
-The latest full Python regression passes 2,538 / skips 5, with 92.025% statement,
+The latest full Python regression on the local TASK-141 changes passes 2,550 / skips 5, with 92.025% statement,
 87.690% branch, and 91.030% combined coverage. TASK-140's new Rust SDK
-differential passes all nine endpoints across authenticated, absent, and blank
-API-key cases; full Rust workspace, strict Clippy, format, Ruff, and the
-29-case combined SDK-focused suite pass locally. Python
+wire differential passes all nine endpoints across authenticated, absent, and
+blank API-key cases. TASK-141 adds injected transport and timeout parity, four
+matched HTTPX failure categories, malformed-fixture rejection, and client close
+behavior; 52 focused SDK/reliability Python tests and nine Rust SDK unit tests
+pass locally. Python
 remains the shipping authority and the Rust migration is incomplete.
 
 ## Historical dashboard

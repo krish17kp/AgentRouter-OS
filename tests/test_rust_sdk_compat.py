@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import threading
@@ -163,8 +164,11 @@ def _python_results(client: AgentRouterClient) -> list[dict]:
     return results
 
 
-def _rust(request: dict) -> list[dict]:
-    process = subprocess.run(
+def _run_rust(request: dict) -> subprocess.CompletedProcess[str]:
+    env = os.environ.copy()
+    if "mock_responses" in request or "mock_transport_error" in request:
+        env["AGENTROUTER_TEST_FIXTURE_TRANSPORT"] = "1"
+    return subprocess.run(
         [
             "cargo",
             "run",
@@ -179,10 +183,15 @@ def _rust(request: dict) -> list[dict]:
         capture_output=True,
         text=True,
         encoding="utf-8",
+        env=env,
         cwd=ROOT,
         timeout=120,
         check=False,
     )
+
+
+def _rust(request: dict) -> list[dict]:
+    process = _run_rust(request)
     assert process.returncode == 0, process.stderr
     return json.loads(process.stdout)
 
@@ -210,3 +219,185 @@ def test_rust_sdk_matches_python_all_endpoints_and_structured_errors(api_key: st
     assert rust_requests == python_requests
     assert len(rust_requests) == 9
     assert all(request["api_key"] == (api_key or None) for request in rust_requests)
+
+
+@pytest.mark.parametrize("timeout_seconds", [0.25, 10.0])
+def test_rust_sdk_injected_transport_matches_python_mock_transport(timeout_seconds):
+    import httpx
+
+    fixtures = [
+        {"status_code": 200, "body": {"status": "ok"}},
+        {"status_code": 200, "body": {"status": "ready"}},
+        {"status_code": 200, "body": [{"model_id": "fixture-model"}]},
+        {"status_code": 200, "body": [{"host": "manual"}]},
+        {"status_code": 200, "body": {"task_type": "coding", "confidence": 0.82}},
+        {
+            "status_code": 200,
+            "body": {"decision_id": "d_fixture", "no_log": True},
+        },
+        {
+            "status_code": 404,
+            "body": {"error": {"code": "not_found", "message": "decision missing"}},
+        },
+        {"status_code": 200, "body": {"accepted": True}},
+        {"status_code": 200, "body": {"executed": False, "dry_run": True}},
+    ]
+    python_requests: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        index = len(python_requests)
+        python_requests.append(
+            {
+                "method": request.method,
+                "path": request.url.path,
+                "timeout": request.extensions.get("timeout"),
+                "body": json.loads(request.content) if request.content else None,
+                "api_key_present": "X-API-Key" in request.headers,
+                "content_type": request.headers.get("Content-Type"),
+            }
+        )
+        fixture = fixtures[index]
+        return httpx.Response(fixture["status_code"], json=fixture["body"], request=request)
+
+    base_url = "https://fixture.invalid/"
+    with AgentRouterClient(
+        base_url,
+        api_key="fixture-secret",
+        timeout=timeout_seconds,
+        transport=httpx.MockTransport(handler),
+    ) as client:
+        python_results = _python_results(client)
+
+    rust = _rust(
+        {
+            "base_url": base_url,
+            "api_key": "fixture-secret",
+            "timeout_seconds": timeout_seconds,
+            "mock_responses": fixtures,
+            "operations": _operations(),
+        }
+    )
+    assert rust["results"] == python_results
+    assert rust["requests"] == python_requests
+    assert len(rust["requests"]) == 9
+
+
+@pytest.mark.parametrize(
+    ("kind", "python_error"),
+    [
+        ("ConnectError", "ConnectError"),
+        ("ConnectTimeout", "ConnectTimeout"),
+        ("ReadTimeout", "ReadTimeout"),
+        ("RemoteProtocolError", "RemoteProtocolError"),
+    ],
+)
+def test_rust_sdk_injected_transport_errors_match_httpx_categories(kind, python_error):
+    import httpx
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        error_type = getattr(httpx, python_error)
+        raise error_type("fixture failure")
+
+    with AgentRouterClient(
+        "https://fixture.invalid",
+        transport=httpx.MockTransport(handler),
+    ) as client:
+        with pytest.raises(httpx.RequestError) as excinfo:
+            client.health()
+    assert type(excinfo.value).__name__ == python_error
+
+    rust = _rust(
+        {
+            "base_url": "https://fixture.invalid",
+            "mock_transport_error": kind,
+            "operations": [{"name": "health"}],
+        }
+    )
+    assert rust["results"] == [{"transport_error": python_error}]
+    assert len(rust["requests"]) == 1
+
+
+def test_fixture_transport_requires_explicit_test_opt_in():
+    env = os.environ.copy()
+    env.pop("AGENTROUTER_TEST_FIXTURE_TRANSPORT", None)
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "-p",
+            "agentrouter-cli",
+            "--bin",
+            "sdk_from_json",
+        ],
+        input=json.dumps(
+            {
+                "base_url": "https://fixture.invalid",
+                "mock_responses": [],
+                "operations": [],
+            }
+        ),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=ROOT,
+        env=env,
+        timeout=120,
+        check=False,
+    )
+    assert process.returncode != 0
+    assert process.stdout == ""
+    assert "enabled only for explicit test runs" in process.stderr
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("mock_responses", "not-an-array", "mock_responses must be an array"),
+        ("mock_transport_error", 7, "mock_transport_error must be a string"),
+        ("mock_transport_error", "UnexpectedError", "unknown mock transport error kind"),
+    ],
+)
+def test_malformed_fixture_transport_fails_closed(field, value, message):
+    request = {
+        "base_url": "https://fixture.invalid",
+        "operations": [{"name": "health"}],
+        field: value,
+    }
+    process = _run_rust(request)
+    assert process.returncode != 0
+    assert process.stdout == ""
+    assert message in process.stderr
+
+
+def test_native_unsupported_protocol_category_matches_httpx():
+    import httpx
+
+    base_url = "ftp://fixture.invalid"
+    with AgentRouterClient(base_url) as client:
+        with pytest.raises(httpx.UnsupportedProtocol):
+            client.health()
+
+    assert _rust({"base_url": base_url, "operations": [{"name": "health"}]}) == [
+        {"transport_error": "UnsupportedProtocol"}
+    ]
+
+
+def test_fixture_transport_does_not_echo_credentials_from_base_url():
+    base_url = "https://fixture-user:fixture-pass@fixture.invalid/private?token=secret"
+    rust = _rust(
+        {
+            "base_url": base_url,
+            "mock_responses": [{"status_code": 200, "body": {"status": "ok"}}],
+            "operations": [{"name": "health"}],
+        }
+    )
+
+    output = json.dumps(rust)
+    assert "fixture-user" not in output
+    assert "fixture-pass" not in output
+    assert "fixture.invalid" not in output
+    assert "private" not in output
+    assert "secret" not in output
+    assert rust["requests"][0]["path"] == "/health"

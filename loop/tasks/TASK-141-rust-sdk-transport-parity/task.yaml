@@ -1,0 +1,42 @@
+id: TASK-141
+title: Rust SDK transport parity
+source: production completion objective / SDK Partial row in docs/RUST_PARITY_MATRIX.md
+priority: 1
+status: verify
+risk: low
+customer_impact: Rust SDK callers can inject bounded transports and inspect stable transport failure categories.
+affected_surfaces:
+  - rust/agentrouter-cli/src/sdk.rs
+  - rust/agentrouter-cli/src/bin/sdk_from_json.rs
+  - tests/test_rust_sdk_compat.py
+  - tests/test_rust_reliability_compat.py
+dependencies:
+  - TASK-140
+acceptance_criteria:
+  - Python httpx.MockTransport and Rust SdkTransport match all nine SDK request/response contracts.
+  - Explicit request timeout values reach injected Rust transports and match Python timeout extensions.
+  - Injected ConnectError, ConnectTimeout, ReadTimeout, and RemoteProtocolError categories match HTTPX.
+  - Client close is idempotent and requests after close fail with ClientClosed.
+  - The test bridge exposes no API-key value or raw transport error details.
+  - Fixture output includes only the endpoint suffix and does not echo URL credentials, query values, or base paths.
+  - Client close waits for in-flight sends and drops the default ureq agent.
+  - Request/response debug output excludes URLs, header values, and raw bodies.
+  - SDK module remains Partial until native transport timeout and generic I/O parity are complete.
+verification_commands:
+  - ./.venv/bin/python -m pytest -q tests/test_rust_sdk_compat.py tests/test_sdk.py tests/test_sdk_parity.py
+  - ./.venv/bin/python -m pytest -q tests/test_rust_reliability_compat.py -k unsupported_protocol
+  - cargo test -p agentrouter-cli --lib sdk:: --locked
+  - cargo test --workspace --locked
+  - cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+  - cargo fmt --all -- --check
+  - ./.venv/bin/ruff check tests/test_rust_sdk_compat.py tests/test_rust_reliability_compat.py
+  - ./.venv/bin/ruff format --check tests/test_rust_sdk_compat.py tests/test_rust_reliability_compat.py
+  - git diff --check
+required_reviewers:
+  - compatibility-contract
+  - security-output-review
+repair_iteration: 0
+external_blockers: []
+owner_blockers: []
+created_at: "2026-11-14"
+updated_at: "2026-11-14"

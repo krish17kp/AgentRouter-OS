@@ -273,10 +273,11 @@ def test_rust_load_runner_does_not_follow_redirects():
     assert not redirect_target_hit.is_set()
 
 
-def test_rust_transport_connect_error_matches_httpx():
-    # Port zero is an invalid destination port rejected locally; a just-closed
-    # ephemeral port can be silently filtered on Windows and become a timeout.
-    url = "http://127.0.0.1:0"
+def test_rust_transport_unsupported_protocol_matches_httpx():
+    # An unsupported scheme fails in both clients before socket access. Invalid
+    # loopback ports are not deterministic on Windows because port zero may be
+    # treated differently by the platform's networking stack.
+    url = "ftp://127.0.0.1/"
     python = run_load(
         url,
         LoadSpec(total=1, workers=1, timeout_seconds=2, request=lambda _index: ("GET", "/", None)),
@@ -292,8 +293,8 @@ def test_rust_transport_connect_error_matches_httpx():
         }
     )
 
-    assert python.transport_errors == {"ConnectError": 1}
-    assert rust["transport_errors"] == {"ConnectError": 1}
+    assert python.transport_errors == {"UnsupportedProtocol": 1}
+    assert rust["transport_errors"] == {"UnsupportedProtocol": 1}
     assert rust["requests"] == 1
 
 

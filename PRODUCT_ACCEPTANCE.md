@@ -3,18 +3,21 @@
 ## Current checkpoint — 2026-11-14
 
 Product acceptance remains **not granted**. PR #16 is the sole open PR. At
-pushed head `52c9565`, Rust workspace passes on Linux, Windows, and macOS;
-Python 3.10–3.13, macOS full-suite, Linux/macOS Python/Rust compatibility,
-site, scan, build smoke, release report, and critical-module mutation checks
-pass. Windows Python/Rust compatibility and full-suite jobs failed because a
-closed ephemeral port was filtered as a timeout; a reserved port-zero fixture
-passes locally and awaits hosted revalidation. The enforce-release-gate remains blocked by context-band accuracy
+pushed head `1959548`, Rust workspace, security, site, build-smoke, release
+report, Rust 1.89, MCP, API, and critical mutation checks pass; Linux/macOS
+Python/Rust compatibility passes. Windows compatibility exposed that port zero
+does not reliably produce a transport exception. The local repair uses an
+unsupported scheme and passes before socket access; hosted revalidation is
+pending. The enforce-release-gate remains blocked by context-band accuracy
 0.6667 < 0.90; live smoke skips without an OpenAI credential.
 
-TASK-140's local SDK differential covers every Rust SDK endpoint and passes
-three API-key variants; the full Rust workspace, strict Clippy, format, Ruff,
-and 29 focused Python SDK tests pass. Full Python passes 2,538 tests with 5
-skips at 92.025% statement, 87.690% branch, and 91.030% combined coverage.
+TASK-140 covers every Rust SDK endpoint across three API-key variants. TASK-141
+adds injected transport, timeout and close parity, typed errors, malformed
+fixture rejection, and deterministic unsupported-protocol handling. The 52-case
+focused SDK/reliability selection, nine Rust SDK unit tests, full Rust workspace,
+strict Clippy, format, Ruff, and the full Python suite pass locally. Full Python passes 2,550 tests
+with 5 skips at 92.025% statement, 87.690% branch, and 91.030% combined
+coverage; see `docs/COVERAGE_REPORT_2026-11-14-TASK-141.md`.
 The Rust migration and product acceptance remain incomplete; no production
 deployment or paid OpenAI request occurred.
 The table below is historical.

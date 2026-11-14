@@ -2,26 +2,28 @@
 
 ## Current checkpoint — 2026-11-14
 
-Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `36809f5`
-(TASK-139 Windows repair and TASK-140 SDK wire parity). Linux/macOS Rust workspace,
-MCP, API, site, build-smoke, release report, and Rust 1.89 checks pass; other
-platform and full-suite checks are still running. Two security scan runs failed
-because the workflow omitted the SDK's optional `httpx` dependency; the workflow
-fix is local and its security suite passes. Windows Python/Rust compatibility and full-suite jobs failed at
-`52c9565` because a closed ephemeral port was filtered as a timeout. `36809f5`
-uses invalid loopback destination port zero; its hosted workflows are running. The frozen
+Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `1959548`
+(security-scan dependency fix). Linux/Windows/macOS Rust workspace, security,
+site, build-smoke, release report, Rust 1.89, MCP, and API checks pass. Linux/macOS
+Python/Rust compatibility passes; Windows compatibility exposed that port zero
+is not a deterministic transport failure. The local test now uses an unsupported
+scheme and passes before socket access. The frozen
 context gate remains 0.6667 < 0.90; live smoke skips without an OpenAI key.
 
 Pushed TASK-140 adds nine-endpoint Rust/Python SDK wire-contract comparisons.
-Its 3 credential variants, response/error parity, full Rust
-workspace, strict Clippy, formatting, Ruff, and 29 focused Python SDK cases
-pass locally. Full Python regression passes 2,538 / skips 5, with 92.025%
-statement, 87.690% branch, and 91.030% combined coverage after the Windows test
-repair. Keep
-`agentrouter/sdk.py` Partial until Python's injectable transport and transport
-error semantics are represented. Continue hosted validation and remaining
-Rust parity work. Human annotation, bounded OpenAI live validation, main
-promotion, and deployment credentials remain listed in `PRODUCTION_STATUS.md`.
+TASK-141 adds injectable transport, typed errors, timeout propagation, close
+parity, malformed-fixture rejection, base URL redaction, and the deterministic
+unsupported-scheme repair. Close now waits for active sends and releases the
+default `ureq` agent promptly. The focused SDK/reliability selection passes 52
+tests; nine Rust SDK unit tests, the full Rust workspace, and strict Clippy
+pass. The final full Python regression after these review fixes passes 2,550
+tests with 5 skipped; coverage evidence is in
+`docs/COVERAGE_REPORT_2026-11-14-TASK-141.md`.
+Keep `agentrouter/sdk.py` Partial until native `ureq` timeout and generic I/O
+semantics match the full HTTPX contract. Hosted revalidation remains pending;
+continue the remaining Rust parity work. Human annotation, bounded OpenAI live
+validation, main promotion, and deployment credentials remain listed in
+`PRODUCTION_STATUS.md`.
 
 ## Historical narrative
 

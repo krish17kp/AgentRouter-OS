@@ -2,11 +2,12 @@
 
 ## Current migration and release limits (2026-11-14)
 
-- TASK-140 adds Rust/Python SDK wire-contract comparisons for all nine
-  endpoints, including no-key and blank-key behavior and structured HTTP API
-  errors. Local SDK and Rust workspace checks pass. `agentrouter/sdk.py` stays
-  Partial because Rust does not yet model the Python client's injectable
-  `httpx` transport or its native transport exception types.
+- TASK-141 adds a public Rust transport seam with request timeout propagation,
+  typed error categories, close-once behavior, and injected all-endpoint
+  comparisons against Python `httpx.MockTransport`. Malformed fixture input
+  fails closed and the native unsupported-protocol category matches Python.
+  `agentrouter/sdk.py` stays Partial because native `ureq` timeouts and generic
+  read/write I/O distinctions do not yet match the complete HTTPX contract.
 - TASK-139 maps common `ureq` connection and timeout failures to the corresponding
   Python `httpx` category names in the reliability harness. Generic I/O errors
   still do not retain read-versus-write direction; that harness stays Partial.

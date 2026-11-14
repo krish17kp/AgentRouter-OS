@@ -2606,3 +2606,28 @@ Partial because Python's injectable `httpx` transport and native transport
 exception contract remain unmatched; the parity matrix is unchanged. Pushed as `36809f5`; hosted
 Linux/Windows/macOS validation is running. The bridge emits only a generic transport-failure
 label so URLs or other transport details cannot leak into test output.
+
+## 2026-11-14 — TASK-141 SDK transport parity and Windows fixture correction
+
+Added a public Rust `SdkTransport` seam with request/response types, propagated
+per-request timeouts, typed failure categories, and idempotent close behavior.
+An explicitly enabled in-memory fixture transport now compares all nine Python
+SDK operations against `httpx.MockTransport`, including response decoding,
+structured API errors, request body/content type, and timeout extensions. Four
+injected categories match their HTTPX names; the test bridge records only API-key
+presence and never the key or raw transport error. Malformed fixture definitions
+fail closed before the default live transport can be created. Native Rust and
+Python both report `UnsupportedProtocol` for an unsupported URL scheme.
+
+The focused SDK/reliability selection passes 52 Python tests; the Rust SDK unit
+suite passes nine. Full workspace tests, strict Clippy, Rust formatting, Ruff,
+and diff checks pass locally. The complete Python regression passes 2,550/5 in
+408.95 seconds, with 92.025% statement, 87.690% branch, and 91.030% combined
+coverage; see `docs/COVERAGE_REPORT_2026-11-14-TASK-141.md`.
+
+Hosted Windows parity exposed that port zero can produce a response rather than
+a transport exception. Replaced that network-dependent assertion with an
+unsupported-scheme check that fails before socket access. The SDK remains
+Partial for native `ureq` timeout and generic read/write I/O ambiguity. Hosted
+cross-platform revalidation is pending; continue with the next local parity gap
+while it runs.
