@@ -102,6 +102,17 @@ pub const ADAPTERS: [AdapterDescriptor; 8] = [
 ];
 
 pub const PROFILE_NAMES: [&str; 5] = ["fast", "pr", "nightly", "release", "full"];
+/// Stable default task set used by Python's performance smoke evaluator.
+pub const PERFORMANCE_SAMPLE_TASKS: [&str; 8] = [
+    "Refactor the payment module and add unit tests",
+    "Write a blog post about our API launch",
+    "Summarize this 30k token incident report",
+    "Design a scalable multi-tenant architecture",
+    "Fix the off-by-one bug in the pagination helper",
+    "Analyze the query plan and recommend indexes",
+    "Rotate the production API keys and update secrets",
+    "Draft release notes for version 2.1",
+];
 
 const GRADE_DIMENSIONS: [(&str, u64); 7] = [
     ("classification", 30),
@@ -595,16 +606,40 @@ pub fn evaluate_performance(
     models: &[agentrouter_registry::ModelEntry],
     tasks: &[String],
 ) -> serde_json::Value {
+    evaluate_performance_with(models, tasks, |task| {
+        agentrouter_classifier::classify(task, &agentrouter_classifier::ClassifyOptions::default())
+    })
+}
+
+/// Measure the default classifier and router against Python's default
+/// performance task set and embedded seed registry.
+pub fn evaluate_default_performance() -> Result<serde_json::Value, String> {
+    let models = evaluators_api::load_seed_models()?;
+    let tasks = PERFORMANCE_SAMPLE_TASKS
+        .iter()
+        .map(|task| (*task).to_owned())
+        .collect::<Vec<_>>();
+    Ok(evaluate_performance(&models, &tasks))
+}
+
+/// Measure routing latency using a caller-supplied classifier, matching
+/// Python's injectable `classify_fn` seam for deterministic and specialized
+/// evaluation runs.
+pub fn evaluate_performance_with<F>(
+    models: &[agentrouter_registry::ModelEntry],
+    tasks: &[String],
+    classify_fn: F,
+) -> serde_json::Value
+where
+    F: Fn(&str) -> agentrouter_core::Classification,
+{
     use std::time::Instant;
 
     let mut classify_seconds = Vec::with_capacity(tasks.len());
     let mut route_seconds = Vec::with_capacity(tasks.len());
     for task in tasks {
         let classify_start = Instant::now();
-        let classification = agentrouter_classifier::classify(
-            task,
-            &agentrouter_classifier::ClassifyOptions::default(),
-        );
+        let classification = classify_fn(task);
         let route_start = Instant::now();
         let _route = std::hint::black_box(agentrouter_routing::route(
             models,
@@ -1208,6 +1243,31 @@ pub fn write_reports(
         }
     }
     Ok(written)
+}
+
+#[cfg(test)]
+mod performance_contract_tests {
+    use std::cell::Cell;
+
+    #[test]
+    fn injected_classifier_runs_once_for_each_performance_task() {
+        let models = crate::evaluators_api::load_seed_models().expect("packaged seed catalog");
+        let tasks = vec!["first task".to_owned(), "second task".to_owned()];
+        let calls = Cell::new(0);
+        let report = crate::evaluate_performance_with(&models, &tasks, |task| {
+            calls.set(calls.get() + 1);
+            agentrouter_classifier::classify(
+                task,
+                &agentrouter_classifier::ClassifyOptions::default(),
+            )
+        });
+
+        assert_eq!(calls.get(), tasks.len());
+        assert_eq!(report["detail"]["n_samples"], tasks.len());
+        assert!(report["score"]
+            .as_f64()
+            .is_some_and(|score| (0.0..=1.0).contains(&score)));
+    }
 }
 
 fn write_json_file(

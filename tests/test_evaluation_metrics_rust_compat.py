@@ -14,6 +14,9 @@ from agentrouter.evaluation.evaluators.feedback import evaluate_feedback as eval
 from agentrouter.evaluation.evaluators.performance import (
     _summarize_samples as summarize_python_performance,
 )
+from agentrouter.evaluation.evaluators.performance import (
+    evaluate_performance as evaluate_python_performance,
+)
 from agentrouter.evaluation.evaluators.platform import evaluate_platform as evaluate_python_platform
 from agentrouter.evaluation.evaluators.provider import evaluate_provider as evaluate_python_provider
 from agentrouter.evaluation.evaluators.routing import evaluate_routing as evaluate_python_routing
@@ -948,6 +951,41 @@ def test_rust_performance_evaluator_measures_classifier_and_router():
     assert detail["route_median_ms"] >= 0
     assert 0 <= result["score"] <= 1
     assert detail["note"] == "smoke perf check on this machine; not a benchmark"
+
+
+def test_rust_performance_evaluator_matches_python_defaults():
+    expected = evaluate_python_performance()
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_performance_run_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input="{}",
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+        check=True,
+    )
+    actual = json.loads(process.stdout)
+    assert isinstance(actual["score"], (float, int))
+    assert 0.0 <= actual["score"] <= 1.0
+    assert actual["detail"]["n_samples"] == expected["detail"]["n_samples"] == 8
+    for field in (
+        "classify_threshold_ms",
+        "route_threshold_ms",
+        "note",
+    ):
+        assert actual["detail"][field] == expected["detail"][field]
+    for field in ("classify_median_ms", "route_median_ms"):
+        assert isinstance(actual["detail"][field], (float, int))
+        assert actual["detail"][field] >= 0
 
 
 def test_rust_evaluation_comparison_and_artifacts_match_python(tmp_path):

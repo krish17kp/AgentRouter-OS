@@ -53,7 +53,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/context_bands.py` | `agentrouter-evaluation::context_bands` | Parity |
 | `agentrouter/evaluation/evaluators/__init__.py` | `agentrouter-evaluation::evaluators_api` | Partial |
 | `agentrouter/evaluation/evaluators/feedback.py` | `agentrouter-evaluation::evaluate_feedback` | Parity |
-| `agentrouter/evaluation/evaluators/performance.py` | `agentrouter-evaluation::{evaluate_performance,summarize_performance}` | Partial |
+| `agentrouter/evaluation/evaluators/performance.py` | `agentrouter-evaluation::{evaluate_performance,evaluate_performance_with,evaluate_default_performance,summarize_performance}` | Parity |
 | `agentrouter/evaluation/evaluators/platform.py` | `agentrouter-evaluation::evaluate_platform` | Partial |
 | `agentrouter/evaluation/evaluators/provider.py` | `agentrouter-evaluation::evaluate_provider` | Partial |
 | `agentrouter/evaluation/evaluators/routing.py` | `agentrouter-evaluation::evaluate_routing` | Partial |
@@ -183,11 +183,15 @@ release authority until the full set is complete.
   counts. It only measures; it does not change classifier thresholds or gates.
 - Evaluation JSON, scorecard, Markdown, failure/holdout CSV, confusion CSV, and
   output file ordering all have a Python/Rust differential fixture.
-- Classification-only grading and gate calculation have differential coverage;
-  Rust does not invoke the classifier or implement the `measure_all` evaluators.
+- Classification-only grading and gate calculation have differential coverage.
+  Rust also supports bounded `measure_all` scoring for caller-supplied cases,
+  seed models, and command manifests; automatic runtime discovery remains
+  partial.
 - The safety evaluator now classifies and gates cases in Rust with differential
-  coverage. Feedback, provider, routing, platform, and performance each have
-  partial or complete Rust scoring, while runtime orchestration remains open.
+  coverage. Feedback, provider, routing, platform, and performance have Rust
+  scoring and caller-supplied/default input paths. Performance summary values
+  match exactly for fixed samples; measured latency values are machine-specific
+  by contract. Runtime-wide evaluator orchestration remains partial.
 - Provider metadata scoring is ported over caller-supplied model records; Rust
   does not load the packaged seed registry for this evaluator yet.
 - The feedback/storage evaluator now uses the Rust SQLite store in a unique
@@ -259,8 +263,10 @@ release authority until the full set is complete.
   owned and unmanaged files, backup collisions, concurrent edits, pre-identity
   and post-identity crash boundaries, rollback, malformed or forged journals,
   verified backup restoration, historical paths, hard-link refusal, and
-  identity-checked empty-directory cleanup. Managed upgrades and full CLI parity
-  remain incomplete; hosted validation of TASK-113 is pending.
+  identity-checked empty-directory cleanup. TASK-114 adds journaled
+  managed-payload upgrades and preserves prior backup metadata. Full CLI parity
+  remains incomplete; local full-suite verification passes while
+  cross-platform hosted validation is pending.
   Windows parity uses the CPython-compatible file-ID query where supported and
   fails closed for 128-bit identities the current state schema cannot encode.
 - Routing evaluation now scores caller-supplied model catalogs against gold

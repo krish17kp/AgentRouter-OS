@@ -9,6 +9,8 @@ mutation testing rewards asserting exact boundary behaviour, not just happy path
 
 from __future__ import annotations
 
+import os
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -22,6 +24,7 @@ from agentrouter import cli as cli_mod
 from agentrouter import controls as controls_mod
 from agentrouter import engine as engine_mod
 from agentrouter import hosts as hosts_mod
+from agentrouter import plugins as plugins_mod
 from agentrouter.controls import RouteControls, apply_controls
 from agentrouter.hosts import (
     AVAILABLE,
@@ -54,6 +57,48 @@ from agentrouter.server import limits as limits_mod
 from agentrouter.server.limits import IdempotencyCache, RateLimiter
 
 _SEEDS = Path(agentrouter.__file__).parent / "seeds"
+
+
+def test_plugin_backup_ownership_requires_matching_digest_identity_and_mode(tmp_path):
+    backup = tmp_path / "AGENTS.md.agentrouter-bak"
+    backup.write_bytes(b"original user-owned guidance")
+    info = backup.lstat()
+    entry = {
+        "backup_sha256": plugins_mod._sha256(backup.read_bytes()),
+        "backup_identity": plugins_mod._identity_json(info),
+        "backup_mode": stat.S_IMODE(info.st_mode),
+    }
+
+    assert plugins_mod._entry_matches(backup, entry, backup=True) is True
+    assert (
+        plugins_mod._entry_matches(backup, {**entry, "backup_sha256": "0" * 64}, backup=True)
+        is False
+    )
+    assert (
+        plugins_mod._entry_matches(backup, {**entry, "backup_identity": [-1, -1]}, backup=True)
+        is False
+    )
+    assert (
+        plugins_mod._entry_matches(
+            backup, {**entry, "backup_mode": entry["backup_mode"] ^ 0o100}, backup=True
+        )
+        is False
+    )
+
+
+def test_plugin_managed_file_hardlinks_require_explicit_recovery_allowance(tmp_path):
+    destination = tmp_path / "AGENTS.md"
+    destination.write_bytes(b"managed guidance")
+    alias = tmp_path / "user-alias.md"
+    os.link(destination, alias)
+    info = destination.lstat()
+    entry = {
+        "installed_sha256": plugins_mod._sha256(destination.read_bytes()),
+        "installed_identity": plugins_mod._identity_json(info),
+    }
+
+    assert plugins_mod._entry_matches(destination, entry) is False
+    assert plugins_mod._entry_matches(destination, entry, allow_hardlinks=True) is True
 
 
 def _seed_model(**over):

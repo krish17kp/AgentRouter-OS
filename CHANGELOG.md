@@ -31,12 +31,20 @@ All notable changes to AgentRouter OS. Format loosely follows
   install, ownership-checked uninstall, forced unmanaged-file replacement, and
   identity-checked transaction recovery. Python and Rust share ownership and
   journal formats; both preserve edits and ambiguous files and restore only
-  verified backups. Managed plugin upgrades remain Python-owned.
+  verified backups. Add journaled managed-payload upgrades that retain the
+  original unmanaged backup identity and mode and recover staged or published
+  replacements without claiming concurrent user files. Cross-platform CI is
+  pending for this candidate.
 - Preserve Python-compatible arbitrary-precision annotation manifest integers
   in Rust schema validation and JSON storage, including exact large schema
   versions and count-map values. Keep the serializer's YAML paths safe under
   Cargo feature unification by converting supported numbers explicitly and
   refusing inexact oversized integer narrowing.
+- Complete the Rust performance smoke evaluator inputs: expose Python's eight
+  default tasks, load the embedded seed catalog for default runs, support an
+  injected classifier, and use the shared task set from the aggregate runner.
+  Stable summary fields and default sample counts have Python/Rust coverage;
+  machine-specific timings are checked by contract rather than compared.
 
 ### Fixed
 - Add Rust OpenAPI canonicalization and bounded `$ref` validation with stable,

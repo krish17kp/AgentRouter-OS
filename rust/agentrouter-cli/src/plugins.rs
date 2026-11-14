@@ -428,10 +428,18 @@ fn read_transaction(
     })?;
     if transaction.schema != 1
         || transaction.plugin != plugin.name
-        || !matches!(
-            transaction.phase.as_str(),
-            "prepared" | "backing_up" | "backed_up" | "replaced"
-        )
+        || (if transaction.prior_entry.is_some() {
+            !matches!(
+                transaction.phase.as_str(),
+                "upgrade_prepared" | "upgrade_staging" | "upgrade_published"
+            ) || (transaction.phase != "upgrade_prepared"
+                && transaction.installed_identity.is_none())
+        } else {
+            !matches!(
+                transaction.phase.as_str(),
+                "prepared" | "backing_up" | "backed_up" | "replaced"
+            )
+        })
         || transaction.original_sha256.len() != 64
         || !transaction
             .original_sha256
@@ -442,6 +450,9 @@ fn read_transaction(
             .installed_sha256
             .bytes()
             .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+        || (transaction.prior_entry.is_some()
+            && transaction.phase != "upgrade_prepared"
+            && transaction.installed_identity.is_none())
         || (transaction.phase == "replaced" && transaction.installed_identity.is_none())
     {
         return Err(format!(
@@ -494,6 +505,24 @@ fn read_transaction(
             "plugin transaction journal backup does not match its destination: {}",
             path.display()
         ));
+    }
+    if let Some(prior_entry) = transaction.prior_entry.as_ref() {
+        let prior_disposition = prior_entry
+            .get("disposition")
+            .and_then(serde_json::Value::as_str);
+        if !matches!(prior_disposition, Some("created" | "replaced"))
+            || prior_entry
+                .get("installed_sha256")
+                .and_then(serde_json::Value::as_str)
+                != Some(transaction.original_sha256.as_str())
+            || prior_entry.get("installed_identity")
+                != Some(&serde_json::json!(transaction.original_identity))
+        {
+            return Err(format!(
+                "plugin upgrade journal does not match its prior ownership entry: {}",
+                path.display()
+            ));
+        }
     }
     Ok(Some(LoadedTransaction {
         value: transaction,
@@ -690,7 +719,7 @@ fn transaction_file_matches(file: &VerifiedFile, transaction: &PluginTransaction
                 transaction.original_identity[0],
                 transaction.original_identity[1],
             )
-        && file.mode == transaction.original_mode
+        && (transaction.prior_entry.is_some() || file.mode == transaction.original_mode)
 }
 
 fn remove_transaction_stage(
@@ -903,6 +932,168 @@ fn restore_transaction_stage(
     Ok(())
 }
 
+fn managed_upgrade_entry(
+    prior_entry: &serde_json::Value,
+    transaction: &PluginTransaction,
+) -> Result<serde_json::Value, String> {
+    let identity = transaction
+        .installed_identity
+        .ok_or_else(|| "plugin upgrade journal lacks the new file identity".to_owned())?;
+    let mut entry = prior_entry.clone();
+    entry["installed_sha256"] = serde_json::json!(transaction.installed_sha256);
+    entry["installed_identity"] = serde_json::json!(identity);
+    Ok(entry)
+}
+
+fn recover_managed_upgrade(
+    root: &Path,
+    root_dir: &cap_std::fs::Dir,
+    plugin: &PluginSpec,
+    state: &mut serde_json::Value,
+    state_sha: &mut Option<String>,
+    loaded: &LoadedTransaction,
+) -> Result<(), String> {
+    let transaction = &loaded.value;
+    let prior_entry = transaction
+        .prior_entry
+        .as_ref()
+        .ok_or_else(|| "plugin upgrade journal lacks its prior ownership entry".to_owned())?;
+    let upgraded_entry = transaction
+        .installed_identity
+        .map(|_| managed_upgrade_entry(prior_entry, transaction))
+        .transpose()?;
+    let state_entry = state
+        .get("files")
+        .and_then(serde_json::Value::as_object)
+        .and_then(|files| files.get(&transaction.dest));
+    let state_is_prior = state_entry == Some(prior_entry);
+    let state_is_upgraded = state_entry == upgraded_entry.as_ref();
+    if !state_is_prior && !state_is_upgraded {
+        return Err(
+            "plugin upgrade ownership state changed; destination, staging files, and journal were preserved"
+                .to_owned(),
+        );
+    }
+
+    let destination_present = relative_entry_exists(root, &transaction.dest)?;
+    let destination = if destination_present {
+        Some(
+            verified_file_if_readable_with_hardlinks(root, &transaction.dest, true)
+                .ok_or_else(|| {
+                    "plugin upgrade destination is not a verified regular file; all paths were preserved"
+                        .to_owned()
+                })?,
+        )
+    } else {
+        None
+    };
+    let original_staged = match transaction.staged.as_deref() {
+        Some(path) if relative_entry_exists(root, path)? => {
+            let file =
+                verified_file_if_readable_with_hardlinks(root, path, true).ok_or_else(|| {
+                    "staged prior managed payload is not verifiable; it was preserved".to_owned()
+                })?;
+            if !transaction_file_matches(&file, transaction) {
+                return Err("staged prior managed payload changed; it was preserved".to_owned());
+            }
+            true
+        }
+        _ => false,
+    };
+    let install_staged_present = match transaction.install_staged.as_deref() {
+        Some(path) if relative_entry_exists(root, path)? => {
+            let file =
+                verified_file_if_readable_with_hardlinks(root, path, true).ok_or_else(|| {
+                    "staged plugin upgrade payload is not verifiable; it was preserved".to_owned()
+                })?;
+            if !transaction_install_file_matches(&file, transaction) {
+                return Err("staged plugin upgrade payload changed; it was preserved".to_owned());
+            }
+            true
+        }
+        _ => false,
+    };
+    let destination_is_new = destination
+        .as_ref()
+        .is_some_and(|file| transaction_install_file_matches(file, transaction));
+    let destination_is_prior = destination
+        .as_ref()
+        .is_some_and(|file| transaction_file_matches(file, transaction));
+
+    if destination_is_new {
+        let upgraded_entry = upgraded_entry
+            .ok_or_else(|| "plugin upgrade journal lacks the new file identity".to_owned())?;
+        if state_is_prior {
+            state["files"][&transaction.dest] = upgraded_entry;
+            let saved = save_state(root, root_dir, plugin, state, state_sha.as_deref())?;
+            *state_sha = Some(saved.sha256);
+        }
+        remove_transaction_stage(root, root_dir, transaction)?;
+        if install_staged_present {
+            remove_transaction_install_stage(root, root_dir, transaction)?;
+        }
+        return delete_transaction(root, root_dir, plugin, loaded);
+    }
+
+    if destination_is_prior && original_staged {
+        if state_is_upgraded {
+            return Err(
+                "plugin upgrade destination reverted after ownership commit; all paths were preserved"
+                    .to_owned(),
+            );
+        }
+        let destination_identity = destination
+            .as_ref()
+            .map(|file| file.identity)
+            .ok_or_else(|| "verified plugin upgrade destination disappeared".to_owned())?;
+        let staged_identity = transaction
+            .staged
+            .as_deref()
+            .and_then(|path| verified_file_if_readable_with_hardlinks(root, path, true))
+            .map(|file| file.identity)
+            .ok_or_else(|| "verified prior managed payload disappeared".to_owned())?;
+        if destination_identity != staged_identity {
+            return Err(
+                "plugin upgrade rollback found different files at the destination and staging path; all paths were preserved"
+                    .to_owned(),
+            );
+        }
+        remove_transaction_stage(root, root_dir, transaction)?;
+        if install_staged_present {
+            remove_transaction_install_stage(root, root_dir, transaction)?;
+        }
+        return delete_transaction(root, root_dir, plugin, loaded);
+    }
+
+    if destination_is_prior && !original_staged {
+        if state_is_upgraded {
+            return Err(
+                "plugin upgrade destination reverted after ownership commit; all paths were preserved"
+                    .to_owned(),
+            );
+        }
+        if install_staged_present {
+            remove_transaction_install_stage(root, root_dir, transaction)?;
+        }
+        return delete_transaction(root, root_dir, plugin, loaded);
+    }
+
+    if destination.is_none() && original_staged {
+        restore_transaction_stage(root, root_dir, transaction)?;
+        if state_is_upgraded {
+            state["files"][&transaction.dest] = prior_entry.clone();
+            let saved = save_state(root, root_dir, plugin, state, state_sha.as_deref())?;
+            *state_sha = Some(saved.sha256);
+        }
+        if install_staged_present {
+            remove_transaction_install_stage(root, root_dir, transaction)?;
+        }
+        return delete_transaction(root, root_dir, plugin, loaded);
+    }
+
+    Err("an interrupted managed plugin upgrade is ambiguous; destination, staging files, and journal were preserved".to_owned())
+}
+
 fn recover_transaction(
     root: &Path,
     root_dir: &cap_std::fs::Dir,
@@ -914,6 +1105,9 @@ fn recover_transaction(
         return Ok(());
     };
     let transaction = loaded.value.clone();
+    if transaction.prior_entry.is_some() {
+        return recover_managed_upgrade(root, root_dir, plugin, state, state_sha, &loaded);
+    }
     let loaded_state_entry = state
         .get("files")
         .and_then(serde_json::Value::as_object)
@@ -1269,10 +1463,22 @@ pub fn install(
                 results.push(plugin_result(&destination, "skipped (identical, managed)"));
                 continue;
             }
-            return Err(
-                "managed plugin upgrades require the Rust transaction recovery protocol; use the Python CLI"
-                    .to_owned(),
-            );
+            let upgrade_result = upgrade_managed_plugin_file(
+                ManagedPluginUpgrade {
+                    root,
+                    root_dir: &root_dir,
+                    plugin,
+                    relative: file.dest,
+                    destination: &destination,
+                    expected,
+                    expected_digest: &digest,
+                },
+                entry.clone(),
+                &mut state,
+                &mut state_sha,
+            )?;
+            results.push(plugin_result(&destination, &upgrade_result));
+            continue;
         }
 
         if let Some(actual) = actual {
@@ -1329,6 +1535,7 @@ pub fn install(
                     installed_identity: None,
                     staged: Some(staged),
                     install_staged: Some(install_staged),
+                    prior_entry: None,
                 };
                 let prepared = write_transaction(root, &root_dir, plugin, &transaction, None)?;
                 transaction.phase = "backing_up".to_owned();
@@ -2015,7 +2222,7 @@ fn rename_sibling_no_replace_windows(
         ));
     }
 
-    let parent_identity = directory_identity(&parent_file)?;
+    let parent_identity = directory_identity(&parent_file).map_err(std::io::Error::other)?;
     let mut final_path = vec![0_u16; 32_768];
     let path_length = unsafe {
         GetFinalPathNameByHandleW(
@@ -2055,7 +2262,8 @@ fn rename_sibling_no_replace_windows(
     }
     let destination_parent = unsafe { std::fs::File::from_raw_handle(destination_handle.cast()) };
     if !destination_parent.metadata()?.is_dir()
-        || directory_identity(&destination_parent)? != parent_identity
+        || directory_identity(&destination_parent).map_err(std::io::Error::other)?
+            != parent_identity
     {
         return Err(std::io::Error::other(
             "plugin staging parent changed while opening it for rename",
@@ -3111,6 +3319,157 @@ fn plugin_result(destination: &Path, result: &str) -> serde_json::Value {
     })
 }
 
+struct ManagedPluginUpgrade<'a> {
+    root: &'a Path,
+    root_dir: &'a cap_std::fs::Dir,
+    plugin: &'a PluginSpec,
+    relative: &'a str,
+    destination: &'a Path,
+    expected: &'a [u8],
+    expected_digest: &'a str,
+}
+
+fn upgrade_managed_plugin_file(
+    upgrade: ManagedPluginUpgrade<'_>,
+    previous_entry: serde_json::Value,
+    state: &mut serde_json::Value,
+    state_sha: &mut Option<String>,
+) -> Result<String, String> {
+    let ManagedPluginUpgrade {
+        root,
+        root_dir,
+        plugin,
+        relative,
+        destination,
+        expected,
+        expected_digest,
+    } = upgrade;
+    let actual = read_relative_file(root, relative)?.ok_or_else(|| {
+        format!(
+            "{} changed after AgentRouter installed it; refusing to overwrite the user edit.",
+            destination.display()
+        )
+    })?;
+    let actual_digest = format!("{:x}", sha2::Sha256::digest(&actual.bytes));
+    if previous_entry
+        .get("installed_sha256")
+        .and_then(serde_json::Value::as_str)
+        != Some(actual_digest.as_str())
+        || previous_entry.get("installed_identity")
+            != Some(&serde_json::json!([actual.identity.0, actual.identity.1]))
+    {
+        return Err(format!(
+            "{} changed after AgentRouter installed it; refusing to overwrite the user edit.",
+            destination.display()
+        ));
+    }
+
+    let (parent, _) = open_relative_parent(root_dir, relative, false)?
+        .ok_or_else(|| "plugin destination parent is unavailable".to_owned())?;
+    let staged_name = unique_staged_name(&parent)?;
+    let install_staged_name = unique_install_staged_name(&parent)?;
+    let parent_relative = sibling_directory(relative);
+    let staged = if parent_relative.is_empty() {
+        staged_name
+    } else {
+        format!("{parent_relative}/{staged_name}")
+    };
+    let install_staged = if parent_relative.is_empty() {
+        install_staged_name
+    } else {
+        format!("{parent_relative}/{install_staged_name}")
+    };
+    let mut transaction = PluginTransaction {
+        schema: 1,
+        plugin: plugin.name.to_owned(),
+        phase: "upgrade_prepared".to_owned(),
+        dest: relative.to_owned(),
+        backup: format!("{relative}.agentrouter-bak"),
+        original_sha256: actual_digest,
+        original_identity: [actual.identity.0, actual.identity.1],
+        original_mode: actual.mode,
+        installed_sha256: expected_digest.to_owned(),
+        installed_identity: None,
+        staged: Some(staged),
+        install_staged: Some(install_staged),
+        prior_entry: Some(previous_entry),
+    };
+
+    // Persist the intended staging name before creating it. If the process
+    // stops while the temporary payload is being written, the old managed
+    // destination remains intact and recovery can still account for the path.
+    let prepared = write_transaction(root, root_dir, plugin, &transaction, None)?;
+    let install_stage = create_transaction_install_stage(root, root_dir, &transaction, expected)?;
+    transaction.installed_identity = Some([install_stage.identity.0, install_stage.identity.1]);
+    let prepared_with_identity =
+        write_transaction(root, root_dir, plugin, &transaction, Some(&prepared))?;
+    transaction.phase = "upgrade_staging".to_owned();
+    let staging_intent = write_transaction(
+        root,
+        root_dir,
+        plugin,
+        &transaction,
+        Some(&prepared_with_identity),
+    )?;
+
+    let staged_original = stage_exact_file_to(
+        root,
+        root_dir,
+        relative,
+        &transaction.original_sha256,
+        Some(actual.identity),
+        "managed plugin file",
+        StageOptions {
+            allow_hardlinks: false,
+            staged_name: transaction
+                .staged
+                .as_deref()
+                .and_then(|path| path.rsplit('/').next()),
+        },
+    )?;
+    if staged_original.is_none() {
+        return Err(format!(
+            "{} changed during upgrade; the verified replacement and journal were preserved.",
+            destination.display()
+        ));
+    }
+
+    let installed = link_transaction_install_stage(root, root_dir, &transaction)?;
+    if installed.bytes != expected
+        || transaction.installed_identity != Some([installed.identity.0, installed.identity.1])
+    {
+        return Err(format!(
+            "{} changed during upgrade; staged files and journal were preserved.",
+            destination.display()
+        ));
+    }
+    transaction.phase = "upgrade_published".to_owned();
+    let published = write_transaction(root, root_dir, plugin, &transaction, Some(&staging_intent))?;
+
+    let mut next_state = state.clone();
+    next_state["files"][relative] = managed_upgrade_entry(
+        transaction
+            .prior_entry
+            .as_ref()
+            .ok_or_else(|| "plugin upgrade lost its prior ownership entry".to_owned())?,
+        &transaction,
+    )?;
+    let saved = save_state(
+        root,
+        root_dir,
+        plugin,
+        &mut next_state,
+        state_sha.as_deref(),
+    )?;
+    *state = next_state;
+    *state_sha = Some(saved.sha256);
+
+    remove_transaction_stage(root, root_dir, &transaction)?;
+    remove_transaction_install_stage(root, root_dir, &transaction)?;
+    delete_transaction(root, root_dir, plugin, &published)?;
+    Ok("updated (managed payload)".to_owned())
+}
+
 fn existing_relative_directory(
     root: &cap_std::fs::Dir,
     relative: &str,
@@ -3252,13 +3611,14 @@ fn acquire_plugin_mutation_lock(
     }
     #[cfg(windows)]
     {
-        let mut file = file;
         let length = file
             .metadata()
             .map_err(|error| format!("could not inspect plugin mutation lock: {error}"))?
             .len();
         if length == 0 {
-            file.write_all(&[0])
+            let mut writer = &file;
+            writer
+                .write_all(&[0])
                 .and_then(|()| file.sync_data())
                 .map_err(|error| format!("could not initialize plugin mutation lock: {error}"))?;
         } else if length != 1 {
@@ -3842,6 +4202,8 @@ struct PluginTransaction {
     staged: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     install_staged: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    prior_entry: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone)]
@@ -4287,6 +4649,405 @@ fn python_equal_schema_version(value: &serde_json::Value) -> bool {
 mod tests {
     use super::*;
 
+    struct ManagedUpgradeFixture {
+        _temporary: tempfile::TempDir,
+        root: PathBuf,
+        root_dir: cap_std::fs::Dir,
+        plugin: &'static PluginSpec,
+        state: serde_json::Value,
+        state_sha: Option<String>,
+        transaction: PluginTransaction,
+        expected: Vec<u8>,
+        original: Vec<u8>,
+        backup: Vec<u8>,
+    }
+
+    fn managed_upgrade_fixture() -> ManagedUpgradeFixture {
+        managed_upgrade_fixture_with_payload(true)
+    }
+
+    fn managed_upgrade_fixture_with_payload(create_staged_payload: bool) -> ManagedUpgradeFixture {
+        let plugin = get_plugin("codex").unwrap();
+        let temporary = tempfile::tempdir().unwrap();
+        let root = temporary.path().join("home");
+        std::fs::create_dir_all(&root).unwrap();
+        let root = root.canonicalize().unwrap();
+        let destination = plugin.files[0].dest;
+        let backup_path = format!("{destination}.agentrouter-bak");
+        let original = b"previous managed plugin payload".to_vec();
+        let backup = b"original user-authored payload".to_vec();
+        let expected = bundled_contents(plugin.files[0].src).unwrap().to_vec();
+        std::fs::write(root.join(destination), &original).unwrap();
+        std::fs::write(root.join(&backup_path), &backup).unwrap();
+        let installed = read_relative_file(&root, destination).unwrap().unwrap();
+        let backup_file = read_relative_file(&root, &backup_path).unwrap().unwrap();
+        let mut state = empty_state(plugin);
+        state["files"][destination] = serde_json::json!({
+            "disposition": "replaced",
+            "installed_sha256": format!("{:x}", sha2::Sha256::digest(&installed.bytes)),
+            "installed_identity": [installed.identity.0, installed.identity.1],
+            "backup": backup_path,
+            "backup_sha256": format!("{:x}", sha2::Sha256::digest(&backup_file.bytes)),
+            "backup_identity": [backup_file.identity.0, backup_file.identity.1],
+            "backup_mode": backup_file.mode,
+        });
+        let root_file = crate::open_safe_home(&root).unwrap();
+        let root_dir = cap_std::fs::Dir::from_std_file(root_file);
+        let saved = save_state(&root, &root_dir, plugin, &mut state, None).unwrap();
+        let state_sha = Some(saved.sha256);
+        let (parent, _) = open_relative_parent(&root_dir, destination, false)
+            .unwrap()
+            .unwrap();
+        let staged_name = unique_staged_name(&parent).unwrap();
+        let install_staged_name = unique_install_staged_name(&parent).unwrap();
+        let transaction = PluginTransaction {
+            schema: 1,
+            plugin: plugin.name.to_owned(),
+            phase: "upgrade_prepared".to_owned(),
+            dest: destination.to_owned(),
+            backup: backup_path,
+            original_sha256: format!("{:x}", sha2::Sha256::digest(&installed.bytes)),
+            original_identity: [installed.identity.0, installed.identity.1],
+            original_mode: installed.mode,
+            installed_sha256: format!("{:x}", sha2::Sha256::digest(&expected)),
+            installed_identity: None,
+            staged: Some(staged_name),
+            install_staged: Some(install_staged_name),
+            prior_entry: Some(state["files"][destination].clone()),
+        };
+        let mut transaction = transaction;
+        let prepared = write_transaction(&root, &root_dir, plugin, &transaction, None).unwrap();
+        if create_staged_payload {
+            let install_stage =
+                create_transaction_install_stage(&root, &root_dir, &transaction, &expected)
+                    .unwrap();
+            transaction.installed_identity =
+                Some([install_stage.identity.0, install_stage.identity.1]);
+            let prepared_with_identity =
+                write_transaction(&root, &root_dir, plugin, &transaction, Some(&prepared)).unwrap();
+            transaction.phase = "upgrade_staging".to_owned();
+            write_transaction(
+                &root,
+                &root_dir,
+                plugin,
+                &transaction,
+                Some(&prepared_with_identity),
+            )
+            .unwrap();
+        }
+
+        ManagedUpgradeFixture {
+            _temporary: temporary,
+            root,
+            root_dir,
+            plugin,
+            state,
+            state_sha,
+            transaction,
+            expected,
+            original,
+            backup,
+        }
+    }
+
+    fn stage_managed_upgrade_original(fixture: &ManagedUpgradeFixture) {
+        let staged_name = fixture
+            .transaction
+            .staged
+            .as_deref()
+            .and_then(|path| path.rsplit('/').next());
+        assert!(stage_exact_file_to(
+            &fixture.root,
+            &fixture.root_dir,
+            &fixture.transaction.dest,
+            &fixture.transaction.original_sha256,
+            Some((
+                fixture.transaction.original_identity[0],
+                fixture.transaction.original_identity[1]
+            )),
+            "managed plugin file",
+            StageOptions {
+                allow_hardlinks: false,
+                staged_name,
+            },
+        )
+        .unwrap()
+        .is_some());
+    }
+
+    fn publish_managed_upgrade(fixture: &ManagedUpgradeFixture) {
+        let installed =
+            link_transaction_install_stage(&fixture.root, &fixture.root_dir, &fixture.transaction)
+                .unwrap();
+        assert_eq!(installed.bytes, fixture.expected);
+        assert_eq!(
+            Some([installed.identity.0, installed.identity.1]),
+            fixture.transaction.installed_identity
+        );
+    }
+
+    #[test]
+    fn managed_upgrade_recovery_cleans_prepared_stage_without_moving_original() {
+        let mut fixture = managed_upgrade_fixture();
+        recover_transaction(
+            &fixture.root,
+            &fixture.root_dir,
+            fixture.plugin,
+            &mut fixture.state,
+            &mut fixture.state_sha,
+        )
+        .unwrap();
+
+        assert_eq!(
+            std::fs::read(fixture.root.join(&fixture.transaction.dest)).unwrap(),
+            fixture.original
+        );
+        assert_eq!(
+            std::fs::read(
+                fixture.root.join(
+                    fixture.transaction.prior_entry.as_ref().unwrap()["backup"]
+                        .as_str()
+                        .unwrap()
+                )
+            )
+            .unwrap(),
+            fixture.backup
+        );
+        assert!(
+            read_transaction(&fixture.root, &fixture.root_dir, fixture.plugin)
+                .unwrap()
+                .is_none()
+        );
+        assert!(fixture
+            .transaction
+            .install_staged
+            .as_deref()
+            .is_some_and(|path| !relative_entry_exists(&fixture.root, path).unwrap()));
+    }
+
+    #[test]
+    fn managed_upgrade_recovery_clears_journal_before_stage_creation() {
+        let mut fixture = managed_upgrade_fixture_with_payload(false);
+        recover_transaction(
+            &fixture.root,
+            &fixture.root_dir,
+            fixture.plugin,
+            &mut fixture.state,
+            &mut fixture.state_sha,
+        )
+        .unwrap();
+
+        assert_eq!(
+            std::fs::read(fixture.root.join(&fixture.transaction.dest)).unwrap(),
+            fixture.original
+        );
+        assert!(
+            read_transaction(&fixture.root, &fixture.root_dir, fixture.plugin)
+                .unwrap()
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn managed_upgrade_recovery_preserves_an_unverified_stage_after_a_crash() {
+        let mut fixture = managed_upgrade_fixture_with_payload(false);
+        let staged = create_transaction_install_stage(
+            &fixture.root,
+            &fixture.root_dir,
+            &fixture.transaction,
+            &fixture.expected,
+        )
+        .unwrap();
+        assert_eq!(staged.bytes, fixture.expected);
+        let error = recover_transaction(
+            &fixture.root,
+            &fixture.root_dir,
+            fixture.plugin,
+            &mut fixture.state,
+            &mut fixture.state_sha,
+        )
+        .unwrap_err();
+
+        assert!(error.contains("staged plugin upgrade payload changed"));
+        assert_eq!(
+            std::fs::read(fixture.root.join(&fixture.transaction.dest)).unwrap(),
+            fixture.original
+        );
+        assert_eq!(
+            std::fs::read(plugin_path(
+                &fixture.root,
+                fixture.transaction.install_staged.as_deref().unwrap(),
+            ))
+            .unwrap(),
+            fixture.expected
+        );
+        assert!(
+            read_transaction(&fixture.root, &fixture.root_dir, fixture.plugin)
+                .unwrap()
+                .is_some()
+        );
+    }
+
+    #[test]
+    fn managed_upgrade_recovery_completes_published_state_and_keeps_original_backup() {
+        let mut fixture = managed_upgrade_fixture();
+        stage_managed_upgrade_original(&fixture);
+        publish_managed_upgrade(&fixture);
+        recover_transaction(
+            &fixture.root,
+            &fixture.root_dir,
+            fixture.plugin,
+            &mut fixture.state,
+            &mut fixture.state_sha,
+        )
+        .unwrap();
+
+        assert_eq!(
+            std::fs::read(fixture.root.join(&fixture.transaction.dest)).unwrap(),
+            fixture.expected
+        );
+        let entry = &fixture.state["files"][&fixture.transaction.dest];
+        assert_eq!(entry["disposition"], "replaced");
+        assert_eq!(
+            entry["installed_sha256"],
+            fixture.transaction.installed_sha256
+        );
+        assert_eq!(
+            entry["backup_sha256"],
+            fixture.transaction.prior_entry.as_ref().unwrap()["backup_sha256"]
+        );
+        assert_eq!(
+            entry["backup_identity"],
+            fixture.transaction.prior_entry.as_ref().unwrap()["backup_identity"]
+        );
+        assert_eq!(
+            entry["backup_mode"],
+            fixture.transaction.prior_entry.as_ref().unwrap()["backup_mode"]
+        );
+        assert!(
+            read_transaction(&fixture.root, &fixture.root_dir, fixture.plugin)
+                .unwrap()
+                .is_none()
+        );
+        assert!(fixture
+            .transaction
+            .staged
+            .as_deref()
+            .is_some_and(|path| !relative_entry_exists(&fixture.root, path).unwrap()));
+    }
+
+    #[test]
+    fn managed_upgrade_recovery_finishes_cleanup_after_state_commit() {
+        let mut fixture = managed_upgrade_fixture();
+        stage_managed_upgrade_original(&fixture);
+        publish_managed_upgrade(&fixture);
+        fixture.state["files"][&fixture.transaction.dest] = managed_upgrade_entry(
+            fixture.transaction.prior_entry.as_ref().unwrap(),
+            &fixture.transaction,
+        )
+        .unwrap();
+        let saved = save_state(
+            &fixture.root,
+            &fixture.root_dir,
+            fixture.plugin,
+            &mut fixture.state,
+            fixture.state_sha.as_deref(),
+        )
+        .unwrap();
+        fixture.state_sha = Some(saved.sha256);
+        let committed_state = fixture.state.clone();
+
+        recover_transaction(
+            &fixture.root,
+            &fixture.root_dir,
+            fixture.plugin,
+            &mut fixture.state,
+            &mut fixture.state_sha,
+        )
+        .unwrap();
+
+        assert_eq!(fixture.state, committed_state);
+        assert_eq!(
+            std::fs::read(fixture.root.join(&fixture.transaction.dest)).unwrap(),
+            fixture.expected
+        );
+        assert!(
+            read_transaction(&fixture.root, &fixture.root_dir, fixture.plugin)
+                .unwrap()
+                .is_none()
+        );
+        assert!(fixture
+            .transaction
+            .staged
+            .as_deref()
+            .is_some_and(|path| !relative_entry_exists(&fixture.root, path).unwrap()));
+    }
+
+    #[test]
+    fn managed_upgrade_recovery_rolls_back_when_original_is_staged_but_unpublished() {
+        let mut fixture = managed_upgrade_fixture();
+        stage_managed_upgrade_original(&fixture);
+        recover_transaction(
+            &fixture.root,
+            &fixture.root_dir,
+            fixture.plugin,
+            &mut fixture.state,
+            &mut fixture.state_sha,
+        )
+        .unwrap();
+
+        assert_eq!(
+            std::fs::read(fixture.root.join(&fixture.transaction.dest)).unwrap(),
+            fixture.original
+        );
+        assert_eq!(
+            fixture.state["files"][&fixture.transaction.dest],
+            fixture.transaction.prior_entry.unwrap()
+        );
+        assert!(
+            read_transaction(&fixture.root, &fixture.root_dir, fixture.plugin)
+                .unwrap()
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn managed_upgrade_recovery_finishes_a_linked_restore_idempotently() {
+        let mut fixture = managed_upgrade_fixture();
+        stage_managed_upgrade_original(&fixture);
+        let staged_path = fixture
+            .transaction
+            .staged
+            .as_deref()
+            .map(|path| plugin_path(&fixture.root, path))
+            .unwrap();
+        std::fs::hard_link(&staged_path, fixture.root.join(&fixture.transaction.dest)).unwrap();
+
+        recover_transaction(
+            &fixture.root,
+            &fixture.root_dir,
+            fixture.plugin,
+            &mut fixture.state,
+            &mut fixture.state_sha,
+        )
+        .unwrap();
+
+        assert_eq!(
+            std::fs::read(fixture.root.join(&fixture.transaction.dest)).unwrap(),
+            fixture.original
+        );
+        assert!(!staged_path.exists());
+        assert!(
+            read_transaction(&fixture.root, &fixture.root_dir, fixture.plugin)
+                .unwrap()
+                .is_none()
+        );
+        assert_eq!(
+            fixture.state["files"][&fixture.transaction.dest],
+            fixture.transaction.prior_entry.unwrap()
+        );
+    }
+
     #[test]
     fn plugin_inventory_matches_python_order_and_paths() {
         let plugins = known_plugins();
@@ -4705,6 +5466,7 @@ mod tests {
             installed_identity: None,
             staged: Some(staged.clone()),
             install_staged: None,
+            prior_entry: None,
         };
         let prepared = write_transaction(&root, &root_dir, plugin, &transaction, None).unwrap();
         transaction.phase = "backing_up".to_owned();
@@ -4777,6 +5539,7 @@ mod tests {
             installed_identity: None,
             staged: None,
             install_staged: None,
+            prior_entry: None,
         };
         write_transaction(&root, &root_dir, plugin, &transaction, None).unwrap();
         std::fs::hard_link(root.join(destination), root.join(&transaction.backup)).unwrap();
@@ -4830,6 +5593,7 @@ mod tests {
             installed_identity: None,
             staged: Some(".agentrouter-remove-uncommitted".to_owned()),
             install_staged: Some(install_staged.clone()),
+            prior_entry: None,
         };
         std::fs::hard_link(root.join(destination), root.join(&transaction.backup)).unwrap();
         write_transaction(&root, &root_dir, plugin, &transaction, None).unwrap();
@@ -4885,6 +5649,7 @@ mod tests {
             installed_identity: None,
             staged: Some(".agentrouter-remove-not-created".to_owned()),
             install_staged: Some(install_staged.clone()),
+            prior_entry: None,
         };
         std::fs::hard_link(root.join(destination), root.join(&transaction.backup)).unwrap();
         let backed_up = write_transaction(&root, &root_dir, plugin, &transaction, None).unwrap();
@@ -4933,6 +5698,7 @@ mod tests {
             installed_identity: None,
             staged: Some(".agentrouter-remove-cleaned".to_owned()),
             install_staged: Some(".agentrouter-install-cleaned".to_owned()),
+            prior_entry: None,
         };
         write_transaction(&root, &root_dir, plugin, &transaction, None).unwrap();
 
@@ -4964,9 +5730,9 @@ mod tests {
         ] {
             let root = temporary.path().join(format!("home-{index}"));
             std::fs::create_dir_all(&root).unwrap();
+            let root = root.canonicalize().unwrap();
             std::fs::write(root.join(destination), b"keep user content").unwrap();
             let original = read_relative_file(&root, destination).unwrap().unwrap();
-            let root = root.canonicalize().unwrap();
             let root_file = crate::open_safe_home(&root).unwrap();
             let root_dir = cap_std::fs::Dir::from_std_file(root_file);
             let transaction = PluginTransaction {
@@ -4982,6 +5748,7 @@ mod tests {
                 installed_identity: None,
                 staged: None,
                 install_staged: None,
+                prior_entry: None,
             };
             let journal = plugin_path(&root, &transaction_relative(plugin));
             std::fs::create_dir_all(journal.parent().unwrap()).unwrap();
@@ -5042,6 +5809,7 @@ mod tests {
             installed_identity: None,
             staged: Some(staged.clone()),
             install_staged: Some(install_staged.clone()),
+            prior_entry: None,
         };
         let prepared = write_transaction(&root, &root_dir, plugin, &transaction, None).unwrap();
         transaction.phase = "backing_up".to_owned();

@@ -1058,6 +1058,70 @@ def test_rust_plugin_force_install_preserves_python_backup_contract(tmp_path, mo
     assert not backup.exists()
 
 
+def test_rust_plugin_install_upgrades_managed_payload_and_preserves_original_backup(
+    tmp_path, monkeypatch
+):
+    plugin = plugins.get_plugin("codex")
+    destination_relative = plugin.files[0].dest
+    old_payload = b"older AgentRouter-managed payload\n"
+    original_payload = b"original user-authored payload\n"
+
+    def prepare(root: Path) -> tuple[Path, Path]:
+        destination = root / destination_relative
+        destination.parent.mkdir(parents=True)
+        destination.write_bytes(old_payload)
+        destination_info = destination.stat()
+        backup = destination.with_name(destination.name + plugins._BAK_SUFFIX)
+        backup.write_bytes(original_payload)
+        backup_info = backup.stat()
+        state = plugins._empty_state(plugin)
+        state["files"][destination_relative] = {
+            "disposition": "replaced",
+            "installed_sha256": plugins._sha256(old_payload),
+            "installed_identity": plugins._identity_json(destination_info),
+            "backup": f"{destination_relative}{plugins._BAK_SUFFIX}",
+            "backup_sha256": plugins._sha256(original_payload),
+            "backup_identity": plugins._identity_json(backup_info),
+            "backup_mode": backup_info.st_mode & 0o777,
+        }
+        plugins._save_state(root, plugin, state)
+        return destination, backup
+
+    python_home = (tmp_path / "python-home").resolve()
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(python_home))
+    python_root = plugins.dest_root(plugin)
+    python_destination, python_backup = prepare(python_root)
+    python_result = plugins.install(plugin)
+
+    rust_home = (tmp_path / "rust-home").resolve()
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(rust_home))
+    rust_root = plugins.dest_root(plugin)
+    rust_destination, rust_backup = prepare(rust_root)
+    rust_result = _rust_plugin_install(plugin.name)
+
+    assert rust_result.returncode == 0, rust_result.stderr
+    assert "updated (managed payload)" in python_result[0]["result"]
+    assert "updated (managed payload)" in rust_result.stdout
+    expected = plugins._src_bytes(plugin.files[0].src)
+    assert python_destination.read_bytes() == expected
+    assert rust_destination.read_bytes() == expected
+    assert python_backup.read_bytes() == rust_backup.read_bytes() == original_payload
+
+    python_entry = plugins._load_state(python_root, plugin)[0]["files"][destination_relative]
+    rust_entry = plugins._load_state(rust_root, plugin)[0]["files"][destination_relative]
+    for entry, backup in (
+        (python_entry, python_backup),
+        (rust_entry, rust_backup),
+    ):
+        assert entry["disposition"] == "replaced"
+        assert entry["installed_sha256"] == plugins._sha256(expected)
+        assert entry["backup"] == f"{destination_relative}{plugins._BAK_SUFFIX}"
+        assert entry["backup_sha256"] == plugins._sha256(original_payload)
+        backup_info = backup.stat()
+        assert entry["backup_identity"] == plugins._identity_json(backup_info)
+        assert entry["backup_mode"] == backup_info.st_mode & 0o777
+
+
 def test_rust_plugin_install_refuses_a_linked_state_directory(tmp_path, monkeypatch):
     linked_root = tmp_path / "linked-root"
     monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(linked_root.resolve()))

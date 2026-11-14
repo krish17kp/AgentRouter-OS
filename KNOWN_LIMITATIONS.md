@@ -23,11 +23,13 @@
 - Rust provider-status parity is a new probe, not full `providers` CLI parity.
 - Rust plugin lifecycle now includes safe no-force creation/adoption,
   identity-checked uninstall and backup restore, forced unmanaged replacement,
-  and journaled crash recovery. TASK-113's local candidate passes 116 focused
-  plugin tests and the 2,257-test Python regression; Rust workspace tests and
-  strict Clippy pass. Hosted checks at `08c019e` exposed Windows rename/staging
-  failures; the current handle-based repair awaits CI. Managed upgrades remain
-  an open lifecycle parity gap.
+  journaled crash recovery, and locally implemented managed-payload upgrades
+  that preserve backup provenance. The TASK-114 candidate passes seven focused
+  Rust recovery tests, the Rust workspace, strict Clippy, and the full critical
+  mutation campaign (0.9698 overall; zero unreviewed survivors). Hosted checks
+  at `b244ad1` exposed Windows compile and compatibility failures, a macOS
+  fixture-root failure, and six unreviewed plugin mutation survivors. Local
+  repairs and added regression tests await hosted revalidation.
 - The path-format and CPython file-identity fixes pass hosted Rust and
   Python/Rust jobs on Linux, Windows, and macOS at `132151d`; Windows and macOS
   Python CI also pass.
@@ -35,9 +37,12 @@
   in schema validation and JSON storage under TASK-111. Datetime grammar and
   remaining Pydantic scalar coercions still keep that schema module Partial;
   hosted validation of TASK-111 is pending.
-- Latest full Python coverage is 91.97% statement / 87.69% branch / 90.99%
+- Latest full Python coverage is 91.96% statement / 87.65% branch / 90.97%
   combined, meeting the unchanged 90%/85% thresholds; see
-  `docs/COVERAGE_REPORT_2026-11-14-TASK-113.md`.
+  `docs/COVERAGE_REPORT_2026-11-14-TASK-114.md` (pytest 9.0.3).
+  `pip-audit` also identified pytest 8.4.2 as affected by CVE-2025-71176. The
+  dev constraint now selects patched pytest 9.0.x, and `pip-audit` plus the
+  full pytest 9.0.3 regression pass.
 - The frozen context-band release gate remains 0.6667 < 0.90. The 63-candidate
   two-human annotation/adjudication round is not complete. Synthetic or AI
   labels cannot be submitted as human labels.

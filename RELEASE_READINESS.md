@@ -2,18 +2,23 @@
 
 ## Current checkpoint — 2026-11-14
 
-**NOT release ready.** The RC head is `08c019e`; TASK-113 is locally verified
-and awaits push. PR #16 remains the sole open PR. At this local candidate, the
-full Python regression passes 2,257 tests with 4 skips (91.97% statement,
-87.69% branch, 90.99% combined); the Rust workspace, strict Clippy, Ruff,
-formatting, configured Bandit, pip-audit, cargo audit, and diff checks pass.
-The focused plugin suite passes 116 tests. Hosted checks at `08c019e` exposed
-Windows rename/staging failures; the candidate contains a Windows handle-based
-repair, and cross-platform confirmation is pending. `enforce-release-gate`
-still fails on the unchanged context-band score 0.6667 < 0.90; live smoke is
-skipped because no credential was supplied. Full Rust CLI/HTTP/MCP parity,
-provider execution, managed plugin upgrades, external dataset loaders,
-evaluation runner, and R5–R13 remain incomplete.
+**NOT release ready.** Pushed RC head `b244ad1` has failing Windows Rust,
+Windows compatibility, macOS Rust, and mutation checks. The local TASK-114
+candidate repairs the observed cross-platform failures and implements Rust
+managed plugin upgrades. Its full mutation campaign passes at 0.9698 overall,
+0.9670 safety/policy/execution, and 0.9815 routing, with zero unreviewed
+survivors; exact evidence is in
+`docs/MUTATION_REPORT_2026-11-14-TASK-114.md`. The full Python regression
+on pytest 9.0.3 passes 2,262 tests with 4 skips (91.96% statement, 87.65% branch,
+90.97% combined). The Rust workspace, strict Clippy, Ruff, formatting, Bandit,
+cargo audit, package wheel/sdist build, and Twine metadata checks pass. `pip-audit`
+initially found vulnerable development-only pytest 8.4.2; the constraint now
+requires patched pytest 9.0.3–9.0.x and `pip-audit` is clean. Hosted
+cross-platform confirmation is pending the next release-candidate push. PR #16 remains the
+sole open PR.
+The unchanged context-band score is 0.6667 < 0.90; live smoke is skipped
+without credentials. Full Rust CLI/HTTP/MCP parity, provider execution,
+external dataset loaders, evaluation runner, and R5–R13 remain incomplete.
 Human annotation, live OpenAI validation, main promotion, and production
 credentials remain owner inputs. No paid request or production deployment
 occurred.

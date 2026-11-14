@@ -254,6 +254,26 @@ def test_entry_matches_checks_the_backup_fields_when_asked(tmp_path, monkeypatch
     assert plugins._entry_matches(dest, entry, backup=True) is False
 
 
+def test_entry_matches_requires_every_recorded_backup_field(tmp_path):
+    backup = tmp_path / "AGENTS.md.agentrouter-bak"
+    backup.write_bytes(b"original user-owned bytes")
+    info = backup.lstat()
+    entry = {
+        "backup_sha256": plugins._sha256(backup.read_bytes()),
+        "backup_identity": plugins._identity_json(info),
+        "backup_mode": stat.S_IMODE(info.st_mode),
+    }
+
+    assert plugins._entry_matches(backup, entry, backup=True) is True
+    assert (
+        plugins._entry_matches(backup, {**entry, "backup_sha256": "0" * 64}, backup=True) is False
+    )
+    assert (
+        plugins._entry_matches(backup, {**entry, "backup_identity": [-1, -1]}, backup=True) is False
+    )
+    assert plugins._entry_matches(backup, {**entry, "backup_mode": -1}, backup=True) is False
+
+
 # --- _remove_owned_empty_directory: the only directory deletion ---------------
 
 

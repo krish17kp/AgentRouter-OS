@@ -245,17 +245,6 @@ pub fn run_all_dimensions(
         ("feedback_storage", 7),
         ("performance", 5),
     ];
-    const PERFORMANCE_TASKS: [&str; 8] = [
-        "Refactor the payment module and add unit tests",
-        "Write a blog post about our API launch",
-        "Summarize this 30k token incident report",
-        "Design a scalable multi-tenant architecture",
-        "Fix the off-by-one bug in the pagination helper",
-        "Analyze the query plan and recommend indexes",
-        "Rotate the production API keys and update secrets",
-        "Draft release notes for version 2.1",
-    ];
-
     let mut report = run_classification(
         cases,
         options.profile.as_deref(),
@@ -276,13 +265,7 @@ pub fn run_all_dimensions(
         ),
         (
             "performance",
-            evaluate_performance(
-                models,
-                &PERFORMANCE_TASKS
-                    .iter()
-                    .map(|task| (*task).to_owned())
-                    .collect::<Vec<_>>(),
-            ),
+            evaluate_performance(models, &crate::PERFORMANCE_SAMPLE_TASKS.map(str::to_owned)),
         ),
     ];
 
