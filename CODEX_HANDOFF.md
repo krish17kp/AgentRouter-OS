@@ -2,16 +2,17 @@
 
 ## Current checkpoint — 2026-11-14
 
-Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `a900126`
-(TASK-134). TASK-135 adds direct concurrent Python/Rust idempotency evidence.
-The full Python regression passes 2,525 tests with 5 skips; 23 focused MCP
+Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `934fe17`
+(TASK-135). It adds direct concurrent Python/Rust idempotency evidence.
+The full Python regression passes 2,529 tests with 5 skips; 23 focused MCP
 cases pass on Python 3.10/MCP 1.30 and Python 3.11/3.12/MCP 2.3. The full Rust
 workspace, strict Clippy, formatting, Ruff, package build, and diff checks pass.
 Coverage is 91.971% statement, 87.690% branch, and 90.988% weighted combined.
-At `a900126`, MCP SDK 1.30/2.3 and Rust workspace checks pass on Linux, Windows,
-and macOS; the remaining matrix jobs are running. The frozen context gate
-remains unchanged at 0.6667 < 0.90. Continue hosted validation and the remaining
-Rust parity work.
+At `934fe17`, push-workflow MCP, Rust workspace, Python/Rust compatibility,
+Python-version and macOS checks pass; one Windows test and duplicate
+PR-workflow Windows/macOS tests are still running. The frozen context gate
+remains unchanged at 0.6667 < 0.90. Continue hosted validation and the
+remaining Rust parity work.
 Human annotation, bounded OpenAI live validation, main promotion, and deployment
 credentials remain owner-gated in `PRODUCTION_STATUS.md`.
 

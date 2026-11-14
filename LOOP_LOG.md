@@ -10,11 +10,13 @@ coverage exercises rate-limit keys, retry-after values, environment values,
 response fields, and TTL expiry; each runtime also verifies bounded storage.
 The parity matrix now marks `agentrouter/server/limits.py` complete.
 
-The 8-case server-limits differential suite, full Rust workspace, Rust
-formatting, targeted Ruff and diff checks pass. Hosted validation of this task
-follows the next RC push. At `a900126`, hosted MCP SDK 1.30/2.3 and Rust
-workspace jobs pass; the other platform jobs are running. The immutable release
-gate remains 0.6667 < 0.90.
+The 8-case server-limits differential suite, full Rust workspace, strict
+Clippy, Rust formatting, Ruff and diff checks pass. The full Python suite
+passes 2,529/5 in 409.36 seconds at 91.971% statement, 87.690% branch, and
+90.988% weighted combined coverage. At `934fe17`, push-workflow MCP SDK, Rust
+workspace, Python/Rust compatibility, supported Python versions, macOS and
+critical-module mutation pass; one Windows job and duplicate PR-workflow checks
+are still running. The immutable release gate remains 0.6667 < 0.90.
 
 ## 2026-11-14 — TASK-134 current MCP protocol and SDK migration
 
