@@ -1,10 +1,10 @@
-//! Rust diagnostics probe for the structured `agentrouter doctor` contract.
+//! Rust diagnostics for the unified `agentrouter doctor` command.
 //!
 //! Checks are isolated and return data rather than printing or propagating
-//! errors. Plugin diagnosis and the optional HTTP extra are still Python-only;
-//! this probe reports those gaps as warnings instead of pretending they passed.
+//! errors. Runtime-specific checks report the Rust binary's environment, while
+//! shared data, registry, host, plugin, and usage checks reuse Rust primitives.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use chrono::Local;
 use rusqlite::{Connection, OpenFlags};
@@ -327,20 +327,114 @@ fn check_observability() -> Check {
 }
 
 fn check_plugins() -> Check {
+    let override_root = std::env::var_os("AGENTROUTER_PLUGIN_ROOT")
+        .map(PathBuf::from)
+        .filter(|path| !path.as_os_str().is_empty());
+    #[cfg(windows)]
+    let user_home = std::env::var_os("USERPROFILE")
+        .or_else(|| {
+            let drive = std::env::var_os("HOMEDRIVE")?;
+            let path = std::env::var_os("HOMEPATH")?;
+            let mut joined = PathBuf::from(drive);
+            joined.push(path);
+            Some(joined.into_os_string())
+        })
+        .or_else(|| std::env::var_os("HOME"));
+    #[cfg(not(windows))]
+    let user_home = std::env::var_os("HOME");
+    let user_home = user_home.map(PathBuf::from);
+
+    if override_root.is_none() && user_home.is_none() {
+        return Check::new(
+            "plugins.state",
+            FAIL,
+            "plugin destinations could not be located",
+            Some("set AGENTROUTER_PLUGIN_ROOT or the user home directory".into()),
+        );
+    }
+
+    let mut findings = Vec::new();
+    for plugin in crate::plugins::known_plugins() {
+        let root =
+            match crate::plugins::dest_root(plugin, override_root.as_deref(), user_home.as_deref())
+            {
+                Ok(root) => root,
+                Err(_) => {
+                    findings.push(serde_json::json!({
+                        "plugin": plugin.name,
+                        "check": "diagnose",
+                        "status": "blocked",
+                        "summary": "the check itself failed (PluginError)",
+                        "remedy": "this is a bug in the diagnostic; report it",
+                    }));
+                    continue;
+                }
+            };
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            crate::plugins::diagnose(plugin, &root)
+        })) {
+            Ok(plugin_findings) => findings.extend(plugin_findings),
+            Err(_) => findings.push(serde_json::json!({
+                "plugin": plugin.name,
+                "check": "diagnose",
+                "status": "blocked",
+                "summary": "the check itself failed (panic)",
+                "remedy": "this is a bug in the diagnostic; report it",
+            })),
+        }
+    }
+
+    let blocked = findings
+        .iter()
+        .filter(|finding| finding["status"] == "blocked")
+        .collect::<Vec<_>>();
+    if !blocked.is_empty() {
+        let remedy = blocked[0]["remedy"]
+            .as_str()
+            .unwrap_or("run: agentrouter plugin doctor")
+            .to_owned();
+        return Check::new(
+            "plugins.state",
+            FAIL,
+            format!(
+                "{} plugin destination(s) AgentRouter will not touch",
+                blocked.len()
+            ),
+            Some(remedy),
+        );
+    }
+
+    let attention = findings
+        .iter()
+        .filter(|finding| finding["status"] == "attention")
+        .collect::<Vec<_>>();
+    if !attention.is_empty() {
+        let remedy = attention[0]["remedy"]
+            .as_str()
+            .unwrap_or("run: agentrouter plugin doctor")
+            .to_owned();
+        return Check::new(
+            "plugins.state",
+            WARN,
+            format!("{} plugin file(s) need attention", attention.len()),
+            Some(remedy),
+        );
+    }
+
     Check::new(
         "plugins.state",
-        WARN,
-        "Rust plugin health checks are not ported",
-        Some("use the Python agentrouter plugin doctor for plugin diagnostics".into()),
+        OK,
+        format!("{} plugin file(s) installed and unmodified", findings.len()),
+        None,
     )
 }
 
 fn check_server_extra() -> Check {
     Check::new(
         "server.extra",
-        WARN,
-        "the REST API is not part of the Rust CLI yet",
-        Some("use the Python agentrouter server entrypoint".into()),
+        OK,
+        "the REST API is included in the Rust CLI",
+        None,
     )
 }
 

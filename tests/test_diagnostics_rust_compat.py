@@ -33,6 +33,7 @@ def _doctor(home, *args, env=None):
         "OPENROUTER_API_KEY",
     ):
         process_env.pop(key, None)
+    process_env["AGENTROUTER_PLUGIN_ROOT"] = str(home / "plugin-root")
     if env:
         process_env.update(env)
     return subprocess.run(
@@ -73,6 +74,51 @@ def test_json_report_has_stable_ids_and_check_shape(tmp_path):
     assert all(set(check) == {"id", "status", "summary", "remedy"} for check in checks)
     assert all(check["status"] in {"ok", "warn", "fail"} for check in checks)
     assert all(check["remedy"] for check in checks if check["status"] != "ok")
+    assert next(check for check in checks if check["id"] == "server.extra")["status"] == "ok"
+
+
+def test_plugin_health_rollup_matches_python_for_missing_destinations(tmp_path, monkeypatch):
+    from agentrouter import diagnostics
+
+    home = tmp_path / "agentrouter"
+    home.mkdir()
+    plugin_root = tmp_path / "host-plugins"
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(plugin_root))
+
+    python_check = next(check for check in diagnostics.run_all(home) if check.id == "plugins.state")
+    result = _doctor(
+        home,
+        "--json",
+        env={"AGENTROUTER_PLUGIN_ROOT": str(plugin_root)},
+    )
+    payload = json.loads(result.stdout)
+    rust_check = next(check for check in payload["checks"] if check["id"] == "plugins.state")
+
+    assert rust_check == python_check.as_dict()
+
+
+def test_plugin_health_rollup_matches_python_for_corrupt_ownership(tmp_path, monkeypatch):
+    from agentrouter import diagnostics, plugins
+
+    home = tmp_path / "agentrouter"
+    home.mkdir()
+    plugin_root = tmp_path / "host-plugins"
+    monkeypatch.setenv("AGENTROUTER_PLUGIN_ROOT", str(plugin_root))
+    plugin = plugins.get_plugin("codex")
+    state_path = plugins._state_path(plugins.dest_root(plugin), plugin)
+    state_path.parent.mkdir(parents=True)
+    state_path.write_text("{not json", encoding="utf-8")
+
+    python_check = next(check for check in diagnostics.run_all(home) if check.id == "plugins.state")
+    result = _doctor(
+        home,
+        "--json",
+        env={"AGENTROUTER_PLUGIN_ROOT": str(plugin_root)},
+    )
+    payload = json.loads(result.stdout)
+    rust_check = next(check for check in payload["checks"] if check["id"] == "plugins.state")
+
+    assert rust_check == python_check.as_dict()
 
 
 def test_broken_registry_is_reported_without_echoing_file_content(tmp_path):

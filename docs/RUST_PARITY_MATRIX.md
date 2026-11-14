@@ -228,9 +228,11 @@ release authority until the full set is complete.
   without changing the decision log.
 - Python and Rust doctor database checks inspect existing files read-only and
   report matching actionable `OperationalError` or `DatabaseError` categories
-  for empty and corrupt databases. Diagnostics as a whole remain Partial
-  because Rust plugin health, server-extra detection, and some environment
-  details are not yet equivalent.
+  for empty and corrupt databases. Rust now aggregates its safe plugin
+  destination findings into the same blocked/attention summary as Python, and
+  reports its built-in REST API as available. Diagnostics as a whole remain
+  Partial because native runtime/version details differ from Python's and some
+  environment check summaries are not fully equivalent.
 - The complete `store.py` public data contract is differentially checked over
   a shared SQLite database: identity precedence and OS-account fallback,
   concurrent first-use migration and decision writes, Python/Rust save and
