@@ -174,6 +174,12 @@ release authority until the full set is complete.
   Pydantic's datetime parsing directly, including reduced-precision times with
   `Z` and numeric offsets. The annotation schema module remains Partial while
   broader timestamp grammar coverage is unfinished.
+- Rust registry dates now normalize the Pydantic-accepted YAML date, midnight
+  datetime, and epoch-second/millisecond forms to the same ISO date in JSON;
+  differential cases cover all three optional date fields and reject
+  non-midnight timestamps and invalid offsets. `schema.py` remains Partial:
+  Python's unbounded integer domain and coercion behavior for other model
+  fields are still broader than the Rust registry contract.
 - Context-band model inference is ported but remains disabled in the default
   classifier. The frozen evaluation gate still controls whether learned routing
   can be enabled.

@@ -6,8 +6,10 @@ import json
 import os
 import shutil
 import subprocess
+from datetime import date
 
 import pytest
+import yaml
 from typer.testing import CliRunner
 
 from agentrouter.cli import app
@@ -116,6 +118,20 @@ def test_duplicate_registry_keys_are_rejected_by_python_and_rust(seeded_home):
             "pricing_tier: frontier\n    input_price_per_million: -1",
         ),
         ('last_updated: "2026-07-14"', "last_updated: bad-date"),
+        (
+            'last_updated: "2026-07-14"',
+            'last_updated: "2026-07-14T00:00:01Z"',
+        ),
+        ('last_updated: "2026-07-14"', "last_updated: 1767225600.1"),
+        ('last_updated: "2026-07-14"', "last_updated: true"),
+        (
+            'last_updated: "2026-07-14"',
+            'last_updated: "2026-07-14T00:00:00+0:530"',
+        ),
+        (
+            'last_updated: "2026-07-14"',
+            'last_updated: "2026-07-14T😀+00:00"',
+        ),
     ],
 )
 def test_rust_registry_rejects_model_fields_python_rejects(seeded_home, old, new):
@@ -127,6 +143,35 @@ def test_rust_registry_rejects_model_fields_python_rejects(seeded_home, old, new
     rust = _rust_registry(seeded_home, "--json")
     assert python.exit_code == rust.returncode == 3
     assert python.stdout == rust.stdout == ""
+
+
+@pytest.mark.parametrize(
+    "field,date_value",
+    [
+        (field, value)
+        for field in ("pricing_effective_date", "last_updated", "last_verified")
+        for value in (
+            date(2026, 1, 1),
+            "2026-01-01T00:00:00Z",
+            "2026-01-01t00:00+05:30",
+            "2026-01-01_00:00:00,0z",
+            "2026-01-01T00:00:00+0530",
+            1767225600,
+            1767225600.0,
+            "1767225600",
+        )
+    ],
+)
+def test_rust_registry_normalizes_pydantic_accepted_dates(seeded_home, field, date_value):
+    path = seeded_home / "registry" / "models.yaml"
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
+    document["models"][0][field] = date_value
+    path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
+
+    python = runner.invoke(app, ["registry", "list", "--json"])
+    rust = _rust_registry(seeded_home, "--json")
+    assert python.exit_code == rust.returncode == 0
+    assert json.loads(rust.stdout) == json.loads(python.stdout)
 
 
 @pytest.mark.parametrize("options", [("--unknown",), ("--provider",), ("--provider", "--json")])

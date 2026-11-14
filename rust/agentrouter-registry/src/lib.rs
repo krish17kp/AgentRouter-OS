@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate, NaiveTime};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -174,6 +174,7 @@ pub struct ModelEntry {
     pub input_price_per_million: Option<f64>,
     pub output_price_per_million: Option<f64>,
     pub pricing_basis: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_pydantic_date")]
     pub pricing_effective_date: Option<String>,
     pub ability: Ability,
     #[serde(default = "default_ability_source")]
@@ -199,11 +200,195 @@ pub struct ModelEntry {
     pub notes: Option<String>,
     pub source: Option<String>,
     pub source_url_or_identifier: Option<String>,
-    /// ISO `YYYY-MM-DD`, kept as a string field (matching the raw YAML
-    /// scalar) and parsed on demand in [`ModelEntry::last_updated_date`] —
-    /// avoids pulling a YAML-date serde adapter in for one staleness check.
+    /// Normalized ISO `YYYY-MM-DD` string. Deserialization mirrors Pydantic's
+    /// `date | None` input forms while keeping the registry JSON contract
+    /// stable; [`ModelEntry::last_updated_date`] parses it for staleness checks.
+    #[serde(default, deserialize_with = "deserialize_pydantic_date")]
     pub last_updated: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_pydantic_date")]
     pub last_verified: Option<String>,
+}
+
+/// Pydantic's `date | None` accepts ISO dates, midnight ISO datetimes, and
+/// epoch values that resolve to UTC midnight. Keep the normalized value as an
+/// ISO date string so the registry's public JSON shape remains unchanged.
+fn deserialize_pydantic_date<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct OptionalDateVisitor;
+
+    impl<'de> serde::de::Visitor<'de> for OptionalDateVisitor {
+        type Value = Option<String>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            formatter.write_str("a date, a midnight datetime, an epoch value, or null")
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_unit<E>(self) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_any(DateValueVisitor).map(Some)
+        }
+    }
+
+    struct DateValueVisitor;
+
+    impl<'de> serde::de::Visitor<'de> for DateValueVisitor {
+        type Value = String;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            formatter.write_str("a valid Pydantic date value")
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            parse_pydantic_date(value).ok_or_else(|| E::custom("invalid date value"))
+        }
+
+        fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            self.visit_str(&value)
+        }
+
+        fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            epoch_date(value as f64).ok_or_else(|| E::custom("invalid date value"))
+        }
+
+        fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            epoch_date(value as f64).ok_or_else(|| E::custom("invalid date value"))
+        }
+
+        fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            epoch_date(value).ok_or_else(|| E::custom("invalid date value"))
+        }
+    }
+
+    deserializer.deserialize_option(OptionalDateVisitor)
+}
+
+fn parse_pydantic_date(value: &str) -> Option<String> {
+    if let Ok(date) = NaiveDate::parse_from_str(value, "%Y-%m-%d") {
+        return Some(date.format("%Y-%m-%d").to_string());
+    }
+    if let Ok(epoch) = value.parse::<f64>() {
+        return epoch_date(epoch);
+    }
+
+    let date_text = value.get(..10)?;
+    let date = NaiveDate::parse_from_str(date_text, "%Y-%m-%d").ok()?;
+    let separator = value.as_bytes().get(10).copied()?;
+    if !matches!(separator, b'T' | b't' | b' ' | b'_') {
+        return None;
+    }
+    let tail = value.get(11..)?;
+    let (time_text, zone) = split_datetime_zone(tail)?;
+    if let Some(zone) = zone {
+        validate_datetime_zone(zone)?;
+    }
+
+    let time_text = time_text.replace(',', ".");
+    let normalized_time = match time_text.matches(':').count() {
+        1 => format!("{time_text}:00"),
+        2 => time_text,
+        _ => return None,
+    };
+    let time = chrono::NaiveTime::parse_from_str(&normalized_time, "%H:%M:%S%.f").ok()?;
+    if time != NaiveTime::MIN {
+        return None;
+    }
+    Some(date.format("%Y-%m-%d").to_string())
+}
+
+fn split_datetime_zone(value: &str) -> Option<(&str, Option<&str>)> {
+    if let Some(time) = value.strip_suffix(['Z', 'z']) {
+        return Some((time, Some("Z")));
+    }
+    if let Some((index, _)) = value
+        .char_indices()
+        .skip(1)
+        .find(|(_, character)| matches!(character, '+' | '-'))
+    {
+        let (time, zone) = value.split_at(index);
+        return Some((time, Some(zone)));
+    }
+    Some((value, None))
+}
+
+fn validate_datetime_zone(zone: &str) -> Option<()> {
+    if zone == "Z" {
+        return Some(());
+    }
+    let sign = match zone.as_bytes().first()? {
+        b'+' => 1_i32,
+        b'-' => -1_i32,
+        _ => return None,
+    };
+    let suffix = &zone[1..];
+    let digits = match suffix.len() {
+        4 => suffix.to_owned(),
+        5 if suffix.as_bytes().get(2) == Some(&b':') => {
+            format!("{}{}", &suffix[..2], &suffix[3..])
+        }
+        _ => return None,
+    };
+    if digits.len() != 4 || !digits.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    let hours: i32 = digits[..2].parse().ok()?;
+    let minutes: i32 = digits[2..].parse().ok()?;
+    if hours > 23 || minutes > 59 {
+        return None;
+    }
+    chrono::FixedOffset::east_opt(sign * (hours * 3600 + minutes * 60)).map(|_| ())
+}
+
+fn epoch_date(value: f64) -> Option<String> {
+    if !value.is_finite() {
+        return None;
+    }
+    let seconds = if value.abs() > 20_000_000_000.0 {
+        value / 1_000.0
+    } else {
+        value
+    };
+    if seconds.fract() != 0.0 {
+        return None;
+    }
+    let timestamp = seconds as i64;
+    let date = chrono::DateTime::from_timestamp(timestamp, 0)?.date_naive();
+    if !(1..=9999).contains(&date.year()) {
+        return None;
+    }
+    Some(date.format("%Y-%m-%d").to_string())
 }
 
 fn default_release_channel() -> ReleaseChannel {
