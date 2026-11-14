@@ -2195,7 +2195,7 @@ fn rename_sibling_no_replace_windows(
     use fs_at::os::windows::OpenOptionsExt;
     use std::os::windows::io::AsRawHandle;
     use windows_sys::Win32::Storage::FileSystem::{
-        FileRenameInfoEx, SetFileInformationByHandle, FILE_READ_ATTRIBUTES, FILE_RENAME_INFO,
+        FileRenameInfo, SetFileInformationByHandle, FILE_READ_ATTRIBUTES, FILE_RENAME_INFO,
     };
 
     const DELETE_ACCESS: u32 = 0x0001_0000;
@@ -2237,9 +2237,9 @@ fn rename_sibling_no_replace_windows(
     let mut buffer = vec![0_u64; word_count];
     let info = buffer.as_mut_ptr().cast::<FILE_RENAME_INFO>();
     unsafe {
-        // FileRenameInfoEx interprets a relative leaf against this pinned
-        // directory handle. Flags=0 keeps the operation atomic and no-replace.
-        (*info).Anonymous.Flags = 0;
+        // Resolve the simple destination leaf against the pinned parent
+        // handle. ReplaceIfExists=0 keeps the rename atomic and no-replace.
+        (*info).Anonymous.ReplaceIfExists = 0;
         (*info).RootDirectory = parent_file.as_raw_handle().cast();
         (*info).FileNameLength = filename_bytes;
         std::ptr::copy_nonoverlapping(
@@ -2249,7 +2249,7 @@ fn rename_sibling_no_replace_windows(
         );
         if SetFileInformationByHandle(
             source.as_raw_handle().cast(),
-            FileRenameInfoEx,
+            FileRenameInfo,
             info.cast(),
             u32::try_from(buffer_bytes).map_err(|_| {
                 std::io::Error::new(

@@ -79,7 +79,9 @@ fn legacy_gold(args: impl Iterator<Item = String>) -> Result<i32, String> {
             flag => return Err(format!("unknown option '{flag}'")),
         }
     }
-    let report = agentrouter_evaluation::legacy_gold::evaluate(&gold)?;
+    let cases = agentrouter_evaluation::legacy_gold::load_gold(&gold)
+        .map_err(|error| format!("Benchmark error: {error}"))?;
+    let report = agentrouter_evaluation::legacy_gold::grade_cases(&cases)?;
     if !no_artifacts {
         for path in agentrouter_evaluation::legacy_gold::write_artifacts(&report, &out_dir)? {
             println!("Wrote {}", path.display());

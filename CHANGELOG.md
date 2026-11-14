@@ -51,8 +51,13 @@ All notable changes to AgentRouter OS. Format loosely follows
 - Match the injected `classify_fn` seam in the Rust routing and safety
   evaluators, keeping default classifier behavior and adding deterministic
   Python/Rust report comparisons for caller-supplied classifications.
+- Preserve the legacy gold loader's Python error categories and CLI diagnostic,
+  and write artifact JSON with Python-compatible ASCII escaping for Unicode
+  keys and values.
 
 ### Fixed
+- Keep Windows plugin staging renames relative to the pinned parent directory
+  while using the standard no-replace rename information class.
 - Match Python's routing evaluator lookup when a caller supplies duplicate model
   keys: the last model entry now provides the routing constraint metadata.
 - Add Rust OpenAPI canonicalization and bounded `$ref` validation with stable,

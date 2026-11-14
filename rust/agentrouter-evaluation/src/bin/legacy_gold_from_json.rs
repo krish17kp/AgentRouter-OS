@@ -13,6 +13,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .as_str()
         .ok_or("operation must be a string")?;
     let report = match operation {
+        "load_gold" => {
+            let path = request["path"].as_str().ok_or("path must be a string")?;
+            match agentrouter_evaluation::legacy_gold::load_gold(Path::new(path)) {
+                Ok(cases) => {
+                    json!({"ok": true, "error_type": null, "message": null, "cases": cases})
+                }
+                Err(error) => json!({
+                    "ok": false,
+                    "error_type": error.python_type(),
+                    "message": error.to_string(),
+                    "cases": null
+                }),
+            }
+        }
         "grade_cases" => {
             let cases = request["cases"]
                 .as_array()

@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-14 (TASK-082–118). This inventory covers every Python source module under
+Updated: 2026-11-14 (TASK-082–119). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -36,7 +36,7 @@ release authority until the full set is complete.
 | `agentrouter/dashboard.py` | `agentrouter-cli::dashboard` | Parity |
 | `agentrouter/diagnostics.py` | `agentrouter-cli::diagnostics` | Partial |
 | `agentrouter/engine.py` | `agentrouter-routing` | Parity |
-| `agentrouter/evaluate.py` | `agentrouter-evaluation::legacy_gold` | Partial |
+| `agentrouter/evaluate.py` | `agentrouter-evaluation::legacy_gold::{LegacyGoldError,grade_cases,grade_routing,write_artifacts}` | Parity |
 | `agentrouter/evaluation/__init__.py` | `agentrouter-evaluation::evaluation_api` | Parity |
 | `agentrouter/evaluation/adapters/__init__.py` | `agentrouter-evaluation::package_markers::ADAPTERS_PUBLIC_EXPORTS` | Parity |
 | `agentrouter/evaluation/adapters/agentrouter_gold.py` | `agentrouter-evaluation::AgentRouterGoldAdapter` | Parity |
@@ -163,8 +163,9 @@ release authority until the full set is complete.
   live checks until a provider adapter is deliberately added.
 - The historical classifier and routing-gold evaluator, report rendering, and
   artifact writing are implemented in Rust and differentially checked against
-  the full checked-in gold sets. Python's typed `GoldError` surface and exact
-  JSON text escaping still differ; the module remains Partial. See
+  the full checked-in gold sets. Gold loading preserves Python's error
+  categories and messages for missing, malformed-shape, and duplicate-ID
+  inputs; artifact JSON matches Python's ASCII escaping byte-for-byte. See
   [`RUST_LEGACY_GOLD.md`](RUST_LEGACY_GOLD.md).
 - Rust `Classification` rejects unknown fields and has round-trip and rejection
   checks against Pydantic. Annotation manifest schema versions and count maps

@@ -4,6 +4,7 @@
 //! readiness is computed separately by the registered evaluation runner.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -28,29 +29,85 @@ const WEIGHTS: [(&str, u64); 7] = [
     ("approval", 1),
 ];
 
-pub fn load_gold(path: &Path) -> Result<Vec<Value>, String> {
-    if !path.exists() {
-        return Err(format!("gold benchmark not found: {}", path.display()));
+/// Typed loading failures corresponding to the Python evaluator's public
+/// `GoldError`, YAML parser, and operating-system error categories.
+#[derive(Debug)]
+pub enum LegacyGoldError {
+    GoldError(String),
+    YamlError(String),
+    OSError {
+        kind: std::io::ErrorKind,
+        message: String,
+    },
+}
+
+impl LegacyGoldError {
+    pub fn python_type(&self) -> &'static str {
+        match self {
+            Self::GoldError(_) => "GoldError",
+            Self::YamlError(_) => "YAMLError",
+            Self::OSError { kind, .. } => match kind {
+                std::io::ErrorKind::NotFound => "FileNotFoundError",
+                std::io::ErrorKind::PermissionDenied => "PermissionError",
+                std::io::ErrorKind::IsADirectory => "IsADirectoryError",
+                std::io::ErrorKind::InvalidData => "UnicodeDecodeError",
+                _ => "OSError",
+            },
+        }
     }
-    let source = std::fs::read_to_string(path).map_err(|error| error.to_string())?;
-    let document: Value = serde_yaml::from_str(&source).map_err(|error| error.to_string())?;
+}
+
+impl fmt::Display for LegacyGoldError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let message = match self {
+            Self::GoldError(message) | Self::YamlError(message) => message,
+            Self::OSError { message, .. } => message,
+        };
+        formatter.write_str(message)
+    }
+}
+
+impl std::error::Error for LegacyGoldError {}
+
+pub fn load_gold(path: &Path) -> Result<Vec<Value>, LegacyGoldError> {
+    if !path.exists() {
+        return Err(LegacyGoldError::GoldError(format!(
+            "gold benchmark not found: {}",
+            path.display()
+        )));
+    }
+    let source = std::fs::read_to_string(path).map_err(|error| LegacyGoldError::OSError {
+        kind: error.kind(),
+        message: error.to_string(),
+    })?;
+    let document: Value = serde_yaml::from_str(&source)
+        .map_err(|error| LegacyGoldError::YamlError(error.to_string()))?;
     let cases = document
         .get("cases")
         .and_then(Value::as_array)
-        .ok_or_else(|| format!("{}: expected a mapping with a 'cases' list", path.display()))?;
+        .ok_or_else(|| {
+            LegacyGoldError::GoldError(format!(
+                "{}: expected a mapping with a 'cases' list",
+                path.display()
+            ))
+        })?;
     let mut ids = BTreeSet::new();
     for case in cases {
         let id = case.get("id").cloned().unwrap_or(Value::Null);
-        let key = serde_json::to_string(&id).map_err(|error| error.to_string())?;
+        let key = id.to_string();
         if !ids.insert(key) {
-            return Err(format!("{}: duplicate case ids present", path.display()));
+            return Err(LegacyGoldError::GoldError(format!(
+                "{}: duplicate case ids present",
+                path.display()
+            )));
         }
     }
     Ok(cases.clone())
 }
 
 pub fn evaluate(path: &Path) -> Result<Value, String> {
-    grade_cases(&load_gold(path)?)
+    let cases = load_gold(path).map_err(|error| error.to_string())?;
+    grade_cases(&cases)
 }
 
 pub fn load_routing_gold(path: &Path) -> Result<Vec<Value>, String> {
@@ -281,14 +338,46 @@ pub fn write_artifacts(report: &Value, out_dir: &Path) -> Result<Vec<PathBuf>, S
     if let Some(object) = slim.as_object_mut() {
         object.remove("cases");
     }
-    fs::write(
-        &json_path,
-        serde_json::to_string_pretty(&slim).map_err(|error| error.to_string())?,
-    )
-    .map_err(|error| error.to_string())?;
+    fs::write(&json_path, python_json_dumps_pretty(&slim)?).map_err(|error| error.to_string())?;
     fs::write(&markdown_path, render_markdown(report)).map_err(|error| error.to_string())?;
     fs::write(&csv_path, render_failures_csv(report)).map_err(|error| error.to_string())?;
     Ok(vec![json_path, markdown_path, csv_path])
+}
+
+fn python_json_dumps_pretty(value: &Value) -> Result<String, String> {
+    let encoded = serde_json::to_string_pretty(value).map_err(|error| error.to_string())?;
+    let mut output = String::with_capacity(encoded.len());
+    let mut in_string = false;
+    let mut escaped = false;
+    for character in encoded.chars() {
+        if in_string && !escaped && character as u32 > 0x7f {
+            let codepoint = character as u32;
+            if codepoint <= 0xffff {
+                use fmt::Write as _;
+                write!(output, "\\u{codepoint:04x}").map_err(|error| error.to_string())?;
+            } else {
+                let adjusted = codepoint - 0x1_0000;
+                let high = 0xd800 + (adjusted >> 10);
+                let low = 0xdc00 + (adjusted & 0x3ff);
+                use fmt::Write as _;
+                write!(output, "\\u{high:04x}\\u{low:04x}").map_err(|error| error.to_string())?;
+            }
+            continue;
+        }
+        output.push(character);
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if character == '\\' {
+                escaped = true;
+            } else if character == '"' {
+                in_string = false;
+            }
+        } else if character == '"' {
+            in_string = true;
+        }
+    }
+    Ok(output)
 }
 
 pub fn render_markdown(report: &Value) -> String {

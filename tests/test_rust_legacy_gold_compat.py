@@ -6,6 +6,7 @@ import json
 import shutil
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 import yaml
@@ -87,6 +88,81 @@ def test_rust_legacy_gold_loader_and_full_classifier_report_match_python(tmp_pat
         encoding="utf-8"
     )
     assert (rust_dir / "failures.csv").read_bytes() == python_paths[2].read_bytes()
+
+
+def test_rust_legacy_gold_json_artifact_uses_python_ascii_escaping(tmp_path):
+    def field(value: str) -> SimpleNamespace:
+        return SimpleNamespace(value=value)
+
+    prediction = SimpleNamespace(
+        task_type=field("writing"),
+        complexity=field("low"),
+        risk=field("low"),
+        output_type=field("text"),
+        context_band=field("small"),
+        approval_level=field("auto"),
+        tool_needs=[],
+    )
+    cases = [
+        {
+            "id": "例-🚦",
+            "prompt": "Résumé 🧭",
+            "task_type": ["coding"],
+            "complexity": ["high"],
+            "risk": ["high"],
+            "output_type": ["code+tests"],
+            "context_band": ["large"],
+            "tools": ["file-edit"],
+        }
+    ]
+    report = python_evaluator.grade_cases(cases, classify_fn=lambda _prompt: prediction)
+    python_dir = tmp_path / "python-unicode"
+    rust_dir = tmp_path / "rust-unicode"
+    python_paths = python_evaluator.write_artifacts(report, python_dir)
+    _rust(
+        {"operation": "write_artifacts", "report": report, "out_dir": str(rust_dir)}
+    )
+    assert (rust_dir / "evaluation.json").read_bytes() == python_paths[0].read_bytes()
+
+
+def test_rust_legacy_gold_loader_preserves_python_error_categories_and_messages(tmp_path):
+    missing = tmp_path / "missing.yaml"
+    invalid_shape = tmp_path / "invalid-shape.yaml"
+    invalid_shape.write_text("records: []\n", encoding="utf-8")
+    duplicate_ids = tmp_path / "duplicate-ids.yaml"
+    duplicate_ids.write_text(
+        "cases:\n  - {id: dup, prompt: first}\n  - {id: dup, prompt: second}\n",
+        encoding="utf-8",
+    )
+    malformed_yaml = tmp_path / "malformed.yaml"
+    malformed_yaml.write_text("cases: [\n", encoding="utf-8")
+    invalid_utf8 = tmp_path / "invalid-utf8.yaml"
+    invalid_utf8.write_bytes(b"cases: \xff\n")
+
+    for path in (missing, invalid_shape, duplicate_ids, malformed_yaml, invalid_utf8):
+        try:
+            python_evaluator.load_gold(path)
+        except python_evaluator.GoldError as error:
+            expected_type = "GoldError"
+            expected_message = str(error)
+        except yaml.YAMLError:
+            expected_type = "YAMLError"
+            expected_message = None
+        except UnicodeDecodeError:
+            expected_type = "UnicodeDecodeError"
+            expected_message = None
+        else:
+            pytest.fail(f"Python unexpectedly loaded invalid fixture {path}")
+
+        actual = _rust({"operation": "load_gold", "path": str(path)})
+        assert actual["ok"] is False
+        assert actual["error_type"] == expected_type
+        if expected_message is not None:
+            assert actual["message"] == expected_message
+
+    cli = _rust_cli("legacy-gold", "--gold", str(missing), "--no-artifacts")
+    assert cli.returncode == 3
+    assert cli.stderr == f"Benchmark error: gold benchmark not found: {missing}\n"
 
 
 def test_rust_legacy_grader_matches_partial_labels_and_empty_dimensions():
