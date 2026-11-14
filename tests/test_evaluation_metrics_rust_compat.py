@@ -10,6 +10,7 @@ import pytest
 
 from agentrouter.evaluation import comparison as evaluate_python_comparison
 from agentrouter.evaluation.evaluators import load_seed_models
+from agentrouter.evaluation.evaluators import platform as platform_evaluator
 from agentrouter.evaluation.evaluators.feedback import evaluate_feedback as evaluate_python_feedback
 from agentrouter.evaluation.evaluators.performance import (
     _summarize_samples as summarize_python_performance,
@@ -1080,6 +1081,54 @@ def test_rust_platform_evaluator_matches_python_cli_manifest():
             "agentrouter-evaluation",
         ],
         input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+        check=True,
+    )
+    assert json.loads(process.stdout) == expected
+
+
+@pytest.mark.parametrize(
+    ("commands", "groups"),
+    [
+        ([], []),
+        (["route", "init", "route", "private-command"], ["hosts", "registry", "hosts"]),
+        (
+            [
+                "init",
+                "setup",
+                "route",
+                "explain",
+                "feedback",
+                "execute",
+                "stats",
+                "dashboard",
+                "evaluate",
+            ],
+            ["registry", "providers", "prompt", "hosts", "models", "plugin", "eval"],
+        ),
+    ],
+)
+def test_rust_platform_evaluator_matches_python_for_injected_surfaces(
+    monkeypatch, commands, groups
+):
+    monkeypatch.setattr(platform_evaluator, "_command_names", lambda: set(commands))
+    monkeypatch.setattr(platform_evaluator, "_group_names", lambda: set(groups))
+    expected = evaluate_python_platform()
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_platform_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps({"commands": commands, "groups": groups}),
         capture_output=True,
         text=True,
         encoding="utf-8",

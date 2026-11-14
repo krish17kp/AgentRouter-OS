@@ -2714,7 +2714,7 @@ fn remove_verified_file_at(
                 std::io::Error::last_os_error()
             ));
         }
-        return Ok(());
+        Ok(())
     }
     #[cfg(unix)]
     {
@@ -3082,7 +3082,7 @@ fn remove_staged_directory_exact(
                 std::io::Error::last_os_error()
             ));
         }
-        return Ok(());
+        Ok(())
     }
     #[cfg(unix)]
     {
@@ -3737,7 +3737,7 @@ fn ensure_relative_directory(
             }
             #[cfg(not(unix))]
             {
-                current.create_dir(&part)
+                current.create_dir(part)
             }
         } else {
             #[cfg(unix)]
@@ -3749,7 +3749,7 @@ fn ensure_relative_directory(
             }
             #[cfg(not(unix))]
             {
-                current.create_dir(&part)
+                current.create_dir(part)
             }
         };
         let created_here = match created {
