@@ -2,8 +2,9 @@
 
 ## Current checkpoint — 2026-11-14
 
-**NOT release ready.** The latest pushed RC evidence commit is `c1b6750` on code
-head `db2c67d`. Linux Python 3.10–3.13, Rust workspace on Linux/Windows/macOS,
+**NOT release ready.** The latest pushed RC commit is `19dccfe`; it updates
+release evidence. The latest completed test head is `c1b6750`. Linux Python
+3.10–3.13, Rust workspace on Linux/Windows/macOS,
 API, build, security, website, release-readiness, full Python, and
 Python/Rust compatibility checks pass on Linux, Windows, and macOS. TASK-146's
 hosted critical mutation campaign passes with zero unreviewed survivors. The
@@ -19,7 +20,7 @@ transport categories, idempotent close, fail-closed fixture input validation,
 and credential-safe URL/body diagnostics. The focused SDK/reliability selection
 passes 52 Python tests and ten Rust SDK unit tests; full Rust workspace, strict
 Clippy, formatting, Ruff, and the full Python suite pass locally. The latest
-Python regression is 2,570 / 5; the committed TASK-147 coverage report measures
+Python regression is 2,572 / 5; the committed TASK-148 coverage report measures
 92.030% statement, 87.712% branch, and 91.038% combined coverage.
 Current hosted cross-platform validation is still running; the latest completed
 code-head run passes the Python Linux 3.10–3.13 matrix and Rust/Python

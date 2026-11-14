@@ -360,6 +360,37 @@ def test_rust_api_service_route_preview_matches_python(home):
     assert json.loads(process.stdout) == expected
 
 
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {
+            "task": "review this repository for security issues",
+            "context_tokens": 8192,
+            "risk": "high",
+            "tools": ["filesystem"],
+            "prefer": None,
+            "no_log": True,
+        },
+        {
+            "task": "summarize this product launch plan",
+            "context_tokens": 4096,
+            "risk": "medium",
+            "tools": ["web"],
+            "prefer": "quality",
+            "no_log": True,
+        },
+    ],
+)
+def test_rust_api_service_route_safety_and_preference_match_python(home, payload):
+    """Compare the composed route envelope across risk and model-preference paths."""
+    from agentrouter.server import service
+
+    expected = service.route_task(**payload)
+    process = _rust_service(home, "route", payload)
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == expected
+
+
 def test_rust_api_service_persists_decisions_and_preview_matches_python(home):
     from agentrouter.server import service
 

@@ -2,9 +2,9 @@
 
 ## Current checkpoint — 2026-11-14
 
-Active branch `release/agentrouter-v0.5-rc1`; latest pushed commit is `c1b6750`
-(coverage/status evidence only) on code head `db2c67d`. Full Linux/Python 3.12
-regression passes 2,570 tests, 5 skipped, with 92.030% statement, 87.712%
+Active branch `release/agentrouter-v0.5-rc1`; latest pushed commit is `19dccfe`.
+The next local parity slice, TASK-148, passes its focused tests and full Linux/
+Python 3.12 regression. The suite passes 2,572 tests, 5 skipped, with 92.030% statement, 87.712%
 branch, and 91.038% combined coverage. Hosted critical mutation passes 1,706
 selected mutants with zero unreviewed survivors. All required Python, Rust,
 compatibility, API, build, security, website, and release-readiness checks pass
@@ -14,7 +14,7 @@ no GitHub reviews. Keep the PR held.
 
 TASK-141's SDK/reliability selection, Rust workspace/Clippy, and full Python
 regression pass. Current coverage evidence is
-[`docs/COVERAGE_REPORT_2026-11-14-TASK-147.md`](docs/COVERAGE_REPORT_2026-11-14-TASK-147.md).
+[`docs/COVERAGE_REPORT_2026-11-14-TASK-148.md`](docs/COVERAGE_REPORT_2026-11-14-TASK-148.md).
 TASK-142 compares every evaluator seed model field and Rust exports against
 Python's live `__all__`. TASK-143 makes the Rust full-scorecard CLI discover the
 actual sibling CLI surface at runtime. TASK-144 is pushed at `0d3ea70`: both

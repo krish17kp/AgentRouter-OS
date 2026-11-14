@@ -1,0 +1,28 @@
+id: TASK-148
+title: Expand Rust API route-envelope differential cases
+source: Rust parity matrix Partial row for agentrouter/server/service.py
+priority: 2
+status: verify
+risk: low
+customer_impact: Adds regression coverage for high-risk gates and explicit routing preferences in the Rust API response.
+affected_surfaces:
+  - tests/test_rust_http_schemas_compat.py
+  - loop/tasks/TASK-148-api-route-envelope-differentials
+dependencies:
+  - Rust API service route pipeline
+acceptance_criteria:
+  - High-risk route response matches Python for a filesystem task.
+  - Medium-risk route response matches Python for the quality preference.
+  - Existing route preview differential remains green.
+  - The service remains marked Partial until logging and FastAPI lifecycle behavior are covered.
+  - Frozen data and release thresholds remain unchanged.
+verification_commands:
+  - ./.venv/bin/python -m pytest -q tests/test_rust_http_schemas_compat.py -k 'route_preview or route_safety_and_preference'
+  - git diff --check
+required_reviewers:
+  - rust-api-service-contract
+repair_iteration: 0
+external_blockers: []
+owner_blockers: []
+created_at: "2026-11-14"
+updated_at: "2026-11-14"

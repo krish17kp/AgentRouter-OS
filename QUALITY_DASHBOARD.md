@@ -2,7 +2,7 @@
 
 ## Current checkpoint — 2026-11-14
 
-At pushed RC evidence commit `c1b6750` (code head `db2c67d`), Linux Python
+At the latest completed test head `c1b6750` (subsequent status commit `19dccfe`), Linux Python
 3.10–3.13, API, build, security, website, release-readiness, and Rust workspace
 checks on Linux/Windows/macOS pass. The full Python matrix, Python/Rust
 compatibility on all three platforms, hosted mutation, API, build, security,
@@ -10,7 +10,7 @@ website, and release-readiness checks all pass. The only failed required check
 is the enforcing release gate, at frozen context-band accuracy 0.6667 < 0.90.
 PR #16 has no GitHub reviews.
 
-The latest full Python regression passes 2,570 / skips 5. The TASK-147 coverage
+The latest full Python regression passes 2,572 / skips 5. The TASK-148 coverage
 report measures 92.030% statement, 87.712% branch, and 91.038% combined.
 TASK-140's Rust SDK
 wire differential passes all nine endpoints across authenticated, absent, and
