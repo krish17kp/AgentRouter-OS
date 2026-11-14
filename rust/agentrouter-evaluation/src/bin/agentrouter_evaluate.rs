@@ -1,6 +1,7 @@
 //! Rust evaluation command line for offline-first evaluation workflows.
 
 use agentrouter_evaluation::runner::{run_registered, RegisteredRunOptions};
+use serde::Deserialize;
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -35,6 +36,38 @@ fn runtime_environment(root: &Path) -> Value {
         "platform": format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH),
         "git_sha": git_sha,
     })
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CliSurface {
+    commands: Vec<String>,
+    groups: Vec<String>,
+}
+
+/// Read the command and group names from the sibling Rust CLI that ships with
+/// this evaluator. `run --all` must score the real installed surface instead
+/// of a placeholder list that makes platform coverage look worse or better.
+fn runtime_cli_surface() -> Result<CliSurface, String> {
+    let current = std::env::current_exe().map_err(|error| {
+        format!("could not locate the evaluator executable for CLI discovery: {error}")
+    })?;
+    let parent = current
+        .parent()
+        .ok_or_else(|| "could not locate the evaluator executable directory".to_owned())?;
+    #[cfg(windows)]
+    let executable = parent.join("agentrouter.exe");
+    #[cfg(not(windows))]
+    let executable = parent.join("agentrouter");
+    let output = Command::new(&executable)
+        .arg("__evaluation_surface")
+        .output()
+        .map_err(|error| format!("could not query the sibling Rust CLI surface: {error}"))?;
+    if !output.status.success() {
+        return Err("the sibling Rust CLI could not report its command surface".to_owned());
+    }
+    serde_json::from_slice(&output.stdout)
+        .map_err(|error| format!("the sibling Rust CLI returned an invalid surface: {error}"))
 }
 
 fn usage() -> &'static str {
@@ -268,6 +301,11 @@ fn run_eval(args: impl Iterator<Item = String>) -> Result<i32, String> {
     if require_release_ready && !measure_all {
         return Err("--require-release-ready requires --all.".to_owned());
     }
+    let cli_surface = if measure_all {
+        Some(runtime_cli_surface()?)
+    } else {
+        None
+    };
     let result = run_registered(RegisteredRunOptions {
         project_root: root.clone(),
         dataset,
@@ -277,8 +315,14 @@ fn run_eval(args: impl Iterator<Item = String>) -> Result<i32, String> {
         source,
         languages,
         measure_all,
-        commands: vec!["evaluate".to_owned()],
-        groups: vec!["eval".to_owned()],
+        commands: cli_surface
+            .as_ref()
+            .map(|surface| surface.commands.clone())
+            .unwrap_or_default(),
+        groups: cli_surface
+            .as_ref()
+            .map(|surface| surface.groups.clone())
+            .unwrap_or_default(),
         environment: runtime_environment(&root),
     })?;
     if !no_artifacts {

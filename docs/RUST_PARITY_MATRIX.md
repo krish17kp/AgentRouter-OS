@@ -105,6 +105,10 @@ release authority until the full set is complete.
   directly with Python's `__all__`. The row remains Partial because the facade's
   re-exported evaluator functions still lack Python runtime-state discovery and
   orchestration parity.
+- TASK-143 connects the full Rust evaluation CLI to the installed `agentrouter`
+  binary's actual command/group manifest. A missing sibling binary is an error
+  for `run --all`; the report no longer substitutes a hardcoded two-entry
+  surface. Other evaluator defaults and runtime orchestration remain Partial.
 - The Rust workspace has no `TODO`, `todo!()`, or `unimplemented!()` markers in
   shipped Rust source, but that does not make unported Python behavior complete.
 - The Python modules marked **Partial** and **Not ported** remain production

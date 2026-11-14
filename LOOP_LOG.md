@@ -2642,3 +2642,13 @@ against Python's live `evaluators.__all__`, with no copied field/export list.
 The focused test, Rust formatting check, and diff check pass. The evaluator
 package remains Partial because runtime discovery and orchestration are not yet
 ported.
+
+## 2026-11-14 — TASK-143 runtime CLI platform measurement
+
+Fixed the full Rust evaluation CLI's placeholder platform inputs. The top-level
+`agentrouter` binary exposes its dispatched command/group manifest through a
+private JSON path, and `agentrouter-evaluate run --all` reads that manifest from
+its sibling executable. Missing/invalid discovery now fails closed. The new
+end-to-end test runs the full scorecard and confirms its platform score/detail
+reflect the live Rust command surface. Focused evaluator tests, strict Clippy,
+formatting, and diff checks pass locally.

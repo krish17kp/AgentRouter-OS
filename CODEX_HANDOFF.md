@@ -23,6 +23,9 @@ TASK-142 expands evaluator seed loading compatibility to every serialized
 `ModelEntry` field and compares Rust exports with the live Python `__all__`;
 its focused test and formatting checks pass locally. Runtime evaluator
 orchestration remains a parity gap.
+TASK-143 fixes `agentrouter-evaluate run --all` to query the real sibling Rust
+CLI manifest; the local end-to-end scorecard test, strict Clippy, and formatting
+pass. The latest pushed head is `11f99b9`; hosted checks are still running.
 Keep `agentrouter/sdk.py` Partial until native `ureq` timeout and generic I/O
 semantics match the full HTTPX contract. Hosted revalidation remains pending;
 continue the remaining Rust parity work. Human annotation, bounded OpenAI live

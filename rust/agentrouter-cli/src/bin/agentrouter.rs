@@ -1192,6 +1192,25 @@ fn run() -> Result<i32, String> {
         return Ok(0);
     }
     let tail = args.collect::<Vec<_>>();
+    if command == "__evaluation_surface" {
+        if !tail.is_empty() {
+            return Err("internal evaluation surface command takes no options".to_owned());
+        }
+        println!(
+            "{}",
+            serde_json::json!({
+                "commands": [
+                    "dashboard", "doctor", "evaluate", "execute", "explain", "feedback",
+                    "init", "mcp", "route", "server", "setup", "stats"
+                ],
+                "groups": [
+                    "dataset", "eval", "hosts", "models", "plugin", "prompt", "providers",
+                    "registry"
+                ]
+            })
+        );
+        return Ok(0);
+    }
     if command == "dataset" {
         return agentrouter_evaluation::annotation_cli::run(tail.into_iter());
     }
