@@ -1,4 +1,8 @@
 use std::io::{self, Read};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 
 use agentrouter_cli::limits::{client_key, CachedResponse, IdempotencyCache, RateLimiter};
 use serde_json::{json, Value};
@@ -73,6 +77,60 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             json!({"results": results})
+        }
+        Some("compute") => {
+            let ttl = request["ttl"].as_i64().map(i128::from);
+            let now = request["now"].as_f64().ok_or("now must be numeric")?;
+            let delay_ms = request["delay_ms"].as_u64().unwrap_or(0);
+            let fail = request["fail"].as_bool().unwrap_or(false);
+            let response = &request["response"];
+            let status = response["status"]
+                .as_u64()
+                .ok_or("status must be unsigned")?;
+            let response = CachedResponse {
+                status: u16::try_from(status)?,
+                body: required_str(response, "body")?.as_bytes().to_vec(),
+                media_type: response["media_type"].as_str().map(str::to_owned),
+            };
+            let cache = Arc::new(IdempotencyCache::new(ttl));
+            let calls = Arc::new(AtomicUsize::new(0));
+            let keys = request["keys"].as_array().ok_or("keys must be an array")?;
+            let mut workers = Vec::with_capacity(keys.len());
+            for key in keys {
+                let key = key.as_str().ok_or("keys must contain strings")?.to_owned();
+                let cache = Arc::clone(&cache);
+                let calls = Arc::clone(&calls);
+                let response = response.clone();
+                workers.push(thread::spawn(move || {
+                    cache.get_or_compute_at(&key, now, || {
+                        calls.fetch_add(1, Ordering::SeqCst);
+                        if delay_ms > 0 {
+                            thread::sleep(Duration::from_millis(delay_ms));
+                        }
+                        if fail {
+                            Err("injected failure")
+                        } else {
+                            Ok(response)
+                        }
+                    })
+                }));
+            }
+            let results = workers
+                .into_iter()
+                .map(
+                    |worker| match worker.join().map_err(|_| "worker panicked")? {
+                        Ok(response) => Ok(json!({
+                            "response": {
+                                "status": response.status,
+                                "body": String::from_utf8_lossy(&response.body),
+                                "media_type": response.media_type,
+                            }
+                        })),
+                        Err(error) => Ok(json!({"error": error})),
+                    },
+                )
+                .collect::<Result<Vec<_>, &str>>()?;
+            json!({"calls": calls.load(Ordering::SeqCst), "results": results})
         }
         _ => return Err("unknown operation".into()),
     };

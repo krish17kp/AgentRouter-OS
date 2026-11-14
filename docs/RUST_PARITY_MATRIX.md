@@ -84,7 +84,7 @@ release authority until the full set is complete.
 | `agentrouter/sdk.py` | `agentrouter-cli::sdk` | Partial |
 | `agentrouter/server/__init__.py` | `agentrouter-evaluation::package_markers::SERVER_PUBLIC_EXPORTS` | Parity |
 | `agentrouter/server/app.py` | `agentrouter-api::server` + `agentrouter-api-server` | Partial |
-| `agentrouter/server/limits.py` | `agentrouter-limits` (re-exported as `agentrouter_cli::limits`) | Partial |
+| `agentrouter/server/limits.py` | `agentrouter-limits` (re-exported as `agentrouter_cli::limits`) | Parity |
 | `agentrouter/server/schemas.py` | `agentrouter-api::{schemas,responses}` | Partial |
 | `agentrouter/server/service.py` | `agentrouter-api::service` | Partial |
 | `agentrouter/store.py` | `agentrouter-storage` | Parity |
@@ -256,11 +256,13 @@ release authority until the full set is complete.
   temporary home and compares the same decision, feedback, and aggregation
   checks. The platform evaluator matches scoring for a caller-supplied CLI
   command/group manifest; runtime Typer command discovery remains Python-only.
-- The Rust limits module matches fixed-window rate checks, retry-after values,
-  response TTL and media type, bounded response-body retention, and per-key
-  single-flight behavior. Rust Axum applies the limits in its HTTP middleware.
-  Python exposes asyncio flight-lock methods while Rust provides a synchronous
-  keyed computation seam, so the public module remains Partial.
+- The Rust limits module matches Python's client-key precedence, fixed-window
+  rate checks, retry-after values, environment configuration, response TTL and
+  media type, bounded retention, successful-response caching, failure/non-2xx
+  recomputation, and per-key single-flight behavior. Python's `asyncio.Lock`
+  workflow is compared to Rust's synchronous keyed-computation API at the
+  observable response/call-count boundary; distinct keys remain independent.
+  Rust Axum applies rate limiting and idempotent replay in its HTTP middleware.
 - Rust catalog operations include provenance reads, freshness summaries,
   sorted generated-catalog listing and deprecation reports, plus rollback and
   restore with raw-byte preservation, exclusive backup creation, linked-file

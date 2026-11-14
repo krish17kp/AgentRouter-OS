@@ -161,3 +161,80 @@ def test_rust_limits_read_environment_settings_like_python(monkeypatch):
             "media_type": expected.media_type,
         }
     }
+
+
+def _python_compute(request):
+    import asyncio
+
+    from agentrouter.server.limits import CachedResponse, IdempotencyCache
+
+    cache = IdempotencyCache(ttl=request["ttl"])
+    calls = {key: 0 for key in set(request["keys"])}
+    response_data = request["response"]
+
+    async def compute(key):
+        try:
+            async with cache.flight(key):
+                cached = cache.get(key)
+                if cached is not None:
+                    return {
+                        "response": {
+                            "status": cached.status,
+                            "body": cached.body.decode(),
+                            "media_type": cached.media_type,
+                        }
+                    }
+                calls[key] += 1
+                if request["delay_ms"]:
+                    await asyncio.sleep(request["delay_ms"] / 1000)
+                if request["fail"]:
+                    return {"error": "injected failure"}
+                result = CachedResponse(
+                    response_data["status"],
+                    response_data["body"].encode(),
+                    response_data["media_type"],
+                )
+                if 200 <= result.status < 300:
+                    cache.put(key, result)
+                return {
+                    "response": {
+                        "status": result.status,
+                        "body": result.body.decode(),
+                        "media_type": result.media_type,
+                    }
+                }
+        finally:
+            cache.release_flight(key)
+
+    async def run():
+        return await asyncio.gather(*(compute(key) for key in request["keys"]))
+
+    results = asyncio.run(run())
+    return {"calls": sum(calls.values()), "results": results}
+
+
+@pytest.mark.parametrize(
+    "keys,status,fail,expected_calls",
+    [
+        (["same"] * 8, 200, False, 1),
+        (["same"] * 5, 422, False, 5),
+        (["same"] * 4, 200, True, 4),
+        (["a", "a", "b", "b"], 201, False, 2),
+    ],
+)
+def test_rust_keyed_computation_matches_python_single_flight(keys, status, fail, expected_calls):
+    request = {
+        "operation": "compute",
+        "ttl": 60,
+        "now": 10.0,
+        "keys": keys,
+        "delay_ms": 5,
+        "fail": fail,
+        "response": {"status": status, "body": "shared", "media_type": "text/plain"},
+    }
+    expected = _python_compute(request)
+    process = _rust(request)
+    assert process.returncode == 0, process.stderr
+    actual = json.loads(process.stdout)
+    assert actual == expected
+    assert actual["calls"] == expected_calls

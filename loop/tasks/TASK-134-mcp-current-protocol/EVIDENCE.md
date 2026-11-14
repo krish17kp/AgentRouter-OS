@@ -14,7 +14,10 @@
 - Python sdist and wheel builds succeed. Wheel metadata carries the intended
   Python 3.10/MCP 1.x and Python 3.11+/MCP 2.x dependency markers.
 - The Rust CI workflow YAML parses and now runs dedicated MCP tests on Python
-  3.10 and 3.11. Hosted checks for this task's push are pending.
+  3.10 and 3.11. Both SDK jobs pass in the push and PR workflows at `a900126`;
+  Rust workspace jobs pass on Linux, Windows, and macOS. The Linux Python/Rust
+  compatibility jobs also pass; remaining Python and platform compatibility
+  jobs were still running at this evidence checkpoint.
 
 Protocol behavior follows the official MCP 2026-07-28 stateless/versioning
 specification and Python SDK v2 migration/release guidance; source links are in

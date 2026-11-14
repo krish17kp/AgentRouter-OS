@@ -1,5 +1,21 @@
 # LOOP_LOG
 
+## 2026-11-14 — TASK-135 server limits behavioral parity
+
+Added a concurrent Python/Rust differential probe for the idempotency
+single-flight boundary. Python's async lock flow and Rust's keyed computation
+now compare observable results and call counts for successful replay,
+non-2xx/error recomputation, and independent keys. Existing compatibility
+coverage exercises rate-limit keys, retry-after values, environment values,
+response fields, and TTL expiry; each runtime also verifies bounded storage.
+The parity matrix now marks `agentrouter/server/limits.py` complete.
+
+The 8-case server-limits differential suite, full Rust workspace, Rust
+formatting, targeted Ruff and diff checks pass. Hosted validation of this task
+follows the next RC push. At `a900126`, hosted MCP SDK 1.30/2.3 and Rust
+workspace jobs pass; the other platform jobs are running. The immutable release
+gate remains 0.6667 < 0.90.
+
 ## 2026-11-14 — TASK-134 current MCP protocol and SDK migration
 
 Moved the Python optional MCP integration to SDK 2.x on Python 3.11+ while
@@ -18,13 +34,14 @@ Python regression passes 2,525/5 in 317.45 seconds at 91.971% statement,
 87.690% branch, and 90.988% weighted combined coverage; `mcp_server.py` is 100%
 covered. Full Rust workspace, strict Clippy, Rust formatting, Ruff, package
 build, and diff checks pass. The Python wheel records the intended per-version
-MCP dependencies. Hosted validation awaits the RC push; the frozen release
-gate remains 0.6667 < 0.90.
+MCP dependencies. At `a900126`, MCP SDK 1.30/2.3 jobs and Rust workspace jobs
+pass on Linux, Windows, and macOS; remaining jobs are still running. The frozen
+release gate remains 0.6667 < 0.90.
 
 The parity matrix keeps the MCP module Partial because non-stdio transport and
-broader lifecycle parity are still unimplemented. Next: update the production
-checkpoint, push the slice, review the new Python 3.10/3.11 hosted MCP jobs,
-then continue the remaining Rust parity inventory.
+broader lifecycle parity are still unimplemented. The MCP slice is committed
+and pushed as `a900126`; continue the remaining Rust parity inventory while
+the platform checks complete.
 
 ## 2026-11-14 — TASK-133 direct public schema required/default parity
 

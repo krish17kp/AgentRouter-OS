@@ -6,6 +6,9 @@ All notable changes to AgentRouter OS. Format loosely follows
 ## [Unreleased]
 
 ### Added
+- Verify Python/Rust server rate limiting and idempotency behavior across
+  fixed-window retries, bounded cache retention, TTL boundaries, concurrent
+  same-key success and failures, and independent keys.
 - Upgrade the MCP integration for Python 3.11+ to the current stateless
   protocol and SDK 2.x, while retaining the legacy SDK for Python 3.10. The Rust
   stdio server now supports `server/discover`, modern per-request protocol
