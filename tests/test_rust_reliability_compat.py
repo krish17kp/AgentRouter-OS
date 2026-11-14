@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 
+import agentrouter.reliability as reliability_package
 from agentrouter.reliability import LoadOutcome, LoadSpec, run_load, serve_app
 from agentrouter.reliability.soak import Sample, SoakResult
 
@@ -41,6 +42,11 @@ def _rust(request: dict) -> dict:
     )
     assert process.returncode == 0, process.stderr
     return json.loads(process.stdout)["value"]
+
+
+def test_rust_reliability_package_exports_match_python():
+    assert _rust({"operation": "package_exports"}) == reliability_package.__all__
+    assert all(hasattr(reliability_package, name) for name in reliability_package.__all__)
 
 
 def test_rust_load_summary_matches_python_fields_and_percentiles():

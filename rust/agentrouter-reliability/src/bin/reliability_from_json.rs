@@ -17,6 +17,12 @@ fn run(request: &Value) -> Result<Value, Box<dyn std::error::Error>> {
         "summarize_soak" => {
             serde_json::from_value::<SoakResult>(request["result"].clone())?.as_dict()
         }
+        "package_exports" => {
+            let _: fn(&str, &LoadSpec) -> LoadOutcome = agentrouter_reliability::run_load;
+            let _: fn(PathBuf) -> Result<agentrouter_reliability::RunningApp, String> =
+                agentrouter_reliability::serve_app;
+            json!(agentrouter_reliability::PYTHON_PACKAGE_EXPORTS)
+        }
         "run_load" => {
             let url = request
                 .get("url")

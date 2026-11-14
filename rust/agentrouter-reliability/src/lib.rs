@@ -18,6 +18,15 @@ use serde_json::{json, Value};
 
 const EXPECTED_STATUSES: &[u16] = &[200, 201, 404, 409, 422, 429];
 
+/// Public names re-exported by `agentrouter.reliability`.
+pub const PYTHON_PACKAGE_EXPORTS: [&str; 5] = [
+    "LoadOutcome",
+    "LoadSpec",
+    "RunningApp",
+    "run_load",
+    "serve_app",
+];
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Request {
     pub method: String,

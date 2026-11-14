@@ -2568,3 +2568,14 @@ existing config, and report file. Full Rust workspace tests, strict Clippy,
 formatting, Ruff, and diff checks pass locally. Hosted validation follows this
 RC push. Transport exception names remain a harness parity gap; evaluation
 holdout is untouched.
+
+## 2026-11-14 — TASK-138 reliability package exports
+
+Added a Rust-side inventory for the five names re-exported from
+`agentrouter.reliability` and extended the compatibility bridge to compile-check
+`run_load` and `serve_app` signatures. A focused test compares the Rust export
+list with Python's `__all__`; this closes initializer export parity without
+overstating the separately tracked partial harness behavior. All nine focused
+reliability compatibility tests, the full Rust workspace, strict Clippy, Rust
+formatting, Ruff, and diff checks pass locally. Hosted platform validation
+follows this RC push.

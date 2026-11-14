@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-14 (TASK-082–135). This inventory covers every Python source module under
+Updated: 2026-11-14 (TASK-082–138). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -76,7 +76,7 @@ release authority until the full set is complete.
 | `agentrouter/prompts.py` | `agentrouter-cli::generate_prompt` | Parity |
 | `agentrouter/refresh.py` | `agentrouter-registry::refresh` | Partial |
 | `agentrouter/registry.py` | `agentrouter-registry` | Parity |
-| `agentrouter/reliability/__init__.py` | `agentrouter-reliability` | Partial |
+| `agentrouter/reliability/__init__.py` | `agentrouter-reliability::PYTHON_PACKAGE_EXPORTS` | Parity |
 | `agentrouter/reliability/harness.py` | `agentrouter-reliability::{LoadSpec,LoadOutcome,run_load,serve_app,serve_router,RunningApp}` | Partial |
 | `agentrouter/reliability/soak.py` | `agentrouter-reliability::{Sample,SoakResult,soak,soak_app}` and `agentrouter reliability soak` | Partial |
 | `agentrouter/safety.py` | `agentrouter-policy` | Parity |
@@ -157,6 +157,10 @@ release authority until the full set is complete.
   the Rust API, and writes the soak report. Per-`httpx` transport exception
   names and Python module invocation details remain Partial. See
   [`RUST_RELIABILITY.md`](RUST_RELIABILITY.md) for scope.
+- The reliability package initializer's five re-exported names now have an
+  exact Python/Rust inventory check. Behavior of `run_load` and `serve_app` is
+  still tracked by the harness row, so export parity does not imply full
+  harness parity.
 - Rust quota status normalization and one-step exhausted-model reranking are
   compared with Python for all declared states, Unicode sanitization, invalid
   states, missing recommendations, ranking output, timeout, and typed adapter
