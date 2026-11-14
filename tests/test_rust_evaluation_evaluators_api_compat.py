@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from agentrouter.evaluation.evaluators import load_seed_models
+from agentrouter.evaluation import evaluators
 
 pytestmark = pytest.mark.skipif(shutil.which("cargo") is None, reason="cargo not on PATH")
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,22 +36,6 @@ def test_evaluator_facade_and_seed_models_match_python():
     )
     assert process.returncode == 0, process.stderr
     actual = json.loads(process.stdout)
-    expected = [
-        {
-            "provider": model.provider,
-            "vendor": model.vendor,
-            "model_id": model.model_id,
-            "name": model.name,
-        }
-        for model in load_seed_models()
-    ]
+    expected = [model.model_dump(mode="json") for model in evaluators.load_seed_models()]
     assert actual["models"] == expected
-    assert actual["exports"] == [
-        "load_seed_models",
-        "evaluate_routing",
-        "evaluate_safety",
-        "evaluate_platform",
-        "evaluate_provider",
-        "evaluate_feedback",
-        "evaluate_performance",
-    ]
+    assert actual["exports"] == evaluators.__all__

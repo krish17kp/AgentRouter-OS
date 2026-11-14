@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-14 (TASK-082–141). This inventory covers every Python source module under
+Updated: 2026-11-14 (TASK-082–142). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -100,6 +100,11 @@ release authority until the full set is complete.
   `httpx.MockTransport`. The SDK remains Partial because native `ureq` timeout
   behavior and ambiguous generic read/write I/O categories do not yet match the
   full HTTPX contract.
+- TASK-142 expands the evaluator facade differential from model identity fields
+  to every normalized `ModelEntry` JSON field and compares the Rust export list
+  directly with Python's `__all__`. The row remains Partial because the facade's
+  re-exported evaluator functions still lack Python runtime-state discovery and
+  orchestration parity.
 - The Rust workspace has no `TODO`, `todo!()`, or `unimplemented!()` markers in
   shipped Rust source, but that does not make unported Python behavior complete.
 - The Python modules marked **Partial** and **Not ported** remain production

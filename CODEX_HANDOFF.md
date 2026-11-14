@@ -19,6 +19,10 @@ tests; nine Rust SDK unit tests, the full Rust workspace, and strict Clippy
 pass. The final full Python regression after these review fixes passes 2,550
 tests with 5 skipped; coverage evidence is in
 `docs/COVERAGE_REPORT_2026-11-14-TASK-141.md`.
+TASK-142 expands evaluator seed loading compatibility to every serialized
+`ModelEntry` field and compares Rust exports with the live Python `__all__`;
+its focused test and formatting checks pass locally. Runtime evaluator
+orchestration remains a parity gap.
 Keep `agentrouter/sdk.py` Partial until native `ureq` timeout and generic I/O
 semantics match the full HTTPX contract. Hosted revalidation remains pending;
 continue the remaining Rust parity work. Human annotation, bounded OpenAI live

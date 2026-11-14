@@ -2631,3 +2631,14 @@ unsupported-scheme check that fails before socket access. The SDK remains
 Partial for native `ureq` timeout and generic read/write I/O ambiguity. Hosted
 cross-platform revalidation is pending; continue with the next local parity gap
 while it runs.
+
+## 2026-11-14 — TASK-142 evaluator seed catalog contract
+
+Expanded `evaluation_evaluators_api_from_json` from four identity fields to the
+complete serialized seed `ModelEntry` values. Rust emits the effective vendor
+property so Python's dependent default is compared correctly. The test now
+compares all seed models to Pydantic JSON output and checks Rust's export list
+against Python's live `evaluators.__all__`, with no copied field/export list.
+The focused test, Rust formatting check, and diff check pass. The evaluator
+package remains Partial because runtime discovery and orchestration are not yet
+ported.

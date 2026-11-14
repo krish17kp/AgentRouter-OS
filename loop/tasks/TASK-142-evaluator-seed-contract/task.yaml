@@ -1,0 +1,27 @@
+id: TASK-142
+title: Evaluator seed catalog full contract
+source: evaluator facade Partial row in docs/RUST_PARITY_MATRIX.md
+priority: 2
+status: verify
+risk: low
+customer_impact: Rust evaluator seed loading is checked against the complete normalized Python model catalog.
+affected_surfaces:
+  - rust/agentrouter-evaluation/src/bin/evaluation_evaluators_api_from_json.rs
+  - tests/test_rust_evaluation_evaluators_api_compat.py
+dependencies:
+  - TASK-047
+acceptance_criteria:
+  - Every Rust seed ModelEntry JSON value equals Python model_dump(mode=json).
+  - Rust PUBLIC_EXPORTS equals Python evaluators.__all__.
+  - Evaluator facade remains Partial while runtime discovery/orchestration differs.
+verification_commands:
+  - ./.venv/bin/python -m pytest -q tests/test_rust_evaluation_evaluators_api_compat.py
+  - cargo fmt --all -- --check
+  - git diff --check
+required_reviewers:
+  - compatibility-contract
+repair_iteration: 0
+external_blockers: []
+owner_blockers: []
+created_at: "2026-11-14"
+updated_at: "2026-11-14"
