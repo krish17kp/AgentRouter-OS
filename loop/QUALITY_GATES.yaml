@@ -1,0 +1,112 @@
+# Machine-readable desired thresholds and current evidence for AgentRouter OS.
+version: 2
+updated: 2026-11-14
+canonical_release_ready: false
+
+testing:
+  mandatory_tests_pass:
+    required: true
+    current: pass_local
+    last_full_baseline_passed: 2237
+  unexplained_failures:
+    required: 0
+    current: 0
+  every_fixed_bug_has_regression:
+    required: true
+    current: true
+
+coverage:
+  line_min: 0.90
+  branch_min: 0.85
+  safety_execution_gateway_branch: 1.00
+  policy_enforcement_branch: 1.00
+  current: pass_local
+  line: 0.928255
+  branch: 0.886342
+  evidence: docs/COVERAGE_REPORT_2026-11-14.md
+
+mutation:
+  overall_min: 0.85
+  safety_execution_policy_min: 0.95
+  measured: true
+  current: pass
+  overall: 0.9693
+  safety_execution_policy: 0.9663
+  routing: 0.9815
+  unreviewed_survivors: 0
+  evidence: PR-13 Critical Mutation Testing workflow
+  fabricated_score: false
+
+evaluation:
+  grade_over_100:
+    achieved: 98.23
+  task_type_macro_f1:
+    threshold: 0.90
+    pass: true
+  high_risk_recall:
+    threshold: 1.00
+    pass: true
+  approval_accuracy:
+    threshold: 1.00
+    pass: true
+  tool_needs_f1:
+    threshold: 0.90
+    pass: true
+  context_band_accuracy:
+    threshold: 0.90
+    achieved: 0.6667
+    macro_f1: 0.6792
+    confidence_interval_95: [0.5207, 0.7864]
+    dataset: frozen_45_case_holdout
+    checksum: ca07dfa09f08cd877d383067b8e1163c0f196a5a1f0c4e641adefed12b17508f
+    pass: false
+    note: >-
+      Shipped rules-active. TASK-009 decision A proved a dataset ceiling: a dev-only
+      learned model (0.6889) and hybrid (0.6444) also fail 0.90; learned is not
+      significantly better than rules and has lower macro-F1. See
+      loop/tasks/TASK-009-context-band-holdout/learned-model-study.md.
+  high_risk_gated:
+    threshold: 1.00
+    pass: true
+  synthetic_routing_top1:
+    threshold: 0.95
+    pass: true
+
+static_quality:
+  ruff_clean: pass_local
+  format_clean: pass_local
+  type_checker_green: pass_on_f81d2d1
+  no_broad_new_ignores: true
+
+security:
+  bandit_clean_or_justified: pass_local
+  pip_audit_clean_or_mitigated: pass_local
+  secret_scan_clean: pass_on_f81d2d1
+  plugin_permission_audit_pass: pass_PR_13
+
+packaging:
+  wheel_and_sdist_build: pass_local
+  wheel_installs_clean_env: pass_local
+  cli_starts: pass_local
+  plugins_included: pass_prior_rc
+  install_upgrade_uninstall: pass_prior_rc
+
+platforms:
+  windows_local_green: pending
+  github_linux_green: pass_on_f81d2d1
+  github_windows_green: pass_on_f81d2d1
+  github_macos_green: pass_on_f81d2d1
+
+open:
+  - id: context_band_generalization
+    blocking: true
+    reason: >-
+      frozen held-out accuracy 0.6667 is below the unchanged 0.90 threshold; decision A
+      proved a dataset ceiling (rules 0.6667 / learned 0.6889 / hybrid 0.6444 all fail)
+  - id: release_branch_ci
+    blocking: true
+    reason: Ordinary Python, Rust, security, mutation, API, build, and site jobs pass on f81d2d1; PR #16's enforcing gate remains failed because frozen context-band accuracy is 0.6667 below the unchanged 0.90 threshold
+
+historical_corrections:
+  - claim: context_band_accuracy_0.945_release_ready
+    correction: 0.945 was in-sample gold-set accuracy, not held-out generalization

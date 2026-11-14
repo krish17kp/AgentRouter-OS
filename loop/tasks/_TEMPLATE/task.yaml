@@ -1,0 +1,18 @@
+# Copy this dir to loop/tasks/TASK-<n>-<slug>/ and fill in.
+id: TASK-000
+title: ""
+source: ""            # backlog id / user request / audit finding
+priority: 0
+status: intake        # intake|discover|plan|implement|verify|audit|repair|review|done|blocked
+risk: low             # low|medium|high
+customer_impact: ""
+affected_surfaces: []
+dependencies: []
+acceptance_criteria: []
+verification_commands: []
+required_reviewers: []   # verification-engineer, security-reviewer-arros, ...
+repair_iteration: 0
+external_blockers: []
+owner_blockers: []
+created_at: ""
+updated_at: ""

@@ -1,0 +1,16 @@
+id,category,expected,predicted
+hold-s-02,analysis,small,medium
+hold-s-03,review,small,medium
+hold-s-10,documentation,small,medium
+hold-s-14,audit,small,medium
+hold-m-03,review,medium,small
+hold-m-05,documentation,medium,small
+hold-m-09,audit,medium,small
+hold-m-11,review,medium,small
+hold-m-12,summarization,medium,small
+hold-m-15,ambiguous,medium,small
+hold-l-03,refactor,large,small
+hold-l-09,summarization,large,small
+hold-l-11,refactor,large,small
+hold-l-13,documentation,large,small
+hold-l-15,ambiguous,large,small

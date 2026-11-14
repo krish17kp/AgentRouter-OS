@@ -1,0 +1,52 @@
+schema_version: 1
+dataset: agentrouter-context-band
+split: final_holdout
+frozen: true
+annotation: model_assisted_pending_human_review
+cases:
+  - {id: hold-s-01, prompt: "Write a function that clamps one number to a range.", context_band: small, category: coding}
+  - {id: hold-s-02, prompt: "Sketch a contract for a brand-new weather API.", context_band: small, category: analysis}
+  - {id: hold-s-03, prompt: "Why do teams inspect changes before merging?", context_band: small, category: review}
+  - {id: hold-s-04, prompt: "Give three principles for restructuring code safely.", context_band: small, category: refactor}
+  - {id: hold-s-05, prompt: "Create a title for the installation guide.", context_band: small, category: documentation}
+  - {id: hold-s-06, prompt: "Shorten this caption.", context_band: small, category: summarization}
+  - {id: hold-s-07, prompt: "Define a batch ingestion process in one paragraph.", context_band: small, category: data-pipeline}
+  - {id: hold-s-08, prompt: "How should an authorization assessment be organized?", context_band: small, category: audit}
+  - {id: hold-s-09, prompt: "Check it.", context_band: small, category: ambiguous}
+  - {id: hold-s-10, prompt: "Suggest a name for a command-line application.", context_band: small, category: documentation}
+  - {id: hold-s-11, prompt: "Compare queues and streams at a conceptual level.", context_band: small, category: analysis}
+  - {id: hold-s-12, prompt: "Show a regular expression for a four-digit PIN.", context_band: small, category: coding}
+  - {id: hold-s-13, prompt: "Explain what a vector store does.", context_band: small, category: data-pipeline}
+  - {id: hold-s-14, prompt: "List the usual stages of a source-code audit.", context_band: small, category: audit}
+  - {id: hold-s-15, prompt: "Tidy this.", context_band: small, category: ambiguous}
+  - {id: hold-m-01, prompt: "Inspect the sign-in sequence for privilege escalation paths.", context_band: medium, category: audit}
+  - {id: hold-m-02, prompt: "Reshape the notification subsystem while retaining its observable behavior.", context_band: medium, category: refactor}
+  - {id: hold-m-03, prompt: "Read through the proposed change set and flag maintainability concerns.", context_band: medium, category: review}
+  - {id: hold-m-04, prompt: "Turn the existing deployment handbook into a one-page operator brief.", context_band: medium, category: summarization}
+  - {id: hold-m-05, prompt: "Describe how requests currently travel from the gateway to persistence.", context_band: medium, category: documentation}
+  - {id: hold-m-06, prompt: "Diagnose missing records across the nightly import stages.", context_band: medium, category: data-pipeline}
+  - {id: hold-m-07, prompt: "Evaluate cohesion across the tokenizer implementation and its specifications.", context_band: medium, category: analysis}
+  - {id: hold-m-08, prompt: "Add graceful shutdown to the daemon already shipped with the product.", context_band: medium, category: coding}
+  - {id: hold-m-09, prompt: "Search the incident evidence for the source of recurring timeouts.", context_band: medium, category: audit}
+  - {id: hold-m-10, prompt: "Modernize the account component without altering external semantics.", context_band: medium, category: refactor}
+  - {id: hold-m-11, prompt: "Critique the pending patch for correctness and test gaps.", context_band: medium, category: review}
+  - {id: hold-m-12, prompt: "Extract the decisions from the supplied architecture notes.", context_band: medium, category: summarization}
+  - {id: hold-m-13, prompt: "Write reference material for the behavior exposed by the current parser.", context_band: medium, category: documentation}
+  - {id: hold-m-14, prompt: "Reconcile schema drift between the source feeds and analytical tables.", context_band: medium, category: data-pipeline}
+  - {id: hold-m-15, prompt: "What is going on in this component?", context_band: medium, category: ambiguous}
+  - {id: hold-l-01, prompt: "Synthesize an 85k-token archive of regulatory correspondence.", context_band: large, category: summarization}
+  - {id: hold-l-02, prompt: "Examine 130000 tokens of identity-provider events for abuse patterns.", context_band: large, category: audit}
+  - {id: hold-l-03, prompt: "Restructure a workspace snapshot containing nine hundred source files.", context_band: large, category: refactor}
+  - {id: hold-l-04, prompt: "Inspect a 420-page due-diligence dossier and enumerate contradictions.", context_band: large, category: review}
+  - {id: hold-l-05, prompt: "Generate a user manual from a 72k-token device protocol.", context_band: large, category: documentation}
+  - {id: hold-l-06, prompt: "Study twelve months of telemetry partitions totaling 160000 tokens.", context_band: large, category: data-pipeline}
+  - {id: hold-l-07, prompt: "Apply an API migration throughout a 105k-token generated SDK.", context_band: large, category: coding}
+  - {id: hold-l-08, prompt: "Assess a complete monorepo export with 680 files and its build history.", context_band: large, category: analysis}
+  - {id: hold-l-09, prompt: "Summarize a three-volume technical standard supplied as PDFs.", context_band: large, category: summarization}
+  - {id: hold-l-10, prompt: "Look for credential misuse across 99000 tokens of audit evidence.", context_band: large, category: audit}
+  - {id: hold-l-11, prompt: "Rework every package in a repository containing 1,100 tracked files.", context_band: large, category: refactor}
+  - {id: hold-l-12, prompt: "Review the full 600-page tender response against all requirements.", context_band: large, category: review}
+  - {id: hold-l-13, prompt: "Create migration documentation from ninety-thousand tokens of design records.", context_band: large, category: documentation}
+  - {id: hold-l-14, prompt: "Compare all historical warehouse snapshots, roughly 125k tokens in total.", context_band: large, category: data-pipeline}
+  - {id: hold-l-15, prompt: "Handle everything in the attached corpus of eight hundred files.", context_band: large, category: ambiguous}
+

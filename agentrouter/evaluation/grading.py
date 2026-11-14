@@ -49,7 +49,13 @@ def _classification_score(m: dict) -> tuple[float, dict]:
     return total / sum(_CLASS_SUBWEIGHTS.values()), detail
 
 
-def grade(cases: list[EvaluationCase], classify_fn=None, *, measure_all: bool = False) -> dict:
+def grade(
+    cases: list[EvaluationCase],
+    classify_fn=None,
+    *,
+    measure_all: bool = False,
+    context_band_generalization: dict | None = None,
+) -> dict:
     """Grade a case list.
 
     Classification is always measured. The remaining dimensions
@@ -99,10 +105,10 @@ def grade(cases: list[EvaluationCase], classify_fn=None, *, measure_all: bool = 
     achieved = sum(d["achieved"] for d in dimensions.values())
     grade_of_measured = round(100 * achieved / measured_weight, 2) if measured_weight else 0.0
 
-    gates = _release_gates(m, class_score)
+    gates = _release_gates(m, class_score, context_band_generalization)
     if measured:
         gates.update(_extended_gates(measured))
-    return {
+    result = {
         "n_cases": len(cases),
         "dimensions": dimensions,
         "achieved_points": round(achieved, 2),
@@ -113,6 +119,9 @@ def grade(cases: list[EvaluationCase], classify_fn=None, *, measure_all: bool = 
         "release_gates": gates,
         "release_ready": all(gates.values()),
     }
+    if context_band_generalization is not None:
+        result["context_band_generalization"] = context_band_generalization
+    return result
 
 
 def _measure_dimensions(cases: list[EvaluationCase], classify_fn) -> dict:
@@ -149,13 +158,18 @@ def _extended_gates(measured: dict) -> dict:
     }
 
 
-def _release_gates(m: dict, class_score: float) -> dict:
+def _release_gates(
+    m: dict, class_score: float, context_band_generalization: dict | None = None
+) -> dict:
     """The subset of §7 gates evaluable from a classification-only run."""
     hrr = m.get("high_risk_recall")
+    context_accuracy = m["context"]["accuracy"]
+    if context_band_generalization is not None:
+        context_accuracy = context_band_generalization["current_holdout"]["accuracy"]
     return {
         "task_type_macro_f1>=0.90": m["task_type"]["macro_f1"] >= 0.90,
         "high_risk_recall==1.00": hrr == 1.0,
         "approval_accuracy==1.00": m["approval"]["accuracy"] == 1.0,
         "tool_needs_f1>=0.90": m["tools"]["f1"] >= 0.90,
-        "context_band_accuracy>=0.90": m["context"]["accuracy"] >= 0.90,
+        "context_band_accuracy>=0.90": context_accuracy >= 0.90,
     }

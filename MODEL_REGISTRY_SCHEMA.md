@@ -17,8 +17,14 @@
 
 - `registry/models.yaml` — the model catalog (one list of model entries).
 - `registry/providers.yaml` — the provider catalog (see PROVIDER_ADAPTER_SPEC).
-- Both are validated by **Pydantic v2** at load. A malformed or incomplete entry
-  raises a validation error naming the offending field; nothing loads silently.
+- `registry/models.<provider>.generated.yaml` — written by `agentrouter providers
+  refresh <provider>`; same `models:` shape, plus a top-level `provenance` block
+  (`provider`, `source_url`, `fetched_at` UTC, `count`, `tool_version`,
+  `cli_args`) that the loader ignores. Manual `models.yaml` always wins on
+  key collision. See `agentrouter providers status/rollback/restore/doctor`.
+- Both `models.yaml` and every `.generated.yaml` are validated by **Pydantic v2**
+  at load. A malformed or incomplete entry raises a validation error naming the
+  offending field; nothing loads silently.
 
 ---
 

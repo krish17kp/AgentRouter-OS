@@ -5,6 +5,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Scanning is read-only work; the token never needs write access here.
+permissions:
+  contents: read
+
 jobs:
   scan:
     runs-on: ubuntu-latest
@@ -18,10 +22,16 @@ jobs:
       - name: Install project + security tools
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev,security]"
+          # The marked regression suite collects SDK wire-contract tests, which
+          # import httpx from the optional server extra.
+          pip install -e ".[dev,server,security]"
 
       - name: Bandit static analysis (config-aware; fails on any finding)
-        run: bandit -c pyproject.toml -r agentrouter
+        # `scripts/` is scanned too: it holds the mutation runner and the parity
+        # server, which spawn processes and bind a socket. Excluding the shipped
+        # package's neighbours from the scan is how security-relevant code ends
+        # up unreviewed. No blanket skips — pyproject's only skip is B404.
+        run: bandit -c pyproject.toml -r agentrouter scripts
 
       - name: pip-audit dependency vulnerability scan
         run: pip-audit -r requirements.txt

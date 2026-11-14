@@ -1,0 +1,101 @@
+# Rust is a separate migration gate. Python remains the release authority until
+# Rust reaches full parity; a passing Rust job never overrides the product gates.
+name: Rust migration CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rust-workspace:
+    name: Rust workspace (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Build workspace
+        run: cargo build --workspace --locked
+      - name: Test workspace
+        run: cargo test --workspace --locked
+      - name: Clippy warnings are errors
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+
+  rust-msrv:
+    name: Declared Rust 1.89 minimum
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.89.0
+      - name: Build and test minimum supported toolchain
+        run: cargo test --workspace --locked
+
+  python-rust-parity:
+    name: Python/Rust compatibility (${{ matrix.os }}, non-skipping)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Python reference + tests
+        run: python -m pip install -e ".[dev,server,mcp]" "mcp==2.3.0"
+      - name: Assert compatibility against the real Rust binary
+        run: |
+          cargo build --workspace --locked
+          python -m pytest -q -rs tests/test_rust_compat.py tests/test_classifier_rust_compat.py tests/test_cli_route_rust_compat.py tests/test_cli_decision_rust_compat.py tests/test_cli_init_rust_compat.py tests/test_cli_registry_rust_compat.py tests/test_cli_providers_status_rust_compat.py tests/test_controls_rust_compat.py tests/test_hosts_rust_compat.py tests/test_routing_rust_compat.py tests/test_rust_routing_matrix.py tests/test_store_rust_compat.py tests/test_rust_agentrouter_gold_compat.py tests/test_rust_evaluation_adapter_base_compat.py tests/test_rust_clinc150_compat.py tests/test_rust_banking77_compat.py tests/test_rust_massive_compat.py tests/test_rust_longbench_compat.py tests/test_rust_swebench_compat.py tests/test_rust_llmrouterbench_compat.py tests/test_rust_twinrouterbench_compat.py tests/test_rust_annotation_compat.py tests/test_rust_annotation_dedup_compat.py tests/test_rust_annotation_splits_compat.py tests/test_rust_annotation_schema_compat.py tests/test_rust_annotation_graph_signal_compat.py tests/test_rust_annotation_packs_compat.py tests/test_rust_annotation_store_compat.py tests/test_rust_annotation_candidates_compat.py tests/test_rust_annotation_compare_compat.py tests/test_rust_annotation_cli_compat.py tests/test_rust_unified_cli_compat.py tests/test_evaluation_metrics_rust_compat.py tests/test_rust_context_bands_compat.py tests/test_rust_evaluation_package_api_compat.py tests/test_rust_annotation_package_api_compat.py tests/test_rust_evaluation_evaluators_api_compat.py tests/test_rust_package_version_compat.py tests/test_rust_empty_package_markers_compat.py tests/test_rust_evaluation_registry_api_compat.py tests/test_rust_evaluation_runner_compat.py tests/test_rust_http_schemas_compat.py tests/test_rust_http_server_compat.py tests/test_rust_mcp_compat.py tests/test_rust_refresh_compat.py tests/test_rust_reliability_compat.py tests/test_rust_legacy_gold_compat.py tests/test_plugins_rust_compat.py
+      - name: Set up Node for SDK integration
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: TypeScript SDK against the Rust HTTP server
+        env:
+          AGENTROUTER_REQUIRE_LIVE: "1"
+          AGENTROUTER_PARITY_SERVER: rust
+          AGENTROUTER_PYTHON: python
+        run: |
+          npm ci --prefix sdk/typescript
+          npm test --prefix sdk/typescript
+
+  mcp-sdk-compatibility:
+    name: MCP SDK compatibility (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install MCP v1 on Python 3.10
+        if: matrix.python-version == '3.10'
+        run: python -m pip install -e ".[dev,server,mcp]" "mcp==1.30.0"
+      - name: Install MCP v2 on Python 3.11
+        if: matrix.python-version == '3.11'
+        run: python -m pip install -e ".[dev,server,mcp]" "mcp==2.3.0"
+      - name: Test Python and Rust MCP stdio compatibility
+        run: |
+          python -m pytest -q \
+            tests/test_mcp_server.py \
+            tests/test_rust_mcp_compat.py \
+            tests/test_rust_unified_cli_compat.py

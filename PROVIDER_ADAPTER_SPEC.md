@@ -21,14 +21,13 @@ and match [ARCHITECTURE.md](ARCHITECTURE.md).
 | `list_models()` | → `list[ModelEntry]` | Return the models this adapter currently knows, already mapped to the registry schema. | MVP |
 | `refresh_models()` | → `list[ModelEntry]` | Fetch the live model list from the provider and re-map to schema. Writes back to ModelRegistry. | Capstone demo |
 | `map_capabilities(raw)` | `raw → ModelEntry` | Translate provider-native model metadata into schema fields (`ability`, `tool_support`, `context_window`, tiers, …). | MVP |
-| `supports_execution()` | → `bool` | Whether this adapter can actually run a task. **Returns `False` for all adapters in v1.** | MVP |
-| `execute(prompt, model)` | → result / raises | Run the recommended tool. **Raises `NotSupported` in v1** (planner-only boundary). | Production-future |
+| `supports_execution()` | → `bool` | Whether this adapter can actually run a task. **Defaults to `False`; OpenAI text execution requires local opt-in.** | MVP |
+| `execute(prompt, model)` | → result / raises | Run the recommended tool only after safety, provider opt-in, host, and explicit confirmation gates. OpenAI text has a bounded implementation; other API adapters remain unimplemented. | Staged |
 
 **Auth handling:** each adapter declares an `auth_model` (`none` \| `api-key` \|
-`oauth` \| `local` \| `manual`). In v1, adapters that need credentials operate
-in **catalog-only mode** — they can describe models (from static config or a
-public list) but never call an authenticated endpoint. Live auth arrives with
-`refresh_models` (Capstone, read-only key) and `execute` (Production-future).
+`oauth` \| `local` \| `manual`). Adapters remain in **catalog-only mode** by
+default. OpenAI text execution is available only after an explicit local
+provider opt-in, a key in the environment, and `execute --yes`.
 
 **Common responsibilities (all adapters):**
 - Never leak provider specifics beyond the adapter — output is always the
@@ -45,7 +44,7 @@ public list) but never call an authenticated endpoint. Live auth arrives with
 ### 2.1 Claude Code adapter
 - **Responsibilities:** map Claude Code's model catalog + tool capabilities
   (file-edit, shell, agentic tool-use) into the schema.
-- **Required methods:** all five; `supports_execution` → `False` (v1).
+- **Required methods:** all five; `supports_execution` defaults to `False`.
 - **Auth:** `oauth` / local CLI session. Catalog-only in v1.
 - **Model refresh:** `refresh_models` reads the available model list from the
   local Claude Code environment/config.
@@ -56,13 +55,19 @@ public list) but never call an authenticated endpoint. Live auth arrives with
 
 ### 2.2 OpenAI adapter
 - **Responsibilities:** map OpenAI model list + function-calling/vision flags.
-- **Required methods:** all five; `supports_execution` → `False` (v1).
-- **Auth:** `api-key`. Catalog-only until a read key is provided (Capstone).
+- **Required methods:** all five; `supports_execution` defaults to `False` and
+  can be enabled in the local registry for the bounded text adapter.
+- **Auth:** `api-key`. Catalog-only until a key is supplied and execution is
+  explicitly enabled.
 - **Model refresh:** `refresh_models` calls the models list endpoint, maps ids,
   context windows, and modality flags.
 - **Capability mapping:** `tool_support` includes `function-calling`, `tool-use`;
   `vision_support` from modality metadata.
-- **Execution support:** API-call execution (Production-future).
+- **Execution support:** an opt-in, text-only Responses API adapter is available
+  through `agentrouter execute <decision-id> --yes` when the local provider
+  registry enables `supports_execution` and `OPENAI_API_KEY` is set. It sends
+  no tools, sets `store: false`, caps output tokens, and never retries a call.
+  This is a bounded execution slice, not proof of a production-ready adapter.
 - **Limits:** ability scores (coding/reasoning/writing) are curated, not API-derived.
 
 ### 2.3 OpenRouter adapter
@@ -130,5 +135,6 @@ public list) but never call an authenticated endpoint. Live auth arrives with
 
 - Hardcode a specific current model as special-case logic.
 - Return provider-native shapes to the engine (always map to schema first).
-- Auto-execute anything in v1 (`supports_execution` must be `False`).
+- Auto-execute anything by default. OpenAI execution requires an explicit local
+  provider opt-in, a ready API host, an auto-approval decision, and `--yes`.
 - Swallow provider errors silently.

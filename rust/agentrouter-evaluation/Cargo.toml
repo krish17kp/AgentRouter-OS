@@ -1,0 +1,221 @@
+[package]
+name = "agentrouter-evaluation"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+agentrouter-routing = { path = "../agentrouter-routing" }
+agentrouter-core = { path = "../agentrouter-core" }
+agentrouter-classifier = { path = "../agentrouter-classifier" }
+agentrouter-registry = { path = "../agentrouter-registry" }
+agentrouter-storage = { path = "../agentrouter-storage" }
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = { version = "1.0.128", features = ["arbitrary_precision", "preserve_order"] }
+chrono = { version = "0.4.38", default-features = false, features = ["std"] }
+regex = "=1.13.1"
+serde_yaml = { package = "noyalib-serde-yaml", version = "=0.0.60" }
+sha2 = "=0.10.9"
+unicode-general-category = "=0.6.0"
+tempfile = "=3.13.0"
+
+[[bin]]
+name = "evaluation_metrics_from_json"
+path = "src/bin/evaluation_metrics_from_json.rs"
+
+[[bin]]
+name = "evaluation_quality_from_json"
+path = "src/bin/evaluation_quality_from_json.rs"
+
+[[bin]]
+name = "evaluation_sample_from_json"
+path = "src/bin/evaluation_sample_from_json.rs"
+
+[[bin]]
+name = "evaluation_schema_from_json"
+path = "src/bin/evaluation_schema_from_json.rs"
+
+[[bin]]
+name = "evaluation_registry_from_json"
+path = "src/bin/evaluation_registry_from_json.rs"
+
+[[bin]]
+name = "evaluation_report_from_json"
+path = "src/bin/evaluation_report_from_json.rs"
+
+[[bin]]
+name = "evaluation_grade_from_json"
+path = "src/bin/evaluation_grade_from_json.rs"
+
+[[bin]]
+name = "evaluation_safety_from_json"
+path = "src/bin/evaluation_safety_from_json.rs"
+
+[[bin]]
+name = "evaluation_provider_from_json"
+path = "src/bin/evaluation_provider_from_json.rs"
+
+[[bin]]
+name = "evaluation_feedback_from_json"
+path = "src/bin/evaluation_feedback_from_json.rs"
+
+[[bin]]
+name = "evaluation_routing_from_json"
+path = "src/bin/evaluation_routing_from_json.rs"
+
+[[bin]]
+name = "evaluation_write_reports_from_json"
+path = "src/bin/evaluation_write_reports_from_json.rs"
+
+[[bin]]
+name = "evaluation_platform_from_json"
+path = "src/bin/evaluation_platform_from_json.rs"
+
+[[bin]]
+name = "evaluation_performance_from_json"
+path = "src/bin/evaluation_performance_from_json.rs"
+
+[[bin]]
+name = "evaluation_performance_run_from_json"
+path = "src/bin/evaluation_performance_run_from_json.rs"
+
+[[bin]]
+name = "evaluation_compare_from_json"
+path = "src/bin/evaluation_compare_from_json.rs"
+
+[[bin]]
+name = "evaluation_load_result_from_json"
+path = "src/bin/evaluation_load_result_from_json.rs"
+
+[[bin]]
+name = "evaluation_gold_from_json"
+path = "src/bin/evaluation_gold_from_json.rs"
+
+[[bin]]
+name = "evaluation_adapter_from_json"
+path = "src/bin/evaluation_adapter_from_json.rs"
+
+[[bin]]
+name = "evaluation_clinc150_from_json"
+path = "src/bin/evaluation_clinc150_from_json.rs"
+
+[[bin]]
+name = "evaluation_banking77_from_json"
+path = "src/bin/evaluation_banking77_from_json.rs"
+
+[[bin]]
+name = "evaluation_massive_from_json"
+path = "src/bin/evaluation_massive_from_json.rs"
+
+[[bin]]
+name = "evaluation_longbench_from_json"
+path = "src/bin/evaluation_longbench_from_json.rs"
+
+[[bin]]
+name = "evaluation_swebench_from_json"
+path = "src/bin/evaluation_swebench_from_json.rs"
+
+[[bin]]
+name = "evaluation_llmrouterbench_from_json"
+path = "src/bin/evaluation_llmrouterbench_from_json.rs"
+
+[[bin]]
+name = "evaluation_twinrouterbench_status_from_json"
+path = "src/bin/evaluation_twinrouterbench_status_from_json.rs"
+
+[[bin]]
+name = "evaluation_environment_from_json"
+path = "src/bin/evaluation_environment_from_json.rs"
+
+[[bin]]
+name = "evaluation_adjudicate_from_json"
+path = "src/bin/evaluation_adjudicate_from_json.rs"
+
+[[bin]]
+name = "evaluation_annotation_dedup_from_json"
+path = "src/bin/evaluation_annotation_dedup_from_json.rs"
+
+[[bin]]
+name = "evaluation_annotation_splits_from_json"
+path = "src/bin/evaluation_annotation_splits_from_json.rs"
+
+[[bin]]
+name = "evaluation_annotation_schema_from_json"
+path = "src/bin/evaluation_annotation_schema_from_json.rs"
+
+[[bin]]
+name = "evaluation_annotation_graph_signal_from_json"
+path = "src/bin/evaluation_annotation_graph_signal_from_json.rs"
+
+[[bin]]
+name = "evaluation_annotation_packs_from_json"
+path = "src/bin/evaluation_annotation_packs_from_json.rs"
+
+[[bin]]
+name = "evaluation_annotation_store_from_json"
+path = "src/bin/evaluation_annotation_store_from_json.rs"
+
+[[bin]]
+name = "evaluation_annotation_candidates_from_json"
+path = "src/bin/evaluation_annotation_candidates_from_json.rs"
+
+[[bin]]
+name = "evaluation_annotation_compare_from_json"
+path = "src/bin/evaluation_annotation_compare_from_json.rs"
+
+[[bin]]
+name = "evaluation_context_bands_from_json"
+path = "src/bin/evaluation_context_bands_from_json.rs"
+
+[[bin]]
+name = "evaluation_context_leaks_from_json"
+path = "src/bin/evaluation_context_leaks_from_json.rs"
+
+[[bin]]
+name = "evaluation_context_score_from_json"
+path = "src/bin/evaluation_context_score_from_json.rs"
+
+[[bin]]
+name = "evaluation_public_api_from_json"
+path = "src/bin/evaluation_public_api_from_json.rs"
+
+[[bin]]
+name = "evaluation_annotation_public_api_from_json"
+path = "src/bin/evaluation_annotation_public_api_from_json.rs"
+
+[[bin]]
+name = "evaluation_evaluators_api_from_json"
+path = "src/bin/evaluation_evaluators_api_from_json.rs"
+
+[[bin]]
+name = "evaluation_package_markers_from_json"
+path = "src/bin/evaluation_package_markers_from_json.rs"
+
+[[bin]]
+name = "evaluation_registry_api_from_json"
+path = "src/bin/evaluation_registry_api_from_json.rs"
+
+[[bin]]
+name = "evaluation_runner_from_json"
+path = "src/bin/evaluation_runner_from_json.rs"
+
+[[bin]]
+name = "evaluation_grade_all_from_json"
+path = "src/bin/evaluation_grade_all_from_json.rs"
+
+[[bin]]
+name = "evaluation_collect_from_json"
+path = "src/bin/evaluation_collect_from_json.rs"
+
+[[bin]]
+name = "evaluation_registered_runner_from_json"
+path = "src/bin/evaluation_registered_runner_from_json.rs"
+
+[[bin]]
+name = "agentrouter-evaluate"
+path = "src/bin/agentrouter_evaluate.rs"
+
+[[bin]]
+name = "legacy_gold_from_json"
+path = "src/bin/legacy_gold_from_json.rs"

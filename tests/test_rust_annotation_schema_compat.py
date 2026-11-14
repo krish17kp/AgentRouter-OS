@@ -1,0 +1,309 @@
+"""Differential checks for annotation artifact schemas and defaults."""
+
+from __future__ import annotations
+
+import json
+import shutil
+import subprocess
+from pathlib import Path
+
+import pytest
+from pydantic import ValidationError
+
+from agentrouter.annotation.schema import (
+    AdjudicatedItem,
+    AnnotatorLabel,
+    Candidate,
+    DatasetManifest,
+    ItemLabels,
+)
+
+pytestmark = pytest.mark.skipif(shutil.which("cargo") is None, reason="cargo not on PATH")
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def _rust(model, value):
+    return subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_annotation_schema_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps({"model": model, "value": value}),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=ROOT,
+        timeout=120,
+        check=False,
+    )
+
+
+def test_rust_annotation_artifact_schemas_match_python():
+    label_a = AnnotatorLabel(
+        annotator="reviewer-a", band="medium", rationale="existing context", confidence=0.8
+    )
+    label_b = AnnotatorLabel(
+        annotator="reviewer-b", band="medium", rationale="repository scope", confidence=0.9
+    )
+    models = [
+        ("candidate", Candidate(id="candidate-1", prompt="Review this service", category="review")),
+        ("annotator_label", label_a),
+        (
+            "item_labels",
+            ItemLabels(
+                candidate_id="candidate-1",
+                prompt="Review this service",
+                category="review",
+                labels=[label_a, label_b],
+            ),
+        ),
+        (
+            "adjudicated_item",
+            AdjudicatedItem(
+                id="candidate-1",
+                prompt="Review this service",
+                category="review",
+                band="medium",
+                label_source="curated",
+                annotators=["reviewer-a", "reviewer-b"],
+                rationale="Independent agreement.",
+                confidence=0.85,
+            ),
+        ),
+        (
+            "dataset_manifest",
+            DatasetManifest(version="v2.0", created="2026-11-11T00:00:00Z"),
+        ),
+    ]
+    for model, value in models:
+        expected_value = value.model_dump(mode="json")
+        process = _rust(model, expected_value)
+        assert process.returncode == 0, process.stderr
+        actual = json.loads(process.stdout)
+        expected = {"value": expected_value}
+        if isinstance(value, ItemLabels):
+            expected.update({"annotators": value.annotators, "agrees": value.agrees})
+        assert actual == expected
+
+
+@pytest.mark.parametrize(
+    ("model", "value"),
+    [
+        (
+            "candidate",
+            {
+                "id": "bad",
+                "prompt": "bad",
+                "category": "not-a-category",
+                "source": "generated_candidate",
+                "template": None,
+                "notes": None,
+            },
+        ),
+        (
+            "annotator_label",
+            {
+                "annotator": "reviewer-a",
+                "band": "medium",
+                "abstain": True,
+                "rationale": "conflicting schema",
+                "confidence": 0.7,
+                "at": None,
+            },
+        ),
+        (
+            "adjudicated_item",
+            {
+                "id": "bad",
+                "prompt": "bad",
+                "category": "review",
+                "band": None,
+                "abstained": False,
+                "label_source": "curated",
+                "annotators": [],
+                "adjudicated_by": None,
+                "rationale": "missing band",
+                "confidence": 0.5,
+                "split": None,
+                "review_status": "pending_human_review",
+            },
+        ),
+    ],
+)
+def test_rust_annotation_schema_rejects_invalid_models(model, value):
+    process = _rust(model, value)
+    assert process.returncode != 0
+    with pytest.raises(ValidationError):
+        if model == "candidate":
+            Candidate.model_validate(value)
+        elif model == "annotator_label":
+            AnnotatorLabel.model_validate(value)
+        else:
+            AdjudicatedItem.model_validate(value)
+
+
+@pytest.mark.parametrize(
+    "timestamp",
+    [
+        "2026-11-11T12:30:00Z",
+        "2026-11-11T12:30:00+05:30",
+        "2026-11-11 12:30:00.120000",
+        "2026-11-11",
+        "2026-11-11T12:30:00.123456789Z",
+        "2026-11-11T12:30:00.5Z",
+        "1.0e3",
+        "+1",
+        "-62135596800",
+        "2026-11-11t12:30:00",
+        "2026-11-11_12:30",
+        "2026-11-11_12:30:00",
+        "2026-11-11_12:30:00.1",
+        "2026-11-11_12:30:00,1",
+        "2026-11-11_12:30:00Z",
+        "2026-11-11_12:30:00+05:30",
+        "2026-11-11_12:30:00+0530",
+        "2026-11-11T12:30:00+0530",
+        "2026-11-11T12:30:00.123+05:30",
+        "2026-11-11T12:30",
+        "2026-11-11T12:30Z",
+        "2026-11-11T12:30z",
+        "2026-11-11 12:30+05:30",
+        "2026-11-11_12:30-0330",
+        "2026-11-11T12:30:00,25+05:30",
+        0,
+        1.5,
+        20000000001,
+        1700000000.1234567,
+        1.0000015,
+        -0.0000005,
+        "0",
+        None,
+    ],
+)
+def test_rust_annotation_datetime_matches_python_parse_and_serialization(timestamp):
+    value = {
+        "annotator": "reviewer-a",
+        "band": "medium",
+        "abstain": False,
+        "rationale": "timestamp fixture",
+        "confidence": 0.75,
+        "at": timestamp,
+    }
+    expected = AnnotatorLabel.model_validate(value).model_dump(mode="json")
+    process = _rust("annotator_label", value)
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == {"value": expected}
+
+
+@pytest.mark.parametrize(
+    "timestamp",
+    [
+        "not-a-date",
+        "20261111T123000",
+        "2026-11-11X12:30",
+        "2026-W46-3T12:30:00",
+        "1e3",
+        "2026-11-11T12:30:60",
+        "2026-11-11T12:30:60.5Z",
+        "1_0",
+        " 1 ",
+    ],
+)
+def test_rust_annotation_datetime_rejects_invalid_value_like_python(timestamp):
+    invalid = {
+        "annotator": "reviewer-a",
+        "band": "medium",
+        "abstain": False,
+        "rationale": "invalid timestamp fixture",
+        "confidence": 0.75,
+        "at": timestamp,
+    }
+    process = _rust("annotator_label", invalid)
+    assert process.returncode != 0
+    with pytest.raises(ValidationError):
+        AnnotatorLabel.model_validate(invalid)
+
+
+@pytest.mark.parametrize("confidence", ["0.75", True])
+def test_rust_annotation_confidence_matches_pydantic_scalar_coercion(confidence):
+    value = {
+        "annotator": "reviewer-a",
+        "band": "medium",
+        "abstain": False,
+        "rationale": "coercion fixture",
+        "confidence": confidence,
+        "at": None,
+    }
+    expected = AnnotatorLabel.model_validate(value).model_dump(mode="json")
+    process = _rust("annotator_label", value)
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == {"value": expected}
+
+
+def test_rust_annotation_manifest_matches_pydantic_integer_and_boolean_coercion():
+    for schema_version, untouched in [
+        ("1", "yes"),
+        ("1.0", "yes"),
+        ("1_000", "yes"),
+        (1.0, 1.0),
+        (True, 1),
+        (1, "off"),
+        (1, 0.0),
+        (-2, False),
+    ]:
+        value = {
+            "schema_version": schema_version,
+            "dataset": "agentrouter-context-band-v2",
+            "version": "v2.0",
+            "created": "2026-11-11T00:00:00Z",
+            "split_counts": {"train": "2.0", "dev": 2.0, "holdout": True},
+            "split_sha256": {},
+            "category_counts": {"coding": -1},
+            "band_counts": {"small": 3},
+            "frozen_holdout_untouched": untouched,
+            "leakage_report": None,
+            "provenance": "",
+        }
+        expected = DatasetManifest.model_validate(value).model_dump(mode="json")
+        process = _rust("dataset_manifest", value)
+        assert process.returncode == 0, process.stderr
+        assert json.loads(process.stdout) == {"value": expected}
+
+
+@pytest.mark.parametrize("schema_version", ["1.5", "1e2", "1__0", "1.000000001"])
+def test_rust_annotation_manifest_rejects_non_integer_strings_like_python(schema_version):
+    value = {
+        "schema_version": schema_version,
+        "version": "v2.0",
+        "created": "2026-11-11T00:00:00Z",
+    }
+    process = _rust("dataset_manifest", value)
+    assert process.returncode != 0
+    with pytest.raises(ValidationError):
+        DatasetManifest.model_validate(value)
+
+
+def test_rust_annotation_manifest_preserves_arbitrary_precision_integers():
+    large = 10**79 + 123456789
+    value = {
+        "schema_version": large,
+        "version": "large-integers",
+        "created": "2026-11-14T00:00:00Z",
+        "split_counts": {
+            "train": large,
+            "dev": str(-large),
+            "holdout": f"{large}.000",
+        },
+        "category_counts": {"review": 1e10, "coding": 1e18},
+        "band_counts": {"large": "000" + str(large)},
+    }
+    expected = DatasetManifest.model_validate(value).model_dump(mode="json")
+    process = _rust("dataset_manifest", value)
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == {"value": expected}

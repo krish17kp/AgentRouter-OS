@@ -44,6 +44,27 @@ def _degrade(median_ms: float, threshold_ms: float) -> float:
     return max(0.0, 1.0 - over)
 
 
+def _summarize_samples(classify_times: list[float], route_times: list[float]) -> dict:
+    """Apply the stable report contract to measured elapsed seconds."""
+    classify_median = _median_ms(classify_times)
+    route_median = _median_ms(route_times)
+    score = min(
+        _degrade(classify_median, CLASSIFY_THRESHOLD_MS),
+        _degrade(route_median, ROUTE_THRESHOLD_MS),
+    )
+    return {
+        "score": round(score, 4),
+        "detail": {
+            "n_samples": len(classify_times),
+            "classify_median_ms": classify_median,
+            "route_median_ms": route_median,
+            "classify_threshold_ms": CLASSIFY_THRESHOLD_MS,
+            "route_threshold_ms": ROUTE_THRESHOLD_MS,
+            "note": "smoke perf check on this machine; not a benchmark",
+        },
+    }
+
+
 def evaluate_performance(
     models: Sequence[ModelEntry] | None = None,
     tasks: Sequence[str] = _SAMPLE_TASKS,
@@ -67,20 +88,4 @@ def evaluate_performance(
         classify_times.append(t1 - t0)
         route_times.append(t2 - t1)
 
-    classify_median = _median_ms(classify_times)
-    route_median = _median_ms(route_times)
-    score = min(
-        _degrade(classify_median, CLASSIFY_THRESHOLD_MS),
-        _degrade(route_median, ROUTE_THRESHOLD_MS),
-    )
-    return {
-        "score": round(score, 4),
-        "detail": {
-            "n_samples": len(tasks),
-            "classify_median_ms": classify_median,
-            "route_median_ms": route_median,
-            "classify_threshold_ms": CLASSIFY_THRESHOLD_MS,
-            "route_threshold_ms": ROUTE_THRESHOLD_MS,
-            "note": "smoke perf check on this machine; not a benchmark",
-        },
-    }
+    return _summarize_samples(classify_times, route_times)

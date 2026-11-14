@@ -2,6 +2,13 @@
 
 Not published to PyPI yet — releases are git tags + GitHub Releases for now.
 
+> **Implementation status:** this checklist and the seven evaluation gates it
+> depends on govern releases of the **Python implementation**, the current
+> shipping system. The approved Rust-native port (see
+> [RUST_MIGRATION_PLAN.md](RUST_MIGRATION_PLAN.md)) does not change this
+> checklist or lower any gate; a ported module only becomes release-eligible
+> once it passes the same gates this checklist already enforces.
+
 ## Before tagging
 
 ```console
@@ -54,3 +61,23 @@ One-time setup (repo owner, on pypi.org):
 
 After that, step 5 above (publishing the GitHub Release) publishes to PyPI
 automatically.
+
+## Supply chain: SBOM + provenance
+
+The release workflow also, on every published Release:
+
+- generates a **CycloneDX SBOM** (`sbom.cdx.json`) from the installed package and
+  attaches it as a Release asset;
+- emits **SLSA build provenance** for `dist/*` and the SBOM via
+  `actions/attest-build-provenance` (OIDC — no stored secret).
+
+Generate the SBOM locally the same way:
+
+```console
+pip install "agentrouter-os[sbom]"
+cyclonedx-py environment --output-format JSON --output-file sbom.cdx.json
+```
+
+Consumers verify a downloaded artifact with
+`gh attestation verify <file> --repo krish17kp/AgentRouter-OS`.
+See [UPGRADING.md](UPGRADING.md) for version policy and migration steps.

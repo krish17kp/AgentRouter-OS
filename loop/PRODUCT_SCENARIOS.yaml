@@ -1,0 +1,47 @@
+# Customer scenarios AgentRouter OS must satisfy. Used by the customer-advocate
+# agent and customer-review skill. Each must be reproducible from the packaged wheel.
+version: 1
+
+scenarios:
+  - id: S1
+    persona: first-time developer
+    goal: route a prompt to a model in under 5 minutes from a clean install
+    steps:
+      - pip install agentrouter-os (or wheel)
+      - agentrouter setup            # non-interactive, no secrets printed
+      - agentrouter route "summarize this PR"
+    success: prints chosen model + rationale + estimated cost; no remote exec by default
+    accessibility: works with NO_COLOR set; no unexplained internal jargon
+
+  - id: S2
+    persona: everyday user tuning routing
+    goal: constrain routing by cost/quality/tools
+    steps:
+      - agentrouter route "..." --max-price 0.01 --prohibit-tool web-search
+      - agentrouter route "..." --uncertainty-threshold 0.6
+    success: filters applied; abstains with actionable message when uncertain
+
+  - id: S3
+    persona: integrator using the API
+    goal: call the local server and get structured output
+    steps:
+      - agentrouter server &
+      - GET /health ; GET /openapi.json ; POST /v1/route
+    success: request-id on every response; structured errors; dry-run only
+
+  - id: S4
+    persona: plugin user
+    goal: install and later cleanly remove a plugin
+    steps:
+      - agentrouter plugin install <name>
+      - agentrouter plugin doctor
+      - agentrouter plugin uninstall <name>
+    success: idempotent install; backup on change; uninstall loses no user files
+
+  - id: S5
+    persona: security-conscious operator
+    goal: confirm the tool never executes remote code or leaks secrets
+    steps:
+      - inspect route/server output for command execution
+      - run with a malicious catalog / URL scheme
+    success: unsafe execution blocked; secrets never printed; clear privacy behavior

@@ -17,6 +17,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from enum import Enum
+from importlib import resources
 from pathlib import Path
 
 from .sampling import deterministic_sample
@@ -25,6 +26,19 @@ from .schema import EvaluationCase
 # valid source values for load/sample/checksum
 FIXTURE = "fixture"
 REAL = "real"
+
+
+def fixture_path(name: str) -> Path:
+    """Filesystem path to a shipped eval fixture (agentrouter/evaluation/fixtures/).
+
+    ponytail: assumes an unpacked install (pip's default); zipimport unsupported.
+    """
+    return Path(str(resources.files("agentrouter.evaluation").joinpath("fixtures", name)))
+
+
+def gold_path(name: str) -> Path:
+    """Filesystem path to a shipped gold benchmark (agentrouter/benchmarks/)."""
+    return Path(str(resources.files("agentrouter").joinpath("benchmarks", name)))
 
 
 class Availability(str, Enum):

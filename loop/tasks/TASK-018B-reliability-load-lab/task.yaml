@@ -1,0 +1,86 @@
+id: TASK-018B
+title: Reliability, load, concurrency, soak and failure-injection lab
+source: EPIC TASK-018 part 2 of 3, owner directive 2026-08-09; loop/BACKLOG.yaml local_open TASK-018B
+priority: 1
+status: in_progress
+risk: medium
+owner: unassigned
+created: 2026-08-19
+customer_impact: >
+  The API is documented for localhost use but nothing measures what it does under
+  concurrent load. A first reproduction found the answer is: it fails. At 200
+  concurrent POST /v1/route over real HTTP, 7 requests returned HTTP 500 from
+  sqlite3.OperationalError "database is locked", and throughput collapsed to
+  ~8 req/s. A user running a handful of parallel agents against their own local
+  router gets intermittent 500s with no explanation and a decision that was never
+  recorded.
+
+objective: >
+  Build a repo-native, deterministic harness that exercises load, concurrency,
+  soak and injected failures; use it to find and FIX real reliability defects
+  rather than to produce a benchmark number; and gate the correctness properties
+  in CI without turning wall-clock timing into a flaky gate.
+
+discovery_findings:
+  - "REPRODUCED: 200 concurrent POST /v1/route against a real uvicorn server ->
+    193x200 OK, 7x500. Server log shows sqlite3.OperationalError: database is
+    locked raised from store.save_decision. No lost or duplicated rows among the
+    successes, so the failure is refusal-under-contention, not corruption."
+  - "The same test through fastapi TestClient at 40 concurrent requests passes
+    cleanly. The defect only appears against a real server with real sockets, so
+    a harness built on TestClient alone would have declared this healthy."
+  - "store.connect() uses a plain sqlite3.connect with NO journal_mode=WAL and NO
+    busy_timeout, so a writer that finds the database locked fails immediately
+    instead of waiting."
+  - "store.connect() also runs executescript(_SCHEMA) plus a PRAGMA table_info and
+    a possible ALTER TABLE on EVERY call, and the server opens a fresh connection
+    per request (service.py:126,134,146). That is a schema migration check per
+    request, and two processes can race the ALTER."
+  - "Throughput ~8 req/s at 32 workers suggests the per-request connect+schema
+    work dominates, independent of the locking failure."
+  - "limits.py rate limiter and idempotency cache are per-create_app() and
+    in-memory under a threading.Lock, with a flat MAX_ENTRIES cap and
+    oldest-first eviction — worth testing under key spray and at window
+    boundaries."
+  - "observability._request_id is a ContextVar set in middleware and reset in a
+    finally; under BaseHTTPMiddleware a request may hop threadpool workers, so
+    id bleed between concurrent requests needs an explicit test."
+
+scope:
+  - "a deterministic harness (repo-native, no external load tool) that drives the
+    real ASGI app over loopback at a configurable concurrency, records status
+    codes, exceptions, latency percentiles and persisted-row reconciliation"
+  - "failure injection: registry made unreadable mid-run, store made read-only,
+    slow/failing dependencies, and abrupt client disconnects"
+  - "concurrency correctness: no lost or duplicated decisions, no request-id
+    bleed, idempotency replay under contention, rate-limit window boundaries"
+  - "FIX the reproduced SQLite defect (WAL + busy_timeout, and stop re-running
+    the schema script on every connection) and prove the fix with the harness"
+  - "CI gates on CORRECTNESS invariants only — zero unexpected 5xx, zero lost
+    writes, no id bleed — never on wall-clock throughput, which is not stable on
+    shared runners"
+  - "a soak mode that runs longer locally and is not part of the CI gate"
+  - "baselines and a report artifact, with the honest caveat that timing numbers
+    from CI hardware are indicative only"
+
+acceptance_criteria:
+  - "the harness reproduces the database-is-locked failure on the UNFIXED code,
+    so the test is proven to have teeth before the fix lands"
+  - "after the fix, 200+ concurrent routes produce zero 5xx and zero lost writes"
+  - "every injected failure yields a typed error envelope, never a traceback"
+  - "no request-id bleed between concurrent requests"
+  - "CI gates are correctness-only and deterministic; no timing threshold"
+  - "full battery green; no threshold lowered, no test weakened"
+
+dependencies:
+  - agentrouter/store.py, agentrouter/server/service.py, agentrouter/server/limits.py, agentrouter/observability.py
+
+non_goals:
+  - a distributed or multi-process rate limiter (documented single-process today)
+  - replacing SQLite, or adding a new storage backend
+  - publishing benchmark numbers as a product claim
+  - unified doctor / diagnostic bundle / runbooks (TASK-018C)
+
+external_blockers:
+  - "none: everything runs against an in-process or loopback app with no network,
+    no credentials and no paid inference"

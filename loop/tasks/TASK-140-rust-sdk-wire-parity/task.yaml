@@ -1,0 +1,33 @@
+id: TASK-140
+title: Rust SDK wire-contract parity
+source: production completion objective / SDK Partial row in docs/RUST_PARITY_MATRIX.md
+priority: 1
+status: verify
+risk: low
+customer_impact: All Rust SDK endpoint contracts gain direct Python differential evidence.
+affected_surfaces:
+  - rust/agentrouter-cli/src/sdk.rs
+  - rust/agentrouter-cli/src/bin/sdk_from_json.rs
+  - tests/test_rust_sdk_compat.py
+dependencies: []
+acceptance_criteria:
+  - All nine endpoint requests and response/error envelopes match the Python SDK over a local fixture.
+  - Authenticated, absent, and blank API-key behavior matches.
+  - Transport error output does not expose URLs or raw error details.
+  - SDK parity remains Partial for unmatched Python transport injection/error behavior.
+verification_commands:
+  - ./.venv/bin/python -m pytest -q tests/test_rust_sdk_compat.py
+  - cargo test --workspace --locked
+  - cargo clippy --workspace --all-targets --locked -- -D warnings
+  - cargo fmt --all -- --check
+  - ./.venv/bin/ruff check tests/test_rust_sdk_compat.py
+  - ./.venv/bin/ruff format --check tests/test_rust_sdk_compat.py
+  - git diff --check
+required_reviewers:
+  - compatibility-contract
+  - security-output-review
+repair_iteration: 0
+external_blockers: []
+owner_blockers: []
+created_at: "2026-11-14"
+updated_at: "2026-11-14"

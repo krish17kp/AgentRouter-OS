@@ -1,0 +1,39 @@
+[package]
+name = "agentrouter-api"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "HTTP request and response schema contracts for AgentRouter OS"
+
+[dependencies]
+axum = { version = "=0.8.9", features = ["json"] }
+agentrouter-core = { path = "../agentrouter-core" }
+agentrouter-limits = { path = "../agentrouter-limits" }
+agentrouter-classifier = { path = "../agentrouter-classifier" }
+agentrouter-hosts = { path = "../agentrouter-hosts" }
+agentrouter-registry = { path = "../agentrouter-registry" }
+agentrouter-routing = { path = "../agentrouter-routing" }
+agentrouter-storage = { path = "../agentrouter-storage" }
+sha2 = "=0.10.9"
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = { version = "1.0.128", features = ["arbitrary_precision"] }
+tokio = { version = "=1.54.1", features = ["macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
+tower-http = { version = "=0.7.1", features = ["catch-panic", "cors"] }
+unicode-general-category = "=0.6.0"
+
+[[bin]]
+name = "api_request_from_json"
+path = "src/bin/api_request_from_json.rs"
+
+[[bin]]
+name = "api_response_from_json"
+path = "src/bin/api_response_from_json.rs"
+
+[[bin]]
+name = "api_service_from_json"
+path = "src/bin/api_service_from_json.rs"
+
+[[bin]]
+name = "agentrouter-api-server"
+path = "src/bin/api_server.rs"

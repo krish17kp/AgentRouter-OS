@@ -1,0 +1,26 @@
+{
+  "name": "@agentrouter/sdk",
+  "version": "0.4.0",
+  "description": "Typed TypeScript client for the local AgentRouter OS REST API (parity with the Python SDK).",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "// files": "Tests are repo-only: live.test.ts drives ../../../scripts/serve_for_parity.py, which is not part of the published package, so shipping it would give consumers a test that cannot run.",
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test test/*.test.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "typescript": "^5.5"
+  }
+}

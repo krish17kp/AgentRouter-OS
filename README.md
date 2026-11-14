@@ -1,7 +1,7 @@
 # AgentRouter OS
 
 [![CI](https://github.com/krish17kp/AgentRouter-OS/actions/workflows/ci.yml/badge.svg)](https://github.com/krish17kp/AgentRouter-OS/actions/workflows/ci.yml)
-![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Version](https://img.shields.io/badge/version-0.4.0-brightgreen)
 
@@ -174,7 +174,21 @@ agentrouter execute d_00001          # shows what would run, asks for --yes
 agentrouter execute d_00001 --yes    # actually runs it
 ```
 
-Disabled everywhere by default. To opt a provider in, set `supports_execution: true` and an `exec_command` in `providers.yaml`. **Hard gate:** any decision with `risk=high` or non-auto approval is always blocked from auto-execution — the command tells you to run the prompt yourself.
+Disabled everywhere by default. For a legacy CLI provider, opt in with
+`supports_execution: true` and an `exec_command` in `providers.yaml`.
+**Hard gate:** any decision with `risk=high` or non-auto approval is always
+blocked from auto-execution — the command tells you to run the prompt yourself.
+
+For **OpenAI API text execution**, set `supports_execution: true` for the `openai`
+provider in your local `registry/providers.yaml`, export `OPENAI_API_KEY`, then
+route a text-only task to an OpenAI model and run its decision with `execute
+<decision-id> --yes`. `--dry-run` shows the selected host and sends nothing.
+This path rejects tasks that need external tools, rechecks the recorded model
+and host before sending, and caps the output at 4,096 tokens. It makes one
+request with a 60-second timeout, never retries a possibly billable call, and
+sets `store: false` in the [Responses API](https://developers.openai.com/api/reference/resources/responses/methods/create)
+request. The API key and prompt are never printed by the adapter. Live API
+execution needs your key and may incur provider charges; no live call runs in CI.
 
 ### See telemetry and history
 
@@ -206,8 +220,17 @@ The [`integrations/`](integrations/) directory turns AgentRouter into a **skill*
 agentrouter plugin install claude-code    # -> ~/.claude/skills/agentrouter/  (idempotent; backs up any existing file)
 agentrouter plugin install codex          # -> ~/.codex/AGENTS.md
 agentrouter plugin doctor                 # status + exact paths
-agentrouter plugin uninstall claude-code  # restores any backup
+agentrouter plugin uninstall claude-code  # ownership-safe removal; restores any backup
+# For a pre-v0.5 identical legacy copy only, explicitly claim ownership first:
+agentrouter plugin install claude-code --adopt-identical
 ```
+
+Install records the exact installed digest and file identity in private state below the host root.
+Uninstall removes a file only when that ownership record still matches; package upgrades therefore
+remain reversible, while user edits, unmanaged identical files, and unrelated files are preserved.
+Forced replacements use a metadata-preserving backup plus a recoverable transaction journal. The
+Claude Code `skills/agentrouter/` directory is removed only when AgentRouter created it, its identity
+still matches, and it is empty; parent directories are never removed recursively.
 
 Manual copy still works if you prefer:
 
@@ -361,6 +384,74 @@ Everything is local under `AGENTROUTER_HOME` (default `~/.agentrouter/`):
 - **Nothing leaves your machine** except explicit `providers refresh` fetches and tools you run with `execute --yes`.
 - Task text is stored locally so `explain` can replay decisions. Use `--no-log` on `route` to skip persisting a sensitive task.
 
+## Observability (opt-in)
+
+Every route decision emits a structured JSON record on the `agentrouter.route`
+logger — metadata only (`task_type`, `risk`, chosen model, score, `request_id`,
+`task_len`); **never the task text or generated prompt**. It is silent by default.
+
+| Env var | Effect |
+| --- | --- |
+| `AGENTROUTER_LOG=1` | Print the JSON route-decision records to stderr. |
+| `AGENTROUTER_OTEL=1` | Emit OpenTelemetry spans (needs `pip install agentrouter-os[otel]`; a no-op otherwise). |
+
+The server echoes `X-Request-ID` and threads it into the log record so API calls
+are traceable end to end.
+
+### Server limits (opt-in)
+
+| Env var | Effect |
+| --- | --- |
+| `AGENTROUTER_RATE_LIMIT=N` | Allow at most `N` requests per window per caller (0/unset = off). Excess → `429` + `Retry-After`. `/health` and `/ready` are exempt. |
+| `AGENTROUTER_RATE_WINDOW=S` | Rate-limit window in seconds (default 60). |
+| `AGENTROUTER_IDEMPOTENCY_TTL=S` | How long a cached response is replayable (default 300). |
+
+Send an `Idempotency-Key` header on a `POST` to make a retry safe: the first
+response is replayed (with `Idempotency-Replay: true`) instead of producing a
+second decision. The key is scoped to the caller's API key, the path, and a hash
+of the request body, and only successful (2xx) responses are cached. In-memory
+and single-process (one worker); both stores are size-bounded.
+
+## MCP server
+
+Expose routing to MCP clients (agents, IDEs) without shelling out:
+
+```bash
+pip install "agentrouter-os[mcp]"
+agentrouter mcp          # serves over stdio
+```
+
+Tools are **read-only and dry-run**: `route`, `classify`, `explain`,
+`list_models`, `list_hosts`. There is deliberately **no execute tool** — the MCP
+surface never spawns a process or runs a model.
+
+Register it with a Claude Code / MCP client, e.g.:
+
+```json
+{ "mcpServers": { "agentrouter": { "command": "agentrouter", "args": ["mcp"] } } }
+```
+
+The Rust stdio server is available as a migration preview from a source
+checkout; it has not replaced the supported Python CLI entry point. See
+[`docs/RUST_MCP_SERVER.md`](docs/RUST_MCP_SERVER.md) for its local setup and
+parity scope.
+
+Rust also has an offline provider-catalog mapping slice. Live provider refresh
+still runs through the Python CLI; see
+[`docs/RUST_PROVIDER_REFRESH.md`](docs/RUST_PROVIDER_REFRESH.md).
+
+The Cargo workspace also exposes a Rust local reliability soak for development
+and release checks:
+
+```bash
+cargo run -p agentrouter-cli --bin agentrouter -- reliability soak --seconds 120
+```
+
+It creates a fresh temporary home by default, binds only to loopback, removes
+`AGENTROUTER_API_KEY` from its own process, and writes an indicative JSON
+report. The supported Python CLI remains the release authority during the Rust
+migration. See [`docs/RUST_RELIABILITY.md`](docs/RUST_RELIABILITY.md).
+
 ---
 
 ## Troubleshooting
@@ -393,7 +484,17 @@ pytest --cov=agentrouter                  # coverage report (fails under 80%)
 ruff check . && ruff format --check .     # lint + format
 ```
 
-No test needs internet or an API key — provider-refresh tests mock the HTTP layer. CI runs the same suite on Python 3.11 / 3.12 / 3.13, then a **`build-smoke` job** builds the real sdist + wheel, installs the wheel into a clean venv, and smoke-tests the *installed* artifact (`--version` → `init` → `route --json` → `stats` → `registry list`). That catches packaging bugs — a missing seed file, a broken entrypoint — that editable installs never hit. See [TESTING.md](TESTING.md).
+No test needs internet or an API key — provider-refresh tests mock the HTTP layer. CI runs the same suite on Python 3.10 / 3.11 / 3.12 / 3.13, then a **`build-smoke` job** builds the real sdist + wheel, installs the wheel into a clean venv, and smoke-tests the *installed* artifact (`--version` → `init` → `route --json` → `stats` → `registry list`). That catches packaging bugs — a missing seed file, a broken entrypoint — that editable installs never hit. See [TESTING.md](TESTING.md).
+
+The workspace also provides a separate Rust offline evaluator; see the
+[Rust evaluation CLI guide](docs/RUST_EVALUATION_CLI.md) for fixture profiles,
+report generation, and current migration boundaries.
+
+---
+
+## Architecture
+
+The target architecture — orchestration and dispatch, the three specialist agents, and the protected control plane vs. workspace permission split — is documented with four diagrams in **[docs/architecture](docs/architecture/README.md)**. These are the target design; see [Milestones](#milestones) below for what is actually implemented today.
 
 ---
 
@@ -422,7 +523,11 @@ See [ROADMAP.md](ROADMAP.md) and [MILESTONES.md](MILESTONES.md) for the full bre
 | [integrations/README.md](integrations/README.md) | Install the skill into any agent host |
 | [CLI_SPEC.md](CLI_SPEC.md) | Full command specification and flags |
 | [ROUTING_RULES.md](ROUTING_RULES.md) | Scoring, classification, risk, fallback logic |
+| [docs/API.md](docs/API.md) | Local HTTP API endpoints, auth, CORS, and errors |
+| [docs/RUST_HTTP_SERVER.md](docs/RUST_HTTP_SERVER.md) | Rust HTTP migration preview and current limits |
+| [docs/RUST_RELIABILITY.md](docs/RUST_RELIABILITY.md) | Rust loopback load and soak tooling, safety scope, and parity limits |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Components, request lifecycle, data flow |
+| [docs/architecture](docs/architecture/README.md) | Target architecture diagrams (orchestration, agents, control plane) |
 | [MODEL_REGISTRY_SCHEMA.md](MODEL_REGISTRY_SCHEMA.md) | Model entry schema (source of truth) |
 | [PROVIDER_ADAPTER_SPEC.md](PROVIDER_ADAPTER_SPEC.md) | Provider adapter contract |
 | [TESTING.md](TESTING.md) | Test layout, coverage, post-build verification |

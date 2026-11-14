@@ -71,7 +71,8 @@ def write_comparison(cmp: dict, out_dir: Path) -> list[Path]:
     lines += ["", "## Improvements", ""]
     for r in cmp["improvements"]:
         lines.append(f"- {r['dimension']}: {r['baseline']} -> {r['current']} ({r['delta']:+})")
-    (out_dir / "comparison.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    with (out_dir / "comparison.md").open("w", encoding="utf-8", newline="\n") as f:
+        f.write("\n".join(lines) + "\n")
     written.append(out_dir / "comparison.md")
 
     csv_sets = (("regressions.csv", cmp["regressions"]), ("improvements.csv", cmp["improvements"]))

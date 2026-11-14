@@ -1,0 +1,25 @@
+id: TASK-006
+title: TypeScript SDK with contract-parity to the Python SDK (backlog L3)
+source: loop/BACKLOG.yaml#L3
+priority: 6
+status: done
+risk: low
+customer_impact: JS/TS consumers get a typed client for the local API (parity with Python SDK)
+affected_surfaces: [sdk]
+dependencies: []
+acceptance_criteria:
+  - TS client mirrors the Python SDK methods (health/ready/models/hosts/classify/route/getDecision/feedback/executeDryRun)
+  - same error contract ({error:{code,message}} -> AgentRouterError with status+code)
+  - drops undefined/null body fields but keeps explicit false/0 (parity with _clean)
+  - tsc --noEmit typechecks clean; node:test contract tests pass
+  - no impact on Python package/tests
+verification_commands:
+  - npx tsc --noEmit (in sdk/typescript)
+  - node --experimental-strip-types --test test (in sdk/typescript)
+  - python -m pytest -q
+required_reviewers: [verification-engineer]
+repair_iteration: 0
+created_at: "2026-07-18"
+updated_at: "2026-07-18"
+
+result: "PASS — TypeScript SDK contract-parity with Python SDK (9/9 endpoints); tsc clean; 8/8 tests; 2 parity bugs found+fixed (no_log always-sent, non-JSON error body)"

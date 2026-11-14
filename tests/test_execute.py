@@ -2,17 +2,33 @@
 
 import json
 import sys
+from datetime import date
 
 import pytest
 import yaml
 from typer.testing import CliRunner
 
+from agentrouter import registry as registry_module
+
 runner = CliRunner()
+
+# Not testing registry staleness here; freeze the registry's clock to the
+# bundled seed catalog's own curated date so an unrelated, correct staleness
+# warning (stderr) never leaks into CliRunner's merged output and breaks
+# these tests' JSON parsing as real time passes.
+_FROZEN_TODAY = date(2026, 7, 14)
+
+
+class _FrozenDate(date):
+    @classmethod
+    def today(cls):
+        return _FROZEN_TODAY
 
 
 @pytest.fixture()
 def home(tmp_path, monkeypatch):
     monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
+    monkeypatch.setattr(registry_module, "date", _FrozenDate)
     from agentrouter.cli import app
 
     result = runner.invoke(app, ["init"])
@@ -95,6 +111,24 @@ def test_execute_requires_yes(home):
     r = runner.invoke(app, ["execute", payload["decision_id"]])
     assert r.exit_code == 2
     assert "--yes" in r.output
+
+
+def test_legacy_provider_dry_run_never_executes_even_with_yes(home, tmp_path, capfd):
+    from agentrouter.cli import app
+
+    payload = _route(LOW_RISK_TASK)
+    marker = tmp_path / "must-not-exist"
+    provider = payload["recommendation"]["provider"]
+    _enable_execution(
+        home,
+        provider,
+        [sys.executable, "-c", f"from pathlib import Path; Path({str(marker)!r}).touch()"],
+    )
+    result = runner.invoke(app, ["execute", payload["decision_id"], "--yes", "--dry-run"])
+    assert result.exit_code == 0, result.output
+    assert "Dry run: nothing executed." in result.output
+    capfd.readouterr()
+    assert not marker.exists()
 
 
 def test_low_risk_executes_end_to_end(home, capfd):

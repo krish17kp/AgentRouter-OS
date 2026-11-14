@@ -1,0 +1,64 @@
+id: TASK-011
+title: Context-band data and annotation program
+source: user request 2026-07-31 (post RC-branch); follows TASK-009 proven dataset ceiling
+priority: 1
+status: done
+merged: PR #2, merge commit 35e616ef7198236560ba2983d14e3bbdccb496ba, 2026-08-01
+risk: medium
+owner: unassigned
+created: 2026-07-31
+customer_impact: >
+  Context-band accuracy is the sole failing release gate (held-out 0.6667 < 0.90).
+  TASK-009 proved the 24-case dev set is a ceiling: rules 0.6667, learned 0.6889,
+  hybrid 0.6444 all fail and none is significantly better. Closing the gap honestly
+  needs a substantially larger, human-reviewed dataset and a fresh private holdout —
+  not more hand-written rules or tuning against the frozen holdout.
+
+objective: >
+  Build a substantially larger human-reviewed DEVELOPMENT dataset and a NEW private
+  holdout for small/medium/large context-band classification. Do not reuse or tune
+  against the current frozen holdout. The goal is honest generalization headroom, not
+  forcing the old score upward with hand-written rules.
+
+scope:
+  - a human-reviewable labeling interface or CLI
+  - annotation guidelines (clear small/medium/large definitions + examples)
+  - disagreement + adjudication handling (multi-annotator, tie-break protocol)
+  - train / dev / private-holdout separation with strict isolation
+  - exact and near-duplicate leakage detection across splits + against gold/test literals
+  - diverse prompt generation for CANDIDATE COLLECTION ONLY (never automatic final labels)
+  - repository/file-impact signals from Graphify where available (optional feature)
+  - uncertainty + abstention for ambiguous one-line prompts
+  - versioned datasets + reproducible training
+  - comparison of rules, learned, and hybrid approaches on the new splits
+
+acceptance_criteria:
+  - new development set is materially larger than the 24-case TASK-009 set and every
+    final label is human-reviewed (generation may propose candidates; humans decide)
+  - a NEW private holdout exists, isolated, evaluated at most once per candidate model,
+    and never used for tuning or selection
+  - the current frozen TASK-009 holdout is NOT reused or tuned against
+  - exact + near-duplicate leakage checks pass across train/dev/holdout and against
+    existing gold/test literals; report duplicates found and removed
+  - annotation guidelines + adjudication protocol are documented and versioned
+  - datasets are versioned (schema + provenance + label-source per item) and training
+    is reproducible from a pinned command
+  - rules vs learned vs hybrid are compared on the new dev set with accuracy, macro-F1,
+    per-band recall, and confidence intervals; abstention behavior reported
+  - honest results recorded even if the 0.90 gate is still not reached; no threshold
+    reduction, no holdout tuning, no reuse of the frozen holdout
+
+dependencies:
+  - TASK-009 (frozen holdout + learned-model study) — do NOT reuse its holdout
+  - agentrouter/context_model.py, agentrouter/evaluation/context_bands.py
+  - Graphify (optional) for repository/file-impact signals — must degrade gracefully
+
+non_goals:
+  - reducing or altering the 0.90 release gate
+  - tuning against, or reusing, the current frozen holdout
+  - hand-writing rules to inflate the existing score
+  - making AgentRouter depend on Graphify for basic operation
+
+external_blockers:
+  - human annotator time / adjudication is required for final labels
+  - larger candidate collection may require owner decision on prompt sources

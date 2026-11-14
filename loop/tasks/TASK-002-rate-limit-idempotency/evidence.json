@@ -1,0 +1,35 @@
+{
+  "criteria": [
+    {
+      "id": "AC1",
+      "text": "rate limiting opt-in; 429+Retry-After",
+      "status": "PASS",
+      "evidence": "test_rate_limit_returns_429, test_rate_limit_disabled_lets_requests_through, test_health_exempt_from_rate_limit"
+    },
+    {
+      "id": "AC2",
+      "text": "Idempotency-Key replays; no duplicate decision",
+      "status": "PASS",
+      "evidence": "test_idempotent_post_replays_same_decision (verification confirmed 1 DB row)"
+    },
+    {
+      "id": "AC3",
+      "text": "default unchanged; no new deps",
+      "status": "PASS",
+      "evidence": "399 passed; limits.py stdlib-only"
+    },
+    {
+      "id": "AC4",
+      "text": "stores bounded",
+      "status": "PASS",
+      "evidence": "test_idempotency_cache_bounded, test_rate_limiter_bounded; 50k-key check"
+    }
+  ],
+  "security": "HIGH auth-bypass + 3 MEDIUM + 2 bugs from audit -> all fixed with regression tests; bandit 0",
+  "commands": [
+    "pytest tests/test_server_limits.py -q => 19 passed",
+    "pytest -q => 399 passed (was 393 pre-task, 380 at session baseline)",
+    "ruff check + format --check => clean",
+    "bandit -c pyproject.toml -r agentrouter => 0 issues"
+  ]
+}

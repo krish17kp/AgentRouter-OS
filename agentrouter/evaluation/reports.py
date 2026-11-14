@@ -13,6 +13,12 @@ from pathlib import Path
 REPORT_SCHEMA_VERSION = 1
 
 
+def _write_text_lf(path: Path, text: str) -> None:
+    """Write stable UTF-8 artifacts with canonical LF on every platform."""
+    with path.open("w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
+
+
 def _confusion_csv(path: Path, matrix: dict[str, dict[str, int]]) -> None:
     labels = sorted(set(matrix) | {p for row in matrix.values() for p in row})
     with path.open("w", newline="", encoding="utf-8") as f:
@@ -29,7 +35,7 @@ def write_reports(result: dict, out_dir: Path) -> list[Path]:
     written: list[Path] = []
 
     payload = {"report_schema_version": REPORT_SCHEMA_VERSION, **result}
-    (out_dir / "result.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    _write_text_lf(out_dir / "result.json", json.dumps(payload, indent=2))
     written.append(out_dir / "result.json")
 
     scorecard = {
@@ -38,11 +44,12 @@ def write_reports(result: dict, out_dir: Path) -> list[Path]:
         "dimensions": result.get("dimensions"),
         "release_gates": result.get("release_gates"),
         "release_ready": result.get("release_ready"),
+        "context_band_generalization": result.get("context_band_generalization"),
     }
-    (out_dir / "scorecard.json").write_text(json.dumps(scorecard, indent=2), encoding="utf-8")
+    _write_text_lf(out_dir / "scorecard.json", json.dumps(scorecard, indent=2))
     written.append(out_dir / "scorecard.json")
 
-    (out_dir / "report.md").write_text(render_markdown(result), encoding="utf-8")
+    _write_text_lf(out_dir / "report.md", render_markdown(result))
     written.append(out_dir / "report.md")
 
     m = result.get("classification", {})
@@ -65,6 +72,23 @@ def write_reports(result: dict, out_dir: Path) -> list[Path]:
                     ]
                 )
     written.append(csv_path)
+
+    generalization = result.get("context_band_generalization") or {}
+    holdout_failures = (generalization.get("current_holdout") or {}).get("failures", [])
+    holdout_csv = out_dir / "context_band_holdout_failures.csv"
+    with holdout_csv.open("w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["id", "category", "expected", "predicted"])
+        for failure in holdout_failures:
+            w.writerow(
+                [
+                    failure["id"],
+                    failure["category"],
+                    failure["expected"],
+                    failure["predicted"],
+                ]
+            )
+    written.append(holdout_csv)
 
     if "confusion_task_type" in m:
         _confusion_csv(out_dir / "confusion_task_type.csv", m["confusion_task_type"])
@@ -112,11 +136,28 @@ def render_markdown(result: dict) -> str:
             f"- task-type macro F1: {m['task_type']['macro_f1']}",
             f"- high-risk recall: {m.get('high_risk_recall')}",
             f"- tool F1: {m['tools']['f1']}",
-            f"- context accuracy: {m['context']['accuracy']}",
+            f"- gold-set context accuracy (in-sample): {m['context']['accuracy']}",
             f"- failed cases: {len(m.get('failures', []))}",
+        ]
+    if generalization := result.get("context_band_generalization"):
+        current = generalization["current_holdout"]
+        before = generalization["pre_task004_holdout"]
+        lines += [
+            "",
+            "## Context-band generalization (frozen final holdout)",
+            "",
+            f"- holdout checksum: `{generalization['holdout_sha256']}`",
+            f"- current accuracy: {current['accuracy']} (95% CI {current['accuracy_ci95']})",
+            f"- current macro-F1: {current['macro_f1']} "
+            f"(bootstrap 95% CI {current['macro_f1_bootstrap_ci95']})",
+            f"- per-band recall: {current['per_band_recall']}",
+            f"- pre-TASK-004 accuracy: {before['accuracy']}",
+            f"- accuracy delta: {generalization['delta']['accuracy']}",
         ]
     lines += ["", "## Limitations", ""]
     for name, d in (result.get("dimensions") or {}).items():
         if d["status"] == "pending":
             lines.append(f"- `{name}` dimension not yet measured (evaluator pending).")
+    for limitation in (result.get("context_band_generalization") or {}).get("limitations", []):
+        lines.append(f"- {limitation}")
     return "\n".join(lines) + "\n"

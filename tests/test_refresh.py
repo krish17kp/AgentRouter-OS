@@ -1,6 +1,8 @@
 """Capstone M2 — providers refresh (OpenRouter) with mocked HTTP. No network, no keys."""
 
 import copy
+import os
+import urllib.error
 
 import pytest
 import yaml
@@ -136,6 +138,114 @@ def test_fetch_bad_shape_raises(monkeypatch):
         fetch_openrouter_models(None, limit=5)
 
 
+def test_openai_refresh_maps_known_models_and_warns_for_unmapped(monkeypatch):
+    calls = []
+
+    def fake(url, api_key):
+        calls.append((url, api_key))
+        return {"data": [{"id": "gpt-4.1-mini-2026-01-01"}, {"id": "text-embedding-3-small"}]}
+
+    monkeypatch.setattr(refresh, "_http_get_json", fake)
+    entries, warnings = refresh.fetch_openai_models("test-key", limit=10)
+    assert calls == [(refresh.OPENAI_MODELS_URL, "test-key")]
+    assert [entry.model_id for entry in entries] == ["gpt-4.1-mini-2026-01-01"]
+    assert warnings == ["skipped 1 catalog entries with no family mapping (non-chat or unknown)"]
+
+
+def test_openai_refresh_requires_key_and_valid_catalog(monkeypatch):
+    with pytest.raises(RefreshError, match="OPENAI_API_KEY"):
+        refresh.fetch_openai_models(None, limit=5)
+
+    monkeypatch.setattr(refresh, "_http_get_json", lambda *_args: {"data": []})
+    with pytest.raises(RefreshError, match="response shape"):
+        refresh.fetch_openai_models("test-key", limit=5)
+
+
+@pytest.mark.parametrize(
+    ("payload", "match", "message"),
+    [
+        ({"data": [{"id": "unknown-model"}]}, None, "no OpenAI entry could be mapped"),
+        ({"data": [{"id": "gpt-4o"}]}, "missing", "no OpenAI entry matched"),
+    ],
+)
+def test_openai_refresh_reports_empty_filtered_results(monkeypatch, payload, match, message):
+    monkeypatch.setattr(refresh, "_http_get_json", lambda *_args: payload)
+    with pytest.raises(RefreshError, match=message):
+        refresh.fetch_openai_models("test-key", limit=5, match=match)
+
+
+def test_http_get_json_rejects_non_http_schemes():
+    with pytest.raises(RefreshError, match=r"non-http\(s\)"):
+        refresh._http_get_json("file:///etc/passwd", None)
+
+
+@pytest.mark.parametrize(
+    ("failure", "message"),
+    [
+        (urllib.error.HTTPError("https://example.test", 503, "down", {}, None), "HTTP 503"),
+        (urllib.error.URLError("offline"), "network error"),
+        (TimeoutError("slow"), "timed out"),
+    ],
+)
+def test_http_get_json_converts_transport_failures(monkeypatch, failure, message):
+    def fail(*_args, **_kwargs):
+        raise failure
+
+    monkeypatch.setattr(refresh.urllib.request, "urlopen", fail)
+    with pytest.raises(RefreshError, match=message):
+        refresh._http_get_json("https://example.test/models", "secret")
+
+
+def test_http_get_json_converts_invalid_json_and_adds_auth_header(monkeypatch):
+    captured = {}
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self):
+            return b"{invalid"
+
+    def fake_urlopen(request, timeout):
+        captured["auth"] = request.get_header("Authorization")
+        captured["timeout"] = timeout
+        return Response()
+
+    monkeypatch.setattr(refresh.urllib.request, "urlopen", fake_urlopen)
+    with pytest.raises(RefreshError, match="not valid JSON"):
+        refresh._http_get_json("https://example.test/models", "secret")
+    assert captured == {"auth": "Bearer secret", "timeout": refresh._TIMEOUT_SECONDS}
+
+
+def test_http_get_json_accepts_valid_json_without_an_api_key(monkeypatch):
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self):
+            return b'{"data": []}'
+
+    monkeypatch.setattr(refresh.urllib.request, "urlopen", lambda *_args, **_kwargs: Response())
+    assert refresh._http_get_json("https://example.test/models", None) == {"data": []}
+
+
+def test_openai_refresh_stops_after_requested_limit(monkeypatch):
+    monkeypatch.setattr(
+        refresh,
+        "_http_get_json",
+        lambda *_args: {"data": [{"id": "gpt-4o"}, {"id": "gpt-5"}]},
+    )
+    entries, warnings = refresh.fetch_openai_models("test-key", limit=1)
+    assert [entry.model_id for entry in entries] == ["gpt-4o"]
+    assert warnings == []
+
+
 # --- generated registry merge ---------------------------------------------------
 
 
@@ -152,6 +262,76 @@ def test_manual_wins_on_collision(home, mock_http):
     kept = [m for m in merged if m.model_id == "claude-sonnet-5"]
     assert len(kept) == 1 and kept[0].pricing_tier is PricingTier.high  # manual value
     assert any("shadowed" in w for w in warnings)
+
+
+def test_write_generated_registry_includes_provenance(home, mock_http):
+    entries, _ = fetch_openrouter_models(None, limit=25)
+    reg_dir = home / "registry"
+    path = write_generated_registry(
+        reg_dir, "openrouter", entries, cli_args={"limit": 25, "match": None}
+    )
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    prov = data["provenance"]
+    assert prov["provider"] == "openrouter"
+    assert prov["source_url"] == refresh.OPENROUTER_MODELS_URL
+    assert prov["count"] == len(entries)
+    assert prov["cli_args"] == {"limit": 25, "match": None}
+    assert prov["tool_version"]
+    assert prov["fetched_at"]  # ISO-8601 UTC timestamp, non-empty
+
+
+def test_write_generated_registry_provenance_ignored_by_loader(home, mock_http):
+    """Extra top-level `provenance` key must not break the registry loader."""
+    entries, _ = fetch_openrouter_models(None, limit=25)
+    reg_dir = home / "registry"
+    write_generated_registry(reg_dir, "openrouter", entries)
+    providers = load_providers(reg_dir / "providers.yaml")
+    merged, _ = load_all_models(reg_dir, providers)
+    assert any(m.source == "refresh" for m in merged)
+
+
+def test_write_generated_registry_is_atomic_on_failure(home, mock_http, monkeypatch):
+    """A failure during the atomic replace must never corrupt the previous file."""
+    entries, _ = fetch_openrouter_models(None, limit=25)
+    reg_dir = home / "registry"
+    path = write_generated_registry(reg_dir, "openrouter", entries)
+    original = path.read_text(encoding="utf-8")
+
+    def boom(_src, _dst):
+        raise OSError("simulated crash during atomic replace")
+
+    monkeypatch.setattr(refresh.os, "replace", boom)
+    with pytest.raises(OSError, match="simulated crash"):
+        write_generated_registry(reg_dir, "openrouter", entries[:1])
+
+    # the final file is untouched — still the original, complete content
+    assert path.read_text(encoding="utf-8") == original
+    # no leftover temp file (hidden, unpredictable name — glob for the *.tmp suffix)
+    assert not list(reg_dir.glob("*.tmp"))
+
+
+def test_write_generated_registry_temp_file_is_not_predictable(home, mock_http):
+    """The temp filename must not be guessable/pre-plantable (no fixed name + PID)."""
+    entries, _ = fetch_openrouter_models(None, limit=25)
+    reg_dir = home / "registry"
+    predictable = reg_dir / f"models.openrouter.generated.yaml.tmp{os.getpid()}"
+    write_generated_registry(reg_dir, "openrouter", entries)
+    assert not predictable.exists()
+
+
+def test_previous_model_ids_reads_existing_generated_file(home, mock_http):
+    entries, _ = fetch_openrouter_models(None, limit=25)
+    reg_dir = home / "registry"
+    assert refresh.previous_model_ids(reg_dir, "openrouter") == set()
+    write_generated_registry(reg_dir, "openrouter", entries)
+    assert refresh.previous_model_ids(reg_dir, "openrouter") == {e.model_id for e in entries}
+
+
+@pytest.mark.parametrize("content", ["[1, 2]", "models: nope\n", "models: [\n", "\xff"])
+def test_previous_model_ids_ignores_invalid_or_unexpected_files(tmp_path, content):
+    path = tmp_path / "models.openrouter.generated.yaml"
+    path.write_bytes(content.encode("latin-1"))
+    assert refresh.previous_model_ids(tmp_path, "openrouter") == set()
 
 
 def test_refresh_is_idempotent(home, mock_http):
@@ -185,6 +365,32 @@ def test_cli_refresh_writes_and_routing_still_works(home, mock_http):
 
     route = runner.invoke(app, ["route", "write a haiku about routers"])
     assert route.exit_code == 0, route.output
+
+
+def test_cli_refresh_reports_deprecation_candidates(home, mock_http, monkeypatch):
+    from agentrouter.cli import app
+
+    r1 = runner.invoke(app, ["providers", "refresh", "openrouter"])
+    assert r1.exit_code == 0, r1.output
+    assert "candidate deprecation" not in r1.output  # nothing to compare against yet
+
+    shrunk = copy.deepcopy(SAMPLE_RESPONSE)
+    shrunk["data"] = [shrunk["data"][0]]  # only vendor/frontier-x remains live
+
+    def fake_shrunk(url, api_key):
+        return copy.deepcopy(shrunk)
+
+    monkeypatch.setattr(refresh, "_http_get_json", fake_shrunk)
+    r2 = runner.invoke(app, ["providers", "refresh", "openrouter"])
+    assert r2.exit_code == 0, r2.output
+    assert "candidate deprecation" in r2.output
+    assert "vendor/cheap-y" in r2.output and "vendor/mid-z" in r2.output
+    assert "nothing is deleted" in r2.output
+
+    # report-only: the new fetch still overwrites the generated file (no auto-keep)
+    gen = home / "registry" / "models.openrouter.generated.yaml"
+    data = yaml.safe_load(gen.read_text(encoding="utf-8"))
+    assert [m["model_id"] for m in data["models"]] == ["vendor/frontier-x"]
 
 
 def test_cli_refresh_dry_run_writes_nothing(home, mock_http):

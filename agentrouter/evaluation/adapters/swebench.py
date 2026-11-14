@@ -12,9 +12,7 @@ full issue-solving run is reported as SKIPPED_EXTERNAL.
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from ..base import Availability, DatasetAdapter, DatasetMetadata
+from ..base import Availability, DatasetAdapter, DatasetMetadata, fixture_path
 from ..schema import (
     AnnotationMethod,
     EvaluationCase,
@@ -24,7 +22,7 @@ from ..schema import (
     RoutingExpectation,
 )
 
-_FIXTURE = Path(__file__).resolve().parents[3] / "evaluation" / "fixtures" / "swebench_sample.jsonl"
+_FIXTURE = fixture_path("swebench_sample.jsonl")
 
 
 class SWEBenchAdapter(DatasetAdapter):

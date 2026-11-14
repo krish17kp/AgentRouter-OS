@@ -1,0 +1,324 @@
+# AGENT_HANDOFF — live checkpoint
+
+## Current checkpoint — 2026-11-14
+
+- Active RC branch `release/agentrouter-v0.5-rc1`; latest pushed head is `af3c699` (TASK-141). Rust workspace checks pass on Linux, Windows, and macOS; security and site pass on `af3c699`; remaining cross-platform CI is running. Windows compatibility failed on the prior head because port zero is not a deterministic transport failure on that runner; the local repair uses an unsupported URL scheme and passes before socket access. TASK-141 adds Rust SDK transport injection, timeout propagation, typed transport categories, close/send synchronization, immediate default-agent release, and credential-safe diagnostics. The focused SDK/reliability selection passes 52 tests and nine Rust SDK tests pass. The full Python regression passes 2,550/5 with evidence in `docs/COVERAGE_REPORT_2026-11-14-TASK-141.md`. TASK-142 locally compares all fields in the embedded evaluator seed models and the live Python export list; its focused test passes. The evaluator facade remains Partial for runtime orchestration. The immutable gate remains 0.6667 < 0.90.
+- PR #16 is the only open PR. Its promotion gate still fails at the unchanged frozen context-band score of 0.6667 against 0.90; live smoke skips without an OpenAI secret. Human evaluation, bounded OpenAI live validation, and deployment credentials remain under **Needs Krish**.
+- Rust plugin parity now covers list/doctor/plan, safe non-forced creation/adoption, exact uninstall, forced unmanaged replacement, journal recovery, and managed upgrades across Python and Rust. Continue the rest of the 77-module migration; Python remains the shipping authority.
+- The 77-module inventory is current in `docs/RUST_PARITY_MATRIX.md`; migration remains incomplete and Python remains the shipping authority. Continue the remaining module work, review current PR checks, and update `PRODUCTION_STATUS.md` after each slice.
+- The owner explicitly authorized iterative pushes to the release-candidate branch for this objective. The frozen evaluation threshold and holdout remain immutable. `enforce-release-gate` still fails at 0.6667 < 0.90; real human annotation, bounded OpenAI live smoke, and production credentials are listed under **Needs Krish**.
+
+## Historical checkpoint — 2026-11-11
+
+- The old local test counts, branch head, and task position below describe the earlier session and are not current.
+
+## How to use this handoff
+
+**Canonical volatile handoff.** A fresh session given only "continue from the
+previous left-off task" should recover from this file plus the repository and
+GitHub state. Detailed history belongs in `LOOP_LOG.md` and the task progress
+files, not here.
+
+`CODEX_HANDOFF.md` is a separate, Codex-oriented narrative and is **not**
+authoritative for Claude sessions; where the two disagree, this file wins.
+
+---
+
+## Position
+
+| Field | Value |
+|---|---|
+| Last updated | 2026-10-17 (Rust R2/R3 session) |
+| Repository | `/run/media/krish/New Volume/Krish/04 - Dev Projects/Agentrouteros` (path confirmed this session; prior path strings below are historical and may not match the current mount) |
+| Filesystem | NTFS/fuseblk, verified **rw** this session (`findmnt` + write test) |
+| Rust toolchain | **Installed this session** via official `rustup` (owner-authorized) — `rustc`/`cargo` 1.99.0 stable. Was absent at session start. |
+| Active branch | `task/rust-r1-workspace` (unchanged branch, now carrying R1+R2+R3), branched from `task/rust-migration-foundation` (PR #24, left untouched at `2bcaf5e`) |
+| RC | **`5ce3234`** (merge of PR #23, `task/fix-registry-staleness-test-fragility`, on top of PR #19's handoff-docs reconciliation). Open PRs/branches ahead of this point, per `gh pr list` this session: #22 (mcp dep pin), #21 (hook interpreter fix), #20 (eval CLI coverage), #16 (RC→`main` promotion, still blocked — see Release truth), #13 (TASK-019, still unmerged per instruction). The four branches this file previously listed as "safe to delete, blocked by `pre_tool_guard`" were not re-verified this session — treat that claim as historical, not current, until re-checked. |
+| `main` | not re-verified this session; historical value below (`602321a`) may be stale |
+| Open PRs | **#16** (RC → `main`, still blocked only on `context_band_accuracy`, see Release truth) · **#13** (TASK-019, historical state below not re-verified this session) · **#20, #21, #22** (opened since this file's last update, not yet reviewed by this session) |
+| Milestone | **R1 (prior session) + R2 + R3 + R4-partial shipped (this session)** — real Rust code, not just docs. R2: `agentrouter-registry` (port of `registry.py`) and `agentrouter-classifier` (port of `classifier.py`), each with its own Python/Rust compat test (seed-registry load test; 40-prompt `tests/test_classifier_rust_compat.py`). R3: `agentrouter-routing` (port of `engine.py`, 12-scenario compat test), `agentrouter-hosts` (port of `hosts.py`'s availability state machine, env/filesystem-controlled compat test `tests/test_hosts_rust_compat.py` — this test's fixture had two real cross-platform bugs, now fixed: an extensionless shell-script shim `shutil.which` can't find on Windows, and Python's `Path.home()` preferring `USERPROFILE` over `HOME` on Windows while the Rust port's `home_dir()` checks `HOME` first), `agentrouter-usage` (port of `usage.py`'s quota state machine — deliberately excludes `apply_live_verification`, the CLI/route re-ranking glue, deferred to R4/R5), `agentrouter-policy` (port of `taxonomy.py` + `controls.py`, 9-case compat test `tests/test_controls_rust_compat.py`). R4 (partial): `agentrouter-storage` DONE — full port of `store.py`'s SQLite DecisionLog (`connect`/`save_decision`/`recent_ids`/`recent_decisions`/`aggregate_stats`/`load_decision`/`snapshot`, via `rusqlite` with the `bundled`+`backup` features), verified against a real SQLite file both languages read (`tests/test_store_rust_compat.py`); new `agentrouter-cli` crate ports the `route --json` pipeline (`safety.gates_for`, `prompts.generate_prompt`, `learning.learned_weights`, `cli._apply_policy`/`_reason_for`, `hosts.execution_route_block`, assembled into the same payload `cli.route()` builds), verified against the real seed registries for 4 tasks (`tests/test_cli_route_rust_compat.py`) — **this compat test caught a real latent bug in R3's `agentrouter-routing`**: `round_half_even` scaled by `10^ndigits` in floating point before rounding, which can land off the true `.5` boundary (e.g. producing `0.635` where Python's `round()` gives `0.64`); fixed by delegating to Rust's `{:.N}` float formatting, which — verified directly against CPython — performs the same correctly-rounded, ties-to-even decimal conversion of the exact binary value that `round()` does. `explain`/`doctor`/`init`/`feedback`/`registry list`/`prompt generate`/`plugin`/`providers *` remain **not started**. All seven crates' `#[cfg(test)]` suites plus `cargo fmt --all`/`cargo build --workspace`/`cargo clippy --workspace --all-targets --all-features -- -D warnings`/`cargo test --workspace` green. Full `pytest -q` 1059 passed/1 skipped (0 regressions, +4 vs. the storage checkpoint, +9 vs. the R3 checkpoint). No Python code modified, no release gate touched. Also fixed a non-blocking stop-hook bug: `.claude/settings.json`'s three hook commands invoked bare `python3`, which lacks `ruff` and the project's other dependencies on this machine (only the venv's `python3` has them) — repointed at `$HOME/.venvs/agentrouter/bin/python3` explicitly. |
+| Next milestone | Finish R4: port `agentrouter-cli`'s remaining commands (`explain`, `doctor`, `init`, `feedback`, `registry list`, `prompt generate`, `plugin`, `providers *`) against `CLI_SPEC.md`, then R5 (HTTP API + TS SDK + MCP) per `RUST_MIGRATION_PLAN.md`'s milestone table. A CI job that builds/tests the Rust workspace still has not been added (carried over from the R1 note) — do this before or alongside finishing R4. Everything below this point in the file is **historical** (prior sessions' own "what shipped" records) and is preserved, not re-verified, except where a line explicitly says otherwise. |
+
+### Graphify — corrected stale claim
+
+The "Graph" section further below (last updated 2026-08-20) claims Graphify
+`0.9.47` is installed at `~/.venvs/graphify`. **This was independently checked
+and found false** during this session's foundation review
+(`AGENTROUTER_FOUNDATION_REVIEW.md` §1): `~/.local/bin` and `~/.venvs` have no
+`graphify` on this machine. This is an environment gap, not a code defect, and
+is unresolved — flagged for the owner. Do not assume Graphify is available
+until this is re-verified; the historical node/edge counts further below
+describe a graph built 2026-08-20 and may not reflect the current tree.
+
+## Release truth
+
+**NOT RELEASE READY.** `context_band_accuracy = 0.6667` against the unchanged
+`0.90` frozen-holdout gate. The other six gates pass. Only the two-real-human
+annotation round in `TASK_012_OWNER_ACTIONS.md` can close it. No AI may act as
+Annotator A, Annotator B or adjudicator; the frozen holdout must not be tuned
+against; the threshold must not be lowered.
+
+## EPIC TASK-018 — what shipped
+
+**018A** (PR #9, `c11ddec`) — versioned HTTP contract, semantic compatibility
+gate, SDK parity. Two review rounds; every finding reproduced then fixed.
+
+**018B** (PR #10, `ff06910`) — reliability lab. **Five real defects**, each
+reproduced before being fixed:
+
+1. concurrent routing returned HTTP 500 (`database is locked`) — no WAL, no
+   `busy_timeout`; does *not* reproduce through `TestClient`;
+2. the WAL fix introduced a silent backup hazard — a plain `cp` of the database
+   reports **0 rows, no error**; fixed with `store.snapshot`;
+3. an unbounded `task` was a disk-fill primitive (2 MB → 4 MB response + 4 MB
+   row) — fixed with bounded request fields, an **owner-approved** breaking
+   change recorded in the contract manifest;
+4. idempotent POSTs were not idempotent — 12 concurrent same-key requests
+   produced **6 decisions**; fixed with per-key single-flight;
+5. **CI caught what the dev machine could not** — WAL + 5 s timeout sufficed
+   locally, not on slower runners; writers are now serialised in-process.
+
+**018C** (PR #11, `d81ad94`) — unified `agentrouter doctor [--json] [--bundle]`
+aggregating the three existing doctors' primitives; secret-safe allowlisted
+diagnostic bundle; redaction narrowed so tracebacks keep their paths while 16
+credential formats stay masked; correlation-ID tracing asserted end to end
+including the error path; twelve runbooks each labelled Verified / Local
+procedure / Hypothetical, with a test keeping the citations honest.
+
+The missing **TASK-018A security re-review** was executed and closed —
+`loop/tasks/TASK-018B-reliability-load-lab/security-review-018a.md`, no new
+critical or high findings.
+
+## Branch consolidation + RC→main promotion attempt (this session)
+
+PR #14 (repo cleanup + architecture) merged into RC as `1ae3155`; PR #15
+(dynamic skill discovery + TASK-020) retargeted from the now-merged cleanup
+branch straight to RC and merged as `62d5289` — recalculated diff verified
+identical to the pre-retarget diff (tree of `1ae3155` is byte-identical to
+`e678860`, so no code moved under the retarget). Full RC validation on
+`62d5289`: pytest 973 passed/3 skipped, ruff+format clean, bandit 0, pip-audit
+(against `requirements.txt`) clean, wheel/sdist build + clean-venv install/CLI
+smoke pass (harness correctly detects `claude-code` outside the repo), SDK
+typecheck+tests pass (14/18, 4 skipped), and CI (full matrix + api-compatibility
++ build-smoke + critical-modules + security scan) green on the merged head.
+Two independent read-only reviews of the combined `7068887..62d5289` diff
+(product-architect, security-reviewer-arros) found 0 regressions and 0
+CRITICAL/HIGH; architecture review's one actionable finding (a stale
+"gitignored" claim in `.claude/SKILL_POLICY.md`) is fixed; the rest are
+pre-existing/out-of-scope LOW items, not attributable to this integration.
+
+PR **#16** (`release/agentrouter-v0.5-rc1` → `main`) opened to exercise the
+real `enforce-release-gate` (it only runs for a PR whose base is `main`, a
+release tag, or explicit dispatch — never skipped here). It ran and **failed
+on exactly one of seven gates**: `context_band_accuracy>=0.90` — measured
+`0.6667` (n=45 held-out cases), unchanged from every prior session. All six
+other gates pass (`task_type_macro_f1`, `high_risk_recall`,
+`approval_accuracy`, `tool_needs_f1`, `high_risk_gated`,
+`synthetic_routing_top1`). This is the known, legitimate, non-bypassable
+human-annotation gate — not a software defect. **PR #16 is intentionally
+left open, not merged.** Closing it requires the real two-annotator round in
+`TASK_012_OWNER_ACTIONS.md`; no AI may act as annotator or adjudicator, the
+frozen holdout must not be tuned against, and the threshold must not be
+lowered.
+
+Both merged task branches (`task/repo-cleanup-architecture-ponytail`,
+`task/dynamic-skill-discovery`) are fully reachable from RC
+(`git merge-base --is-ancestor` verified) and were deleted locally. The
+remote copies were **not** deleted — the repo's `pre_tool_guard` hook
+categorically refuses `git push --delete` on any remote branch, and that
+refusal was respected rather than routed around; the owner can delete
+`origin/task/repo-cleanup-architecture-ponytail` and
+`origin/task/dynamic-skill-discovery` directly on GitHub.
+
+TASK-019 (PR #13, still DRAFT, untouched) is now 11 commits behind RC. A
+read-only `git merge-tree` dry run (no branch or working-tree state changed)
+confirms **real future conflicts**, not just GitHub's shallow "mergeable"
+signal: `AGENT_HANDOFF.md` (trivial, doc churn), `agentrouter/diagnostics.py`
+(real — TASK-018C's doctor pattern and TASK-019's own "plugin doctor" check
+both touch it), and `tests/conftest.py` (add/add — both branches
+independently consolidated the same fixtures). Whoever resumes TASK-019
+should rebase onto current RC early, expect a real (not mechanical) merge in
+`diagnostics.py`, and re-run mutation coverage on that file after resolving
+it.
+
+## Release-gate preparation + TASK-019 resume (this session)
+
+**Track A — human annotation tooling, verified not fabricated.** All seven
+`TASK_012_OWNER_ACTIONS.md` CLI commands confirmed to exist with matching
+flags; the 63-candidate pool intact; the frozen-holdout leakage guardrail
+confirmed as real enforced code in `agentrouter/annotation/splits.py`; 35
+annotation tests passing; nothing in `agentrouter/annotation/*` touched by
+the branch consolidation. One real, pre-existing defect found by a read-only
+verification pass (not attributable to this session's other work): `dataset
+pack` did not honor its own blinding promise — `Candidate.template` (which
+literally encodes the intended band, e.g. `"review/small"`) and `notes`
+survived into the pack YAML an annotator opens. Fixed on its own branch
+(PR #18, merged) at the shared choke point (`build_pack()`), verified via
+the real CLI that a freshly generated pack now has zero `template:`/`notes:`
+occurrences. **The pipeline is genuinely ready to hand to two real human
+annotators now** — see the Next human action section this session's final
+report gave (not persisted here; re-derive from `TASK_012_OWNER_ACTIONS.md`
+plus `agentrouter dataset pack --annotator A/B --seed <distinct> --out
+<path>` if this file is the only thing surviving).
+
+**Track B — TASK-019 resumed, not restarted.** Merged current RC into
+`task/TASK-019-plugin-installer-hardening` (two merges, since RC advanced
+again mid-session with PR #18): the `diagnostics.py`/`conftest.py`/
+`AGENT_HANDOFF.md` conflicts predicted above were resolved exactly as
+predicted — `run_all()`'s two independently-added `Check` entries both kept,
+`conftest.py`'s two non-overlapping fixtures (RC's `home`, TASK-019's
+`_never_touch_the_real_home`) combined rather than one superseding the
+other, `AGENT_HANDOFF.md` took RC's version outright. Verified the PR body's
+own "still to come" list (mutation coverage, security review, Graphify
+re-check, documentation) was **already stale** before this session touched
+anything — `task.yaml`'s `results` section and real CI history on the branch
+tip already showed mutation PASS at 0.9679; only the security review and
+Graphify re-check were genuinely outstanding.
+
+An independent `security-reviewer-arros` pass over the complete TASK-019
+diff found 0 CRITICAL/HIGH, 3 MEDIUM, 2 LOW — all fixed, all reproduced
+before and after:
+`plugin list`/`doctor`/`uninstall` traceback on a hostile `0o000`
+directory (`_is_link_or_reparse`'s `path.is_symlink()` and `_path_exists`
+both caught only `FileNotFoundError`, not `PermissionError`); `safe_echo`'s
+hand-curated bidi/zero-width range list missed real codepoints (replaced
+with a Unicode-category `Cc`+`Cf` check, comprehensive and future-proof);
+`tests/conftest.py`'s autouse safety net used to *delete* a leaked write
+into the developer's real home before failing (itself a data-loss
+primitive — now fails loudly, leaves the path alone); a loose fault-injection
+test assertion, tightened, exposed a real gap in `install()`'s
+pre-validation loop (no `try/except` at all, unlike the loop right after it
+— fixed at the shared `_src_bytes` choke point and the call site).
+
+Fixing `_is_link_or_reparse` renumbered every mutant inside it, turning 7
+into unreviewed CI survivors. Each was hand-verified (mutmut's CLI was too
+slow locally for a full campaign; mutant diffs pulled individually via
+`mutmut show`, then applied by hand to confirm each new test actually fails
+against them before being reverted): 3 were real gaps, now killed with
+tests in `tests/test_plugins_decisions.py`; 4 were genuinely equivalent,
+re-verified fresh (not carried forward) and re-allowlisted under their new
+numbers. Final mutation gate: **PASS at 0.9688 overall, 0 unreviewed
+survivors**, confirmed by CI's `critical-modules` job, not just locally.
+
+PR #13's stale description (the "still to come" list, the pre-merge commit
+count) corrected to reflect actual verified state. Marked **ready for
+review** (un-drafted) — all of `task.yaml`'s own acceptance criteria are
+now genuinely met and CI is green — but **not merged**, per instruction.
+
+## Production Milestone 1 (TASK-020) — what shipped
+
+**Architecture publication**: the four canonical diagrams (already finalized
+in `2de5cae` on `task/repo-cleanup-architecture-ponytail`, still `img1-4.png`
+with no landing page) renamed to descriptive filenames
+(`01-orchestration-routing-dispatch.png` … `04-workspace-layer-maintainer-interfaces.png`)
+and given a `docs/architecture/README.md` landing page; root `README.md`'s
+Architecture section now links there instead of embedding all four images
+inline.
+
+**Harness identity + usage/quota intelligence** (`loop/tasks/TASK-020-preflight-model-intelligence/`):
+a discovery pass first established that most of "Milestone 1" already existed
+— `engine.py` (complexity-weighted scoring + explanation trail),
+`hosts.py`/TASK-016 (verified execution-host states), `refresh.py` (dynamic
+catalog discovery), `diagnostics.py`/TASK-018C (the `doctor` Check pattern) —
+so only two real gaps were built: `agentrouter/harness.py` (introspective,
+evidence-only harness detection: Claude Code via a verified `CLAUDECODE` env
+var, CI via `CI`/`GITHUB_ACTIONS`, GENERIC/UNKNOWN otherwise — no other tool
+is guessed) and `agentrouter/usage.py` (a usage/quota state model —
+UNKNOWN/UNSUPPORTED/AVAILABLE/EXHAUSTED/ERROR — honestly UNSUPPORTED for
+every real provider today, since no live-credentialed adapter is registered;
+`loop/BACKLOG.yaml` P2 already tracks that as owner-credential-gated). Wired
+opt-in only: `doctor --verify-live` and `route --verify-live`; zero behavior
+change without the flag.
+
+Three independent read-only reviews (verification-engineer,
+security-reviewer-arros, product-architect) found 0 CRITICAL/HIGH, 3 MEDIUM
+security findings (unenforced timeout; unsanitized adapter-supplied text;
+inconsistent provider-id namespace between `doctor` and `route`'s usage
+lookups), 2 LOW, and 1 correctness bug (duplicated exclusion entries on a
+quota-triggered re-rank) — all reproduced and fixed; see
+`loop/tasks/TASK-020-preflight-model-intelligence/repairs.md`. Full
+regression after repairs: **970 passed, 3 skipped** (baseline 936/3, so +34
+new tests, 0 regressions); ruff/bandit/pip-audit clean.
+
+## Graph
+
+| Field | Value |
+|---|---|
+| Graphify | **0.9.47** at `~/.venvs/graphify`, linked into `~/.local/bin` |
+| Built | 2026-08-20 from RC `d81ad94` |
+| Size | **3623 nodes, 7084 edges, 309 communities** |
+| Artifacts | `graphify-out/{graph.json,graph.html,GRAPH_REPORT.md}` — local only, gitignored |
+| Verified | `save_decision` + four callers checked line-by-line against source |
+| Earned its keep | `graphify affected "connect"` exposed the WAL blast radius, which led directly to defect 2 above |
+| Community naming | placeholder — labelling needs an LLM backend, deliberately skipped (no paid inference) |
+
+Refresh with `graphify update .` (AST only, no LLM, no API key).
+
+## Latest gates
+
+| Check | At | Result |
+|---|---|---|
+| pytest | `d81ad94` (018-era) | 936 passed, 3 skipped |
+| branch coverage (gate 80%) | `d81ad94` | 85.42% |
+| mutation gate | `d81ad94` | PASS — 0.986 overall, safety 0.9879, engine 0.9815 |
+| contract check | `d81ad94` | unchanged; 8 owner-accepted |
+| pytest | this session, `task/dynamic-skill-discovery` + TASK-020 | **970 passed, 3 skipped** |
+| ruff check / format | this session | clean, 348 files |
+| bandit (`agentrouter`) | this session | 0 issues |
+| pip-audit | this session | no known vulnerabilities |
+| pytest | this session, merged RC `62d5289` | **973 passed, 3 skipped** |
+| ruff check / format | this session, RC `62d5289` | clean |
+| bandit (`agentrouter`) | this session, RC `62d5289` | 0 issues |
+| pip-audit (`requirements.txt`) | this session, RC `62d5289` | no known vulnerabilities |
+| build + clean-venv install/CLI smoke | this session, RC `62d5289` | pass |
+| sdk/typescript typecheck + test | this session, RC `62d5289` | pass (14 pass, 4 skipped) |
+| CI (full matrix, api-compat, build-smoke, critical-modules, security) | this session, RC `62d5289` | all green |
+| `enforce-release-gate` (real, PR #16 base=`main`) | this session | **FAIL** — only `context_band_accuracy` (0.6667 < 0.90); other 6 gates pass |
+
+Critical-module mutation gate was confirmed via CI's `Critical Mutation
+Testing` workflow (pass) on RC `62d5289`, not re-run locally this session.
+
+## Next action
+
+**TASK-019 (PR #13) is DONE and ready for review — an owner decision to
+merge, not further engineering.** Everything in `task.yaml`'s acceptance
+criteria is met (every invariant tested, mutation gate PASS 0.9688/0
+unreviewed survivors, every documented command executed by
+`test_documented_commands.py`, no threshold lowered/test weakened/mutant
+blanket-allowlisted) and CI is green on the current head. Do not reopen it
+for stylistic reasons. If the owner merges it, refresh Graphify and pick the
+next module by the same graph-driven gap analysis TASK-019 itself used
+(size+coverage, hub centrality, blast-radius outside the project).
+
+**The human-annotation round (`TASK_012_OWNER_ACTIONS.md`) is the only path
+to closing PR #16.** The tooling is now genuinely ready — see Track A above.
+If a fresh session is asked to help, it may prepare packs, verify file
+integrity/schema, check commands, and run the pipeline after real labels
+exist; it may **never** generate a label, adjudicate a disagreement, or tune
+against the frozen holdout.
+
+```bash
+source "$HOME/.venvs/agentrouter/bin/activate"
+export PATH="$HOME/.local/bin:$PATH"
+gh pr view 13   # confirm still ready/green before assuming this file is current
+gh pr view 16   # confirm still blocked only by context_band_accuracy
+```
+
+## Open findings
+
+None blocking. All three EPIC-018 findings are closed: the WAL sidecar hazard
+(fixed via `store.snapshot`), the missing 018A security re-review (executed,
+no new critical/high), and the redaction path over-match (fixed without
+weakening detection). TASK-019's independent security review findings (3
+MEDIUM, 2 LOW) are all fixed and re-verified this session, see above. The
+consolidation session's LOW-severity items remain pre-existing/out-of-scope,
+below the fix-now bar under this repo's "don't reopen a finished milestone
+for stylistic reasons" policy.
+
+## Release and safety boundaries
+
+The active owner instruction authorizes iterative pushes to the release-candidate
+branch. Do not force-push, promote to `main`, tag, publish, or deploy until the
+required release gates are satisfied. Do not lower evaluation, coverage, or
+mutation thresholds; weaken tests; spend on live inference without the listed
+credential/authorization; or fabricate human annotations.

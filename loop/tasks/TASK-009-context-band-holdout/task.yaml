@@ -1,0 +1,25 @@
+id: TASK-009
+title: Held-out context-band generalization evaluation
+status: in_progress
+owner: codex
+started: 2026-07-20
+scope:
+  - agentrouter/benchmarks/context_band_dev_v1.yaml
+  - agentrouter/benchmarks/context_band_holdout_v1.yaml
+  - agentrouter/evaluation/context_bands.py
+  - agentrouter/evaluation/grading.py
+  - agentrouter/evaluation/runner.py
+  - agentrouter/evaluation/reports.py
+  - agentrouter/evaluation/cli.py
+  - tests/test_context_band.py
+acceptance:
+  - separate development and frozen final-holdout cases
+  - no tuning against final-holdout results
+  - unseen vocabulary, varied syntax, near-neighbors, and short ambiguous prompts
+  - requested task categories represented
+  - accuracy, macro-F1, per-band recall, and confidence intervals
+  - frozen pre-TASK-004 versus current comparison
+  - exact and near-duplicate leakage checks against development, gold, and test literals
+  - other six release gates unchanged
+  - honest limitations and no threshold reduction
+
