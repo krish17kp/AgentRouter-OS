@@ -2,15 +2,14 @@
 
 ## Current checkpoint — 2026-11-14
 
-**NOT release ready.** The latest pushed RC head `593e375` has failed
-Python/Rust compatibility jobs on Linux, Windows, and macOS: the new scalar
-coercion used an untagged enum that did not accept serde_json
-arbitrary-precision streaming numbers. The local visitor fix passes 108
-focused registry/evaluation differentials, the full Python suite (2,332 passed,
-4 skipped), full Rust workspace, strict Clippy, formatting, Ruff, and diff
-checks. Hosted cross-platform revalidation remains pending. PR #16 is the sole
-open PR. The unchanged context-band score is
-0.6667 < 0.90; live smoke is skipped without credentials. Full Rust
+**NOT release ready.** The latest pushed RC head `6223871` passes hosted Rust
+workspace and Python/Rust compatibility on Linux, Windows, and macOS, plus the
+Python version/platform matrix, API, build, site, security, and mutation checks.
+The only failed required PR check is the unchanged context-band score at 0.6667
+< 0.90; live smoke is skipped without credentials. Local TASK-126 schema
+coercions pass focused tests, the full Python suite (2,352 passed, 4 skipped),
+full Rust workspace, strict Clippy, format, Ruff, Bandit, and dependency audits;
+hosted revalidation is pending. PR #16 is the sole open PR. Full Rust
 CLI/HTTP/MCP parity, provider execution, external dataset loaders, evaluation
 runner, and R5–R13 remain incomplete. Human annotation, live OpenAI validation,
 main promotion, and production credentials remain owner inputs. No paid request

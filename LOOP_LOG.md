@@ -2354,5 +2354,19 @@ private one-entry map. Added a custom scalar visitor and rejected that reserved
 marker recursively in YAML registries. Focused registry/evaluation differentials
 pass (108); full Python passes 2,332/4 at 91.983% statement, 87.735% branch,
 and 91.008% combined coverage. Full Rust workspace, strict Clippy, Rust format,
-Ruff, and diff checks pass locally. The fix awaits hosted cross-platform CI.
-The frozen context-band release gate remains 0.6667 < 0.90.
+Ruff, and diff checks pass locally. Hosted Rust workspace and Python/Rust
+compatibility pass on Linux, Windows, and macOS at `6223871`. The frozen
+context-band release gate remains 0.6667 < 0.90.
+
+## 2026-11-14 — TASK-126 Classification scalar parity
+
+Added Pydantic-compatible Rust `Classification.confidence` and
+`needs_clarification` coercion and fixed the registry float-string boundary:
+numeric underscores are accepted between digits, but surrounding whitespace
+is not trimmed when separators occur. Red tests reproduced the previous
+acceptance mismatch. Twenty-two focused schema/registry differentials pass.
+The full Python suite passes 2,352/4 at 91.970% statement, 87.690% branch,
+90.988% combined. Full Rust workspace, strict Clippy, format, Ruff, Bandit,
+pip-audit, cargo audit, and diff checks pass locally. Hosted validation is
+pending push; Rust `context_tokens` remains bounded to `u32` and `schema.py`
+remains Partial. The frozen release gate remains 0.6667 < 0.90.

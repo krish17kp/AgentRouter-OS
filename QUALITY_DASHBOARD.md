@@ -2,15 +2,15 @@
 
 ## Current checkpoint — 2026-11-14
 
-The latest pushed RC head is `593e375`; TASK-125's arbitrary-precision repair
-is local. Hosted Rust workspace checks pass on Linux, Windows, and macOS, while
-Python/Rust compatibility checks found the streaming-number mismatch on all
-three platforms. The fix passes 108 focused registry/evaluation differentials,
-2,332 Python tests (4 skipped), the full Rust workspace, strict Clippy,
-formatting, Ruff, and diff checks. Python coverage is 91.983% statement,
-87.735% branch, and 91.008% combined. PR #16's unchanged context-band gate
-remains 0.6667 < 0.90; Python remains the shipping authority and the Rust
-migration is incomplete.
+The latest pushed RC head is `6223871`. TASK-125 now passes hosted Rust
+workspace and Python/Rust compatibility on Linux, Windows, and macOS, as well
+as the Python version/platform matrix, API, build, security, site, and mutation
+checks. The only failed required PR check is the frozen context gate at 0.6667
+< 0.90. Local TASK-126 passes 22 focused cases and the full Python suite
+(2,352 passed, 4 skipped) at 91.970% statement, 87.690% branch, and 90.988%
+combined coverage. Full Rust workspace, strict Clippy, Ruff, formatting, and
+security audits pass locally; hosted validation is pending. Python remains the
+shipping authority and the Rust migration is incomplete.
 
 ## Historical dashboard
 

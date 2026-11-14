@@ -605,9 +605,14 @@ fn parse_pydantic_float(value: PydanticScalar) -> Option<f64> {
         PydanticScalar::Signed(value) => Some(value as f64),
         PydanticScalar::Unsigned(value) => Some(value as f64),
         PydanticScalar::Float(value) => Some(value),
-        PydanticScalar::Text(value) => strip_valid_digit_separators(value.trim())?
-            .parse::<f64>()
-            .ok(),
+        PydanticScalar::Text(value) => {
+            let normalized = if value.contains('_') {
+                strip_valid_digit_separators(&value)?
+            } else {
+                value.trim().to_owned()
+            };
+            normalized.parse::<f64>().ok()
+        }
     }
 }
 

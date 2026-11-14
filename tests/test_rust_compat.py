@@ -90,3 +90,65 @@ def test_classification_schema_roundtrip_and_extra_field_rejection_match():
     )
     assert rejected.returncode != 0
     assert rejected.stdout == ""
+
+
+@pytest.mark.parametrize(
+    "confidence,needs_clarification",
+    [
+        (0.4, False),
+        ("0.5", "yes"),
+        (True, 0),
+        (False, 1.0),
+        ("0.0_5", "off"),
+        (" 0.5 ", "no"),
+        (-0.0, -0.0),
+    ],
+)
+def test_classification_pydantic_scalar_coercions_match(confidence, needs_clarification):
+    payload = _python_classification_json()
+    payload["confidence"] = confidence
+    payload["needs_clarification"] = needs_clarification
+    expected = Classification.model_validate(payload).model_dump(mode="json")
+    result = subprocess.run(
+        ["cargo", "run", "--quiet", "--bin", "classification_from_json"],
+        cwd=RUST_CRATE_DIR,
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == expected
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("confidence", -0.1),
+        ("confidence", 1.1),
+        ("confidence", "NaN"),
+        ("confidence", "not-a-number"),
+        ("confidence", " 0.0_5 "),
+        ("needs_clarification", 2),
+        ("needs_clarification", 0.5),
+        ("needs_clarification", " true "),
+        ("needs_clarification", "maybe"),
+    ],
+)
+def test_classification_rejects_pydantic_invalid_scalar_values(field, value):
+    payload = _python_classification_json()
+    payload[field] = value
+    with pytest.raises(ValidationError):
+        Classification.model_validate(payload)
+    result = subprocess.run(
+        ["cargo", "run", "--quiet", "--bin", "classification_from_json"],
+        cwd=RUST_CRATE_DIR,
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert result.stdout == ""

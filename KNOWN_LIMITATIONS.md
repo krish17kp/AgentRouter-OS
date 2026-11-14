@@ -3,11 +3,15 @@
 ## Current migration and release limits (2026-11-14)
 
 - TASK-125 registry scalar coercions now cover Pydantic-compatible integer,
-  float, and boolean forms. Its first hosted Linux run caught the interaction
-  between untagged scalar enums and `serde_json` arbitrary precision. The local
-  visitor fix passes 108 focused registry/evaluation cases, the full Python
-  suite (2,332 passed, 4 skipped), the full Rust workspace, and strict Clippy.
-  Hosted revalidation is pending the RC push.
+  float, and boolean forms. Its arbitrary-precision JSON visitor and reserved
+  YAML marker rejection pass hosted Rust workspace and Python/Rust compatibility
+  on Linux, Windows, and macOS at `6223871`.
+- TASK-126 adds Pydantic confidence/boolean coercion to Rust Classification and
+  matches the whitespace boundary for digit-separated float strings. Local
+  focused tests, the 2,352-pass/4-skip full suite, Rust workspace, strict
+  Clippy, Ruff, format, Bandit, pip-audit, and cargo audit pass; hosted
+  revalidation is pending. `schema.py` remains Partial because Rust
+  `context_tokens` remains bounded to `u32`.
 - The Rust evaluation crate now matches the full `agentrouter/evaluation/adapters/agentrouter_gold.py` module surface: metadata, availability, describe, loading, checksum and deterministic sampling. Its Python/Rust differential test covers all 165 committed cases plus Unicode/default handling. External adapter base behavior and the other dataset adapters remain Python-only; see `docs/RUST_PARITY_MATRIX.md`.
 - A Rust fixture-mode adapter base now covers metadata, availability, description, JSONL loading/checksums, deterministic sampling, and explicit real-mode skips for six external fixtures. Real dataset downloads and dataset-specific row transformations still require Python's optional `datasets` integration.
 - Python is still the shipping router. Rust R4 has route, SQLite,
@@ -32,20 +36,19 @@
   journaled crash recovery, and locally implemented managed-payload upgrades
   that preserve backup provenance. The TASK-114 candidate passes seven focused
   Rust recovery tests, the Rust workspace, strict Clippy, and the full critical
-  mutation campaign (0.9698 overall; zero unreviewed survivors). Hosted checks
-  at `b244ad1` exposed Windows compile and compatibility failures, a macOS
-  fixture-root failure, and six unreviewed plugin mutation survivors. Local
-  repairs and added regression tests await hosted revalidation.
+  mutation campaign (0.9698 overall; zero unreviewed survivors). The corrected
+  plugin paths now pass hosted Rust workspace, Python/Rust compatibility, and
+  mutation checks at `6223871` on the supported platforms.
 - The path-format and CPython file-identity fixes pass hosted Rust and
   Python/Rust jobs on Linux, Windows, and macOS at `132151d`; Windows and macOS
   Python CI also pass.
-- Rust annotation manifest integers now preserve arbitrary precision exactly
-  in schema validation and JSON storage under TASK-111. Datetime grammar and
-  remaining Pydantic scalar coercions still keep that schema module Partial;
-  hosted validation of TASK-111 is pending.
-- Latest full Python coverage is 91.983% statement / 87.735% branch / 91.008%
+- Rust annotation manifest integers preserve arbitrary precision exactly in
+  schema validation and JSON storage under TASK-111; cross-platform checks pass
+  at `6223871`. Datetime grammar and remaining Pydantic scalar coercions still
+  keep that annotation schema module Partial.
+- Latest full Python coverage is 91.970% statement / 87.690% branch / 90.988%
   combined, meeting the unchanged 90%/85% thresholds; see
-  `docs/COVERAGE_REPORT_2026-11-14-TASK-125.md` (pytest 9.0.3).
+  `docs/COVERAGE_REPORT_2026-11-14-TASK-126.md` (pytest 9.0.3).
   `pip-audit` also identified pytest 8.4.2 as affected by CVE-2025-71176. The
   dev constraint now selects patched pytest 9.0.x, and `pip-audit` plus the
   full pytest 9.0.3 regression pass.

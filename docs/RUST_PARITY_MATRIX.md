@@ -168,7 +168,11 @@ release authority until the full set is complete.
   inputs; artifact JSON matches Python's ASCII escaping byte-for-byte. See
   [`RUST_LEGACY_GOLD.md`](RUST_LEGACY_GOLD.md).
 - Rust `Classification` rejects unknown fields and has round-trip and rejection
-  checks against Pydantic. Annotation manifest schema versions and count maps
+  checks against Pydantic. Its `confidence` field now matches Pydantic number,
+  numeric-string, and boolean coercion with the 0–1 bound; `needs_clarification`
+  matches boolean, 0/1 numeric, and recognized string forms. `context_tokens`
+  remains `u32` in Rust while Python accepts unbounded signed integers.
+  Annotation manifest schema versions and count maps
   now preserve Python-compatible arbitrary-precision integers exactly in
   schema validation and JSON storage. Raw timestamp differentials now exercise
   Pydantic's datetime parsing directly, including reduced-precision times with

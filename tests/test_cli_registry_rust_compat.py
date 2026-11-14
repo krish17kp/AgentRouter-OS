@@ -220,6 +220,32 @@ def test_rust_registry_coerces_model_scalars_like_pydantic(seeded_home, field, v
     assert json.loads(rust.stdout) == json.loads(python.stdout)
 
 
+@pytest.mark.parametrize("value", ["1_0", "1_000.5"])
+def test_rust_registry_coerces_underscored_float_strings_like_pydantic(seeded_home, value):
+    path = seeded_home / "registry" / "models.yaml"
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
+    document["models"][0]["input_price_per_million"] = value
+    path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
+
+    python = runner.invoke(app, ["registry", "list", "--json"])
+    rust = _rust_registry(seeded_home, "--json")
+    assert python.exit_code == rust.returncode == 0
+    assert json.loads(rust.stdout) == json.loads(python.stdout)
+
+
+@pytest.mark.parametrize("value", [" 1_0 ", " 1_000.5 "])
+def test_rust_registry_rejects_whitespace_around_underscored_float_strings(seeded_home, value):
+    path = seeded_home / "registry" / "models.yaml"
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
+    document["models"][0]["input_price_per_million"] = value
+    path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
+
+    python = runner.invoke(app, ["registry", "list", "--json"])
+    rust = _rust_registry(seeded_home, "--json")
+    assert python.exit_code == rust.returncode == 3
+    assert python.stdout == rust.stdout == ""
+
+
 def test_rust_registry_coerces_provider_and_execution_target_booleans(seeded_home):
     providers_path = seeded_home / "registry" / "providers.yaml"
     providers = yaml.safe_load(providers_path.read_text(encoding="utf-8"))

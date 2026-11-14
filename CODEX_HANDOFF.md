@@ -2,16 +2,17 @@
 
 ## Current checkpoint — 2026-11-14
 
-Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `593e375`.
-TASK-125 adds Pydantic-compatible registry integer, float, and boolean coercion.
-The first hosted Rust migration run found a serde_json arbitrary-precision
-deserialization regression on all three platforms. The local visitor fix now
-passes 108 focused registry/evaluation cases, the 2,332-pass/4-skip full Python
-suite, the full Rust workspace, strict Clippy, formatting, Ruff, and diff
-checks. Push the repair and recheck the cross-platform matrix. PR #16 remains
-held by the unchanged frozen context-band score 0.6667 < 0.90. Human annotation,
-bounded OpenAI live validation, main promotion, and deployment credentials
-remain owner-gated in `PRODUCTION_STATUS.md`.
+Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `6223871`.
+TASK-125's serde_json arbitrary-precision fix passes hosted Rust workspace and
+Python/Rust compatibility on Linux, Windows, and macOS; the Python version
+matrix, platform jobs, security, site, and mutation checks also pass. The only
+failed required PR check is the frozen context-band gate at 0.6667 < 0.90.
+Local TASK-126 adds Classification confidence/boolean coercion and exact
+underscored-float whitespace behavior. It passes 22 focused checks, the
+2,352-pass/4-skip full Python suite, full Rust workspace, strict Clippy,
+formatting, Ruff, Bandit, pip-audit, and cargo audit. Push it and revalidate CI.
+Human annotation, bounded OpenAI live validation, main promotion, and deployment
+credentials remain owner-gated in `PRODUCTION_STATUS.md`.
 
 ## Historical narrative
 
