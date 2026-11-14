@@ -2,6 +2,15 @@
 
 ## Current migration and release limits (2026-11-14)
 
+- The critical mutation run at `0d3ea70` passes its numeric thresholds (overall
+  0.9641, safety/policy/execution 0.9601, routing 0.9815) but fails because ten
+  new OpenAI status mutants were unreviewed by the selected test set. Boundary
+  cases were added locally to `tests/test_openai_adapter.py`, which is in that
+  set; hosted rerun remains pending.
+- TASK-145 adds full serialized Python/Rust CLINC150 real-row normalization
+  differentials, including ordered intent mapping, `oos`, Unicode, source-row
+  IDs, and duplicate semantics. The module remains Partial because Rust does
+  not mirror the Python optional Hugging Face loader.
 - TASK-144 makes Python and Rust OpenAI Responses adapters reject injected or
   native responses outside HTTP 200–299. Offline differential cases cover 300,
   302, and 399; the existing redirect protection remains in place. Hosted

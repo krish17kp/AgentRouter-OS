@@ -2,28 +2,30 @@
 
 ## Current checkpoint — 2026-11-14
 
-Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `75fbe39`
-(TASK-143). Rust workspace checks pass on Linux, Windows, and macOS; completed
-API, security, site, build, and readiness-report checks pass. Full Python,
-compatibility, and mutation jobs are still running. PR #16 is the only open PR,
-has no GitHub reviews, and remains blocked by the unchanged frozen context-band
-score 0.6667 < 0.90. Do not merge, tag, publish, or deploy while the release
-gate fails.
+Active branch `release/agentrouter-v0.5-rc1`; latest pushed head is `0d3ea70`
+(TASK-144). API, security, site, build-smoke, readiness-report, Python
+3.10–3.13, and Rust workspace checks pass; some platform jobs are pending. PR #16 is
+the only open PR and has no GitHub reviews. Its last completed enforcing run
+measured frozen context-band accuracy 0.6667 < 0.90; the new run is pending.
+Do not merge, tag, publish, or deploy while the release gate remains unmet.
 
 TASK-141 passes its 52-case focused SDK/reliability selection, nine Rust SDK
 unit tests, full workspace/Clippy, and full Python regression (2,550 passed,
 5 skipped; 92.025% statement, 87.690% branch, 91.030% combined coverage).
 TASK-142 compares every evaluator seed model field and Rust exports against
 Python's live `__all__`. TASK-143 makes the Rust full-scorecard CLI discover the
-actual sibling CLI surface at runtime. TASK-144 is locally verified and awaits
-push: both OpenAI adapters reject non-2xx responses, with 68 focused Python
-tests and Rust adapter tests passing; offline differential cases cover 300,
-302, and 399. SDK, evaluator orchestration, and multiple CLI/API/MCP modules
-remain Partial in `docs/RUST_PARITY_MATRIX.md`.
+actual sibling CLI surface at runtime. TASK-144 is pushed at `0d3ea70`: both
+OpenAI adapters reject non-2xx responses, with 68 focused Python tests and
+three Rust unit tests passing locally; offline differential cases cover 300,
+302, and 399. Its hosted mutation job fails because ten new status mutants are
+unreviewed by the selected suite; direct boundary cases are now in that suite
+locally. TASK-145 adds three complete serialized CLINC150 raw-row differentials;
+external dataset fetching remains Partial. SDK, evaluator orchestration, and
+multiple CLI/API/MCP modules also remain Partial in `docs/RUST_PARITY_MATRIX.md`.
 
-Next: commit and push TASK-144 to the authorized RC, inspect hosted checks while
-continuing the next parity slice, and keep human evaluation, bounded OpenAI
-live validation, and production credentials under **Needs Krish**.
+Next: push the TASK-145 and mutation-test updates, inspect the reruns while
+continuing the next parity slice, and keep human evaluation, bounded OpenAI live
+validation, and production credentials under **Needs Krish**.
 
 ## Historical narrative
 

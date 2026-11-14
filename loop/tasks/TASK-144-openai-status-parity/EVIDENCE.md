@@ -24,5 +24,10 @@ independent review are complete.
 
 ## Release limits
 
-No live provider call was made. The release gate remains unchanged and PR #16
-remains held for its frozen context-band score and outstanding release checks.
+No live provider call was made. The code was pushed at `0d3ea70`; hosted Rust,
+API, security, build, site, and supported Python-version checks pass. Critical
+mutation fails its no-unreviewed-survivor gate on ten mutants in this new
+status branch; numeric thresholds pass. TASK-146 adds direct boundary tests to
+the mutation-selected suite, and the hosted rerun awaits the next push. The
+release gate remains unchanged and PR #16 remains held for its frozen
+context-band score and outstanding release checks.

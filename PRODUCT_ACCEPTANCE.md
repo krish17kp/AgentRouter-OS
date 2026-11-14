@@ -3,11 +3,12 @@
 ## Current checkpoint — 2026-11-14
 
 Product acceptance remains **not granted**. PR #16 is the sole open PR and has
-no GitHub reviews. At pushed head `75fbe39`, Rust workspace, completed security,
-site, build-smoke, release-report, Rust 1.89, MCP, and API checks pass; full
-Python, cross-platform compatibility, and mutation jobs remain pending. The
-enforce-release-gate remains blocked by context-band accuracy 0.6667 < 0.90;
-live smoke skips without an OpenAI credential.
+no GitHub reviews. At pushed head `0d3ea70`, API, security, site, build-smoke,
+release-report, Python 3.10–3.13, and Rust workspace checks pass; some platform
+jobs remain pending. Critical mutation fails because ten OpenAI status mutants
+are unreviewed; numeric thresholds pass. Direct status-boundary cases are now
+in the selected suite locally. The enforcing run remains blocked by context-
+band accuracy 0.6667 < 0.90; live smoke skips without an OpenAI credential.
 
 TASK-140 covers every Rust SDK endpoint across three API-key variants. TASK-141
 adds injected transport, timeout and close parity, typed errors, malformed
@@ -17,7 +18,9 @@ strict Clippy, format, Ruff, and the full Python suite pass locally. Full Python
 with 5 skips at 92.025% statement, 87.690% branch, and 91.030% combined
 coverage; see `docs/COVERAGE_REPORT_2026-11-14-TASK-141.md`. TASK-144's local
 OpenAI adapter differential rejects HTTP 300, 302, and 399 in both languages;
-68 focused tests pass, with hosted validation awaiting the next push.
+68 focused tests and three Rust adapter unit tests pass, with hosted validation
+running on `0d3ea70`. TASK-145 adds three full-output CLINC150 real-row
+differentials; external dataset fetching remains a documented Partial surface.
 The Rust migration and product acceptance remain incomplete; no production
 deployment or paid OpenAI request occurred.
 The table below is historical.

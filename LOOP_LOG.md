@@ -2665,3 +2665,24 @@ and diff checks also pass. No live API request was made. The implementation is
 locally verified and awaits RC CI plus a separate review. PR #16 remains held:
 its frozen context-band score is 0.6667 < 0.90, it has no GitHub reviews, and
 some platform and mutation jobs were still running at the last hosted check.
+
+## 2026-11-14 — TASK-145 CLINC150 normalization contract
+
+Added direct Python/Rust comparison for CLINC150 real-row normalization. Three
+cases cover every ordered intent hint, unknown labels, `oos`, a label that
+matches multiple hints, Unicode text, source-row IDs, repeated lowercase
+utterances, and punctuation-insensitive hash deduplication. The comparison
+checks complete serialized `EvaluationCase` output after Python's shared
+real-mode deduplication. All three tests pass offline. The module stays Partial
+because Python's external Hugging Face data-loader contract is not implemented
+in Rust.
+
+## 2026-11-14 — TASK-146 critical mutation coverage for HTTP status
+
+The `0d3ea70` mutation workflow found ten unreviewed OpenAI status-check
+mutants; its numeric scores still passed (0.9641 overall, 0.9601
+safety/policy/execution, 0.9815 routing). The workflow's selected Python suite
+does not include the Rust bridge differential. Added direct 199/200/299/300/
+302/399/400/429/500/599 response-status cases to `tests/test_openai_adapter.py`,
+which is in the critical selection. The full OpenAI adapter selection passes 78
+tests locally; hosted mutation revalidation is pending. No threshold changed.

@@ -1,4 +1,4 @@
-"""Differential parity for CLINC150 raw-row normalization."""
+"""Differential contract checks for CLINC150 real-row normalization."""
 
 from __future__ import annotations
 
@@ -16,7 +16,13 @@ pytestmark = pytest.mark.skipif(shutil.which("cargo") is None, reason="cargo not
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _rust_cases(label_names: list[str], rows: list[dict]) -> list[dict]:
+class _Dataset(list):
+    def __init__(self, rows: list[dict], intent_names: list[str]):
+        super().__init__(rows)
+        self.features = {"intent": type("Feature", (), {"names": intent_names})()}
+
+
+def _rust_cases(intent_names: list[str], rows: list[dict]) -> list[dict]:
     process = subprocess.run(
         [
             "cargo",
@@ -28,7 +34,7 @@ def _rust_cases(label_names: list[str], rows: list[dict]) -> list[dict]:
             "-p",
             "agentrouter-evaluation",
         ],
-        input=json.dumps({"label_names": label_names, "rows": rows}),
+        input=json.dumps({"label_names": intent_names, "rows": rows}),
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -39,55 +45,53 @@ def _rust_cases(label_names: list[str], rows: list[dict]) -> list[dict]:
     return json.loads(process.stdout)
 
 
-@pytest.mark.parametrize(
-    "label_names,rows",
-    [
-        (
-            ["translate", "text_translate", "unsupported", "oos", "calendar"],
-            [
-                {"text": "  Translate this phrase  ", "intent": 0},
-                {"text": "Translate this phrase", "intent": 2},
-                {"text": "Please translate the text", "intent": 1},
-                {"text": "A novel unsupported request", "intent": 2},
-                {"text": "I am outside scope", "intent": 3},
-                {"text": "Could you add an event?", "intent": 4},
-            ],
-        ),
-        (
-            [
-                "definition",
-                "spelling",
-                "calculator",
-                "math",
-                "how_busy",
-                "meaning_of_life",
-                "todo",
-                "reminder",
-            ],
-            [
-                {"text": f"request for {intent}", "intent": index}
-                for index, intent in enumerate(
-                    [
-                        "definition",
-                        "spelling",
-                        "calculator",
-                        "math",
-                        "how_busy",
-                        "meaning_of_life",
-                        "todo",
-                        "reminder",
-                    ]
-                )
-            ],
-        ),
-    ],
-)
-def test_rust_clinc150_raw_transform_matches_python(label_names, rows, monkeypatch):
-    class Dataset(list):
-        features = {"intent": type("Feature", (), {"names": label_names})()}
-
+def _python_cases(intent_names: list[str], rows: list[dict], monkeypatch) -> list[dict]:
     adapter = CLINC150Adapter()
     monkeypatch.setattr(evaluation_base, "datasets_available", lambda: True)
-    monkeypatch.setattr(adapter, "_hf_load", lambda split: Dataset(rows))
-    expected = [case.model_dump(mode="json") for case in adapter.load(source=evaluation_base.REAL)]
-    assert _rust_cases(label_names, rows) == expected
+    monkeypatch.setattr(
+        adapter,
+        "_hf_load",
+        lambda split: _Dataset(rows, intent_names),
+    )
+    return [case.model_dump(mode="json") for case in adapter.load(source=evaluation_base.REAL)]
+
+
+@pytest.mark.parametrize(
+    "intent_names",
+    [
+        [
+            "translate",
+            "definition",
+            "spelling",
+            "calculator",
+            "math",
+            "how_busy",
+            "meaning_of_life",
+            "text",
+            "todo",
+            "reminder",
+            "calendar",
+            "oos",
+            "unmapped_intent",
+        ],
+        ["definition_translate", "unknown", "oos"],
+    ],
+)
+def test_rust_clinc150_intent_mapping_matches_python(intent_names, monkeypatch):
+    rows = [
+        {"text": f"How do I handle {intent}?", "intent": index}
+        for index, intent in enumerate(intent_names)
+    ]
+    assert _rust_cases(intent_names, rows) == _python_cases(intent_names, rows, monkeypatch)
+
+
+def test_rust_clinc150_ordered_mapping_and_dedup_match_python(monkeypatch):
+    intent_names = ["definition_translate", "spelling", "oos"]
+    rows = [
+        {"text": "  Explain this definition! ", "intent": 0},
+        {"text": "explain this definition!", "intent": 1},
+        {"text": "Explain this definition", "intent": 1},
+        {"text": "¿Qué hora es?", "intent": 2},
+        {"text": "¿Qué hora es?", "intent": 1},
+    ]
+    assert _rust_cases(intent_names, rows) == _python_cases(intent_names, rows, monkeypatch)

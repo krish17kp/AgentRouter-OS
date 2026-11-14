@@ -2,13 +2,14 @@
 
 ## Current checkpoint — 2026-11-14
 
-**NOT release ready.** The latest pushed RC head is `75fbe39`. Rust workspace
-checks pass on Linux, Windows, and macOS. Completed security, site, build smoke,
-release report, Rust 1.89, MCP, and API checks pass; full Python,
-cross-platform compatibility, and mutation jobs are still pending. PR #16 has
-no GitHub reviews. The enforce-release-gate fails at the unchanged frozen
-context-band score 0.6667 versus 0.90; live smoke skips without an OpenAI
-credential.
+**NOT release ready.** The latest pushed RC head is `0d3ea70`. API, build-smoke,
+site, release-report, security, Python 3.10–3.13, and Rust workspace checks
+pass; some platform checks remain pending. PR #16 has no GitHub reviews. The
+critical mutation job fails its unreviewed-survivor gate for ten OpenAI status
+mutants, although its numeric thresholds pass. A direct boundary regression
+set is being added to the suite used by that job. The enforcing run remains
+blocked by frozen context-band accuracy 0.6667 versus 0.90. Live smoke skips
+without an OpenAI credential.
 
 TASK-140's Rust SDK wire-contract comparison passes all nine endpoints with
 present, absent, and blank API keys. TASK-141 adds an injected transport and
@@ -22,7 +23,9 @@ regression passes 2,550 / 5 with
 in `docs/COVERAGE_REPORT_2026-11-14-TASK-141.md`. Hosted cross-platform
 validation is pending. TASK-144 locally aligns Python and Rust OpenAI adapters
 for every non-2xx response; its offline differential cases and 68 focused
-Python tests pass, and hosted validation will follow the next push. The SDK
+Python tests pass, and hosted validation is running on `0d3ea70`. TASK-145 adds
+three direct CLINC150 normalization comparisons; the Rust adapter transformation
+matches Python, while external Hugging Face loading remains Partial. The SDK
 remains Partial for native `ureq` timeout and generic read/write behavior. PR
 #16 remains the sole open PR. Rust
 CLI/HTTP/MCP parity, provider execution, external dataset loaders, evaluation
