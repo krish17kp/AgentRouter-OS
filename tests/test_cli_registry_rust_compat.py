@@ -111,11 +111,21 @@ def test_duplicate_registry_keys_are_rejected_by_python_and_rust(seeded_home):
         ("ability_confidence: 0.4", "ability_confidence: .nan"),
         ("ability_confidence: 0.4", "ability_confidence: 1.5"),
         ("context_window: 1000000", "context_window: 0"),
+        ("context_window: 1000000", 'context_window: "1.5"'),
+        ("context_window: 1000000", 'context_window: "1e3"'),
         ("max_output_tokens: 128000", "max_output_tokens: 0"),
         ("ability: { coding: 9", "ability: { coding: 11"),
+        ("ability: { coding: 9", 'ability: { coding: "10.5"'),
+        ("vision_support: true", 'vision_support: "maybe"'),
+        ("vision_support: true", 'vision_support: " true "'),
+        ("vision_support: true", 'vision_support: " 1 "'),
         (
             "pricing_tier: frontier",
             "pricing_tier: frontier\n    input_price_per_million: -1",
+        ),
+        (
+            "pricing_tier: frontier",
+            'pricing_tier: frontier\n    input_price_per_million: "not-a-number"',
         ),
         ('last_updated: "2026-07-14"', "last_updated: bad-date"),
         (
@@ -167,6 +177,67 @@ def test_rust_registry_normalizes_pydantic_accepted_dates(seeded_home, field, da
     document = yaml.safe_load(path.read_text(encoding="utf-8"))
     document["models"][0][field] = date_value
     path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
+
+    python = runner.invoke(app, ["registry", "list", "--json"])
+    rust = _rust_registry(seeded_home, "--json")
+    assert python.exit_code == rust.returncode == 0
+    assert json.loads(rust.stdout) == json.loads(python.stdout)
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("context_window", "1000000"),
+        ("context_window", 1000000.0),
+        ("context_window", True),
+        ("max_input_tokens", "8192.0"),
+        ("max_output_tokens", "128000"),
+        ("ability.coding", "9.0"),
+        ("ability.reasoning", True),
+        ("ability.writing", 10.0),
+        ("input_price_per_million", "0.125"),
+        ("output_price_per_million", True),
+        ("ability_confidence", True),
+        ("vision_support", "yes"),
+        ("audio_support", "OFF"),
+        ("video_support", 1.0),
+        ("reasoning_support", 0),
+    ],
+)
+def test_rust_registry_coerces_model_scalars_like_pydantic(seeded_home, field, value):
+    path = seeded_home / "registry" / "models.yaml"
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
+    model = document["models"][0]
+    if field.startswith("ability."):
+        model["ability"][field.split(".", 1)[1]] = value
+    else:
+        model[field] = value
+    path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
+
+    python = runner.invoke(app, ["registry", "list", "--json"])
+    rust = _rust_registry(seeded_home, "--json")
+    assert python.exit_code == rust.returncode == 0
+    assert json.loads(rust.stdout) == json.loads(python.stdout)
+
+
+def test_rust_registry_coerces_provider_and_execution_target_booleans(seeded_home):
+    providers_path = seeded_home / "registry" / "providers.yaml"
+    providers = yaml.safe_load(providers_path.read_text(encoding="utf-8"))
+    providers["providers"][0]["supports_execution"] = "yes"
+    providers_path.write_text(yaml.safe_dump(providers, sort_keys=False), encoding="utf-8")
+
+    models_path = seeded_home / "registry" / "models.yaml"
+    models = yaml.safe_load(models_path.read_text(encoding="utf-8"))
+    models["models"][0]["execution_targets"] = [
+        {
+            "host": "openai-api",
+            "host_model_id": "gpt-test",
+            "supports_noninteractive": "n",
+            "supports_file_edit": 1,
+            "supports_shell": "ON",
+        }
+    ]
+    models_path.write_text(yaml.safe_dump(models, sort_keys=False), encoding="utf-8")
 
     python = runner.invoke(app, ["registry", "list", "--json"])
     rust = _rust_registry(seeded_home, "--json")

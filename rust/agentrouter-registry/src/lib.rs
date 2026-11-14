@@ -116,8 +116,11 @@ pub enum ExecutionMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Ability {
+    #[serde(deserialize_with = "deserialize_pydantic_u8")]
     pub coding: u8,
+    #[serde(deserialize_with = "deserialize_pydantic_u8")]
     pub reasoning: u8,
+    #[serde(deserialize_with = "deserialize_pydantic_u8")]
     pub writing: u8,
 }
 
@@ -134,11 +137,14 @@ pub struct ExecutionTarget {
     pub required_command: Option<String>,
     #[serde(default)]
     pub required_env: Vec<String>,
-    #[serde(default = "default_true")]
+    #[serde(
+        default = "default_true",
+        deserialize_with = "deserialize_pydantic_bool"
+    )]
     pub supports_noninteractive: bool,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_pydantic_bool")]
     pub supports_file_edit: bool,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_pydantic_bool")]
     pub supports_shell: bool,
 }
 
@@ -166,12 +172,17 @@ pub struct ModelEntry {
     pub release_channel: ReleaseChannel,
     #[serde(default = "default_snapshot_type")]
     pub snapshot_type: SnapshotType,
+    #[serde(deserialize_with = "deserialize_pydantic_u32")]
     pub context_window: u32,
+    #[serde(default, deserialize_with = "deserialize_optional_pydantic_u32")]
     pub max_input_tokens: Option<u32>,
+    #[serde(deserialize_with = "deserialize_pydantic_u32")]
     pub max_output_tokens: u32,
     pub pricing_tier: PricingTier,
     pub latency_tier: LatencyTier,
+    #[serde(default, deserialize_with = "deserialize_optional_pydantic_f64")]
     pub input_price_per_million: Option<f64>,
+    #[serde(default, deserialize_with = "deserialize_optional_pydantic_f64")]
     pub output_price_per_million: Option<f64>,
     pub pricing_basis: Option<String>,
     #[serde(default, deserialize_with = "deserialize_pydantic_date")]
@@ -179,14 +190,16 @@ pub struct ModelEntry {
     pub ability: Ability,
     #[serde(default = "default_ability_source")]
     pub ability_source: AbilitySource,
+    #[serde(default, deserialize_with = "deserialize_optional_pydantic_f64")]
     pub ability_confidence: Option<f64>,
     pub tool_support: Vec<String>,
+    #[serde(deserialize_with = "deserialize_pydantic_bool")]
     pub vision_support: bool,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_pydantic_bool")]
     pub audio_support: bool,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_pydantic_bool")]
     pub video_support: bool,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_pydantic_bool")]
     pub reasoning_support: bool,
     #[serde(default)]
     pub ideal_use_cases: Vec<String>,
@@ -391,6 +404,174 @@ fn epoch_date(value: f64) -> Option<String> {
     Some(date.format("%Y-%m-%d").to_string())
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum PydanticScalar {
+    Bool(bool),
+    Signed(i64),
+    Unsigned(u64),
+    Float(f64),
+    Text(String),
+}
+
+fn strip_valid_digit_separators(value: &str) -> Option<String> {
+    let characters: Vec<char> = value.chars().collect();
+    let mut normalized = String::with_capacity(value.len());
+    for (index, character) in characters.iter().copied().enumerate() {
+        if character == '_' {
+            if !characters
+                .get(index.wrapping_sub(1))
+                .is_some_and(|previous| previous.is_ascii_digit())
+                || !characters
+                    .get(index + 1)
+                    .is_some_and(|next| next.is_ascii_digit())
+            {
+                return None;
+            }
+        } else {
+            normalized.push(character);
+        }
+    }
+    Some(normalized)
+}
+
+fn parse_bounded_integer_text(value: &str, max: u64) -> Option<u64> {
+    let normalized = strip_valid_digit_separators(value.trim())?;
+    let (negative, unsigned) = match normalized.as_bytes().first()? {
+        b'-' => (true, &normalized[1..]),
+        b'+' => (false, &normalized[1..]),
+        _ => (false, normalized.as_str()),
+    };
+    let (integer, fraction) = match unsigned.split_once('.') {
+        Some((integer, fraction)) => {
+            if integer.is_empty()
+                || fraction.is_empty()
+                || unsigned.matches('.').count() != 1
+                || !fraction.bytes().all(|byte| byte == b'0')
+            {
+                return None;
+            }
+            (integer, Some(fraction))
+        }
+        None => (unsigned, None),
+    };
+    if integer.is_empty() || !integer.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    if fraction.is_some_and(|digits| !digits.bytes().all(|byte| byte.is_ascii_digit())) {
+        return None;
+    }
+    let mut parsed = 0_u64;
+    for digit in integer.bytes() {
+        parsed = parsed
+            .checked_mul(10)?
+            .checked_add(u64::from(digit - b'0'))?;
+        if parsed > max {
+            return None;
+        }
+    }
+    if negative && parsed != 0 {
+        return None;
+    }
+    Some(parsed)
+}
+
+fn parse_pydantic_integer(value: PydanticScalar, max: u64) -> Option<u64> {
+    match value {
+        PydanticScalar::Bool(value) => Some(u64::from(value)),
+        PydanticScalar::Signed(value) => u64::try_from(value).ok().filter(|value| *value <= max),
+        PydanticScalar::Unsigned(value) => (value <= max).then_some(value),
+        PydanticScalar::Float(value) => {
+            (value.is_finite() && value.fract() == 0.0 && value >= 0.0 && value <= max as f64)
+                .then_some(value as u64)
+        }
+        PydanticScalar::Text(value) => parse_bounded_integer_text(&value, max),
+    }
+}
+
+fn parse_pydantic_float(value: PydanticScalar) -> Option<f64> {
+    match value {
+        PydanticScalar::Bool(value) => Some(f64::from(u8::from(value))),
+        PydanticScalar::Signed(value) => Some(value as f64),
+        PydanticScalar::Unsigned(value) => Some(value as f64),
+        PydanticScalar::Float(value) => Some(value),
+        PydanticScalar::Text(value) => strip_valid_digit_separators(value.trim())?
+            .parse::<f64>()
+            .ok(),
+    }
+}
+
+fn parse_pydantic_bool(value: PydanticScalar) -> Option<bool> {
+    match value {
+        PydanticScalar::Bool(value) => Some(value),
+        PydanticScalar::Signed(0) | PydanticScalar::Unsigned(0) => Some(false),
+        PydanticScalar::Signed(1) | PydanticScalar::Unsigned(1) => Some(true),
+        PydanticScalar::Float(0.0) => Some(false),
+        PydanticScalar::Float(1.0) => Some(true),
+        // Pydantic's bool validator accepts case-insensitive tokens but does
+        // not trim strings (unlike its int and float validators).
+        PydanticScalar::Text(value) => match value.to_ascii_lowercase().as_str() {
+            "0" | "false" | "off" | "no" | "n" | "f" => Some(false),
+            "1" | "true" | "on" | "yes" | "y" | "t" => Some(true),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+fn deserialize_pydantic_u8<'de, D>(deserializer: D) -> Result<u8, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = PydanticScalar::deserialize(deserializer)?;
+    parse_pydantic_integer(value, u64::from(u8::MAX))
+        .and_then(|value| u8::try_from(value).ok())
+        .ok_or_else(|| serde::de::Error::custom("invalid integer value"))
+}
+
+fn deserialize_pydantic_u32<'de, D>(deserializer: D) -> Result<u32, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = PydanticScalar::deserialize(deserializer)?;
+    parse_pydantic_integer(value, u64::from(u32::MAX))
+        .and_then(|value| u32::try_from(value).ok())
+        .ok_or_else(|| serde::de::Error::custom("invalid integer value"))
+}
+
+fn deserialize_optional_pydantic_u32<'de, D>(deserializer: D) -> Result<Option<u32>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Option::<PydanticScalar>::deserialize(deserializer)?
+        .map(|value| {
+            parse_pydantic_integer(value, u64::from(u32::MAX))
+                .and_then(|value| u32::try_from(value).ok())
+                .ok_or_else(|| serde::de::Error::custom("invalid integer value"))
+        })
+        .transpose()
+}
+
+fn deserialize_pydantic_bool<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = PydanticScalar::deserialize(deserializer)?;
+    parse_pydantic_bool(value).ok_or_else(|| serde::de::Error::custom("invalid boolean value"))
+}
+
+fn deserialize_optional_pydantic_f64<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Option::<PydanticScalar>::deserialize(deserializer)?
+        .map(|value| {
+            parse_pydantic_float(value)
+                .ok_or_else(|| serde::de::Error::custom("invalid float value"))
+        })
+        .transpose()
+}
+
 fn default_release_channel() -> ReleaseChannel {
     ReleaseChannel::Stable
 }
@@ -482,7 +663,7 @@ pub struct Provider {
     pub adapter: String,
     #[serde(default = "default_auth_model")]
     pub auth_model: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_pydantic_bool")]
     pub supports_execution: bool,
     #[serde(default)]
     pub exec_command: Vec<String>,

@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-14 (TASK-082–119). This inventory covers every Python source module under
+Updated: 2026-11-14 (TASK-082–125). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -177,9 +177,13 @@ release authority until the full set is complete.
 - Rust registry dates now normalize the Pydantic-accepted YAML date, midnight
   datetime, and epoch-second/millisecond forms to the same ISO date in JSON;
   differential cases cover all three optional date fields and reject
-  non-midnight timestamps and invalid offsets. `schema.py` remains Partial:
-  Python's unbounded integer domain and coercion behavior for other model
-  fields are still broader than the Rust registry contract.
+  non-midnight timestamps and invalid offsets. Registry integer, float, and
+  boolean fields also accept and reject the same scalar forms as Pydantic,
+  including decimal integer strings, integral floats, booleans-as-numbers,
+  numeric separators, and exact boolean tokens. Differential tests cover
+  accepted and rejected forms. `schema.py` remains Partial: Python's unbounded
+  integer domain and coercion behavior for non-registry model fields are still
+  broader than the Rust contract.
 - Context-band model inference is ported but remains disabled in the default
   classifier. The frozen evaluation gate still controls whether learned routing
   can be enabled.
