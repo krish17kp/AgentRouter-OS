@@ -2,16 +2,14 @@
 
 ## Current checkpoint — 2026-11-14
 
-**NOT release ready.** The latest pushed RC commit is `19dccfe`; it updates
-release evidence. The latest completed test head is `c1b6750`. Linux Python
-3.10–3.13, Rust workspace on Linux/Windows/macOS,
-API, build, security, website, release-readiness, full Python, and
-Python/Rust compatibility checks pass on Linux, Windows, and macOS. TASK-146's
-hosted critical mutation campaign passes with zero unreviewed survivors. The
-only failed required check is the enforcing release gate, at
-frozen context-band accuracy 0.6667 versus 0.90. TASK-147 sets the Rust SDK's
-explicit connect timeout. PR #16 has no GitHub reviews. Live smoke skips without
-an OpenAI credential.
+**NOT release ready.** RC code head `7f29015` passes Rust workspace checks on
+Linux/Windows/macOS and Linux Python/Rust compatibility. macOS compatibility
+and Windows/macOS full Python jobs are still running. The enforcing release
+gate fails at frozen context-band accuracy 0.6667 versus 0.90. TASK-146's
+hosted critical mutation campaign passes with zero unreviewed survivors.
+TASK-149's nested JSON redaction differential and full Python suite pass locally;
+this slice awaits hosted validation. PR #16 has no GitHub reviews. Live smoke
+skips without an OpenAI credential.
 
 TASK-140's Rust SDK wire-contract comparison passes all nine endpoints with
 present, absent, and blank API keys. TASK-141 adds an injected transport and
@@ -20,7 +18,7 @@ transport categories, idempotent close, fail-closed fixture input validation,
 and credential-safe URL/body diagnostics. The focused SDK/reliability selection
 passes 52 Python tests and ten Rust SDK unit tests; full Rust workspace, strict
 Clippy, formatting, Ruff, and the full Python suite pass locally. The latest
-Python regression is 2,572 / 5; the committed TASK-148 coverage report measures
+Python regression is 2,572 / 5; the committed TASK-149 coverage report measures
 92.030% statement, 87.712% branch, and 91.038% combined coverage.
 Current hosted cross-platform validation is still running; the latest completed
 code-head run passes the Python Linux 3.10–3.13 matrix and Rust/Python

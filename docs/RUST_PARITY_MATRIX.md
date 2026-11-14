@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-14 (TASK-082–145). This inventory covers every Python source module under
+Updated: 2026-11-14 (TASK-082–149). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -118,6 +118,11 @@ release authority until the full set is complete.
   intent map, `oos` handling, and real-row normalization/deduplication. The
   module remains Partial because its external Hugging Face loading contract is
   Python-only.
+- TASK-149 adds recursive JSON redaction comparisons for nested objects and
+  arrays, including authorization headers, provider tokens, generic API-key
+  fields, and ordinary paths. The observability module remains Partial because
+  structured logging, request context, spans, API-error records, and OTel are
+  still not ported.
 - The Rust workspace has no `TODO`, `todo!()`, or `unimplemented!()` markers in
   shipped Rust source, but that does not make unported Python behavior complete.
 - The Python modules marked **Partial** and **Not ported** remain production

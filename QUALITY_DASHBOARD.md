@@ -2,16 +2,16 @@
 
 ## Current checkpoint — 2026-11-14
 
-At the latest completed test head `c1b6750` (subsequent status commit `19dccfe`), Linux Python
-3.10–3.13, API, build, security, website, release-readiness, and Rust workspace
-checks on Linux/Windows/macOS pass. The full Python matrix, Python/Rust
-compatibility on all three platforms, hosted mutation, API, build, security,
-website, and release-readiness checks all pass. The only failed required check
-is the enforcing release gate, at frozen context-band accuracy 0.6667 < 0.90.
-PR #16 has no GitHub reviews.
+At RC code head `7f29015`, the Rust workspace passes on Linux, Windows, and
+macOS; Linux Python/Rust compatibility passes and macOS compatibility is still
+running. Windows/macOS full Python jobs are running. The enforcing release gate
+fails on the frozen context-band score, 0.6667 < 0.90. A further local
+observability redaction differential is prepared in TASK-149. PR #16 has no
+GitHub reviews.
 
-The latest full Python regression passes 2,572 / skips 5. The TASK-148 coverage
+The latest full Python regression passes 2,572 / skips 5. The TASK-149 coverage
 report measures 92.030% statement, 87.712% branch, and 91.038% combined.
+Evidence: [`docs/COVERAGE_REPORT_2026-11-14-TASK-149.md`](docs/COVERAGE_REPORT_2026-11-14-TASK-149.md).
 TASK-140's Rust SDK
 wire differential passes all nine endpoints across authenticated, absent, and
 blank API-key cases. TASK-141 adds injected transport and timeout parity, four
@@ -24,7 +24,9 @@ TASK-145 adds three full-output CLINC150 real-row differentials. The parity
 inventory now contains 48/77 full modules, with 29 Partial. TASK-147's focused
 Rust SDK tests (10 Rust, 41 Python differential) and full Rust workspace pass
 locally. Python remains the shipping authority and the Rust migration is
-incomplete.
+incomplete. TASK-149 compares recursive Rust JSON redaction with Python for
+nested credentials and ordinary diagnostics; structured logging and tracing
+remain outstanding.
 
 ## Historical dashboard
 

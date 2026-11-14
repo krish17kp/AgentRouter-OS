@@ -43,7 +43,20 @@ fn run() -> Result<(), String> {
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();
-    println!("{}", json!({"redact": redacted, "echo": echoed}));
+    let values = value
+        .get("redact_value")
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .map(agentrouter_cli::observability::redact_value)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    println!(
+        "{}",
+        json!({"redact": redacted, "echo": echoed, "redact_value": values})
+    );
     Ok(())
 }
 

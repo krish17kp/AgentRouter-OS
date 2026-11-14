@@ -53,7 +53,19 @@ def test_redaction_and_safe_echo_match_python_contract():
             "limit": 64,
         },
     ]
-    payload = {"redact": secrets, "echo": echo_inputs}
+    redact_values = [
+        {
+            "headers": {"authorization": "Bearer supersecrettoken1234"},
+            "items": [
+                1,
+                "ghp_0123456789abcdefghijklmnop",
+                {"nested": {"key": "AKIAIOSFODNN7EXAMPLE"}},
+            ],
+        },
+        ["ordinary diagnostic", {"api_key": "AbC123dEf456"}],
+        {"path": "/tmp/agentrouter/logs/run.txt", "clean": True},
+    ]
+    payload = {"redact": secrets, "echo": echo_inputs, "redact_value": redact_values}
     root = Path(__file__).resolve().parents[1]
     result = subprocess.run(
         ["cargo", "run", "--quiet", "-p", "agentrouter-cli", "--bin", "observability_cli"],
@@ -70,3 +82,4 @@ def test_redaction_and_safe_echo_match_python_contract():
     assert rust["echo"] == [
         observability.safe_echo(item["text"], item["limit"]) for item in echo_inputs
     ]
+    assert rust["redact_value"] == [observability.redact_value(value) for value in redact_values]

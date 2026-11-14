@@ -1,0 +1,29 @@
+id: TASK-149
+title: Differential JSON redaction coverage
+source: Rust parity matrix Partial row for agentrouter/observability.py
+priority: 2
+status: in_progress
+risk: medium
+customer_impact: Adds Python/Rust contract coverage for recursively redacting secrets from structured JSON diagnostics.
+affected_surfaces:
+  - rust/agentrouter-cli/src/bin/observability_cli.rs
+  - tests/test_observability_rust_compat.py
+  - loop/tasks/TASK-149-observability-json-redaction-parity
+dependencies:
+  - Rust observability redaction helper
+acceptance_criteria:
+  - Nested objects and arrays produce Python-equivalent redacted JSON values.
+  - Credential-shaped values are removed and ordinary path-shaped diagnostics remain.
+  - The observability module remains Partial for logging, request context, spans, and OTel.
+  - Frozen data and release thresholds remain unchanged.
+verification_commands:
+  - ./.venv/bin/python -m pytest -q tests/test_observability_rust_compat.py
+  - cargo fmt --all -- --check
+  - git diff --check
+required_reviewers:
+  - observability-redaction-contract
+repair_iteration: 0
+external_blockers: []
+owner_blockers: []
+created_at: "2026-11-14"
+updated_at: "2026-11-14"
