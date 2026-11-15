@@ -251,3 +251,8 @@ model discovery remain incomplete and keep grading/platform Partial.
 Default Rust grading now loads packaged models and discovers the installed CLI.
 Full Python evaluation orchestration and complete platform behavior remain
 Partial; all existing release blockers remain unchanged.
+## TASK-158 update — 2026-11-15
+
+Rust evaluation CLI now matches measured option and exit-code contracts.
+External real-dataset preparation and the remaining complete Typer surface keep
+the module Partial; existing release blockers remain unchanged.

@@ -301,3 +301,11 @@ Python regression pass (2,613 passed, 7 skipped, 298.77s). Commit/push this
 exact task, inspect CI, then select the next Partial Rust parity task. Do not
 claim production readiness: frozen evaluation and external gates remain.
 
+## TASK-158 checkpoint — 2026-11-15
+
+TASK-158 is locally complete on `release/agentrouter-v0.5-rc1`. Rust evaluation
+CLI argument/error parity is repaired, as is TASK-157's hosted Ruff failure.
+Independent review is clear; focused 43, Rust workspace/Clippy, Ruff, and full
+Python 2,626/7 pass. Commit/push this exact diff, inspect hosted CI, then select
+the next Partial Rust parity task. Production readiness remains held.
+

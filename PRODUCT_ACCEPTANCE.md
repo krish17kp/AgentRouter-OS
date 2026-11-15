@@ -100,3 +100,8 @@ compatibility, full-regression, and independent-review evidence pass.
 Rust default grading now loads packaged models and queries the installed CLI
 without caller manifests. Full Python 2,613/7 and independent review pass;
 evaluation/platform parity remains Partial and acceptance is not granted.
+## TASK-158 evaluation CLI contracts — 2026-11-15
+
+Measured report, comparison, preparation, status, and context-band CLI paths
+now have direct Rust coverage and repaired error behavior. Verification passes;
+evaluation CLI remains Partial and product acceptance is not granted.

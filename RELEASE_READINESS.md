@@ -129,3 +129,8 @@ the frozen gate and external requirements.
 Default Rust grading now discovers packaged models and the installed CLI surface
 and fails closed when either is unavailable. Independent review and full Python
 2,613/7 pass. No release threshold or frozen data changed; readiness is held.
+## TASK-158 evaluation CLI contracts — 2026-11-15
+
+Rust evaluation CLI argument/error parity and TASK-157 cross-platform
+formatting are repaired. Full Python 2,626/7 and independent review pass.
+No release threshold or frozen data changed; readiness remains held.

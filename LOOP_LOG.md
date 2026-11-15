@@ -2774,3 +2774,9 @@ installed-CLI surface discovery. Differential coverage verifies defaults, both
 modes, empty input, context override, actual CLI surface, and loader errors.
 Independent review repaired circular metadata and executable-relative discovery.
 Final review clear; full Python regression: 2,613 passed, 7 skipped in 298.77s.
+## TASK-158 evaluation CLI contracts — 2026-11-15
+
+Rust evaluation read-only/status/report/compare/prepare argument and exit-code
+behavior now matches the measured Python contracts. TASK-157's hosted Ruff
+failure is repaired. Independent review found and cleared two repair rounds.
+Focused 43, full Rust workspace/Clippy, Ruff, and full Python 2,626/7 pass.

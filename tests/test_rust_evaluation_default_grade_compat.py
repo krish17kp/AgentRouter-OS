@@ -154,9 +154,7 @@ def test_default_runtime_discovers_models_and_cli_for_all_dimensions():
 def test_default_runtime_supports_empty_cases_and_context_override():
     cases = []
     context_report = {"current_holdout": {"accuracy": 0.0}}
-    actual = _default_grade(
-        cases, measure_all=False, context_band_generalization=context_report
-    )
+    actual = _default_grade(cases, measure_all=False, context_band_generalization=context_report)
     expected = grade(cases, context_band_generalization=context_report)
 
     _assert_scorecard_fields(actual, expected)

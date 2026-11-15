@@ -121,3 +121,8 @@ branch, 91.058% combined. Independent review is clear.
 Default Rust grading now loads packaged models and queries the installed CLI
 without caller manifests; failed discovery stops evaluation. Focused
 compatibility and full Python 2,613/7 pass. Release readiness remains held.
+## TASK-158 evaluation CLI contracts — 2026-11-15
+
+Evaluation CLI error exits and option rejection now match measured Python
+behavior. Full Python regression passes 2,626/7; Rust workspace, strict Clippy,
+Ruff, and independent review pass. Overall release readiness remains held.

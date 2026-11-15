@@ -1,7 +1,7 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-15",
-  "current_phase": "TASK-157 public default grading runtime passes independent review, Rust evaluation tests/Clippy, focused Python/Rust compatibility, and full Python 2,613/7. Commit/push next, then continue the next Partial Rust parity task.",
+  "current_phase": "TASK-158 evaluation CLI contract repairs pass independent review, 43 focused checks, Rust workspace/Clippy, Ruff, and full Python 2,626/7. Commit/push next, inspect CI, then continue the next Partial Rust parity task.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {

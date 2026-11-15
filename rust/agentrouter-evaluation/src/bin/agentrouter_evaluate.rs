@@ -55,6 +55,17 @@ fn parse_i64(args: &mut impl Iterator<Item = String>, flag: &str) -> Result<i64,
         .map_err(|_| format!("invalid {flag} value"))
 }
 
+fn parse_json_only(args: impl Iterator<Item = String>) -> Result<bool, String> {
+    let mut json_output = false;
+    for arg in args {
+        match arg.as_str() {
+            "--json" => json_output = true,
+            _ => return Err(format!("unknown option {arg}")),
+        }
+    }
+    Ok(json_output)
+}
+
 fn result_code(result: &Value) -> i32 {
     if result["release_ready"].as_bool() == Some(true) {
         0
@@ -360,7 +371,7 @@ fn run() -> Result<i32, String> {
         "routing-gold" => routing_gold(args),
         "dataset" => agentrouter_evaluation::annotation_cli::run(args),
         "list-datasets" => {
-            let json_output = args.any(|arg| arg == "--json");
+            let json_output = parse_json_only(args)?;
             list_datasets(json_output)
         }
         "validate-dataset" => {
@@ -392,6 +403,9 @@ fn run() -> Result<i32, String> {
                 args.next()
                     .ok_or_else(|| "report needs a result JSON path".to_owned())?,
             );
+            if let Some(arg) = args.next() {
+                return Err(format!("unknown option {arg}"));
+            }
             if !path.exists() {
                 return Err(format!("Not found: {}", path.display()));
             }
@@ -454,12 +468,18 @@ fn run() -> Result<i32, String> {
             let mut all = false;
             let mut dataset = None;
             let mut limit = None;
-            while let Some(arg) = args.next() {
-                match arg.as_str() {
-                    "--all" => all = true,
-                    "--dataset" => dataset = Some(parse_flag(&mut args, "--dataset")?),
-                    "--limit" => limit = Some(parse_i64(&mut args, "--limit")?),
-                    _ => return Err(format!("unknown option {arg}")),
+            if command == "status" {
+                if let Some(arg) = args.next() {
+                    return Err(format!("unknown option {arg}"));
+                }
+            } else {
+                while let Some(arg) = args.next() {
+                    match arg.as_str() {
+                        "--all" => all = true,
+                        "--dataset" => dataset = Some(parse_flag(&mut args, "--dataset")?),
+                        "--limit" => limit = Some(parse_i64(&mut args, "--limit")?),
+                        _ => return Err(format!("unknown option {arg}")),
+                    }
                 }
             }
             if command == "prepare" && dataset.is_none() && !all {
@@ -520,7 +540,7 @@ fn run() -> Result<i32, String> {
             Ok(0)
         }
         "context-band-generalization" => {
-            let json_output = args.any(|arg| arg == "--json");
+            let json_output = parse_json_only(args)?;
             let result = agentrouter_evaluation::context_bands::evaluate_generalization()?;
             if json_output {
                 println!(
@@ -566,7 +586,10 @@ fn main() {
             let usage_error = error == usage()
                 || error.starts_with("unknown command")
                 || error.starts_with("unknown option")
+                || error.starts_with("report needs")
+                || error.starts_with("compare needs")
                 || error.starts_with("--")
+                || error.starts_with("Specify --dataset")
                 || error.starts_with("Invalid --source");
             std::process::exit(if usage_error { 2 } else { 3 });
         }
