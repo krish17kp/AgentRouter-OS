@@ -2,7 +2,7 @@
 
 ## Current migration and release limits (2026-11-15)
 
-- Rust migration remains 49/77 full-module parity. TASK-152 adds opt-in route
+- Rust migration remains 50/77 full-module parity. TASK-152 adds opt-in route
   decision records, request correlation, and shared API/CLI redaction, but full
   observability spans, optional OTel, and complete API-error parity remain.
 - The `5af3c55` hosted matrix passes all Python/Rust supported platforms,

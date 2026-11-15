@@ -2787,3 +2787,9 @@ fail-closed tests cover the complete Python platform evaluator module. Matrix
 candidate: Parity, moving the inventory to 49/77 full and 28 Partial. Initial
 audit found missing real process failures and a circular manifest claim; both
 were repaired. Re-audit clear; focused 12 and full Python 2,630/7 pass.
+## TASK-160 evaluator facade parity — 2026-11-15
+
+Seed loading now caches only successes and retries transient errors. Facade
+defaults and explicit/injected aliases preserve all public call forms. Two audit
+rounds found and cleared those gaps. Rust 7/Clippy, focused 19, and full Python
+2,630/7 pass. Inventory: 50 Parity / 27 Partial.

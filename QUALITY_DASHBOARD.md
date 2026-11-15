@@ -32,7 +32,7 @@ pass locally. TASK-142 and TASK-143 close evaluator seed-contract and runtime
 platform-discovery gaps. TASK-144's non-2xx OpenAI status differential passes
 68 Python tests and three Rust unit tests locally, and is pushed at `0d3ea70`.
 TASK-145 adds three full-output CLINC150 real-row differentials. The parity
-inventory now contains 49/77 full modules, with 28 Partial. TASK-147's focused
+inventory now contains 50/77 full modules, with 27 Partial. TASK-147's focused
 Rust SDK tests (10 Rust, 41 Python differential) and full Rust workspace pass
 locally. Python remains the shipping authority and the Rust migration is
 incomplete. TASK-149 compares recursive Rust JSON redaction with Python for

@@ -6,7 +6,7 @@
 matrices, API, build, security, website, and critical mutation pass. PR #16 is
 the sole open PR, has no GitHub review, and fails the unchanged frozen
 context-band gate at 0.6667 < 0.90. Live OpenAI smoke skips without owner
-credentials. Rust migration is 49/77 full-module parity with 28 Partial rows;
+credentials. Rust migration is 50/77 full-module parity with 27 Partial rows;
 TASK-152 route observability passes local full Python/Rust regression: 2,590/5
 Python tests at 92.052% statement, 87.756% branch, and 91.064% combined
 coverage; Rust workspace, strict Clippy, wheel build, and clean-wheel smoke pass.

@@ -9,7 +9,7 @@ has no human review, and live OpenAI smoke still needs credentials. TASK-152
 adds opt-in, redacted route records to the Rust HTTP service. Full local Python
 regression passes 2,590/5 and Rust workspace/Clippy pass; hosted validation
 awaits the RC push. The 77-module Rust inventory has
-49 Parity and 28 Partial rows.
+50 Parity and 27 Partial rows.
 
 ## Previous checkpoint — 2026-11-14
 

@@ -51,7 +51,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/cli.py` | `agentrouter-evaluation::bin::agentrouter-evaluate` | Partial |
 | `agentrouter/evaluation/comparison.py` | `agentrouter-evaluation::{compare_results,load_result,write_comparison}` | Parity |
 | `agentrouter/evaluation/context_bands.py` | `agentrouter-evaluation::context_bands` | Parity |
-| `agentrouter/evaluation/evaluators/__init__.py` | `agentrouter-evaluation::evaluators_api` | Partial |
+| `agentrouter/evaluation/evaluators/__init__.py` | `agentrouter-evaluation::evaluators_api` | Parity |
 | `agentrouter/evaluation/evaluators/feedback.py` | `agentrouter-evaluation::evaluate_feedback` | Parity |
 | `agentrouter/evaluation/evaluators/performance.py` | `agentrouter-evaluation::{evaluate_performance,evaluate_performance_with,evaluate_default_performance,summarize_performance}` | Parity |
 | `agentrouter/evaluation/evaluators/platform.py` | `agentrouter-evaluation::{evaluate_platform,evaluators_api::runtime_cli_surface}` | Parity |
@@ -104,9 +104,8 @@ release authority until the full set is complete.
   read/write phase.
 - TASK-142 expands the evaluator facade differential from model identity fields
   to every normalized `ModelEntry` JSON field and compares the Rust export list
-  directly with Python's `__all__`. The row remains Partial because the facade's
-  re-exported evaluator functions still lack Python runtime-state discovery and
-  orchestration parity.
+  directly with Python's `__all__`. TASK-160 adds success-only cached loading,
+  retry semantics, no-argument defaults, and explicit/injected facade aliases.
 - TASK-143 connects the full Rust evaluation CLI to the installed `agentrouter`
   binary's actual command/group manifest. A missing sibling binary is an error
   for `run --all`; the report no longer substitutes a hardcoded two-entry

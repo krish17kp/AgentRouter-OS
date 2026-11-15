@@ -317,3 +317,10 @@ sorting/scoring details, installed CLI discovery, and fail-closed process
 errors. Initial audit findings were repaired and re-audit is clear. Focused 12
 and full Python 2,630/7 pass. Commit/push, inspect CI, continue next Partial.
 
+## TASK-160 checkpoint — 2026-11-15
+
+Evaluator facade parity is locally complete after two repaired audit rounds.
+Success-only seed caching, retry behavior, defaults, and explicit/injected
+aliases pass Rust 7/Clippy, focused 19, and full Python 2,630/7. Inventory is
+50/77 Parity and 27 Partial. Commit/push, inspect CI, continue next module.
+

@@ -16,6 +16,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         serde_json::to_string(&serde_json::json!({
             "exports": PUBLIC_EXPORTS,
             "models": serialized_models,
+            "platform_default": agentrouter_evaluation::evaluators_api::evaluate_platform()
+                .map_err(std::io::Error::other)?,
+            "provider_default": agentrouter_evaluation::evaluators_api::evaluate_provider()
+                .map_err(std::io::Error::other)?,
+            "performance_default": agentrouter_evaluation::evaluators_api::evaluate_performance()
+                .map_err(std::io::Error::other)?,
         }))?
     );
     Ok(())
