@@ -292,3 +292,12 @@ git status --short --branch
 graphify update .
 ```
 
+## TASK-157 checkpoint — 2026-11-15
+
+TASK-157 is locally complete on `release/agentrouter-v0.5-rc1`: default Rust
+grading loads packaged models and discovers the installed CLI through PATH,
+with fail-closed errors. Independent review is clear; focused checks and full
+Python regression pass (2,613 passed, 7 skipped, 298.77s). Commit/push this
+exact task, inspect CI, then select the next Partial Rust parity task. Do not
+claim production readiness: frozen evaluation and external gates remain.
+

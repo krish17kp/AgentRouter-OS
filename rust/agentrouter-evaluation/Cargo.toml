@@ -205,6 +205,10 @@ name = "evaluation_grade_all_from_json"
 path = "src/bin/evaluation_grade_all_from_json.rs"
 
 [[bin]]
+name = "evaluation_default_grade_from_json"
+path = "src/bin/evaluation_default_grade_from_json.rs"
+
+[[bin]]
 name = "evaluation_collect_from_json"
 path = "src/bin/evaluation_collect_from_json.rs"
 

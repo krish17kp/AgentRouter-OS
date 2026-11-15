@@ -226,6 +226,57 @@ pub fn run_classification(
     )
 }
 
+/// Run the public default Rust grading path. Model and CLI discovery are owned
+/// by the runtime instead of being fabricated by callers.
+pub fn run_default_grade(
+    cases: &[EvaluationCase],
+    measure_all: bool,
+    context_band_generalization: Option<&serde_json::Value>,
+) -> Result<serde_json::Value, String> {
+    run_default_grade_with(
+        cases,
+        measure_all,
+        context_band_generalization,
+        crate::evaluators_api::load_seed_models,
+        crate::evaluators_api::runtime_cli_surface,
+    )
+}
+
+fn run_default_grade_with<ModelLoader, SurfaceLoader>(
+    cases: &[EvaluationCase],
+    measure_all: bool,
+    context_band_generalization: Option<&serde_json::Value>,
+    model_loader: ModelLoader,
+    surface_loader: SurfaceLoader,
+) -> Result<serde_json::Value, String>
+where
+    ModelLoader: FnOnce() -> Result<Vec<agentrouter_registry::ModelEntry>, String>,
+    SurfaceLoader: FnOnce() -> Result<(Vec<String>, Vec<String>), String>,
+{
+    let options = RunOptions {
+        profile: None,
+        seed: 0,
+        source: "runtime".to_owned(),
+        environment: serde_json::Value::Null,
+        datasets: serde_json::Value::Null,
+        context_band_generalization: context_band_generalization.cloned(),
+    };
+    if !measure_all {
+        return run_classification(
+            cases,
+            None,
+            options.seed,
+            &options.source,
+            options.environment,
+            options.datasets,
+            options.context_band_generalization.as_ref(),
+        );
+    }
+    let models = model_loader()?;
+    let (commands, groups) = surface_loader()?;
+    run_all_dimensions(cases, &models, &commands, &groups, options)
+}
+
 /// Run classification grading through a caller-supplied classifier. The same
 /// seam is used by the complete scorecard so one evaluation never mixes
 /// predictions from different classifiers.
@@ -379,4 +430,35 @@ where
     report["grade_over_100"] = json!(achieved);
     report["grade_of_measured"] = json!(achieved);
     Ok(report)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_grade_propagates_packaged_model_load_failures() {
+        let result = run_default_grade_with(
+            &[],
+            true,
+            None,
+            || -> Result<Vec<agentrouter_registry::ModelEntry>, String> {
+                Err("seed model catalog unavailable".to_owned())
+            },
+            || Ok((vec![], vec![])),
+        );
+        assert_eq!(result.unwrap_err(), "seed model catalog unavailable");
+    }
+
+    #[test]
+    fn default_grade_propagates_cli_discovery_failures() {
+        let result = run_default_grade_with(
+            &[],
+            true,
+            None,
+            crate::evaluators_api::load_seed_models,
+            || Err("shipped CLI is unavailable".to_owned()),
+        );
+        assert_eq!(result.unwrap_err(), "shipped CLI is unavailable");
+    }
 }

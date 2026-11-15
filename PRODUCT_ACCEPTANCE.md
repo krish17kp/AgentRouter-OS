@@ -95,3 +95,8 @@ independent-review evidence pass without changing evaluation thresholds.
 When evaluation uses a custom classifier, every dependent scorecard dimension
 now measures that same classifier. Default behavior remains unchanged. Local
 compatibility, full-regression, and independent-review evidence pass.
+## TASK-157 public grading runtime — 2026-11-15
+
+Rust default grading now loads packaged models and queries the installed CLI
+without caller manifests. Full Python 2,613/7 and independent review pass;
+evaluation/platform parity remains Partial and acceptance is not granted.

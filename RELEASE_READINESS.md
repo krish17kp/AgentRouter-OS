@@ -124,3 +124,8 @@ The measured scorecard no longer mixes an injected classifier with the default
 classifier. Local compatibility, Rust tests, review, and full regression pass.
 The public runtime remains Partial; overall release readiness remains held by
 the frozen gate and external requirements.
+## TASK-157 public grading runtime — 2026-11-15
+
+Default Rust grading now discovers packaged models and the installed CLI surface
+and fails closed when either is unavailable. Independent review and full Python
+2,613/7 pass. No release threshold or frozen data changed; readiness is held.

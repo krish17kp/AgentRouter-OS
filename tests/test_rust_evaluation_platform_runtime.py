@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -16,12 +17,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _cargo(*arguments: str) -> subprocess.CompletedProcess[str]:
+    environment = os.environ.copy()
+    target = Path(environment.get("CARGO_TARGET_DIR", ROOT / "target")) / "debug"
+    environment["PATH"] = f"{target}{os.pathsep}{environment.get('PATH', '')}"
     return subprocess.run(
         ["cargo", "run", "--quiet", "--locked", *arguments],
         capture_output=True,
         text=True,
         encoding="utf-8",
         cwd=ROOT,
+        env=environment,
         timeout=180,
         check=False,
     )

@@ -1199,14 +1199,8 @@ fn run() -> Result<i32, String> {
         println!(
             "{}",
             serde_json::json!({
-                "commands": [
-                    "dashboard", "doctor", "evaluate", "execute", "explain", "feedback",
-                    "init", "mcp", "route", "server", "setup", "stats"
-                ],
-                "groups": [
-                    "dataset", "eval", "hosts", "models", "plugin", "prompt", "providers",
-                    "registry"
-                ]
+                "commands": agentrouter_evaluation::evaluators_api::RUST_CLI_COMMANDS,
+                "groups": agentrouter_evaluation::evaluators_api::RUST_CLI_GROUPS,
             })
         );
         return Ok(0);

@@ -116,3 +116,8 @@ statement, 87.833% branch, and 91.058% combined coverage. Review is clear.
 Scorecard/evaluation compatibility: 42/42. Rust evaluation tests and strict
 Clippy pass. Full Python: 2,610 passed, 7 skipped; 92.021% statement, 87.833%
 branch, 91.058% combined. Independent review is clear.
+## TASK-157 public grading runtime — 2026-11-15
+
+Default Rust grading now loads packaged models and queries the installed CLI
+without caller manifests; failed discovery stops evaluation. Focused
+compatibility and full Python 2,613/7 pass. Release readiness remains held.

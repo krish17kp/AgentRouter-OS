@@ -2767,3 +2767,10 @@ behavior. Added a differential using a prediction that differs from default.
 Scorecard/evaluation compatibility 42/42, Rust tests, strict Clippy, independent
 review, and full Python 2,610/7 pass. Kept grading/platform Partial and split
 default public runtime discovery into TASK-157.
+## TASK-157 public grading runtime — 2026-11-15
+
+Added default Rust grading with packaged seed-model loading and fail-closed
+installed-CLI surface discovery. Differential coverage verifies defaults, both
+modes, empty input, context override, actual CLI surface, and loader errors.
+Independent review repaired circular metadata and executable-relative discovery.
+Final review clear; full Python regression: 2,613 passed, 7 skipped in 298.77s.

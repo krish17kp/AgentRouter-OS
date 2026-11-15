@@ -246,3 +246,8 @@ injected classifier propagation, and default CLI/model discovery.
 Rust now uses an injected classifier consistently across every dependent
 scorecard dimension. Public default grading, live CLI discovery, and packaged
 model discovery remain incomplete and keep grading/platform Partial.
+## TASK-157 update — 2026-11-15
+
+Default Rust grading now loads packaged models and discovers the installed CLI.
+Full Python evaluation orchestration and complete platform behavior remain
+Partial; all existing release blockers remain unchanged.
