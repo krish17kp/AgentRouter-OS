@@ -53,6 +53,28 @@ fn run() -> Result<(), String> {
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();
+    let strict_text = value
+        .get("redact_strict")
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .map(|item| {
+                    agentrouter_cli::observability::redact_strict(item.as_str().unwrap_or_default())
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    let strict_values = value
+        .get("redact_value_strict")
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .map(agentrouter_cli::observability::redact_value_strict)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
     let route_record = value
         .get("route_record")
         .map(|input| {
@@ -73,7 +95,7 @@ fn run() -> Result<(), String> {
         .unwrap_or(Value::Null);
     println!(
         "{}",
-        json!({"redact": redacted, "echo": echoed, "redact_value": values, "route_record": route_record})
+        json!({"redact": redacted, "echo": echoed, "redact_value": values, "route_record": route_record, "redact_strict": strict_text, "redact_value_strict": strict_values})
     );
     Ok(())
 }

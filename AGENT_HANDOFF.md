@@ -2,20 +2,22 @@
 
 ## Current checkpoint — 2026-11-15
 
-- Active branch: `release/agentrouter-v0.5-rc1`; latest pushed head: `5af3c55`.
+- Active checkout: `/data/AgentRouter-production` on
+  `release/agentrouter-v0.5-rc1`; latest pushed head: `c7d8180`.
   Its hosted Python and Rust matrices pass on Linux/Windows/macOS, along with
   API, build, security, website, and critical mutation. The PR's frozen
   context-band gate remains 0.6667 < 0.90; live smoke skips without a key.
 - PR #16 is the sole open PR and has no GitHub review. Keep main promotion and
   release held. The parity matrix remains 48/77 full, 29 Partial.
-- TASK-152 is the current working-tree change: shared Rust observability crate,
-  opt-in request-correlated route records, and Python/Rust log redaction.
-  Focused observability/correlation/HTTP compatibility passes 85/1, five Rust crate tests
-  pass, and the independent privacy review is clear. Full Python regression
-  passes 2,590/5 at 92.052% statement, 87.756% branch, and 91.064% combined
-  coverage; Rust workspace/Clippy and clean-wheel smoke pass. Next:
-  commit/push to the authorized RC, inspect hosted checks, and
-  continue the next Partial module. Preserve the current uncommitted files.
+- TASK-153 is the current working-tree change: strict Python/Rust diagnostic
+  bundle redaction, structural JSON masking, and bounded UTF-8 output. Focused
+  Python passes 88/1, Rust library passes 81, the differential passes 1/1,
+  and independent Python/Rust reviews are clear. Full Python regression passes
+  2,597/7 at 92.004% statement, 87.789% branch, and 91.034% combined coverage;
+  Rust workspace/Clippy, security checks, build, and installed-wheel smoke pass.
+  Next: commit/push to the authorized RC, inspect hosted checks, then apply the
+  prepared TASK-154 exclusive-create repair and continue TASK-155 evaluation
+  grading parity. Preserve TASK-154/155 task notes when staging TASK-153.
 - Needs Krish: two independent annotators and an adjudicator for all 63 blinded
   TASK-012 cases; a protected OpenAI key and bounded paid smoke authorization;
   production infrastructure/release credentials and final main promotion.

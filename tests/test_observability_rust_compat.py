@@ -88,7 +88,14 @@ def test_redaction_and_safe_echo_match_python_contract():
         "decision_id": "d_1",
         "request_id": "req-1",
     }
+    strict_values = [
+        {"APİ_KEY": "abc", "password": "short", "api_key": "set (value withheld)"},
+        {"path": "ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklm/nopqrstuvwxyz.py"},
+        [[[[[[{"token": "abc"}, None, 3, True]]]]]],
+    ]
     payload = {
+        "redact_strict": secrets,
+        "redact_value_strict": strict_values,
         "redact": secrets,
         "echo": echo_inputs,
         "redact_value": redact_values,
@@ -106,6 +113,10 @@ def test_redaction_and_safe_echo_match_python_contract():
         check=True,
     )
     rust = json.loads(result.stdout)
+    assert rust["redact_strict"] == [observability.redact_strict(value) for value in secrets]
+    assert rust["redact_value_strict"] == [
+        observability.redact_value(value, _preserve_paths=False) for value in strict_values
+    ]
     assert rust["redact"] == [observability.redact(secret) for secret in secrets]
     for secret in (
         "postgres://user:allletters@db.internal/x",

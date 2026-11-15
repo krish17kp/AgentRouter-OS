@@ -67,6 +67,11 @@ pub fn redact(text: &str) -> String {
     redact_with_paths(text, true)
 }
 
+/// Redact opaque tokens even when they resemble diagnostic paths.
+pub fn redact_strict(text: &str) -> String {
+    redact_with_paths(text, false)
+}
+
 fn redact_with_paths(text: &str, preserve_paths: bool) -> String {
     secret_pattern()
         .replace_all(text, |captures: &Captures<'_>| {
@@ -230,6 +235,25 @@ fn json_truthy(value: &Value) -> bool {
     }
 }
 
+fn sensitive_field(key: &str) -> bool {
+    let normalized: String = key
+        .to_lowercase()
+        .chars()
+        .filter(char::is_ascii_alphanumeric)
+        .collect();
+    [
+        "apikey",
+        "secret",
+        "passwd",
+        "password",
+        "token",
+        "credential",
+        "authorization",
+    ]
+    .iter()
+    .any(|marker| normalized.contains(marker))
+}
+
 fn redact_value_at(value: &Value, depth: usize, preserve_paths: bool) -> Value {
     match value {
         Value::String(text) => Value::String(redact_with_paths(text, preserve_paths)),
@@ -249,12 +273,23 @@ fn redact_value_at(value: &Value, depth: usize, preserve_paths: bool) -> Value {
                         } else {
                             redact_with_paths(key, false)
                         },
-                        redact_value_at(item, depth + 1, preserve_paths),
+                        if !preserve_paths
+                            && sensitive_field(key)
+                            && !matches!(
+                                item.as_str(),
+                                Some("unset" | "set but blank" | "set (value withheld)")
+                            )
+                        {
+                            Value::String("[redacted]".into())
+                        } else {
+                            redact_value_at(item, depth + 1, preserve_paths)
+                        },
                     )
                 })
                 .collect(),
         ),
         Value::Null | Value::Bool(_) | Value::Number(_) => value.clone(),
+        _ if !preserve_paths => Value::String("[redacted]".into()),
         _ => Value::String(redact_with_paths(&value.to_string(), preserve_paths)),
     }
 }
@@ -263,6 +298,25 @@ fn redact_value_at(value: &Value, depth: usize, preserve_paths: bool) -> Value {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn strict_structures_hide_sensitive_values_beyond_depth_limit() {
+        let mut value = serde_json::json!({"api_key": "abc"});
+        for _ in 0..6 {
+            value = serde_json::json!({"nested": value});
+        }
+        let masked = redact_value_strict(&value);
+        assert!(!masked.to_string().contains("abc"));
+        assert!(masked.to_string().contains("[redacted]"));
+        assert_eq!(
+            redact_value_strict(&serde_json::json!({"APİ_KEY": "abc"})),
+            serde_json::json!({"APİ_KEY": "[redacted]"})
+        );
+        assert_eq!(
+            redact_value_at(&Value::Bool(true), 6, false),
+            Value::Bool(true)
+        );
+    }
 
     #[test]
     fn redacts_provider_tokens_and_generic_secret_shapes() {

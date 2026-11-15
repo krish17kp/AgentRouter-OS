@@ -1,6 +1,41 @@
 # Codex Handoff - AgentRouter OS
 
-## Current checkpoint — 2026-11-15
+## Storage relocation — 2026-11-15
+
+Active release checkout: `/data/AgentRouter-production` on branch
+`release/agentrouter-v0.5-rc1` at c7d8180. The prior checkout is detached and
+preserved at `/home/krish/.codex/worktrees/agentrouter-production/AgentRouter-OS`.
+Tracked code/test diffs were verified identical before transfer; untracked TASK-153,
+154, and 155 task notes and `/data/agentrouter-recovery/task154.patch` were copied.
+Context documents are at `/data/agentrouter-context`. Shared Git metadata and Python
+venv remain at `/data/AgentRouter-OS`. New Rust build output points to
+`/data/agentrouter-build/target`; source `/data/agentrouter-build/environment.sh`
+for that location and `/data/agentrouter-build/tmp` temporary files.
+
+The Python full regression in the previous checkout completed: 2,597 passed,
+7 skipped, 1 warning, 501.42s; coverage is 92.004% statement, 87.789% branch,
+and 91.034% combined. Log and JSON
+coverage evidence are at `/data/agentrouter-build/evidence/`. Investigate skips
+before any release claim. TASK-153 remains uncommitted; preserve current changes.
+
+## Recovery checkpoint — 2026-11-15
+
+Active persistent checkout: `/home/krish/.codex/worktrees/agentrouter-production/AgentRouter-OS`,
+starting detached at `c7d8180`. The old `/tmp/agentrouter-rust-next` disappeared;
+TASK-153 uncommitted changes are being reconstructed. Preserve all current edits.
+Python focused tests pass 88/1, Rust CLI library 75/75 and observability 6/6,
+Rust workspace, strict Clippy, Python/Rust differential, independent reviews, build
+and installed-wheel smoke pass. The first full Python run failed after disk exhaustion;
+no coverage evidence from it is valid. A retry runs with COVERAGE_FILE in /tmp,
+CARGO_INCREMENTAL=0; monitor /tmp/agentrouter-task153-retry.log and disk free space.
+Next: diagnose any retry failure, record coverage, commit only verified changes.
+TASK-154 patch is at /home/krish/.codex/agentrouter-recovery/task154.patch; apply
+only after the running suite completes. TASK-155 identifies malformed holdout
+fallback; fix and test without weakening gates. Preserve all current edits.
+Hosted c7d8180 Rust, security, mutation and website pass; enforcing CI fails its release gate.
+Production remains IN_PROGRESS; 29 module parity rows and external gates remain open.
+
+## Previous checkpoint — 2026-11-15
 
 The active RC branch is at pushed head `5af3c55`. Hosted Python, Rust, and
 compatibility jobs pass across supported platforms, as do API, build, security,

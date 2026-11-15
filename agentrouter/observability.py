@@ -224,9 +224,25 @@ def redact(text: str) -> str:
     return _SECRET_RE.sub(mask, text)
 
 
-def _redact_strict(text: str) -> str:
+def redact_strict(text: str) -> str:
     """Redact all secret-shaped runs in structured fields, including path shapes."""
     return _SECRET_RE.sub("[redacted]", text)
+
+
+def _sensitive_field(key: str) -> bool:
+    normalized = "".join(c for c in key.lower() if c.isascii() and c.isalnum())
+    return any(
+        marker in normalized
+        for marker in (
+            "apikey",
+            "token",
+            "secret",
+            "passwd",
+            "password",
+            "authorization",
+            "credential",
+        )
+    )
 
 
 def _log_request_id(request_id: str) -> str:
@@ -247,22 +263,30 @@ def redact_value(value: Any, _depth: int = 0, *, _preserve_paths: bool = True) -
     ``log_event`` used to redact only values that were already strings, so
     ``detail={"authorization": "Bearer secret"}`` was serialised untouched.
     """
-    mask = redact if _preserve_paths else _redact_strict
+    mask = redact if _preserve_paths else redact_strict
     if isinstance(value, str):
         return mask(value)
+    if not _preserve_paths and isinstance(value, (type(None), bool, int, float)):
+        return value
     if _depth >= _MAX_REDACT_DEPTH:
-        return mask(str(value))
+        return mask(str(value)) if _preserve_paths else "[redacted]"
     if isinstance(value, dict):
         return {
-            (_redact_strict(str(k)) if not _preserve_paths else k): redact_value(
-                v, _depth + 1, _preserve_paths=_preserve_paths
+            (redact_strict(str(k)) if not _preserve_paths else k): (
+                "[redacted]"
+                if not _preserve_paths
+                and _sensitive_field(str(k))
+                and not (
+                    isinstance(v, str) and v in {"unset", "set but blank", "set (value withheld)"}
+                )
+                else redact_value(v, _depth + 1, _preserve_paths=_preserve_paths)
             )
             for k, v in value.items()
         }
     if isinstance(value, (list, tuple, set)):
         return [redact_value(v, _depth + 1, _preserve_paths=_preserve_paths) for v in value]
     if not _preserve_paths and not isinstance(value, (type(None), bool, int, float)):
-        return _redact_strict(str(value))
+        return redact_strict(str(value))
     return value
 
 
@@ -322,7 +346,7 @@ def log_api_error(
         logger.error("%s", line)
         return record
     trace = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
-    logger.error("%s\n%s", line, _redact_strict(trace))
+    logger.error("%s\n%s", line, redact_strict(trace))
     return record
 
 

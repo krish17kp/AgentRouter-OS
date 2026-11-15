@@ -36,20 +36,35 @@ fn existing_path(path: &Path) -> bool {
 }
 
 fn bounded(text: &str) -> String {
-    let redacted = crate::observability::redact(text);
+    let redacted = crate::observability::redact_strict(text);
     if redacted.len() <= MAX_ARTIFACT_BYTES {
         return redacted;
     }
-    let mut end = MAX_ARTIFACT_BYTES;
+    let suffix = "\n... truncated ...\n";
+    let mut end = MAX_ARTIFACT_BYTES - suffix.len();
     while !redacted.is_char_boundary(end) {
         end -= 1;
     }
-    format!("{}\n... truncated ...\n", &redacted[..end])
+    format!("{}{suffix}", &redacted[..end])
 }
 
 fn write_text(directory: &Path, name: &str, text: &str) -> Result<(), BundleError> {
     let path = directory.join(name);
-    let content = bounded(text);
+    let content = if name.ends_with(".json") {
+        let value: Value = serde_json::from_str(text)
+            .map_err(|_| BundleError("bundle JSON artifact is malformed".into()))?;
+        let content =
+            serde_json::to_string_pretty(&crate::observability::redact_value_strict(&value))
+                .map_err(|_| BundleError("bundle JSON artifact could not be serialized".into()))?;
+        if content.len() > MAX_ARTIFACT_BYTES {
+            return Err(BundleError(
+                "bundle JSON artifact exceeds size limit".into(),
+            ));
+        }
+        content
+    } else {
+        bounded(text)
+    };
     let mut file = OpenOptions::new()
         .write(true)
         .create_new(true)
@@ -245,4 +260,50 @@ Text is passed through the same redaction the logs use.\n{}",
     files.push("README.txt".into());
     files.sort();
     Ok(Bundle { directory, files })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn json_artifacts_remain_valid_and_hide_short_and_path_shaped_secrets() {
+        let directory = tempfile::tempdir().unwrap();
+        let token = "ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklm/nopqrstuvwxyz.py";
+        write_text(directory.path(), "doctor.json", &json!({"path": token, "APİ_KEY": "abc", "settings": {"AGENTROUTER_API_KEY": "set (value withheld)"}}).to_string()).unwrap();
+        let raw = fs::read_to_string(directory.path().join("doctor.json")).unwrap();
+        let value: Value = serde_json::from_str(&raw).unwrap();
+        assert!(!raw.contains(token));
+        assert_eq!(value["APİ_KEY"], "[redacted]");
+        assert_eq!(
+            value["settings"]["AGENTROUTER_API_KEY"],
+            "set (value withheld)"
+        );
+    }
+
+    #[test]
+    fn text_is_redacted_before_utf8_truncation_and_stays_within_byte_cap() {
+        let token = "ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklm/nopqrstuvwxyz.py";
+        let text = format!(
+            "{} {token} {}",
+            "é ".repeat(MAX_ARTIFACT_BYTES / 3 - 5),
+            "x ".repeat(50)
+        );
+        let result = bounded(&text);
+        assert!(result.len() <= MAX_ARTIFACT_BYTES);
+        assert!(!result.contains("ABCDEFGHIJ"));
+        assert!(result.ends_with("\n... truncated ...\n"));
+    }
+
+    #[test]
+    fn malformed_and_oversized_json_create_no_artifact() {
+        let directory = tempfile::tempdir().unwrap();
+        for text in [
+            "{".to_owned(),
+            json!({"text": "x ".repeat(MAX_ARTIFACT_BYTES)}).to_string(),
+        ] {
+            assert!(write_text(directory.path(), "doctor.json", &text).is_err());
+            assert!(!directory.path().join("doctor.json").exists());
+        }
+    }
 }

@@ -12,6 +12,17 @@ Updated: 2026-11-15
 - [x] Changelog, coverage evidence, and local latency measurements are committed to the release candidate. Candidate package version is now `0.5.0rc1`, with draft release notes in `docs/RELEASE_NOTES_v0.5.0rc1.md`; final `0.5.0` packaging and publication remain blocked on parity and all release gates.
 - [ ] Release candidate promoted to `main` with a tagged release.
 
+## Current recovery checkpoint
+
+TASK-153 is reconstructed in the persistent managed worktree after the temporary
+checkout disappeared. Python focused tests pass 88/1; Rust CLI library 75/75,
+observability 6/6, and strict Python/Rust differential 1/1 pass. Independent Python
+and Rust reviews found no blocking issue. Wheel/sdist build and installed-wheel
+init, routing, bundle privacy, API/MCP/plugin imports pass. Full Python regression
+passes 2,597/7 with 92.004% statement and 87.789% branch coverage.
+Bundle remains Partial for filesystem behavior and JSON edge-case parity. TASK-154
+baseline reproduces overwriting an existing artifact in Python; Rust refuses it.
+
 ## Completed / in progress
 
 - [x] PR #33 reviewed and merged into RC `019233a`: Rust context-band feature extraction, validated artifact loading, stable softmax inference, and 15 prompt-level Python/Rust differential cases. All cross-platform CI checks passed; the learned model remains disabled in default routing.

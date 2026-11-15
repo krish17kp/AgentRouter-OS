@@ -160,3 +160,43 @@ def test_the_cli_writes_a_bundle_and_names_what_is_inside(home, tmp_path):
     assert "Bundle written to" in result.output
     assert "No .env, credential file or key value is included" in result.output
     assert (tmp_path / "b" / "doctor.json").exists()
+
+
+@pytest.mark.parametrize("field", ["api_key", "APİ_KEY", "password", "credential"])
+def test_bundle_masks_short_sensitive_values(tmp_path, field):
+    bundle._write(tmp_path, "probe.json", json.dumps({field: "abc"}))
+    assert json.loads((tmp_path / "probe.json").read_text())[field] == "[redacted]"
+
+
+def test_bundle_masks_path_shaped_tokens_and_deep_secrets(tmp_path):
+    token = "ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklm/nopqrstuvwxyz.py"
+    payload = {"path": token, "nested": [[[[[[{"api_key": "abc"}]]]]]]}
+    bundle._write(tmp_path, "probe.json", json.dumps(payload))
+    text = (tmp_path / "probe.json").read_text()
+    assert token not in text
+    assert "abc" not in text
+    assert isinstance(json.loads(text), dict)
+
+
+def test_bundle_redacts_before_byte_truncation(tmp_path, monkeypatch):
+    monkeypatch.setattr(bundle, "MAX_ARTIFACT_BYTES", 100)
+    token = "ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklm/nopqrstuvwxyz.py"
+    bundle._write(tmp_path, "probe.txt", "é " * 25 + token + " rest" * 30)
+    raw = (tmp_path / "probe.txt").read_bytes()
+    assert len(raw) <= 100
+    assert b"ABCDEFGHIJ" not in raw
+    assert raw.decode("utf-8").endswith("... truncated ...\n")
+
+
+@pytest.mark.parametrize("text", ['{"bad":', json.dumps({"value": "x " * 200})])
+def test_bundle_rejects_invalid_or_oversized_json_before_creation(tmp_path, monkeypatch, text):
+    monkeypatch.setattr(bundle, "MAX_ARTIFACT_BYTES", 100)
+    with pytest.raises(bundle.BundleError):
+        bundle._write(tmp_path, "probe.json", text)
+    assert not (tmp_path / "probe.json").exists()
+
+
+def test_bundle_byte_limit_includes_newlines(tmp_path, monkeypatch):
+    monkeypatch.setattr(bundle, "MAX_ARTIFACT_BYTES", 100)
+    bundle._write(tmp_path, "probe.txt", "a\n" * 100)
+    assert len((tmp_path / "probe.txt").read_bytes()) <= 100

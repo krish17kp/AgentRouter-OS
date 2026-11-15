@@ -51,12 +51,25 @@ class Bundle:
 
 def _write(directory: Path, name: str, text: str) -> str:
     """Write one allowlisted artifact, redacted and bounded."""
-    if len(text) > MAX_ARTIFACT_BYTES:
-        text = text[:MAX_ARTIFACT_BYTES] + "\n... truncated ...\n"
+    if name.endswith(".json"):
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError as error:
+            raise BundleError("bundle JSON artifact is malformed") from error
+        redacted = json.dumps(observability.redact_value(payload, _preserve_paths=False), indent=2)
+        if len(redacted.encode("utf-8")) > MAX_ARTIFACT_BYTES:
+            raise BundleError("bundle JSON artifact exceeds size limit")
+    else:
+        redacted = observability.redact_strict(text)
+        encoded = redacted.encode("utf-8")
+        if len(encoded) > MAX_ARTIFACT_BYTES:
+            suffix = "\n... truncated ...\n"
+            prefix = encoded[: MAX_ARTIFACT_BYTES - len(suffix.encode("utf-8"))]
+            redacted = prefix.decode("utf-8", errors="ignore") + suffix
     target = directory / name
     if target.is_symlink():
         raise BundleError(f"refusing to write through a symlink: {target}")
-    target.write_text(observability.redact(text), encoding="utf-8")
+    target.write_bytes(redacted.encode("utf-8"))
     return name
 
 
