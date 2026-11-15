@@ -220,17 +220,18 @@ and `tests/test_failure_injection.py::test_read_only_data_directory_does_not_lea
 
 ## 11. Correlating a user report with the logs — **Verified**
 
-Every response carries `X-Request-ID`, echoed if the client sent one. The same
-id appears in the structured log record for that request, including on the error
-path.
+Every response carries `X-Request-ID`, echoed if the client sent one. The
+structured success and error records contain `sha256:` followed by the lowercase
+SHA-256 hex digest of that ID's UTF-8 bytes. Hash the header value to find the
+matching log record without exposing caller-controlled IDs.
 
 ```bash
 export AGENTROUTER_LOG=1     # structured records are opt-in
 ```
 
-*Verified by* `tests/test_observability_correlation.py` — the id reaches the log
-on success and on failure, is unique per request, and is cleared afterwards so
-it cannot bleed into a later call.
+*Verified by* `tests/test_observability_correlation.py` — the digest matches on
+success and failure, remains unique per request, and the underlying context ID
+is cleared afterwards so it cannot bleed into a later call.
 
 ---
 

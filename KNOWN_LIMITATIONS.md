@@ -1,6 +1,16 @@
 # Known Limitations
 
-## Current migration and release limits (2026-11-14)
+## Current migration and release limits (2026-11-15)
+
+- Rust migration remains 48/77 full-module parity. TASK-152 adds opt-in route
+  decision records, request correlation, and shared API/CLI redaction, but full
+  observability spans, optional OTel, and complete API-error parity remain.
+- The `5af3c55` hosted matrix passes all Python/Rust supported platforms,
+  security, and critical mutation. The frozen context-band accuracy is still
+  0.6667 against 0.90; independent human labels and adjudication are needed.
+  OpenAI live validation and production infrastructure need owner credentials.
+
+## Previous migration and release limits (2026-11-14)
 
 - TASK-146 rejects absent and malformed OpenAI HTTP statuses. Hosted critical
   mutation run `43618274518` passes 1,706 selected mutants (0.9701 overall,

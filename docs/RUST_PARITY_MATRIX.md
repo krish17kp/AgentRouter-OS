@@ -70,7 +70,7 @@ release authority until the full set is complete.
 | `agentrouter/hosts.py` | `agentrouter-hosts` | Parity |
 | `agentrouter/learning.py` | `agentrouter-learning::learned_weights` | Parity |
 | `agentrouter/mcp_server.py` | `agentrouter-mcp::{Server,run_stdio}` | Partial |
-| `agentrouter/observability.py` | `agentrouter-cli::observability` | Partial |
+| `agentrouter/observability.py` | `agentrouter-observability` (shared API/CLI redaction and route record) | Partial |
 | `agentrouter/openai_adapter.py` | `agentrouter-cli::openai` | Parity |
 | `agentrouter/plugins.py` | `agentrouter-cli::plugins` (inventory, portable paths, no-follow state, list/status/doctor/plan, safe install/uninstall, forced unmanaged replacement, identity-checked journal recovery) | Partial |
 | `agentrouter/prompts.py` | `agentrouter-cli::generate_prompt` | Parity |
@@ -120,9 +120,12 @@ release authority until the full set is complete.
   Python-only.
 - TASK-149 adds recursive JSON redaction comparisons for nested objects and
   arrays, including authorization headers, provider tokens, generic API-key
-  fields, and ordinary paths. The observability module remains Partial because
-  structured logging, request context, spans, API-error records, and OTel are
-  still not ported.
+  fields, and ordinary paths.
+- TASK-152 shares Rust redaction across API and CLI, matches Python route
+  decision metadata, and emits opt-in JSON route records correlated through
+  SHA-256 request-ID digests, with strict redaction of nested metadata values
+  and keys. The observability module remains Partial for spans, optional OTel,
+  and full API-error record parity.
 - TASK-150 preserves Pydantic's arbitrary-precision `ModelSummary.context_window`
   response value in Rust, including values outside signed 64-bit range, and
   differentially checks accepted and rejected coercions. The schema module stays

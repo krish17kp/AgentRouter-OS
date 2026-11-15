@@ -386,17 +386,19 @@ Everything is local under `AGENTROUTER_HOME` (default `~/.agentrouter/`):
 
 ## Observability (opt-in)
 
-Every route decision emits a structured JSON record on the `agentrouter.route`
-logger — metadata only (`task_type`, `risk`, chosen model, score, `request_id`,
-`task_len`); **never the task text or generated prompt**. It is silent by default.
+When enabled, route decisions emit structured JSON records on the
+`agentrouter.route` logger — metadata only (`task_type`, `risk`, chosen model,
+score, a `request_id` digest, `task_len`); **never the task text or generated
+prompt**. Logging is silent by default.
 
 | Env var | Effect |
 | --- | --- |
 | `AGENTROUTER_LOG=1` | Print the JSON route-decision records to stderr. |
 | `AGENTROUTER_OTEL=1` | Emit OpenTelemetry spans (needs `pip install agentrouter-os[otel]`; a no-op otherwise). |
 
-The server echoes `X-Request-ID` and threads it into the log record so API calls
-are traceable end to end.
+The server echoes `X-Request-ID`. Logs use `sha256:` followed by the lowercase
+SHA-256 hex digest of that ID's UTF-8 bytes, so calls remain traceable without
+writing caller-supplied IDs to logs.
 
 ### Server limits (opt-in)
 

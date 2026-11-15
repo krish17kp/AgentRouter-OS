@@ -20,7 +20,7 @@ use agentrouter_limits::{
 };
 use axum::{
     body::{to_bytes, Body, Bytes},
-    extract::{ConnectInfo, Path, Request, State},
+    extract::{ConnectInfo, Extension, Path, Request, State},
     http::{header, HeaderValue, StatusCode},
     middleware::{self, Next},
     response::{Html, IntoResponse, Redirect, Response},
@@ -56,6 +56,9 @@ struct ApiState {
     idempotency_cache: Arc<IdempotencyCache>,
     flights: Arc<Mutex<HashMap<String, Arc<Mutex<()>>>>>,
 }
+
+#[derive(Clone)]
+struct RequestId(String);
 
 #[derive(Debug)]
 struct ApiError {
@@ -244,7 +247,7 @@ fn cors_origins() -> Vec<HeaderValue> {
         .collect()
 }
 
-async fn request_id(State(state): State<ApiState>, request: Request, next: Next) -> Response {
+async fn request_id(State(state): State<ApiState>, mut request: Request, next: Next) -> Response {
     let supplied = request
         .headers()
         .get(REQUEST_ID_HEADER)
@@ -260,11 +263,13 @@ async fn request_id(State(state): State<ApiState>, request: Request, next: Next)
     });
     let header_value = HeaderValue::try_from(id.as_str())
         .unwrap_or_else(|_| HeaderValue::from_static("request-id-invalid"));
+    request.extensions_mut().insert(RequestId(id.clone()));
     let mut response = next.run(request).await;
+    let safe_id = agentrouter_observability::log_request_id(&id);
     if response.status() == StatusCode::SERVICE_UNAVAILABLE {
-        eprintln!("api.registry_error request_id={id}");
+        eprintln!("api.registry_error request_id={safe_id}");
     } else if response.status().is_server_error() {
-        eprintln!("api.internal_error request_id={id}");
+        eprintln!("api.internal_error request_id={safe_id}");
     }
     response
         .headers_mut()
@@ -535,10 +540,23 @@ async fn classify(State(_state): State<ApiState>, body: Bytes) -> Result<Json<Va
     Ok(Json(result))
 }
 
-async fn route_task(State(state): State<ApiState>, body: Bytes) -> Result<Json<Value>, ApiError> {
+async fn route_task(
+    State(state): State<ApiState>,
+    Extension(request_id): Extension<RequestId>,
+    body: Bytes,
+) -> Result<Json<Value>, ApiError> {
     let request: RouteRequest = decode(body, RequestKind::Route)?;
     let home = state.home;
+    let task = request.classify.task.clone();
     let result = blocking(move || service::route_task(&home, &request)).await?;
+    let decision_id = result.get("decision_id").and_then(Value::as_str);
+    let record = agentrouter_observability::route_decision_record(
+        &task,
+        &result,
+        decision_id,
+        Some(&request_id.0),
+    );
+    agentrouter_observability::emit_route_decision(&record);
     Ok(Json(result))
 }
 

@@ -54,7 +54,9 @@ curl -H "X-API-Key: your-secret" http://127.0.0.1:8000/v1/models
 ## Request ID
 
 Every response carries an `X-Request-ID` header. If the client sends one it is
-echoed back; otherwise the server generates a UUID. Use it to correlate logs.
+echoed back; otherwise the server generates a UUID. Logs store `sha256:` followed
+by the lowercase SHA-256 hex digest of the ID's UTF-8 bytes. Compute that digest
+to correlate a response with its log record.
 
 ## Error format
 
@@ -80,8 +82,9 @@ Two codes deliberately say less than the server knows. `registry_unavailable`
 and `internal_error` both carry a fixed message, because the underlying text
 quotes registry file paths and the offending source line — and a registry is
 only malformed at exactly the moment someone has pasted a credential into it.
-The detail is written to the server log at `ERROR` with the request id, so run
-`agentrouter doctor` locally, or correlate the `X-Request-ID` with the log.
+The detail is written to the server log at `ERROR` with the request ID digest,
+so run `agentrouter doctor` locally, or hash the `X-Request-ID` to correlate it
+with the log.
 **No traceback is ever returned to a client.**
 
 ## Endpoints

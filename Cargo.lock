@@ -10,6 +10,7 @@ dependencies = [
  "agentrouter-core",
  "agentrouter-hosts",
  "agentrouter-limits",
+ "agentrouter-observability",
  "agentrouter-registry",
  "agentrouter-routing",
  "agentrouter-storage",
@@ -44,6 +45,7 @@ dependencies = [
  "agentrouter-learning",
  "agentrouter-limits",
  "agentrouter-mcp",
+ "agentrouter-observability",
  "agentrouter-policy",
  "agentrouter-registry",
  "agentrouter-reliability",
@@ -55,14 +57,12 @@ dependencies = [
  "fs_at",
  "getrandom",
  "noyalib-serde-yaml",
- "regex",
  "rusqlite",
  "rustix 1.1.6",
  "serde",
  "serde_json",
  "sha2",
  "tempfile",
- "unicode-general-category",
  "ureq",
  "windows-sys 0.59.0",
 ]
@@ -128,6 +128,16 @@ dependencies = [
  "agentrouter-api",
  "agentrouter-core",
  "serde_json",
+]
+
+[[package]]
+name = "agentrouter-observability"
+version = "0.1.0"
+dependencies = [
+ "regex",
+ "serde_json",
+ "sha2",
+ "unicode-general-category",
 ]
 
 [[package]]

@@ -1,6 +1,20 @@
 # Codex Handoff - AgentRouter OS
 
-## Current checkpoint — 2026-11-14
+## Current checkpoint — 2026-11-15
+
+The active RC branch is at pushed head `5af3c55`. Hosted Python, Rust, and
+compatibility jobs pass across supported platforms, as do API, build, security,
+website, and critical mutation. TASK-152 local Python passes 2,590/5 with
+92.052% statement, 87.756% branch, and 91.064% combined coverage; Rust
+workspace/Clippy, wheel/sdist, and clean-wheel smoke pass. The sole PR (#16) remains held: frozen
+context-band accuracy is 0.6667 < 0.90, and it has no human review. Rust parity
+is 48/77 full modules. TASK-152 currently changes shared Rust observability,
+opt-in API route records, and logging redaction; commit/push to the authorized
+RC, inspect hosted validation, then continue the next Partial row.
+Human annotation, paid OpenAI live validation, and production credentials are
+listed under Needs Krish in `PRODUCTION_STATUS.md`.
+
+## Previous checkpoint — 2026-11-14
 
 Active branch `release/agentrouter-v0.5-rc1`; latest pushed code is `9a7dc7a`.
 TASK-150's arbitrary-precision API response differential and full Linux/Python

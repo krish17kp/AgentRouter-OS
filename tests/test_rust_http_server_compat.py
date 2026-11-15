@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -21,7 +22,11 @@ pytestmark = pytest.mark.skipif(shutil.which("cargo") is None, reason="cargo not
 
 
 @contextmanager
-def _server(home: Path, settings: dict[str, str] | None = None):
+def _server(
+    home: Path,
+    settings: dict[str, str] | None = None,
+    stderr_capture: list[str] | None = None,
+):
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
         port = listener.getsockname()[1]
@@ -55,7 +60,7 @@ def _server(home: Path, settings: dict[str, str] | None = None):
         cwd=ROOT,
         env=environment,
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stderr=subprocess.PIPE if stderr_capture is not None else subprocess.DEVNULL,
     )
     base = f"http://127.0.0.1:{port}"
     try:
@@ -72,12 +77,15 @@ def _server(home: Path, settings: dict[str, str] | None = None):
             pytest.fail("Rust API server did not become ready within 45 seconds")
         yield base
     finally:
-        process.terminate()
+        if process.poll() is None:
+            process.terminate()
         try:
-            process.wait(timeout=5)
+            _, stderr = process.communicate(timeout=5)
         except subprocess.TimeoutExpired:
             process.kill()
-            process.wait(timeout=5)
+            _, stderr = process.communicate(timeout=5)
+        if stderr_capture is not None:
+            stderr_capture.append((stderr or b"").decode("utf-8", errors="replace"))
 
 
 def _request(base: str, path: str, method: str = "GET", body=None, headers=None):
@@ -170,6 +178,58 @@ def test_rust_http_server_matches_public_local_api(home):
         status, _, contract = _request(base, "/openapi.json")
         expected = json.loads((ROOT / "contracts/http/v1/openapi.json").read_text())
         assert status == 200 and contract == expected
+
+
+@pytest.mark.parametrize(
+    "request_id",
+    [
+        "postgres://user:allletters@db.internal/x",
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklm/nopqrstuvwxyz.py",
+    ],
+)
+def test_rust_http_route_log_is_opt_in_correlated_and_redacted(home, request_id):
+    captured = []
+    task = "summarize private routing notes"
+    with _server(home, {"AGENTROUTER_LOG": "1"}, stderr_capture=captured) as base:
+        status, headers, response = _request(
+            base,
+            "/v1/route",
+            "POST",
+            {"task": task},
+            headers={"X-Request-ID": request_id},
+        )
+        assert status == 200 and response["decision_id"]
+        assert headers.get("X-Request-ID") == request_id
+
+    route_records = []
+    for line in captured[0].splitlines():
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if record.get("event") == "route_decision":
+            route_records.append(record)
+    assert len(route_records) == 1
+    record = route_records[0]
+    assert record["request_id"] == "sha256:" + hashlib.sha256(request_id.encode()).hexdigest()
+    assert record["decision_id"] == response["decision_id"]
+    assert record["task_len"] == len(task)
+    assert record["task_type"] == response["classification"]["task_type"]
+    assert record["risk"] == response["classification"]["risk"]
+    assert record["confidence"] == response["classification"]["confidence"]
+    assert record["recommended_model"] == response["recommendation"]["model"]
+    assert record["provider"] == response["recommendation"]["provider"]
+    assert record["auto_execute_allowed"] == response["gates"]["auto_execute_allowed"]
+    assert record["excluded_count"] == len(response["excluded"])
+    assert task not in captured[0]
+    assert request_id not in captured[0]
+    assert "prompt" not in record
+
+    silent_capture = []
+    with _server(home, {"AGENTROUTER_LOG": "0"}, stderr_capture=silent_capture) as base:
+        status, _, _ = _request(base, "/v1/route", "POST", {"task": task})
+        assert status == 200
+    assert '"event":"route_decision"' not in silent_capture[0]
 
 
 def test_rust_http_server_matches_python_service_responses(home, monkeypatch):

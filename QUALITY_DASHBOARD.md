@@ -1,6 +1,17 @@
 # Quality Dashboard — AgentRouter OS
 
-## Current checkpoint — 2026-11-14
+## Current checkpoint — 2026-11-15
+
+At `5af3c55`, the hosted Python 3.10–3.13, Windows/macOS Python, Rust
+workspace, Python/Rust compatibility, API, build, security, website, and mutation
+checks pass. The RC-to-main PR still fails the unchanged frozen context-band
+gate at 0.6667 < 0.90, and live OpenAI smoke skips without credentials. TASK-152
+adds privacy-safe Rust route logs; local full regression passes 2,590/5 at
+92.052% statement, 87.756% branch, and 91.064% combined coverage. Rust workspace,
+strict Clippy, wheel/sdist build, and clean-wheel smoke pass. Hosted TASK-152
+checks await the RC push. The module remains Partial, as do 28 other rows.
+
+## Previous checkpoint — 2026-11-14
 
 At last pushed code head `9a7dc7a`, all Rust workspace OS jobs and Linux/macOS
 Python/Rust compatibility pass; Windows Python/Rust compatibility and most

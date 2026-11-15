@@ -1,6 +1,26 @@
 # AGENT_HANDOFF — live checkpoint
 
-## Current checkpoint — 2026-11-14
+## Current checkpoint — 2026-11-15
+
+- Active branch: `release/agentrouter-v0.5-rc1`; latest pushed head: `5af3c55`.
+  Its hosted Python and Rust matrices pass on Linux/Windows/macOS, along with
+  API, build, security, website, and critical mutation. The PR's frozen
+  context-band gate remains 0.6667 < 0.90; live smoke skips without a key.
+- PR #16 is the sole open PR and has no GitHub review. Keep main promotion and
+  release held. The parity matrix remains 48/77 full, 29 Partial.
+- TASK-152 is the current working-tree change: shared Rust observability crate,
+  opt-in request-correlated route records, and Python/Rust log redaction.
+  Focused observability/correlation/HTTP compatibility passes 85/1, five Rust crate tests
+  pass, and the independent privacy review is clear. Full Python regression
+  passes 2,590/5 at 92.052% statement, 87.756% branch, and 91.064% combined
+  coverage; Rust workspace/Clippy and clean-wheel smoke pass. Next:
+  commit/push to the authorized RC, inspect hosted checks, and
+  continue the next Partial module. Preserve the current uncommitted files.
+- Needs Krish: two independent annotators and an adjudicator for all 63 blinded
+  TASK-012 cases; a protected OpenAI key and bounded paid smoke authorization;
+  production infrastructure/release credentials and final main promotion.
+
+## Previous checkpoint — 2026-11-14
 
 - Active RC branch `release/agentrouter-v0.5-rc1`; latest pushed code is `9a7dc7a`. TASK-150 and the research update are locally verified and await hosted checks. Full Linux/Python 3.12 regression passes 2,580 tests with 5 skips; coverage is 92.030% statements, 87.712% branches, and 91.038% combined. Hosted mutation passes 1,706 selected mutants with zero unreviewed survivors. At `9a7dc7a`, Rust workspace checks pass all three OSes and Python/Rust compatibility passes Linux/macOS; Windows compatibility and most Python jobs are running. The PR gate fails at context-band accuracy 0.6667 < 0.90.
 - PR #16 is the only open PR and has no GitHub reviews or review requests. The `9a7dc7a` PR enforcing run fails at the unchanged frozen context-band score of 0.6667 against 0.90; live smoke skips without an OpenAI secret. Keep the PR open. Human evaluation, bounded OpenAI live validation, and deployment credentials remain under **Needs Krish**.

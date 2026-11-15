@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import contextlib
 import contextvars
+import hashlib
 import json
 import logging
 import os
@@ -152,7 +153,7 @@ def log_route_decision(
     record = route_decision_record(
         task=task, payload=payload, decision_id=decision_id, request_id=request_id
     )
-    logger.info(json.dumps(record, sort_keys=True))
+    logger.info(json.dumps(_redact_log_record(record), sort_keys=True))
     return record
 
 
@@ -178,7 +179,7 @@ _SECRET_RE = re.compile(
     | [a-z][a-z0-9+.\-]*://[^\s/@]+:[^\s/@]+@
     | (?i:api[_\-]?key|secret|passwd|password|token|credential)
       (?-i:)["'\s]*[:=]["'\s]*[^\s"',}\]]{6,}
-    | [A-Za-z0-9+/]{40,}={0,2}
+    | (?P<opaque>[A-Za-z0-9+/]{40,}={0,2})
     )""",
     re.VERBOSE | re.DOTALL,
 )
@@ -186,23 +187,31 @@ _SECRET_RE = re.compile(
 _MAX_REDACT_DEPTH = 6
 
 
-def _is_probably_a_path(run: str) -> bool:
-    """True for a filesystem path that the catch-all pattern would otherwise mask.
-
-    The last alternative in `_SECRET_RE` is a deliberate catch-all for long
-    opaque runs, and it did its job too well: `.../Projects/Agentrouteros/
-    agentrouter/server/app` is 44 characters of `[A-Za-z0-9+/]` and was redacted
-    out of every traceback, exactly where a path is the most useful thing on the
-    line.
-
-    The discriminator is a digit. Path segments are words; opaque tokens are
-    not, and every realistic long secret that contains a slash (an AWS secret
-    access key, a base64 blob) also contains at least one digit. This narrows
-    only the catch-all — the vendor prefixes, keyword adjacency, JWT, PEM and
-    connection-string rules are untouched, so nothing that was named before is
-    unmasked now.
-    """
-    return "/" in run and not any(character.isdigit() for character in run)
+def _is_probably_a_path(match: re.Match[str]) -> bool:
+    """Preserve source paths matched by the opaque-token catch-all only."""
+    if match.group("opaque") is None:
+        return False
+    run = match.group(0)
+    if run.count("/") < 2 or any(character.isdigit() for character in run):
+        return False
+    tail = re.match(r"^[A-Za-z0-9_.-]*", match.string[match.end() :])
+    extension = tail.group(0).rsplit(".", 1)[-1] if tail else ""
+    return extension in {
+        "py",
+        "rs",
+        "yaml",
+        "yml",
+        "json",
+        "toml",
+        "txt",
+        "md",
+        "ts",
+        "tsx",
+        "js",
+        "html",
+        "css",
+        "sh",
+    }
 
 
 def redact(text: str) -> str:
@@ -210,25 +219,50 @@ def redact(text: str) -> str:
 
     def mask(match: re.Match[str]) -> str:
         run = match.group(0)
-        return run if _is_probably_a_path(run) else "[redacted]"
+        return run if _is_probably_a_path(match) else "[redacted]"
 
     return _SECRET_RE.sub(mask, text)
 
 
-def redact_value(value: Any, _depth: int = 0) -> Any:
+def _redact_strict(text: str) -> str:
+    """Redact all secret-shaped runs in structured fields, including path shapes."""
+    return _SECRET_RE.sub("[redacted]", text)
+
+
+def _log_request_id(request_id: str) -> str:
+    """Keep caller-controlled IDs correlatable without writing their contents."""
+    return "sha256:" + hashlib.sha256(request_id.encode("utf-8")).hexdigest()
+
+
+def _redact_log_record(record: dict[str, Any]) -> dict[str, Any]:
+    safe = redact_value(record, _preserve_paths=False)
+    if isinstance(record.get("request_id"), str):
+        safe["request_id"] = _log_request_id(record["request_id"])
+    return safe
+
+
+def redact_value(value: Any, _depth: int = 0, *, _preserve_paths: bool = True) -> Any:
     """Redact recursively, so a credential inside a dict or list cannot slip past.
 
     ``log_event`` used to redact only values that were already strings, so
     ``detail={"authorization": "Bearer secret"}`` was serialised untouched.
     """
+    mask = redact if _preserve_paths else _redact_strict
     if isinstance(value, str):
-        return redact(value)
+        return mask(value)
     if _depth >= _MAX_REDACT_DEPTH:
-        return redact(str(value))
+        return mask(str(value))
     if isinstance(value, dict):
-        return {k: redact_value(v, _depth + 1) for k, v in value.items()}
+        return {
+            (_redact_strict(str(k)) if not _preserve_paths else k): redact_value(
+                v, _depth + 1, _preserve_paths=_preserve_paths
+            )
+            for k, v in value.items()
+        }
     if isinstance(value, (list, tuple, set)):
-        return [redact_value(v, _depth + 1) for v in value]
+        return [redact_value(v, _depth + 1, _preserve_paths=_preserve_paths) for v in value]
+    if not _preserve_paths and not isinstance(value, (type(None), bool, int, float)):
+        return _redact_strict(str(value))
     return value
 
 
@@ -236,14 +270,14 @@ def log_event(event: str, **fields: Any) -> dict[str, Any]:
     """Emit one structured event record. Returns the record for testing.
 
     Pass metadata only — never raw task text, prompts or credential values. The
-    current request id is attached automatically so an operator can correlate an
-    event with the API response the client saw. String values are passed through
-    ``redact`` as a backstop, because the most valuable events (unexpected
-    failures) carry text nobody enumerated in advance.
+    current request id is attached automatically; its logged digest lets an
+    operator correlate an event without exposing caller-controlled text. Strings
+    are redacted before logging because unexpected failures carry text nobody
+    enumerated in advance.
     """
-    record: dict[str, Any] = {"event": event, "request_id": get_request_id(), **fields}
-    record = {k: redact_value(v) for k, v in record.items() if v is not None}
-    logger.info(json.dumps(record, sort_keys=True, default=str))
+    raw_record: dict[str, Any] = {**fields, "event": event, "request_id": get_request_id()}
+    record = {k: redact_value(v) for k, v in raw_record.items() if v is not None}
+    logger.info(json.dumps(_redact_log_record(raw_record), sort_keys=True, default=str))
     return record
 
 
@@ -282,12 +316,13 @@ def log_api_error(
     if remedy:
         record["remedy"] = remedy
     record = {k: v for k, v in record.items() if v is not None}
+    record = _redact_log_record(record)
     line = json.dumps(record, sort_keys=True, default=str)
     if not detail:
         logger.error("%s", line)
         return record
     trace = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
-    logger.error("%s\n%s", line, redact(trace))
+    logger.error("%s\n%s", line, _redact_strict(trace))
     return record
 
 

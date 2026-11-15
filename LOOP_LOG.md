@@ -1,5 +1,22 @@
 # LOOP_LOG
 
+## 2026-11-15 — TASK-152 Rust route observability
+
+At pushed `5af3c55`, hosted Python, Rust, and compatibility jobs pass on all
+supported platforms; API, build, security, website, and critical mutation pass.
+The PR enforcing job still fails the unchanged frozen context-band gate
+(0.6667 < 0.90), and live smoke skips without credentials. TASK-152 moves Rust
+redaction into a shared API/CLI crate and adds opt-in, request-correlated route
+metadata logging. Both Python and Rust redact credential-shaped metadata at
+logging boundaries. Independent audit found and repaired credential URL, opaque
+path-shaped token, nested-key, and non-JSON value leaks; request IDs are hashed
+in logs. Focused observability/correlation/HTTP compatibility passes 85 tests with one
+environment skip. Full Python regression passes 2,590/5 in 387.16s at 92.052%
+statement, 87.756% branch, and 91.064% combined coverage. Rust workspace,
+strict Clippy, wheel/sdist, and clean-wheel smoke pass; hosted validation awaits
+RC push. Observability
+remains Partial for spans, optional OTel, and complete API-error records.
+
 ## 2026-11-14 — TASK-135 server limits behavioral parity
 
 Added a concurrent Python/Rust differential probe for the idempotency

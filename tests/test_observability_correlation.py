@@ -10,6 +10,7 @@ The chain under test: SDK/client -> API -> middleware -> service -> log record
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 
@@ -23,6 +24,10 @@ from agentrouter import observability as obs  # noqa: E402
 from agentrouter.server.app import create_app  # noqa: E402
 
 TRACE = "trace-me-0001"
+
+
+def _logged_id(value: str) -> str:
+    return "sha256:" + hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
 @pytest.fixture()
@@ -53,7 +58,7 @@ def test_a_client_supplied_id_reaches_the_log_and_comes_back(client, caplog):
 
     logged = _records(caplog)
     assert logged, "no structured record was emitted for the route"
-    assert any(r.get("request_id") == TRACE for r in logged), logged
+    assert any(r.get("request_id") == _logged_id(TRACE) for r in logged), logged
 
 
 def test_a_generated_id_is_also_correlatable(client, caplog):
@@ -64,7 +69,7 @@ def test_a_generated_id_is_also_correlatable(client, caplog):
     assert generated
 
     logged = _records(caplog)
-    assert any(r.get("request_id") == generated for r in logged), (generated, logged)
+    assert any(r.get("request_id") == _logged_id(generated) for r in logged), (generated, logged)
 
 
 def test_a_failure_is_correlatable_too(client, caplog, monkeypatch):
@@ -79,7 +84,7 @@ def test_a_failure_is_correlatable_too(client, caplog, monkeypatch):
 
     assert response.status_code == 500
     assert response.headers["X-Request-ID"] == TRACE
-    assert any(r.get("request_id") == TRACE for r in _records(caplog))
+    assert any(r.get("request_id") == _logged_id(TRACE) for r in _records(caplog))
 
 
 def test_the_id_does_not_leak_between_sequential_requests(client, caplog):
@@ -89,9 +94,9 @@ def test_the_id_does_not_leak_between_sequential_requests(client, caplog):
     client.post("/v1/route", json={"task": "second"}, headers={"X-Request-ID": "id-two"})
 
     ids = [r.get("request_id") for r in _records(caplog) if r.get("event") == "route_decision"]
-    assert "id-one" in ids and "id-two" in ids
-    assert ids.count("id-one") == 1, ids
-    assert ids.count("id-two") == 1, ids
+    assert _logged_id("id-one") in ids and _logged_id("id-two") in ids
+    assert ids.count(_logged_id("id-one")) == 1, ids
+    assert ids.count(_logged_id("id-two")) == 1, ids
 
 
 def test_the_request_id_is_cleared_after_the_request(client):

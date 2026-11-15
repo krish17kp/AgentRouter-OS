@@ -53,9 +53,27 @@ fn run() -> Result<(), String> {
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();
+    let route_record = value
+        .get("route_record")
+        .map(|input| {
+            let task = input
+                .get("task")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            let payload = input.get("payload").unwrap_or(&Value::Null);
+            let decision_id = input.get("decision_id").and_then(Value::as_str);
+            let request_id = input.get("request_id").and_then(Value::as_str);
+            agentrouter_cli::observability::route_decision_record(
+                task,
+                payload,
+                decision_id,
+                request_id,
+            )
+        })
+        .unwrap_or(Value::Null);
     println!(
         "{}",
-        json!({"redact": redacted, "echo": echoed, "redact_value": values})
+        json!({"redact": redacted, "echo": echoed, "redact_value": values, "route_record": route_record})
     );
     Ok(())
 }

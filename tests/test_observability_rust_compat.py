@@ -30,6 +30,8 @@ def test_redaction_and_safe_echo_match_python_contract():
         "Bearer eyJhbGciOiJIUzI1NiJ9.abcdefgh.signature",
         "Basic dXNlcjpwYXNzd29yZA==",
         "postgres://user:hunter2@db.internal:5432/x",
+        "postgres://user:allletters@db.internal/x",
+        "provider/ABCDEFGHIJKLMNOPQRSTUVWXabcdefghijklm",
         'password="hunter2secret"',
         "api_key: AbC123dEf456",
         "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY1",
@@ -65,7 +67,33 @@ def test_redaction_and_safe_echo_match_python_contract():
         ["ordinary diagnostic", {"api_key": "AbC123dEf456"}],
         {"path": "/tmp/agentrouter/logs/run.txt", "clean": True},
     ]
-    payload = {"redact": secrets, "echo": echo_inputs, "redact_value": redact_values}
+    route_record = {
+        "task": "λx private task text",
+        "payload": {
+            "classification": {
+                "task_type": "coding",
+                "risk": "low",
+                "confidence": 0.9,
+            },
+            "recommendation": {
+                "model": "openai/gpt-x",
+                "provider": "openai",
+                "pricing_tier": "mid",
+                "score": 1.23,
+            },
+            "gates": {"auto_execute_allowed": True},
+            "excluded": [{"model": "a"}, {"model": "b"}],
+            "prompt": "must stay private",
+        },
+        "decision_id": "d_1",
+        "request_id": "req-1",
+    }
+    payload = {
+        "redact": secrets,
+        "echo": echo_inputs,
+        "redact_value": redact_values,
+        "route_record": route_record,
+    }
     root = Path(__file__).resolve().parents[1]
     result = subprocess.run(
         ["cargo", "run", "--quiet", "-p", "agentrouter-cli", "--bin", "observability_cli"],
@@ -79,7 +107,21 @@ def test_redaction_and_safe_echo_match_python_contract():
     )
     rust = json.loads(result.stdout)
     assert rust["redact"] == [observability.redact(secret) for secret in secrets]
+    for secret in (
+        "postgres://user:allletters@db.internal/x",
+        "provider/ABCDEFGHIJKLMNOPQRSTUVWXabcdefghijklm",
+    ):
+        assert secret not in rust["redact"][secrets.index(secret)]
     assert rust["echo"] == [
         observability.safe_echo(item["text"], item["limit"]) for item in echo_inputs
     ]
     assert rust["redact_value"] == [observability.redact_value(value) for value in redact_values]
+    assert rust["route_record"] == observability.route_decision_record(
+        task=route_record["task"],
+        payload=route_record["payload"],
+        decision_id=route_record["decision_id"],
+        request_id=route_record["request_id"],
+    )
+    record_json = json.dumps(rust["route_record"])
+    assert "private task text" not in record_json
+    assert "must stay private" not in record_json

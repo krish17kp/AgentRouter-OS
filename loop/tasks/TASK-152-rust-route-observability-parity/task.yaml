@@ -1,0 +1,32 @@
+id: TASK-152
+title: Rust route observability parity
+source: Rust parity matrix Partial row for agentrouter/observability.py
+priority: 2
+status: in_progress
+risk: medium
+customer_impact: Gives operators an opt-in route decision trace without leaking prompts or credentials.
+affected_surfaces:
+  - rust/agentrouter-observability
+  - rust/agentrouter-api/src/server.rs
+  - agentrouter/observability.py
+  - tests/test_observability_rust_compat.py
+  - tests/test_rust_http_server_compat.py
+dependencies: []
+acceptance_criteria:
+  - Rust route decision metadata matches Python for the declared fixture.
+  - Logging stays opt-in and redacts credential-shaped metadata.
+  - Raw task and prompt text never enter the structured route record.
+  - Frozen data and release thresholds remain unchanged.
+verification_commands:
+  - ./.venv/bin/python -m pytest -q tests/test_observability.py tests/test_observability_rust_compat.py tests/test_rust_http_server_compat.py
+  - cargo test --workspace
+  - cargo clippy --workspace --all-targets --all-features -- -D warnings
+  - cargo fmt --all -- --check
+  - git diff --check
+required_reviewers:
+  - observability-security-contract
+repair_iteration: 1
+external_blockers: []
+owner_blockers: []
+created_at: "2026-11-15"
+updated_at: "2026-11-15"

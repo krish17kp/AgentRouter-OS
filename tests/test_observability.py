@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
+from pathlib import Path
 
 import pytest
 
@@ -88,6 +90,32 @@ def test_log_route_decision_emits_json(caplog):
     assert parsed["decision_id"] == "d_9"
 
 
+@pytest.mark.parametrize(
+    "request_id",
+    [
+        "ghp_0123456789abcdefghijklmnop",
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklm/nopqrstuvwxyz.py",
+    ],
+)
+def test_log_route_decision_redacts_request_id_and_model_metadata(caplog, request_id):
+    caplog.set_level(logging.INFO, logger="agentrouter.route")
+    obs.set_request_id(request_id)
+    payload = {
+        **SAMPLE_PAYLOAD,
+        "recommendation": {
+            **SAMPLE_PAYLOAD["recommendation"],
+            "model": "provider/ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklm/nopqrstuvwxyz.py",
+        },
+    }
+    obs.log_route_decision(task="private task text", payload=payload)
+    record = json.loads(caplog.records[-1].message)
+    assert "ghp_" not in caplog.text
+    assert record["request_id"] == "sha256:" + hashlib.sha256(request_id.encode()).hexdigest()
+    assert record["recommended_model"] == "[redacted].py"
+    assert request_id not in caplog.text
+    assert "private task text" not in caplog.text
+
+
 def test_request_id_contextvar_used_when_not_passed():
     obs.set_request_id("ctx-rid")
     rec = obs.route_decision_record(task="x", payload=SAMPLE_PAYLOAD)
@@ -139,7 +167,7 @@ def test_server_route_logs_with_request_id(client, caplog):
     assert r.status_code == 200
     records = [json.loads(rec.message) for rec in caplog.records if rec.name == "agentrouter.route"]
     assert records, "expected a route_decision log record"
-    assert records[-1]["request_id"] == "req-777"
+    assert records[-1]["request_id"] == "sha256:" + hashlib.sha256(b"req-777").hexdigest()
     assert "summarize a PR" not in caplog.text  # no raw task text in logs
 
 
@@ -210,6 +238,60 @@ def test_log_api_error_does_not_pass_exc_info(caplog):
     assert "sk-livekey" not in caplog.text
 
 
+def test_log_api_error_strictly_redacts_path_shaped_token_in_trace(caplog):
+    caplog.set_level(logging.ERROR, logger="agentrouter.route")
+    secret = "ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklm/nopqrstuvwxyz.py"
+    try:
+        raise ValueError(secret)
+    except ValueError as exc:
+        obs.log_api_error("api.unhandled_error", exc)
+    assert secret not in caplog.text
+    assert "[redacted]" in caplog.text
+
+
+def test_log_event_redacts_secret_shaped_metadata_keys(caplog):
+    caplog.set_level(logging.INFO, logger="agentrouter.route")
+    secret_key = "ghp_abcdefghijklmnopqrstuvwx"
+    obs.log_event("test.metadata", detail={secret_key: "ok"})
+    assert secret_key not in caplog.text
+    assert "[redacted]" in caplog.text
+
+
+def test_log_event_redacts_non_json_objects_and_keeps_context_id(caplog):
+    caplog.set_level(logging.INFO, logger="agentrouter.route")
+    secret = "ghp_abcdefghijklmnopqrstuvwx"
+    obs.set_request_id("actual-request")
+    try:
+        obs.log_event(
+            "test.metadata",
+            detail=Path(secret),
+            extra={Path(secret): "ok"},
+            request_id=Path(secret),
+        )
+    finally:
+        obs.set_request_id(None)
+    record = json.loads(caplog.records[-1].message)
+    assert secret not in caplog.text
+    assert record["event"] == "test.metadata"
+    assert record["detail"] == "[redacted]"
+    assert record["extra"] == {"[redacted]": "ok"}
+    assert record["request_id"] == "sha256:" + hashlib.sha256(b"actual-request").hexdigest()
+
+
+def test_log_api_error_redacts_secret_shaped_request_id(caplog):
+    caplog.set_level(logging.ERROR, logger="agentrouter.route")
+    obs.set_request_id("ghp_0123456789abcdefghijklmnop")
+    try:
+        record = obs.log_api_error("api.registry_error", ValueError("bad input"), detail=False)
+    finally:
+        obs.set_request_id(None)
+    assert (
+        record["request_id"]
+        == "sha256:" + hashlib.sha256(b"ghp_0123456789abcdefghijklmnop").hexdigest()
+    )
+    assert "ghp_" not in caplog.text
+
+
 # --- widened redaction (second review round) ---------------------------------
 #
 # The first version matched four vendor prefixes. A reviewer passed 16 of 23 real
@@ -234,6 +316,8 @@ def test_log_api_error_does_not_pass_exc_info(caplog):
         "Bearer eyJhbGciOiJIUzI1NiJ9.abcdefgh.signature",
         "Basic dXNlcjpwYXNzd29yZA==",
         "postgres://user:hunter2@db.internal:5432/x",
+        "postgres://user:allletters@db.internal/x",
+        "provider/ABCDEFGHIJKLMNOPQRSTUVWXabcdefghijklm",
         'password="hunter2secret"',
         "api_key: AbC123dEf456",
         "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY1",

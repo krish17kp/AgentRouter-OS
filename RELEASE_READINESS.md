@@ -1,6 +1,20 @@
 # Release Readiness
 
-## Current checkpoint — 2026-11-14
+## Current checkpoint — 2026-11-15
+
+**NOT release ready.** At `5af3c55`, the hosted cross-platform Python and Rust
+matrices, API, build, security, website, and critical mutation pass. PR #16 is
+the sole open PR, has no GitHub review, and fails the unchanged frozen
+context-band gate at 0.6667 < 0.90. Live OpenAI smoke skips without owner
+credentials. Rust migration is 48/77 full-module parity with 29 Partial rows;
+TASK-152 route observability passes local full Python/Rust regression: 2,590/5
+Python tests at 92.052% statement, 87.756% branch, and 91.064% combined
+coverage; Rust workspace, strict Clippy, wheel build, and clean-wheel smoke pass.
+Hosted TASK-152 validation awaits the RC push. Main promotion, tag,
+and production deployment remain blocked by the documented gates and owner
+inputs.
+
+## Previous checkpoint — 2026-11-14
 
 **NOT release ready.** At last pushed code head `9a7dc7a`, Rust workspace checks
 pass on Linux/Windows/macOS and Python/Rust compatibility passes on Linux/macOS;

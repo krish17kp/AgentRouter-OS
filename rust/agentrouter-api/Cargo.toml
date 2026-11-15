@@ -15,6 +15,7 @@ agentrouter-hosts = { path = "../agentrouter-hosts" }
 agentrouter-registry = { path = "../agentrouter-registry" }
 agentrouter-routing = { path = "../agentrouter-routing" }
 agentrouter-storage = { path = "../agentrouter-storage" }
+agentrouter-observability = { path = "../agentrouter-observability" }
 sha2 = "=0.10.9"
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = { version = "1.0.128", features = ["arbitrary_precision"] }

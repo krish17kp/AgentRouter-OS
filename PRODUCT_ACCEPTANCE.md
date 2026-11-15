@@ -1,6 +1,17 @@
 # Product Acceptance Evidence
 
-## Current checkpoint — 2026-11-14
+## Current checkpoint — 2026-11-15
+
+Product acceptance remains **not granted**. At `5af3c55`, the Python, Rust,
+cross-platform compatibility, API, build, security, website, and mutation jobs
+pass. The frozen context-band evaluation gate remains 0.6667 < 0.90; PR #16
+has no human review, and live OpenAI smoke still needs credentials. TASK-152
+adds opt-in, redacted route records to the Rust HTTP service. Full local Python
+regression passes 2,590/5 and Rust workspace/Clippy pass; hosted validation
+awaits the RC push. The 77-module Rust inventory has
+48 Parity and 29 Partial rows.
+
+## Previous checkpoint — 2026-11-14
 
 Product acceptance remains **not granted**. PR #16 is the sole open PR and has
 no GitHub reviews. On pushed head `0d0a662`, Python, Rust, Windows/macOS,
