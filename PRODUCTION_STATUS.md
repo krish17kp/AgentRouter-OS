@@ -25,6 +25,12 @@ baseline reproduces overwriting an existing artifact in Python; Rust refuses it.
 
 ## Completed / in progress
 
+- [ ] TASK-156 routes one injected Rust classifier through classification,
+  routing, safety, and performance consistently. Default behavior remains intact.
+  Scorecard/evaluation compatibility 42/42, Rust evaluation tests, strict Clippy,
+  independent review, and full Python 2,610/7 pass. Grading/platform remain
+  Partial pending TASK-157 default public runtime discovery.
+
 - [ ] TASK-155 makes supplied context-band reports fail closed in Rust. Missing
   reports and explicit JSON null match Python None; numeric and boolean values
   match Python; malformed supplied structures return errors through every

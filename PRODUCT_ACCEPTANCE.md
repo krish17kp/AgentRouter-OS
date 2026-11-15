@@ -89,3 +89,9 @@ Focused, full-regression, packaged-wheel, and independent-review evidence pass.
 Supplied malformed holdout evidence now stops Rust grading with an explicit
 error. Valid, absent, and JSON-null inputs match Python. Local regression and
 independent-review evidence pass without changing evaluation thresholds.
+
+## TASK-156 consistent injected grading — 2026-11-15
+
+When evaluation uses a custom classifier, every dependent scorecard dimension
+now measures that same classifier. Default behavior remains unchanged. Local
+compatibility, full-regression, and independent-review evidence pass.

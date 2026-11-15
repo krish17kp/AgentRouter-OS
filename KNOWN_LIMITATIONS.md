@@ -240,3 +240,9 @@ mid-write I/O failure remain separate filesystem-hardening limitations.
 Malformed supplied holdout reports are now rejected. The grading/platform module
 remains Partial until TASK-156 supplies the complete public grading runtime,
 injected classifier propagation, and default CLI/model discovery.
+
+## TASK-156 consistent injected grading — 2026-11-15
+
+Rust now uses an injected classifier consistently across every dependent
+scorecard dimension. Public default grading, live CLI discovery, and packaged
+model discovery remain incomplete and keep grading/platform Partial.

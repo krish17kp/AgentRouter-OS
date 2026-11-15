@@ -30,6 +30,12 @@ classification accuracy. Focused 6/6, evaluation compatibility 40/40, full Rust
 workspace, strict Clippy, independent review, and full Python 2,609/7 pass.
 Coverage is 92.021% statement, 87.833% branch, and 91.058% combined.
 
+TASK-155 was committed and pushed as 613550d. TASK-156 routes one injected
+Rust classifier consistently through classification, routing, safety, and
+performance. Compatibility passes 42/42 and full Python passes 2,610/7 at
+92.021% statement, 87.833% branch, and 91.058% combined coverage. It remains
+Partial pending public default grade/runtime discovery in TASK-157.
+
 ## Recovery checkpoint — 2026-11-15
 
 Active persistent checkout: `/home/krish/.codex/worktrees/agentrouter-production/AgentRouter-OS`,

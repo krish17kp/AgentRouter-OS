@@ -117,3 +117,10 @@ Malformed supplied holdout evidence can no longer be replaced by an easier
 metric. Local differential, Rust workspace, Clippy, review, and full regression
 evidence pass. Thresholds and frozen inputs are unchanged. Overall release
 readiness remains held by the measured frozen gate and external requirements.
+
+## TASK-156 consistent injected grading — 2026-11-15
+
+The measured scorecard no longer mixes an injected classifier with the default
+classifier. Local compatibility, Rust tests, review, and full regression pass.
+The public runtime remains Partial; overall release readiness remains held by
+the frozen gate and external requirements.

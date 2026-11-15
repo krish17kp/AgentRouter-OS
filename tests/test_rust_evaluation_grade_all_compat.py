@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from agentrouter.classifier import classify
 from agentrouter.evaluation.adapters.agentrouter_gold import AgentRouterGoldAdapter
 from agentrouter.evaluation.evaluators.platform import _command_names, _group_names
 from agentrouter.evaluation.grading import grade
@@ -67,3 +68,43 @@ def test_rust_measure_all_scorecard_matches_python_dimensions():
         actual["dimensions"]["performance"]["score"]
         == expected["dimensions"]["performance"]["score"]
     )
+
+
+def test_rust_measure_all_propagates_one_injected_classifier_to_every_dimension():
+    cases = AgentRouterGoldAdapter().load()[:12]
+    prediction = classify("Write a short summary of this document")
+    expected = grade(cases, classify_fn=lambda _: prediction, measure_all=True)
+    request = {
+        "cases": [case.model_dump(mode="json") for case in cases],
+        "commands": sorted(_command_names()),
+        "groups": sorted(_group_names()),
+        "prediction": prediction.model_dump(mode="json"),
+    }
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_grade_all_injected_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps(request),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=ROOT,
+        timeout=120,
+        check=True,
+    )
+    actual = json.loads(process.stdout)
+
+    assert actual["classification"] == expected["classification"]
+    assert actual["release_gates"] == expected["release_gates"]
+    for dimension in ("classification", "routing", "safety", "performance"):
+        assert (
+            actual["dimensions"][dimension]["score"] == expected["dimensions"][dimension]["score"]
+        )
+    assert actual["classification"]["failures"]

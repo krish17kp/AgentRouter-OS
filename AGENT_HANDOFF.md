@@ -13,14 +13,15 @@
   mutation checks pass, while enforcing CI fails only the unchanged frozen gate.
 - TASK-154 is pushed at `2542e2d`; hosted security, website, and mutation pass
   while the supported-platform matrices are running.
-- TASK-155 is the current working-tree change: Rust no longer substitutes
-  classification accuracy when a supplied holdout report is malformed. Numeric,
-  boolean, absent, explicit-null, missing, and malformed cases match Python.
-  Focused 6/6, evaluation compatibility 40/40, full Rust workspace, strict
-  Clippy, and independent review pass. Full Python regression passes 2,609/7 at
-  92.021% statement, 87.833% branch, and 91.058% combined coverage. Next:
-  commit/push TASK-155, inspect hosted checks, then start TASK-156 authoritative
-  grading runtime. Preserve the TASK-156 task note when staging.
+- TASK-155 is pushed at 613550d; hosted Rust, security, website, and mutation
+  checks pass, while enforcing CI fails only the unchanged frozen gate.
+- TASK-156 is the current working-tree change: one Rust injected classifier now
+  drives classification, routing, safety, and performance. Default behavior is
+  retained. Scorecard/evaluation compatibility passes 42/42; Rust evaluation
+  tests, strict Clippy, independent review, and full Python 2,610/7 at 92.021%
+  statement, 87.833% branch, and 91.058% combined coverage pass. The rows remain
+  Partial. Next: commit/push TASK-156, inspect hosted checks, then TASK-157
+  public default grading/runtime discovery. Preserve the TASK-157 task note.
 - Needs Krish: two independent annotators and an adjudicator for all 63 blinded
   TASK-012 cases; a protected OpenAI key and bounded paid smoke authorization;
   production infrastructure/release credentials and final main promotion.

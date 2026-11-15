@@ -2757,3 +2757,13 @@ propagate an error. Added numeric, boolean, explicit-null, absent, missing, nest
 null, null-valued, and string-valued differentials. Independent review caught
 explicit JSON null; core normalization repaired it. Focused 6/6, evaluation
 compatibility 40/40, Rust workspace, strict Clippy, and full Python 2,609/7 pass.
+
+## TASK-156 — 2026-11-15
+
+Repaired the scorecard's mixed-classifier behavior by adding injected
+classification and all-dimension runner paths. One callback now flows through
+classification, routing, safety, and performance; default wrappers preserve prior
+behavior. Added a differential using a prediction that differs from default.
+Scorecard/evaluation compatibility 42/42, Rust tests, strict Clippy, independent
+review, and full Python 2,610/7 pass. Kept grading/platform Partial and split
+default public runtime discovery into TASK-157.

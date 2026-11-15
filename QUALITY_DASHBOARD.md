@@ -110,3 +110,9 @@ Independent review, hooks 33/33, Bandit, build, and installed-wheel smoke pass.
 Focused grading differential: 6/6. Evaluation compatibility: 40/40. Full Rust
 workspace and strict Clippy pass. Full Python: 2,609 passed, 7 skipped; 92.021%
 statement, 87.833% branch, and 91.058% combined coverage. Review is clear.
+
+## TASK-156 consistent injected grading — 2026-11-15
+
+Scorecard/evaluation compatibility: 42/42. Rust evaluation tests and strict
+Clippy pass. Full Python: 2,610 passed, 7 skipped; 92.021% statement, 87.833%
+branch, 91.058% combined. Independent review is clear.

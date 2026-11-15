@@ -5,12 +5,12 @@
 //! attaches deterministic dataset-quality and caller-supplied provenance.
 
 use agentrouter_classifier::{classify, ClassifyOptions};
+use agentrouter_core::Classification;
 use std::path::PathBuf;
 
 use crate::{
-    classification_metrics, dataset_quality, evaluate_feedback, evaluate_performance,
-    evaluate_platform, evaluate_provider, evaluate_routing, evaluate_safety, grade_classification,
-    round_to, EvaluationCase, MetricCase, QualityCase,
+    classification_metrics, dataset_quality, evaluate_feedback, evaluate_platform,
+    evaluate_provider, grade_classification, round_to, EvaluationCase, MetricCase, QualityCase,
 };
 
 fn strings<T: serde::Serialize>(values: &[T]) -> Vec<String> {
@@ -32,11 +32,14 @@ fn enum_text<T: serde::Serialize>(value: &T) -> String {
         .unwrap_or_default()
 }
 
-fn metric_cases(cases: &[EvaluationCase]) -> Vec<MetricCase> {
+fn metric_cases_with<F>(cases: &[EvaluationCase], classify_fn: &F) -> Vec<MetricCase>
+where
+    F: Fn(&str) -> Classification,
+{
     cases
         .iter()
         .map(|case| {
-            let prediction = classify(&case.task, &ClassifyOptions::default());
+            let prediction = classify_fn(&case.task);
             let expected = [
                 ("task_type", strings(&case.expected.task_types)),
                 ("complexity", strings(&case.expected.complexities)),
@@ -211,7 +214,36 @@ pub fn run_classification(
     datasets: serde_json::Value,
     context_band_generalization: Option<&serde_json::Value>,
 ) -> Result<serde_json::Value, String> {
-    let metrics = classification_metrics(&metric_cases(cases));
+    run_classification_with(
+        cases,
+        profile,
+        seed,
+        source,
+        environment,
+        datasets,
+        context_band_generalization,
+        &|task| classify(task, &ClassifyOptions::default()),
+    )
+}
+
+/// Run classification grading through a caller-supplied classifier. The same
+/// seam is used by the complete scorecard so one evaluation never mixes
+/// predictions from different classifiers.
+#[allow(clippy::too_many_arguments)]
+pub fn run_classification_with<F>(
+    cases: &[EvaluationCase],
+    profile: Option<&str>,
+    seed: i64,
+    source: &str,
+    environment: serde_json::Value,
+    datasets: serde_json::Value,
+    context_band_generalization: Option<&serde_json::Value>,
+    classify_fn: &F,
+) -> Result<serde_json::Value, String>
+where
+    F: Fn(&str) -> Classification,
+{
+    let metrics = classification_metrics(&metric_cases_with(cases, classify_fn));
     let mut report = grade_classification(&metrics, cases.len(), context_band_generalization)?;
     report["environment"] = environment;
     report["datasets"] = datasets;
@@ -234,6 +266,25 @@ pub fn run_all_dimensions(
     groups: &[String],
     options: RunOptions,
 ) -> Result<serde_json::Value, String> {
+    run_all_dimensions_with(cases, models, commands, groups, options, &|task| {
+        classify(task, &ClassifyOptions::default())
+    })
+}
+
+/// Run every measured dimension through one caller-supplied classifier.
+/// Classification, routing, safety, and performance therefore describe the
+/// same implementation, matching Python's `grade(..., classify_fn=...)` seam.
+pub fn run_all_dimensions_with<F>(
+    cases: &[EvaluationCase],
+    models: &[agentrouter_registry::ModelEntry],
+    commands: &[String],
+    groups: &[String],
+    options: RunOptions,
+    classify_fn: &F,
+) -> Result<serde_json::Value, String>
+where
+    F: Fn(&str) -> Classification,
+{
     use serde_json::{json, Value};
 
     const DIMENSIONS: [(&str, u64); 7] = [
@@ -245,7 +296,7 @@ pub fn run_all_dimensions(
         ("feedback_storage", 7),
         ("performance", 5),
     ];
-    let mut report = run_classification(
+    let mut report = run_classification_with(
         cases,
         options.profile.as_deref(),
         options.seed,
@@ -253,10 +304,14 @@ pub fn run_all_dimensions(
         options.environment,
         options.datasets,
         options.context_band_generalization.as_ref(),
+        classify_fn,
     )?;
     let measured = [
-        ("routing", evaluate_routing(cases, models)),
-        ("safety", evaluate_safety(cases)),
+        (
+            "routing",
+            crate::evaluate_routing_with(cases, models, classify_fn),
+        ),
+        ("safety", crate::evaluate_safety_with(cases, classify_fn)),
         ("cli_platform", evaluate_platform(commands, groups)),
         ("provider_registry", evaluate_provider(models)),
         (
@@ -265,7 +320,11 @@ pub fn run_all_dimensions(
         ),
         (
             "performance",
-            evaluate_performance(models, &crate::PERFORMANCE_SAMPLE_TASKS.map(str::to_owned)),
+            crate::evaluate_performance_with(
+                models,
+                &crate::PERFORMANCE_SAMPLE_TASKS.map(str::to_owned),
+                classify_fn,
+            ),
         ),
     ];
 
