@@ -2738,3 +2738,13 @@ branch, and 91.034% combined coverage. No thresholds or frozen data changed.
 Bundle remains Partial for filesystem and JSON edge-case behavior. TASK-154 will
 address reproduced Python artifact overwrite, then evaluation grading/platform
 orchestration is next.
+
+## TASK-154 — 2026-11-15
+
+Reproduced Python overwriting an existing bundle artifact. Replaced final-path
+write with exclusive binary creation and added existing-file, live/dangling
+symlink, and injected race regressions. Focused 95/1, independent review, hooks,
+Bandit, build, installed-wheel smoke, and full Python 2,604/7 pass. Coverage is
+92.021% statement, 87.833% branch, and 91.058% combined. The first full attempt
+exposed a stale editable install at 0.4.0; repointing the shared venv to the
+relocated 0.5.0rc1 checkout repaired the environment and the clean retry passed.

@@ -3,7 +3,7 @@
 ## Storage relocation — 2026-11-15
 
 Active release checkout: `/data/AgentRouter-production` on branch
-`release/agentrouter-v0.5-rc1` at c7d8180. The prior checkout is detached and
+`release/agentrouter-v0.5-rc1` at pushed head `82babba`. The prior checkout is detached and
 preserved at `/home/krish/.codex/worktrees/agentrouter-production/AgentRouter-OS`.
 Tracked code/test diffs were verified identical before transfer; untracked TASK-153,
 154, and 155 task notes and `/data/agentrouter-recovery/task154.patch` were copied.
@@ -12,11 +12,17 @@ venv remain at `/data/AgentRouter-OS`. New Rust build output points to
 `/data/agentrouter-build/target`; source `/data/agentrouter-build/environment.sh`
 for that location and `/data/agentrouter-build/tmp` temporary files.
 
-The Python full regression in the previous checkout completed: 2,597 passed,
+The Python TASK-153 full regression in the previous checkout completed: 2,597 passed,
 7 skipped, 1 warning, 501.42s; coverage is 92.004% statement, 87.789% branch,
 and 91.034% combined. Log and JSON
 coverage evidence are at `/data/agentrouter-build/evidence/`. Investigate skips
-before any release claim. TASK-153 remains uncommitted; preserve current changes.
+before any release claim.
+
+TASK-153 was committed and pushed as `82babba`. TASK-154 then changed the
+Python bundle writer to use exclusive final-path creation. Its full regression
+passes 2,604/7 with 92.021% statement, 87.833% branch, and 91.058% combined
+coverage; focused tests, review, hooks, Bandit, build, and installed-wheel smoke
+pass. The shared venv now points at this checkout at version `0.5.0rc1`.
 
 ## Recovery checkpoint — 2026-11-15
 

@@ -200,3 +200,80 @@ def test_bundle_byte_limit_includes_newlines(tmp_path, monkeypatch):
     monkeypatch.setattr(bundle, "MAX_ARTIFACT_BYTES", 100)
     bundle._write(tmp_path, "probe.txt", "a\n" * 100)
     assert len((tmp_path / "probe.txt").read_bytes()) <= 100
+
+
+@pytest.mark.parametrize("name,content", [("probe.txt", "new"), ("probe.json", '{"new": true}')])
+def test_artifact_writer_refuses_existing_file(tmp_path, name, content):
+    target = tmp_path / name
+    target.write_bytes(b"existing private data")
+    with pytest.raises(bundle.BundleError, match="refusing to overwrite"):
+        bundle._write(tmp_path, name, content)
+    assert target.read_bytes() == b"existing private data"
+
+
+def _artifact_symlink_or_skip(link, victim):
+    import errno
+
+    try:
+        link.symlink_to(victim)
+    except NotImplementedError:
+        pytest.skip("filesystem does not support symlinks")
+    except OSError as error:
+        unavailable = error.errno in (errno.EPERM, errno.EACCES, errno.ENOTSUP)
+        if unavailable or getattr(error, "winerror", None) == 1314:
+            pytest.skip(f"symlink creation unavailable: {error}")
+        raise
+
+
+@pytest.mark.parametrize("dangling", [False, True])
+def test_artifact_writer_refuses_symlinks_without_touching_referent(tmp_path, dangling):
+    victim = tmp_path / "victim.txt"
+    if not dangling:
+        victim.write_bytes(b"preserve victim")
+    target = tmp_path / "probe.txt"
+    _artifact_symlink_or_skip(target, victim)
+    with pytest.raises(bundle.BundleError, match="symlink"):
+        bundle._write(tmp_path, "probe.txt", "new content")
+    assert target.is_symlink()
+    if dangling:
+        assert not victim.exists()
+    else:
+        assert victim.read_bytes() == b"preserve victim"
+
+
+@pytest.mark.parametrize("kind", ["file", "symlink", "dangling_symlink"])
+def test_artifact_appearing_immediately_before_open_is_not_followed_or_overwritten(
+    tmp_path, monkeypatch, kind
+):
+    from pathlib import Path
+
+    target = tmp_path / "probe.txt"
+    victim = tmp_path / "victim.txt"
+    if kind == "symlink":
+        victim.write_bytes(b"preserve victim")
+    original_open = Path.open
+    injected = False
+
+    def racing_open(path, mode="r", *args, **kwargs):
+        nonlocal injected
+        if path == target and not injected:
+            injected = True
+            if kind == "file":
+                with original_open(target, "xb") as existing:
+                    existing.write(b"created by another process")
+            else:
+                _artifact_symlink_or_skip(target, victim)
+        return original_open(path, mode, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", racing_open)
+    with pytest.raises(bundle.BundleError, match="refusing to overwrite"):
+        bundle._write(tmp_path, "probe.txt", "new content")
+    assert injected
+    if kind == "file":
+        assert target.read_bytes() == b"created by another process"
+    elif kind == "symlink":
+        assert target.is_symlink()
+        assert victim.read_bytes() == b"preserve victim"
+    else:
+        assert target.is_symlink()
+        assert not victim.exists()

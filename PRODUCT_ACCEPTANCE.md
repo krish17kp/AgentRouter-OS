@@ -77,3 +77,9 @@ branch, and 91.034% combined coverage. No thresholds or frozen data changed.
 Bundle remains Partial for filesystem and JSON edge-case behavior. TASK-154 will
 address reproduced Python artifact overwrite, then evaluation grading/platform
 orchestration is next.
+
+## TASK-154 exclusive artifact creation — 2026-11-15
+
+A support bundle can no longer replace an existing artifact. Python matches
+Rust by refusing existing files and symlinks, including a final-path race.
+Focused, full-regression, packaged-wheel, and independent-review evidence pass.

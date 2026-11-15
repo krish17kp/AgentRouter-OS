@@ -98,3 +98,9 @@ branch, and 91.034% combined coverage. No thresholds or frozen data changed.
 Bundle remains Partial for filesystem and JSON edge-case behavior. TASK-154 will
 address reproduced Python artifact overwrite, then evaluation grading/platform
 orchestration is next.
+
+## TASK-154 exclusive artifact creation — 2026-11-15
+
+Focused bundle/observability: 95 passed, 1 skipped. Full Python: 2,604 passed,
+7 skipped; 92.021% statement, 87.833% branch, 91.058% combined coverage.
+Independent review, hooks 33/33, Bandit, build, and installed-wheel smoke pass.

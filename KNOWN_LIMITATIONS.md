@@ -227,3 +227,10 @@ branch, and 91.034% combined coverage. No thresholds or frozen data changed.
 Bundle remains Partial for filesystem and JSON edge-case behavior. TASK-154 will
 address reproduced Python artifact overwrite, then evaluation grading/platform
 orchestration is next.
+
+## TASK-154 exclusive artifact creation — 2026-11-15
+
+Python and Rust now both refuse existing final artifact paths, including live
+and dangling symlinks and a final-path race immediately before open. The full
+Python suite passes 2,604/7. Parent-directory replacement and cleanup after a
+mid-write I/O failure remain separate filesystem-hardening limitations.

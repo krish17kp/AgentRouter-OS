@@ -25,6 +25,13 @@ baseline reproduces overwriting an existing artifact in Python; Rust refuses it.
 
 ## Completed / in progress
 
+- [ ] TASK-154 makes Python diagnostic artifact writes match Rust's exclusive
+  final-path creation. Existing files, live/dangling symlinks, and injected
+  file/symlink races are refused without changing existing content. Focused
+  tests pass 95/1; independent review, hooks, Bandit, build, installed-wheel
+  smoke, and full Python 2,604/7 at 92.021% statement and 87.833% branch
+  coverage pass. Commit/push and hosted validation are next.
+
 - [x] PR #33 reviewed and merged into RC `019233a`: Rust context-band feature extraction, validated artifact loading, stable softmax inference, and 15 prompt-level Python/Rust differential cases. All cross-platform CI checks passed; the learned model remains disabled in default routing.
 - [ ] Rust doctor probe is locally validated on top of RC `07eb511`: stable JSON/text reports, safe checks for data, database, registry, generated catalogs, hosts, auth, runtime, and observability; an allowlisted redacted bundle with opt-in SQLite snapshot; environment values withheld; nine Rust CLI probe cases and focused Python compatibility tests pass. Its cross-platform CI passed on Linux, Windows, and macOS; promotion gate remains held by the frozen context-band evaluation. This is a partial R4 slice, not full CLI parity.
 - [x] Rust quota-aware reranking is wired to `route_cli --verify-live`; eight Rust unit tests and ten Python/Rust differential cases cover unsupported/available/error preservation, verified exhaustion, no recommendation, invalid states, Python-compatible Unicode sanitation, and the CLI contract. PR #16's cross-platform CI passed for the RC base; production live adapters remain disabled.

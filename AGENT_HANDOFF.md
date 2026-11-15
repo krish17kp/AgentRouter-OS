@@ -9,15 +9,16 @@
   context-band gate remains 0.6667 < 0.90; live smoke skips without a key.
 - PR #16 is the sole open PR and has no GitHub review. Keep main promotion and
   release held. The parity matrix remains 48/77 full, 29 Partial.
-- TASK-153 is the current working-tree change: strict Python/Rust diagnostic
-  bundle redaction, structural JSON masking, and bounded UTF-8 output. Focused
-  Python passes 88/1, Rust library passes 81, the differential passes 1/1,
-  and independent Python/Rust reviews are clear. Full Python regression passes
-  2,597/7 at 92.004% statement, 87.789% branch, and 91.034% combined coverage;
-  Rust workspace/Clippy, security checks, build, and installed-wheel smoke pass.
-  Next: commit/push to the authorized RC, inspect hosted checks, then apply the
-  prepared TASK-154 exclusive-create repair and continue TASK-155 evaluation
-  grading parity. Preserve TASK-154/155 task notes when staging TASK-153.
+- TASK-153 is pushed at `82babba`; its hosted Rust, security, website, and
+  mutation checks pass, while enforcing CI fails only the unchanged frozen gate.
+- TASK-154 is the current working-tree change: Python diagnostic artifacts use
+  exclusive final-path creation and refuse existing files and symlinks. Focused
+  tests pass 95/1 and independent review is clear. Full Python regression passes
+  2,604/7 at 92.021% statement, 87.833% branch, and 91.058% combined coverage;
+  hooks, Bandit, build, and installed-wheel smoke pass. The shared venv was
+  repaired to point at `/data/AgentRouter-production` version `0.5.0rc1`.
+  Next: commit/push TASK-154, inspect hosted checks, and continue TASK-155
+  fail-closed evaluation grading. Preserve the TASK-155 task note when staging.
 - Needs Krish: two independent annotators and an adjudicator for all 63 blinded
   TASK-012 cases; a protected OpenAI key and bounded paid smoke authorization;
   production infrastructure/release credentials and final main promotion.

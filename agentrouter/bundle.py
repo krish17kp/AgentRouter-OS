@@ -69,7 +69,13 @@ def _write(directory: Path, name: str, text: str) -> str:
     target = directory / name
     if target.is_symlink():
         raise BundleError(f"refusing to write through a symlink: {target}")
-    target.write_bytes(redacted.encode("utf-8"))
+    try:
+        # Exclusive creation protects the final path even if another process
+        # creates a file or symlink after the check above.
+        with target.open("xb") as artifact:
+            artifact.write(redacted.encode("utf-8"))
+    except FileExistsError as error:
+        raise BundleError(f"refusing to overwrite or follow a bundle path: {name}") from error
     return name
 
 

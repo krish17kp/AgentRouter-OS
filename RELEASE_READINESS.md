@@ -102,3 +102,11 @@ branch, and 91.034% combined coverage. No thresholds or frozen data changed.
 Bundle remains Partial for filesystem and JSON edge-case behavior. TASK-154 will
 address reproduced Python artifact overwrite, then evaluation grading/platform
 orchestration is next.
+
+## TASK-154 exclusive artifact creation — 2026-11-15
+
+Local release evidence passes: focused 95/1, full Python 2,604/7, 92.021%
+statement and 87.833% branch coverage, independent review, hooks, Bandit,
+wheel/sdist build, and installed-wheel exclusive-create smoke. Hosted
+validation follows the RC push. Overall release readiness remains held by the
+existing frozen evaluation and external requirements.
