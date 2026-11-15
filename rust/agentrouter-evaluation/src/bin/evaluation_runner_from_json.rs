@@ -43,7 +43,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         request.environment,
         request.datasets,
         generalization.as_ref(),
-    );
+    )
+    .map_err(io::Error::other)?;
     println!("{}", serde_json::to_string(&report)?);
     Ok(())
 }

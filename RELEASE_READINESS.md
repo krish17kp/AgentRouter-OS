@@ -110,3 +110,10 @@ statement and 87.833% branch coverage, independent review, hooks, Bandit,
 wheel/sdist build, and installed-wheel exclusive-create smoke. Hosted
 validation follows the RC push. Overall release readiness remains held by the
 existing frozen evaluation and external requirements.
+
+## TASK-155 fail-closed holdout grading — 2026-11-15
+
+Malformed supplied holdout evidence can no longer be replaced by an easier
+metric. Local differential, Rust workspace, Clippy, review, and full regression
+evidence pass. Thresholds and frozen inputs are unchanged. Overall release
+readiness remains held by the measured frozen gate and external requirements.

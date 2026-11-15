@@ -188,7 +188,7 @@ pub fn run_registered(options: RegisteredRunOptions) -> Result<serde_json::Value
             run_options,
         )
     } else {
-        Ok(run_classification(
+        run_classification(
             &collection.cases,
             run_options.profile.as_deref(),
             run_options.seed,
@@ -196,7 +196,7 @@ pub fn run_registered(options: RegisteredRunOptions) -> Result<serde_json::Value
             run_options.environment,
             run_options.datasets,
             run_options.context_band_generalization.as_ref(),
-        ))
+        )
     }
 }
 
@@ -210,16 +210,16 @@ pub fn run_classification(
     environment: serde_json::Value,
     datasets: serde_json::Value,
     context_band_generalization: Option<&serde_json::Value>,
-) -> serde_json::Value {
+) -> Result<serde_json::Value, String> {
     let metrics = classification_metrics(&metric_cases(cases));
-    let mut report = grade_classification(&metrics, cases.len(), context_band_generalization);
+    let mut report = grade_classification(&metrics, cases.len(), context_band_generalization)?;
     report["environment"] = environment;
     report["datasets"] = datasets;
     report["profile"] = profile.map_or(serde_json::Value::Null, |value| value.into());
     report["dataset_quality"] = dataset_quality(&quality_cases(cases));
     report["seed"] = seed.into();
     report["source"] = source.into();
-    report
+    Ok(report)
 }
 
 /// Run the complete seven-dimension scorecard used by Python `grade(...,
@@ -253,7 +253,7 @@ pub fn run_all_dimensions(
         options.environment,
         options.datasets,
         options.context_band_generalization.as_ref(),
-    );
+    )?;
     let measured = [
         ("routing", evaluate_routing(cases, models)),
         ("safety", evaluate_safety(cases)),

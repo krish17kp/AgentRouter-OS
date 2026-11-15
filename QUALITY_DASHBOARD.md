@@ -104,3 +104,9 @@ orchestration is next.
 Focused bundle/observability: 95 passed, 1 skipped. Full Python: 2,604 passed,
 7 skipped; 92.021% statement, 87.833% branch, 91.058% combined coverage.
 Independent review, hooks 33/33, Bandit, build, and installed-wheel smoke pass.
+
+## TASK-155 fail-closed holdout grading — 2026-11-15
+
+Focused grading differential: 6/6. Evaluation compatibility: 40/40. Full Rust
+workspace and strict Clippy pass. Full Python: 2,609 passed, 7 skipped; 92.021%
+statement, 87.833% branch, and 91.058% combined coverage. Review is clear.

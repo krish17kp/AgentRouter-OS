@@ -83,3 +83,9 @@ orchestration is next.
 A support bundle can no longer replace an existing artifact. Python matches
 Rust by refusing existing files and symlinks, including a final-path race.
 Focused, full-regression, packaged-wheel, and independent-review evidence pass.
+
+## TASK-155 fail-closed holdout grading — 2026-11-15
+
+Supplied malformed holdout evidence now stops Rust grading with an explicit
+error. Valid, absent, and JSON-null inputs match Python. Local regression and
+independent-review evidence pass without changing evaluation thresholds.

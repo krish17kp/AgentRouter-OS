@@ -655,7 +655,7 @@ def test_rust_evaluation_report_files_match_python(tmp_path):
         assert (rust_dir / name).read_bytes() == (python_dir / name).read_bytes()
 
 
-def test_rust_classification_grade_matches_python():
+def _classification_grade_fixture():
     case = EvaluationCase(
         id="grade-fixture",
         dataset="rust-grade-parity",
@@ -682,8 +682,38 @@ def test_rust_classification_grade_matches_python():
     def classify_fn(_):
         return _Prediction(predicted, ["file-edit", "shell"])
 
-    cases = [case]
-    for generalization in (None, {"current_holdout": {"accuracy": 0.5}}):
+    return [case], classify_fn
+
+
+def _rust_grade_process(payload):
+    return subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "evaluation_grade_from_json",
+            "-p",
+            "agentrouter-evaluation",
+        ],
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=120,
+        check=False,
+    )
+
+
+def test_rust_classification_grade_matches_python():
+    cases, classify_fn = _classification_grade_fixture()
+    for generalization in (
+        None,
+        {"current_holdout": {"accuracy": 0.5}},
+        {"current_holdout": {"accuracy": True}},
+        {"current_holdout": {"accuracy": False}},
+    ):
         expected = grade(
             cases,
             classify_fn=classify_fn,
@@ -695,25 +725,47 @@ def test_rust_classification_grade_matches_python():
         }
         if generalization is not None:
             payload["context_band_generalization"] = generalization
-        process = subprocess.run(
-            [
-                "cargo",
-                "run",
-                "--quiet",
-                "--locked",
-                "--bin",
-                "evaluation_grade_from_json",
-                "-p",
-                "agentrouter-evaluation",
-            ],
-            input=json.dumps(payload),
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            timeout=120,
-            check=True,
-        )
+        process = _rust_grade_process(payload)
+        assert process.returncode == 0, process.stderr
         assert json.loads(process.stdout) == expected
+
+    expected_without_report = grade(cases, classify_fn=classify_fn)
+    explicit_null = _rust_grade_process(
+        {
+            "n_cases": len(cases),
+            "classification": expected_without_report["classification"],
+            "context_band_generalization": None,
+        }
+    )
+    assert explicit_null.returncode == 0, explicit_null.stderr
+    assert json.loads(explicit_null.stdout) == expected_without_report
+
+
+@pytest.mark.parametrize(
+    "generalization",
+    [
+        {},
+        {"current_holdout": None},
+        {"current_holdout": {}},
+        {"current_holdout": {"accuracy": None}},
+        {"current_holdout": {"accuracy": "0.95"}},
+    ],
+)
+def test_rust_classification_grade_rejects_malformed_supplied_holdout(generalization):
+    cases, classify_fn = _classification_grade_fixture()
+    with pytest.raises((KeyError, TypeError)):
+        grade(cases, classify_fn=classify_fn, context_band_generalization=generalization)
+
+    classification = grade(cases, classify_fn=classify_fn)["classification"]
+    process = _rust_grade_process(
+        {
+            "n_cases": len(cases),
+            "classification": classification,
+            "context_band_generalization": generalization,
+        }
+    )
+    assert process.returncode != 0
+    assert "current_holdout.accuracy" in process.stderr
 
 
 def test_rust_safety_evaluator_matches_python():

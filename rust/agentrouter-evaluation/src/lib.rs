@@ -141,8 +141,13 @@ pub fn grade_classification(
     metrics: &serde_json::Value,
     n_cases: usize,
     context_band_generalization: Option<&serde_json::Value>,
-) -> serde_json::Value {
+) -> Result<serde_json::Value, String> {
     use serde_json::{json, Map, Value};
+
+    // JSON null is Python None at the cross-language boundary. Treat both as
+    // absence so callers do not accidentally turn an optional report into an
+    // invalid supplied report.
+    let context_band_generalization = context_band_generalization.filter(|value| !value.is_null());
 
     let mut detail = Map::new();
     let mut weighted_score = 0.0;
@@ -181,11 +186,30 @@ pub fn grade_classification(
         .values()
         .map(|dimension| dimension["achieved"].as_f64().unwrap_or(0.0))
         .sum();
-    let context_accuracy = context_band_generalization
-        .and_then(|value| value.get("current_holdout"))
-        .and_then(|value| value.get("accuracy"))
-        .and_then(Value::as_f64)
-        .unwrap_or_else(|| metrics["context"]["accuracy"].as_f64().unwrap_or(0.0));
+    let context_accuracy = match context_band_generalization {
+        None => metrics["context"]["accuracy"].as_f64().unwrap_or(0.0),
+        Some(generalization) => {
+            let accuracy = generalization
+                .get("current_holdout")
+                .and_then(|holdout| holdout.get("accuracy"))
+                .ok_or_else(|| {
+                    "context_band_generalization.current_holdout.accuracy is required".to_owned()
+                })?;
+            match accuracy {
+                Value::Number(number) => number.as_f64().ok_or_else(|| {
+                    "context_band_generalization.current_holdout.accuracy must be numeric"
+                        .to_owned()
+                })?,
+                Value::Bool(value) => f64::from(*value),
+                _ => {
+                    return Err(
+                        "context_band_generalization.current_holdout.accuracy must be numeric"
+                            .to_owned(),
+                    );
+                }
+            }
+        }
+    };
     let gates = json!({
         "task_type_macro_f1>=0.90": metrics["task_type"]["macro_f1"].as_f64().unwrap_or(0.0) >= 0.90,
         "high_risk_recall==1.00": metrics["high_risk_recall"].as_f64() == Some(1.0),
@@ -210,7 +234,7 @@ pub fn grade_classification(
     if let Some(generalization) = context_band_generalization {
         result["context_band_generalization"] = generalization.clone();
     }
-    result
+    Ok(result)
 }
 
 /// Run the safety evaluator from `evaluation.evaluators.safety` against the

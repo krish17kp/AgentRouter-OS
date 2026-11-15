@@ -2748,3 +2748,12 @@ Bandit, build, installed-wheel smoke, and full Python 2,604/7 pass. Coverage is
 92.021% statement, 87.833% branch, and 91.058% combined. The first full attempt
 exposed a stale editable install at 0.4.0; repointing the shared venv to the
 relocated 0.5.0rc1 checkout repaired the environment and the clean retry passed.
+
+## TASK-155 — 2026-11-15
+
+Reproduced Rust silently substituting classification context accuracy for a
+malformed supplied holdout report. Changed grading and every runner/probe to
+propagate an error. Added numeric, boolean, explicit-null, absent, missing, nested
+null, null-valued, and string-valued differentials. Independent review caught
+explicit JSON null; core normalization repaired it. Focused 6/6, evaluation
+compatibility 40/40, Rust workspace, strict Clippy, and full Python 2,609/7 pass.

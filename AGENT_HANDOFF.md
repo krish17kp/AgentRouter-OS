@@ -11,14 +11,16 @@
   release held. The parity matrix remains 48/77 full, 29 Partial.
 - TASK-153 is pushed at `82babba`; its hosted Rust, security, website, and
   mutation checks pass, while enforcing CI fails only the unchanged frozen gate.
-- TASK-154 is the current working-tree change: Python diagnostic artifacts use
-  exclusive final-path creation and refuse existing files and symlinks. Focused
-  tests pass 95/1 and independent review is clear. Full Python regression passes
-  2,604/7 at 92.021% statement, 87.833% branch, and 91.058% combined coverage;
-  hooks, Bandit, build, and installed-wheel smoke pass. The shared venv was
-  repaired to point at `/data/AgentRouter-production` version `0.5.0rc1`.
-  Next: commit/push TASK-154, inspect hosted checks, and continue TASK-155
-  fail-closed evaluation grading. Preserve the TASK-155 task note when staging.
+- TASK-154 is pushed at `2542e2d`; hosted security, website, and mutation pass
+  while the supported-platform matrices are running.
+- TASK-155 is the current working-tree change: Rust no longer substitutes
+  classification accuracy when a supplied holdout report is malformed. Numeric,
+  boolean, absent, explicit-null, missing, and malformed cases match Python.
+  Focused 6/6, evaluation compatibility 40/40, full Rust workspace, strict
+  Clippy, and independent review pass. Full Python regression passes 2,609/7 at
+  92.021% statement, 87.833% branch, and 91.058% combined coverage. Next:
+  commit/push TASK-155, inspect hosted checks, then start TASK-156 authoritative
+  grading runtime. Preserve the TASK-156 task note when staging.
 - Needs Krish: two independent annotators and an adjudicator for all 63 blinded
   TASK-012 cases; a protected OpenAI key and bounded paid smoke authorization;
   production infrastructure/release credentials and final main promotion.

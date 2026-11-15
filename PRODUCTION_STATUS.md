@@ -25,6 +25,12 @@ baseline reproduces overwriting an existing artifact in Python; Rust refuses it.
 
 ## Completed / in progress
 
+- [ ] TASK-155 makes supplied context-band reports fail closed in Rust. Missing
+  reports and explicit JSON null match Python None; numeric and boolean values
+  match Python; malformed supplied structures return errors through every
+  runner/probe. Focused 6/6, evaluation compatibility 40/40, full Rust workspace,
+  strict Clippy, independent review, and full Python 2,609/7 pass.
+
 - [ ] TASK-154 makes Python diagnostic artifact writes match Rust's exclusive
   final-path creation. Existing files, live/dangling symlinks, and injected
   file/symlink races are refused without changing existing content. Focused

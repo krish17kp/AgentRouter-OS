@@ -234,3 +234,9 @@ Python and Rust now both refuse existing final artifact paths, including live
 and dangling symlinks and a final-path race immediately before open. The full
 Python suite passes 2,604/7. Parent-directory replacement and cleanup after a
 mid-write I/O failure remain separate filesystem-hardening limitations.
+
+## TASK-155 fail-closed holdout grading — 2026-11-15
+
+Malformed supplied holdout reports are now rejected. The grading/platform module
+remains Partial until TASK-156 supplies the complete public grading runtime,
+injected classifier propagation, and default CLI/model discovery.

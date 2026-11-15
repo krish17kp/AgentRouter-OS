@@ -12,7 +12,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &input["classification"],
         n_cases,
         generalization,
-    );
+    )
+    .map_err(io::Error::other)?;
     println!("{}", serde_json::to_string(&result)?);
     Ok(())
 }

@@ -24,6 +24,12 @@ passes 2,604/7 with 92.021% statement, 87.833% branch, and 91.058% combined
 coverage; focused tests, review, hooks, Bandit, build, and installed-wheel smoke
 pass. The shared venv now points at this checkout at version `0.5.0rc1`.
 
+TASK-154 was committed and pushed as `2542e2d`. TASK-155 makes supplied
+context-band reports fail closed in Rust rather than falling back to ordinary
+classification accuracy. Focused 6/6, evaluation compatibility 40/40, full Rust
+workspace, strict Clippy, independent review, and full Python 2,609/7 pass.
+Coverage is 92.021% statement, 87.833% branch, and 91.058% combined.
+
 ## Recovery checkpoint — 2026-11-15
 
 Active persistent checkout: `/home/krish/.codex/worktrees/agentrouter-production/AgentRouter-OS`,
