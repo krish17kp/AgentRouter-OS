@@ -2,7 +2,7 @@
 
 ## Current migration and release limits (2026-11-15)
 
-- Rust migration remains 48/77 full-module parity. TASK-152 adds opt-in route
+- Rust migration remains 49/77 full-module parity. TASK-152 adds opt-in route
   decision records, request correlation, and shared API/CLI redaction, but full
   observability spans, optional OTel, and complete API-error parity remain.
 - The `5af3c55` hosted matrix passes all Python/Rust supported platforms,
@@ -256,3 +256,8 @@ Partial; all existing release blockers remain unchanged.
 Rust evaluation CLI now matches measured option and exit-code contracts.
 External real-dataset preparation and the remaining complete Typer surface keep
 the module Partial; existing release blockers remain unchanged.
+## TASK-159 update — 2026-11-15
+
+Platform evaluation is now Parity. Its Rust CLI manifest is a bounded declared
+contract checked against top-level help, not reflective command registration.
+Twenty-eight Partial module rows and all release blockers remain.

@@ -6,7 +6,7 @@
 matrices, API, build, security, website, and critical mutation pass. PR #16 is
 the sole open PR, has no GitHub review, and fails the unchanged frozen
 context-band gate at 0.6667 < 0.90. Live OpenAI smoke skips without owner
-credentials. Rust migration is 48/77 full-module parity with 29 Partial rows;
+credentials. Rust migration is 49/77 full-module parity with 28 Partial rows;
 TASK-152 route observability passes local full Python/Rust regression: 2,590/5
 Python tests at 92.052% statement, 87.756% branch, and 91.064% combined
 coverage; Rust workspace, strict Clippy, wheel build, and clean-wheel smoke pass.
@@ -134,3 +134,8 @@ and fails closed when either is unavailable. Independent review and full Python
 Rust evaluation CLI argument/error parity and TASK-157 cross-platform
 formatting are repaired. Full Python 2,626/7 and independent review pass.
 No release threshold or frozen data changed; readiness remains held.
+## TASK-159 platform evaluator parity — 2026-11-15
+
+The platform evaluator meets the full-module differential bar after rejected
+evidence was repaired with real process failures and manifest consistency.
+Inventory is 49/77 Parity; production readiness remains held.

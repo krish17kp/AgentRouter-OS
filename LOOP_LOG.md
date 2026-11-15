@@ -2780,3 +2780,10 @@ Rust evaluation read-only/status/report/compare/prepare argument and exit-code
 behavior now matches the measured Python contracts. TASK-157's hosted Ruff
 failure is repaired. Independent review found and cleared two repair rounds.
 Focused 43, full Rust workspace/Clippy, Ruff, and full Python 2,626/7 pass.
+## TASK-159 platform evaluator parity audit — 2026-11-15
+
+Exact injected-manifest differentials plus installed-CLI runtime discovery and
+fail-closed tests cover the complete Python platform evaluator module. Matrix
+candidate: Parity, moving the inventory to 49/77 full and 28 Partial. Initial
+audit found missing real process failures and a circular manifest claim; both
+were repaired. Re-audit clear; focused 12 and full Python 2,630/7 pass.

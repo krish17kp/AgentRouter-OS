@@ -43,6 +43,11 @@ def test_rust_full_evaluation_uses_the_running_cli_surface():
     )
     assert surface_process.returncode == 0, surface_process.stderr
     surface = json.loads(surface_process.stdout)
+    help_process = _cargo("-p", "agentrouter-cli", "--bin", "agentrouter", "--", "--help")
+    assert help_process.returncode == 0, help_process.stderr
+    declared = help_process.stdout.partition("<")[2].partition(">")[0].split("|")
+    for name in surface["commands"] + surface["groups"]:
+        assert name in declared
     assert surface["commands"] == sorted(_command_names())
     # `contract` is a hidden Python Typer group and is not exposed by the Rust
     # CLI. The platform evaluator's score is based only on its declared groups.

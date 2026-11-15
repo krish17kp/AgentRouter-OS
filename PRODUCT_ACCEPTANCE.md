@@ -9,7 +9,7 @@ has no human review, and live OpenAI smoke still needs credentials. TASK-152
 adds opt-in, redacted route records to the Rust HTTP service. Full local Python
 regression passes 2,590/5 and Rust workspace/Clippy pass; hosted validation
 awaits the RC push. The 77-module Rust inventory has
-48 Parity and 29 Partial rows.
+49 Parity and 28 Partial rows.
 
 ## Previous checkpoint — 2026-11-14
 
@@ -105,3 +105,8 @@ evaluation/platform parity remains Partial and acceptance is not granted.
 Measured report, comparison, preparation, status, and context-band CLI paths
 now have direct Rust coverage and repaired error behavior. Verification passes;
 evaluation CLI remains Partial and product acceptance is not granted.
+## TASK-159 platform evaluator parity — 2026-11-15
+
+Platform evaluation is promoted to Parity with independent audit and full
+regression evidence. Twenty-eight Partial modules and release blockers remain;
+product acceptance is not granted.

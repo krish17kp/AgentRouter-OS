@@ -54,7 +54,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/evaluators/__init__.py` | `agentrouter-evaluation::evaluators_api` | Partial |
 | `agentrouter/evaluation/evaluators/feedback.py` | `agentrouter-evaluation::evaluate_feedback` | Parity |
 | `agentrouter/evaluation/evaluators/performance.py` | `agentrouter-evaluation::{evaluate_performance,evaluate_performance_with,evaluate_default_performance,summarize_performance}` | Parity |
-| `agentrouter/evaluation/evaluators/platform.py` | `agentrouter-evaluation::evaluate_platform` | Partial |
+| `agentrouter/evaluation/evaluators/platform.py` | `agentrouter-evaluation::{evaluate_platform,evaluators_api::runtime_cli_surface}` | Parity |
 | `agentrouter/evaluation/evaluators/provider.py` | `agentrouter-evaluation::{evaluate_provider,evaluate_provider_default}` | Parity |
 | `agentrouter/evaluation/evaluators/routing.py` | `agentrouter-evaluation::{evaluate_routing,evaluate_routing_with}` | Parity |
 | `agentrouter/evaluation/evaluators/safety.py` | `agentrouter-evaluation::{evaluate_safety,evaluate_safety_with}` | Parity |

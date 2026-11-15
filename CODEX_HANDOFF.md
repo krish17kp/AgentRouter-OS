@@ -309,3 +309,11 @@ Independent review is clear; focused 43, Rust workspace/Clippy, Ruff, and full
 Python 2,626/7 pass. Commit/push this exact diff, inspect hosted CI, then select
 the next Partial Rust parity task. Production readiness remains held.
 
+## TASK-159 checkpoint — 2026-11-15
+
+TASK-158 is pushed at `68731ae`. TASK-159 audits the complete platform evaluator
+and has evidence for 49/77 Parity, 28 Partial: exact injected/live manifests,
+sorting/scoring details, installed CLI discovery, and fail-closed process
+errors. Initial audit findings were repaired and re-audit is clear. Focused 12
+and full Python 2,630/7 pass. Commit/push, inspect CI, continue next Partial.
+

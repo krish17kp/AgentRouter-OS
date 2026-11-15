@@ -209,6 +209,10 @@ name = "evaluation_default_grade_from_json"
 path = "src/bin/evaluation_default_grade_from_json.rs"
 
 [[bin]]
+name = "evaluation_cli_surface_fixture"
+path = "src/bin/evaluation_cli_surface_fixture.rs"
+
+[[bin]]
 name = "evaluation_collect_from_json"
 path = "src/bin/evaluation_collect_from_json.rs"
 

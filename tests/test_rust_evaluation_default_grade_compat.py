@@ -15,6 +15,7 @@ from agentrouter.evaluation.grading import grade
 
 pytestmark = pytest.mark.skipif(shutil.which("cargo") is None, reason="cargo not on PATH")
 ROOT = Path(__file__).resolve().parents[1]
+CARGO = shutil.which("cargo") or "cargo"
 
 
 def _runtime_environment() -> dict[str, str]:
@@ -24,7 +25,9 @@ def _runtime_environment() -> dict[str, str]:
     return environment
 
 
-def _default_grade(cases, *, measure_all: bool, context_band_generalization=None) -> dict:
+def _default_grade(
+    cases, *, measure_all: bool, context_band_generalization=None, environment=None, check=True
+):
     request = {
         "cases": [case.model_dump(mode="json") for case in cases],
         "measure_all": measure_all,
@@ -33,7 +36,7 @@ def _default_grade(cases, *, measure_all: bool, context_band_generalization=None
         request["context_band_generalization"] = context_band_generalization
     process = subprocess.run(
         [
-            "cargo",
+            CARGO,
             "run",
             "--quiet",
             "--locked",
@@ -47,17 +50,17 @@ def _default_grade(cases, *, measure_all: bool, context_band_generalization=None
         text=True,
         encoding="utf-8",
         cwd=ROOT,
-        env=_runtime_environment(),
+        env=environment or _runtime_environment(),
         timeout=120,
-        check=True,
+        check=check,
     )
-    return json.loads(process.stdout)
+    return json.loads(process.stdout) if check else process
 
 
 def _rust_cli_surface() -> dict:
     subprocess.run(
         [
-            "cargo",
+            CARGO,
             "build",
             "--quiet",
             "--locked",
@@ -75,7 +78,7 @@ def _rust_cli_surface() -> dict:
     )
     process = subprocess.run(
         [
-            "cargo",
+            CARGO,
             "run",
             "--quiet",
             "--locked",
@@ -159,3 +162,57 @@ def test_default_runtime_supports_empty_cases_and_context_override():
 
     _assert_scorecard_fields(actual, expected)
     assert actual["context_band_generalization"] == context_report
+
+
+def _fixture_cli_environment(tmp_path: Path, mode: str) -> dict[str, str]:
+    subprocess.run(
+        [
+            CARGO,
+            "build",
+            "--quiet",
+            "--locked",
+            "-p",
+            "agentrouter-evaluation",
+            "--bin",
+            "evaluation_cli_surface_fixture",
+        ],
+        cwd=ROOT,
+        timeout=120,
+        check=True,
+    )
+    environment = os.environ.copy()
+    target = Path(environment.get("CARGO_TARGET_DIR", ROOT / "target")) / "debug"
+    suffix = ".exe" if os.name == "nt" else ""
+    shutil.copy2(
+        target / f"evaluation_cli_surface_fixture{suffix}", tmp_path / f"agentrouter{suffix}"
+    )
+    environment["PATH"] = f"{tmp_path}{os.pathsep}{environment.get('PATH', '')}"
+    environment["AGENTROUTER_TEST_SURFACE_MODE"] = mode
+    return environment
+
+
+@pytest.mark.parametrize(
+    ("mode", "message"),
+    [
+        ("nonzero", "could not report its command surface"),
+        ("malformed", "returned an invalid surface"),
+        ("unknown-field", "returned an invalid surface"),
+    ],
+)
+def test_default_runtime_fails_closed_on_installed_cli_process_errors(tmp_path, mode, message):
+    process = _default_grade(
+        [],
+        measure_all=True,
+        environment=_fixture_cli_environment(tmp_path, mode),
+        check=False,
+    )
+    assert process.returncode != 0
+    assert message in process.stderr
+
+
+def test_default_runtime_fails_closed_when_installed_cli_is_missing(tmp_path):
+    environment = os.environ.copy()
+    environment["PATH"] = str(tmp_path)
+    process = _default_grade([], measure_all=True, environment=environment, check=False)
+    assert process.returncode != 0
+    assert "could not query the installed Rust CLI surface" in process.stderr

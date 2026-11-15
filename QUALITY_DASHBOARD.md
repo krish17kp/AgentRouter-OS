@@ -32,7 +32,7 @@ pass locally. TASK-142 and TASK-143 close evaluator seed-contract and runtime
 platform-discovery gaps. TASK-144's non-2xx OpenAI status differential passes
 68 Python tests and three Rust unit tests locally, and is pushed at `0d3ea70`.
 TASK-145 adds three full-output CLINC150 real-row differentials. The parity
-inventory now contains 48/77 full modules, with 29 Partial. TASK-147's focused
+inventory now contains 49/77 full modules, with 28 Partial. TASK-147's focused
 Rust SDK tests (10 Rust, 41 Python differential) and full Rust workspace pass
 locally. Python remains the shipping authority and the Rust migration is
 incomplete. TASK-149 compares recursive Rust JSON redaction with Python for
@@ -126,3 +126,8 @@ compatibility and full Python 2,613/7 pass. Release readiness remains held.
 Evaluation CLI error exits and option rejection now match measured Python
 behavior. Full Python regression passes 2,626/7; Rust workspace, strict Clippy,
 Ruff, and independent review pass. Overall release readiness remains held.
+## TASK-159 platform evaluator parity — 2026-11-15
+
+Process-level installed-CLI discovery failures and bounded manifest consistency
+now complement exact injected scoring differentials. Independent re-audit,
+focused 12, and full Python 2,630/7 pass. Inventory: 49 Parity / 28 Partial.
