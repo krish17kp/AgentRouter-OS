@@ -324,3 +324,14 @@ Success-only seed caching, retry behavior, defaults, and explicit/injected
 aliases pass Rust 7/Clippy, focused 19, and full Python 2,630/7. Inventory is
 50/77 Parity and 27 Partial. Commit/push, inspect CI, continue next module.
 
+## TASK-161 checkpoint — 2026-11-16
+
+TASK-161 is locally complete on `release/agentrouter-v0.5-rc1`. The grading
+facade matches Python in default/injected and classification/full modes,
+classification precedes runtime discovery, deterministic full reports compare
+exactly after removing only timing medians, malformed context fails closed, and
+isolated process fixtures no longer inherit Cargo's CLI path. Independent
+re-audit is clear. Rust workspace/strict Clippy, Ruff, 27 focused checks, and
+full Python 2,642/7 pass. Inventory is 51/77 Parity and 26 Partial. Commit/push,
+inspect Windows/macOS CI, then continue the next Partial evaluation module.
+

@@ -1,6 +1,17 @@
 # Release Readiness
 
-## Current checkpoint — 2026-11-15
+## Current checkpoint — 2026-11-16
+
+**NOT release ready.** TASK-161 promotes only the independently audited grading
+row: both grading modes, default/injected classifiers, discovery ordering,
+platform detail, context evidence, and process failures are differentially
+covered. Rust workspace, strict Clippy, Ruff, 27 focused checks, and full Python
+regression pass (2,642/7). Rust migration is now 51/77 full-module parity with
+26 Partial rows. Hosted cross-platform validation is pending. The frozen
+context-band gate, human review/evaluation, live OpenAI validation, remaining
+Rust modules, main promotion, tag, and deployment remain unresolved.
+
+## Previous checkpoint — 2026-11-15
 
 **NOT release ready.** At `5af3c55`, the hosted cross-platform Python and Rust
 matrices, API, build, security, website, and critical mutation pass. PR #16 is

@@ -1,6 +1,15 @@
 # Known Limitations
 
-## Current migration and release limits (2026-11-15)
+## Current migration and release limits (2026-11-16)
+
+- Rust migration remains incomplete at 51/77 full-module parity. TASK-161 closes
+  grading itself, while evaluation runner, registry, CLI, adapter-base, and
+  several external adapters remain Partial.
+- TASK-161 passes full local Python/Rust validation; its hosted cross-platform
+  result is pending. The frozen context-band accuracy, independent human review,
+  OpenAI live validation, and production infrastructure remain external gates.
+
+## Previous migration and release limits (2026-11-15)
 
 - Rust migration remains 50/77 full-module parity. TASK-152 adds opt-in route
   decision records, request correlation, and shared API/CLI redaction, but full

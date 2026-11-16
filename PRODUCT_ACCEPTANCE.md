@@ -1,6 +1,15 @@
 # Product Acceptance Evidence
 
-## Current checkpoint — 2026-11-15
+## Current checkpoint — 2026-11-16
+
+Product acceptance remains **not granted**. TASK-161's grading row is promoted
+after independent review and complete default/injected, both-mode differential
+coverage. Full local Python regression passes 2,642/7; Rust workspace, strict
+Clippy, Ruff, and 27 focused grading checks pass. The 77-module inventory now
+has 51 Parity and 26 Partial rows. Hosted validation and all previously named
+release blockers remain.
+
+## Previous checkpoint — 2026-11-15
 
 Product acceptance remains **not granted**. At `5af3c55`, the Python, Rust,
 cross-platform compatibility, API, build, security, website, and mutation jobs

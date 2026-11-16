@@ -2793,3 +2793,14 @@ Seed loading now caches only successes and retries transient errors. Facade
 defaults and explicit/injected aliases preserve all public call forms. Two audit
 rounds found and cleared those gaps. Rust 7/Clippy, focused 19, and full Python
 2,630/7 pass. Inventory: 50 Parity / 27 Partial.
+
+## TASK-161 grading full-module parity — 2026-11-16
+
+Default and injected Rust grading now match Python's classification-first
+ordering, both measure modes, complete deterministic scorecards, hidden
+platform-detail compatibility, absent/null/malformed context evidence, and
+fail-closed installed-CLI discovery. Cargo PATH pollution in process tests was
+removed for Windows/macOS. Three independent-audit findings and one Windows
+fixture defect were repaired; final re-audit is clear. Rust workspace, strict
+Clippy, Ruff, 27 focused differentials, and full Python 2,642/7 pass. Inventory:
+51 Parity / 26 Partial. Hosted validation follows the RC push.

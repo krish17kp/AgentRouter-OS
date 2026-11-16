@@ -233,23 +233,42 @@ pub fn run_default_grade(
     measure_all: bool,
     context_band_generalization: Option<&serde_json::Value>,
 ) -> Result<serde_json::Value, String> {
-    run_default_grade_with(
+    run_default_grade_with(cases, measure_all, context_band_generalization, &|task| {
+        classify(task, &ClassifyOptions::default())
+    })
+}
+
+/// Run the public grade contract with one caller-supplied classifier while
+/// retaining automatic packaged-model and installed-CLI discovery.
+pub fn run_default_grade_with<F>(
+    cases: &[EvaluationCase],
+    measure_all: bool,
+    context_band_generalization: Option<&serde_json::Value>,
+    classify_fn: &F,
+) -> Result<serde_json::Value, String>
+where
+    F: Fn(&str) -> Classification,
+{
+    run_default_grade_with_loaders(
         cases,
         measure_all,
         context_band_generalization,
+        classify_fn,
         crate::evaluators_api::load_seed_models,
         crate::evaluators_api::runtime_cli_surface,
     )
 }
 
-fn run_default_grade_with<ModelLoader, SurfaceLoader>(
+fn run_default_grade_with_loaders<F, ModelLoader, SurfaceLoader>(
     cases: &[EvaluationCase],
     measure_all: bool,
     context_band_generalization: Option<&serde_json::Value>,
+    classify_fn: &F,
     model_loader: ModelLoader,
     surface_loader: SurfaceLoader,
 ) -> Result<serde_json::Value, String>
 where
+    F: Fn(&str) -> Classification,
     ModelLoader: FnOnce() -> Result<Vec<agentrouter_registry::ModelEntry>, String>,
     SurfaceLoader: FnOnce() -> Result<(Vec<String>, Vec<String>), String>,
 {
@@ -262,7 +281,7 @@ where
         context_band_generalization: context_band_generalization.cloned(),
     };
     if !measure_all {
-        return run_classification(
+        let mut report = run_classification_with(
             cases,
             None,
             options.seed,
@@ -270,11 +289,48 @@ where
             options.environment,
             options.datasets,
             options.context_band_generalization.as_ref(),
-        );
+            classify_fn,
+        )?;
+        remove_runner_provenance(&mut report);
+        return Ok(report);
     }
+    let report = run_classification_with(
+        cases,
+        None,
+        options.seed,
+        &options.source,
+        options.environment.clone(),
+        options.datasets.clone(),
+        options.context_band_generalization.as_ref(),
+        classify_fn,
+    )?;
     let models = model_loader()?;
-    let (commands, groups) = surface_loader()?;
-    run_all_dimensions(cases, &models, &commands, &groups, options)
+    let (commands, mut groups) = surface_loader()?;
+    // Python's Typer application registers `contract` as a hidden group. It is
+    // intentionally absent from the Rust CLI's public help, but remains part of
+    // the Python grading report contract mirrored by this default facade.
+    if !groups.iter().any(|group| group == "contract") {
+        groups.push("contract".to_owned());
+    }
+    let mut report =
+        complete_all_dimensions_with(report, cases, &models, &commands, &groups, classify_fn)?;
+    remove_runner_provenance(&mut report);
+    Ok(report)
+}
+
+fn remove_runner_provenance(report: &mut serde_json::Value) {
+    if let Some(object) = report.as_object_mut() {
+        for field in [
+            "environment",
+            "datasets",
+            "profile",
+            "dataset_quality",
+            "seed",
+            "source",
+        ] {
+            object.remove(field);
+        }
+    }
 }
 
 /// Run classification grading through a caller-supplied classifier. The same
@@ -336,6 +392,30 @@ pub fn run_all_dimensions_with<F>(
 where
     F: Fn(&str) -> Classification,
 {
+    let report = run_classification_with(
+        cases,
+        options.profile.as_deref(),
+        options.seed,
+        &options.source,
+        options.environment,
+        options.datasets,
+        options.context_band_generalization.as_ref(),
+        classify_fn,
+    )?;
+    complete_all_dimensions_with(report, cases, models, commands, groups, classify_fn)
+}
+
+fn complete_all_dimensions_with<F>(
+    mut report: serde_json::Value,
+    cases: &[EvaluationCase],
+    models: &[agentrouter_registry::ModelEntry],
+    commands: &[String],
+    groups: &[String],
+    classify_fn: &F,
+) -> Result<serde_json::Value, String>
+where
+    F: Fn(&str) -> Classification,
+{
     use serde_json::{json, Value};
 
     const DIMENSIONS: [(&str, u64); 7] = [
@@ -347,16 +427,6 @@ where
         ("feedback_storage", 7),
         ("performance", 5),
     ];
-    let mut report = run_classification_with(
-        cases,
-        options.profile.as_deref(),
-        options.seed,
-        &options.source,
-        options.environment,
-        options.datasets,
-        options.context_band_generalization.as_ref(),
-        classify_fn,
-    )?;
     let measured = [
         (
             "routing",
@@ -438,11 +508,26 @@ mod tests {
 
     #[test]
     fn default_grade_propagates_packaged_model_load_failures() {
-        let result = run_default_grade_with(
-            &[],
+        let classified = std::cell::Cell::new(false);
+        let case: EvaluationCase = serde_json::from_value(serde_json::json!({
+            "id": "ordering",
+            "dataset": "ordering",
+            "task": "classify before discovery"
+        }))
+        .expect("valid ordering case");
+        let result = run_default_grade_with_loaders(
+            &[case],
             true,
             None,
+            &|_| {
+                classified.set(true);
+                classify("classify before discovery", &ClassifyOptions::default())
+            },
             || -> Result<Vec<agentrouter_registry::ModelEntry>, String> {
+                assert!(
+                    classified.get(),
+                    "classification must precede model discovery"
+                );
                 Err("seed model catalog unavailable".to_owned())
             },
             || Ok((vec![], vec![])),
@@ -452,12 +537,29 @@ mod tests {
 
     #[test]
     fn default_grade_propagates_cli_discovery_failures() {
-        let result = run_default_grade_with(
-            &[],
+        let classified = std::cell::Cell::new(false);
+        let case: EvaluationCase = serde_json::from_value(serde_json::json!({
+            "id": "ordering",
+            "dataset": "ordering",
+            "task": "classify before discovery"
+        }))
+        .expect("valid ordering case");
+        let result = run_default_grade_with_loaders(
+            &[case],
             true,
             None,
+            &|_| {
+                classified.set(true);
+                classify("classify before discovery", &ClassifyOptions::default())
+            },
             crate::evaluators_api::load_seed_models,
-            || Err("shipped CLI is unavailable".to_owned()),
+            || {
+                assert!(
+                    classified.get(),
+                    "classification must precede CLI discovery"
+                );
+                Err("shipped CLI is unavailable".to_owned())
+            },
         );
         assert_eq!(result.unwrap_err(), "shipped CLI is unavailable");
     }

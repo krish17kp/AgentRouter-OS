@@ -1,6 +1,17 @@
 # Quality Dashboard — AgentRouter OS
 
-## Current checkpoint — 2026-11-15
+## Current checkpoint — 2026-11-16
+
+TASK-161 closes `agentrouter/evaluation/grading.py` after three audit findings
+were repaired: classification now precedes dependency discovery, the default
+full scorecard preserves Python's hidden platform-detail contract, and complete
+deterministic reports are compared in both default and injected modes. Rust
+workspace, strict Clippy, Ruff, 27 focused differentials, and full Python
+regression pass (2,642 passed, 7 skipped in 343.42 seconds). The inventory is
+51/77 Parity with 26 Partial. Hosted cross-platform validation is pending the
+authorized RC push; production readiness remains held by the unchanged gates.
+
+## Previous checkpoint — 2026-11-15
 
 At `5af3c55`, the hosted Python 3.10–3.13, Windows/macOS Python, Rust
 workspace, Python/Rust compatibility, API, build, security, website, and mutation

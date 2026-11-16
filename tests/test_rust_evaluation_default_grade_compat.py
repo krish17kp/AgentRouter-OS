@@ -10,12 +10,14 @@ from pathlib import Path
 
 import pytest
 
+from agentrouter.classifier import classify
 from agentrouter.evaluation.adapters.agentrouter_gold import AgentRouterGoldAdapter
 from agentrouter.evaluation.grading import grade
 
 pytestmark = pytest.mark.skipif(shutil.which("cargo") is None, reason="cargo not on PATH")
 ROOT = Path(__file__).resolve().parents[1]
 CARGO = shutil.which("cargo") or "cargo"
+_MISSING = object()
 
 
 def _runtime_environment() -> dict[str, str]:
@@ -26,25 +28,53 @@ def _runtime_environment() -> dict[str, str]:
 
 
 def _default_grade(
-    cases, *, measure_all: bool, context_band_generalization=None, environment=None, check=True
+    cases,
+    *,
+    measure_all: bool,
+    context_band_generalization=_MISSING,
+    prediction=None,
+    environment=None,
+    check=True,
 ):
     request = {
         "cases": [case.model_dump(mode="json") for case in cases],
         "measure_all": measure_all,
     }
-    if context_band_generalization is not None:
+    if context_band_generalization is not _MISSING:
         request["context_band_generalization"] = context_band_generalization
+    if prediction is not None:
+        request["prediction"] = prediction.model_dump(mode="json")
+    command = [
+        CARGO,
+        "run",
+        "--quiet",
+        "--locked",
+        "--bin",
+        "evaluation_default_grade_from_json",
+        "-p",
+        "agentrouter-evaluation",
+    ]
+    if environment is not None:
+        subprocess.run(
+            [
+                CARGO,
+                "build",
+                "--quiet",
+                "--locked",
+                "--bin",
+                "evaluation_default_grade_from_json",
+                "-p",
+                "agentrouter-evaluation",
+            ],
+            cwd=ROOT,
+            timeout=120,
+            check=True,
+        )
+        target = Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target")) / "debug"
+        suffix = ".exe" if os.name == "nt" else ""
+        command = [str(target / f"evaluation_default_grade_from_json{suffix}")]
     process = subprocess.run(
-        [
-            CARGO,
-            "run",
-            "--quiet",
-            "--locked",
-            "--bin",
-            "evaluation_default_grade_from_json",
-            "-p",
-            "agentrouter-evaluation",
-        ],
+        command,
         input=json.dumps(request),
         capture_output=True,
         text=True,
@@ -119,10 +149,7 @@ def test_default_runtime_matches_python_classification_only_without_manifests():
     actual = _default_grade(cases, measure_all=False)
     expected = grade(cases)
 
-    _assert_scorecard_fields(actual, expected)
-    assert actual["environment"] is None
-    assert actual["datasets"] is None
-    assert actual["source"] == "runtime"
+    assert actual == expected
 
 
 def test_default_runtime_discovers_models_and_cli_for_all_dimensions():
@@ -131,26 +158,14 @@ def test_default_runtime_discovers_models_and_cli_for_all_dimensions():
     actual = _default_grade(cases, measure_all=True)
     expected = grade(cases, measure_all=True)
 
-    for field in (
-        "n_cases",
-        "classification",
-        "release_gates",
-        "release_ready",
-        "achieved_points",
-        "possible_measured_points",
-        "grade_over_100",
-        "grade_of_measured",
-    ):
-        assert actual[field] == expected[field]
-    for dimension, expected_dimension in expected["dimensions"].items():
-        actual_dimension = actual["dimensions"][dimension]
-        for field in ("weight", "status", "score", "achieved"):
-            assert actual_dimension[field] == expected_dimension[field]
-        if dimension not in {"cli_platform", "performance"}:
-            assert actual_dimension["detail"] == expected_dimension["detail"]
+    for report in (actual, expected):
+        performance = report["dimensions"]["performance"]["detail"]
+        performance.pop("classify_median_ms")
+        performance.pop("route_median_ms")
+    assert actual == expected
     platform = actual["dimensions"]["cli_platform"]["detail"]
     assert platform["commands_found"] == surface["commands"]
-    assert platform["groups_found"] == surface["groups"]
+    assert platform["groups_found"] == sorted([*surface["groups"], "contract"])
     assert actual["dimensions"]["performance"]["detail"]["n_samples"] == 8
 
 
@@ -162,6 +177,59 @@ def test_default_runtime_supports_empty_cases_and_context_override():
 
     _assert_scorecard_fields(actual, expected)
     assert actual["context_band_generalization"] == context_report
+
+
+@pytest.mark.parametrize("measure_all", [False, True])
+def test_default_runtime_propagates_injected_classifier(measure_all):
+    cases = AgentRouterGoldAdapter().load()[:12]
+    prediction = classify("Write a short summary of this document")
+    actual = _default_grade(cases, measure_all=measure_all, prediction=prediction)
+    expected = grade(cases, classify_fn=lambda _: prediction, measure_all=measure_all)
+
+    if not measure_all:
+        assert actual == expected
+        return
+    for report in (actual, expected):
+        performance = report["dimensions"]["performance"]["detail"]
+        performance.pop("classify_median_ms")
+        performance.pop("route_median_ms")
+    assert actual == expected
+
+
+@pytest.mark.parametrize("measure_all", [False, True])
+def test_default_runtime_explicit_null_context_matches_absent(measure_all):
+    cases = AgentRouterGoldAdapter().load()[:3]
+    absent = _default_grade(cases, measure_all=measure_all)
+    explicit_null = _default_grade(cases, measure_all=measure_all, context_band_generalization=None)
+    if not measure_all:
+        assert explicit_null == absent
+        return
+    for report in (absent, explicit_null):
+        detail = report["dimensions"]["performance"]["detail"]
+        detail.pop("classify_median_ms")
+        detail.pop("route_median_ms")
+    assert explicit_null == absent
+
+
+@pytest.mark.parametrize("measure_all", [False, True])
+@pytest.mark.parametrize(
+    "malformed",
+    [
+        {},
+        {"current_holdout": None},
+        {"current_holdout": {"accuracy": None}},
+        {"current_holdout": {"accuracy": "0.9"}},
+    ],
+)
+def test_default_runtime_rejects_malformed_context_evidence(measure_all, malformed):
+    process = _default_grade(
+        [],
+        measure_all=measure_all,
+        context_band_generalization=malformed,
+        check=False,
+    )
+    assert process.returncode != 0
+    assert not process.stdout.strip()
 
 
 def _fixture_cli_environment(tmp_path: Path, mode: str) -> dict[str, str]:
