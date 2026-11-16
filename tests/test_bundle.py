@@ -245,27 +245,25 @@ def test_artifact_writer_refuses_symlinks_without_touching_referent(tmp_path, da
 def test_artifact_appearing_immediately_before_open_is_not_followed_or_overwritten(
     tmp_path, monkeypatch, kind
 ):
-    from pathlib import Path
-
     target = tmp_path / "probe.txt"
     victim = tmp_path / "victim.txt"
     if kind == "symlink":
         victim.write_bytes(b"preserve victim")
-    original_open = Path.open
+    original_open = bundle._exclusive_open
     injected = False
 
-    def racing_open(path, mode="r", *args, **kwargs):
+    def racing_open(path):
         nonlocal injected
         if path == target and not injected:
             injected = True
             if kind == "file":
-                with original_open(target, "xb") as existing:
+                with original_open(target) as existing:
                     existing.write(b"created by another process")
             else:
                 _artifact_symlink_or_skip(target, victim)
-        return original_open(path, mode, *args, **kwargs)
+        return original_open(path)
 
-    monkeypatch.setattr(Path, "open", racing_open)
+    monkeypatch.setattr(bundle, "_exclusive_open", racing_open)
     with pytest.raises(bundle.BundleError, match="refusing to overwrite"):
         bundle._write(tmp_path, "probe.txt", "new content")
     assert injected

@@ -343,3 +343,10 @@ normalization, and complete scorecards match their Python contracts. Full Rust
 workspace/Clippy, Ruff, 40 focused checks, and Python 2,660/7 pass. Inventory is
 52/77 Parity and 25 Partial. Commit/push, inspect CI, continue the next Partial.
 
+## TASK-165 checkpoint — 2026-11-16
+
+TASK-162 is pushed at `79c70b0`; Rust migration CI, security, website, and
+mutation pass, while Windows Python exposed two real path/open races. TASK-165
+repairs both; independent review is clear and focused 46/Ruff/Clippy pass. Push
+and require hosted Windows confirmation before considering this repair closed.
+

@@ -4,6 +4,8 @@
 
 - Rust migration remains incomplete at 52/77 full-module parity. Evaluation
   registry, CLI, adapter base, and external real-data adapters remain Partial.
+- TASK-165's Windows-only executable-search and reparse-point repairs are not
+  yet confirmed by a fresh hosted Windows run.
 
 - Rust migration remains incomplete at 51/77 full-module parity. TASK-161 closes
   grading itself, while evaluation runner, registry, CLI, adapter-base, and

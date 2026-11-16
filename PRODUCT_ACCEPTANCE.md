@@ -6,6 +6,9 @@ Product acceptance remains **not granted**. TASK-162 runner parity is locally
 complete and independently clear: 2,660/7 Python, full Rust workspace/Clippy,
 Ruff, and 40 focused checks pass. Inventory: 52 Parity / 25 Partial.
 
+TASK-165 repairs the hosted Windows failures with 46 focused checks and clear
+independent review; acceptance remains held pending hosted revalidation.
+
 Product acceptance remains **not granted**. TASK-161's grading row is promoted
 after independent review and complete default/injected, both-mode differential
 coverage. Full local Python regression passes 2,642/7; Rust workspace, strict

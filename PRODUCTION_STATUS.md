@@ -26,6 +26,11 @@ runner owns selection, runtime discovery, bounded provenance, complete grading,
 and fail-closed validation. Full Rust workspace/Clippy, 40 focused checks, Ruff,
 and full Python regression pass (2,660/7). Inventory: 52 Parity / 25 Partial.
 
+TASK-165 repairs the two hosted Windows failures without weakening assertions:
+explicit evaluator executable discovery and non-following native exclusive
+bundle creation. Independent review and focused 46/Ruff/Clippy pass; hosted
+Windows revalidation is pending.
+
 TASK-153 is reconstructed in the persistent managed worktree after the temporary
 checkout disappeared. Python focused tests pass 88/1; Rust CLI library 75/75,
 observability 6/6, and strict Python/Rust differential 1/1 pass. Independent Python

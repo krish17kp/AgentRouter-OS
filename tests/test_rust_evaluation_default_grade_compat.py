@@ -254,6 +254,7 @@ def _fixture_cli_environment(tmp_path: Path, mode: str) -> dict[str, str]:
     shutil.copy2(
         target / f"evaluation_cli_surface_fixture{suffix}", tmp_path / f"agentrouter{suffix}"
     )
+    environment["AGENTROUTER_EVALUATION_CLI"] = str(tmp_path / f"agentrouter{suffix}")
     environment["PATH"] = f"{tmp_path}{os.pathsep}{environment.get('PATH', '')}"
     environment["AGENTROUTER_TEST_SURFACE_MODE"] = mode
     return environment
@@ -281,6 +282,7 @@ def test_default_runtime_fails_closed_on_installed_cli_process_errors(tmp_path, 
 def test_default_runtime_fails_closed_when_installed_cli_is_missing(tmp_path):
     environment = os.environ.copy()
     environment["PATH"] = str(tmp_path)
+    environment["AGENTROUTER_EVALUATION_CLI"] = str(tmp_path / "missing-agentrouter")
     process = _default_grade([], measure_all=True, environment=environment, check=False)
     assert process.returncode != 0
     assert "could not query the installed Rust CLI surface" in process.stderr

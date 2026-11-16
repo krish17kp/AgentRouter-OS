@@ -2814,3 +2814,12 @@ invalid-source and combined-error precedence, CLI profile normalization, and
 pipe-buffer deadlock risk. Runtime-specific environment semantics are documented.
 Independent audit cleared three repair rounds. Full Rust workspace/Clippy, Ruff,
 40 focused checks, and full Python 2,660/7 pass. Inventory: 52 Parity / 25 Partial.
+
+## TASK-165 Windows CI repair — 2026-11-16
+
+Hosted Windows reproduced executable-directory search bypassing PATH-only CLI
+fixtures and exclusive create following a raced dangling symlink. Added an
+explicit no-shell evaluation executable override and native Windows
+CREATE_NEW|OPEN_REPARSE_POINT creation with complete handle ownership cleanup.
+Independent review found and cleared one descriptor leak. Focused 46, Ruff, and
+strict Clippy pass. Hosted Windows revalidation follows the RC push.

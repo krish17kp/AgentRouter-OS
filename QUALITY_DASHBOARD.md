@@ -9,6 +9,10 @@ full Rust workspace/Clippy, Ruff, 40 focused checks, and full Python 2,660/7 pas
 Inventory: 52/77 Parity, 25 Partial. TASK-161 hosted Rust migration CI passes on
 Linux, Windows, and macOS; its enforcing release gate remains honestly held.
 
+TASK-165 addresses the subsequent Windows Python failures at their platform
+roots. Local focused 46, Ruff, strict Clippy, and independent review pass;
+hosted confirmation is pending.
+
 TASK-161 closes `agentrouter/evaluation/grading.py` after three audit findings
 were repaired: classification now precedes dependency discovery, the default
 full scorecard preserves Python's hidden platform-detail contract, and complete

@@ -40,6 +40,60 @@ class BundleError(Exception):
     """Raised when a bundle cannot be produced safely."""
 
 
+def _exclusive_open(target: Path):
+    """Open a new artifact without following a final-component symlink."""
+    if os.name != "nt":
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        flags |= getattr(os, "O_NOFOLLOW", 0)
+        return os.fdopen(os.open(target, flags, 0o600), "wb")
+
+    # Windows' ordinary O_EXCL path follows a dangling reparse point. Open the
+    # reparse point itself so CREATE_NEW atomically refuses both files and links.
+    import ctypes
+    import msvcrt
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    create_file = kernel32.CreateFileW
+    close_handle = kernel32.CloseHandle
+    create_file.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.HANDLE,
+    ]
+    create_file.restype = wintypes.HANDLE
+    close_handle.argtypes = [wintypes.HANDLE]
+    close_handle.restype = wintypes.BOOL
+    handle = create_file(
+        str(target),
+        0x40000000,  # GENERIC_WRITE
+        0,
+        None,
+        1,  # CREATE_NEW
+        0x00000080 | 0x00200000,  # FILE_ATTRIBUTE_NORMAL | OPEN_REPARSE_POINT
+        None,
+    )
+    if handle == wintypes.HANDLE(-1).value:
+        error = ctypes.get_last_error()
+        if error in {80, 183}:  # ERROR_FILE_EXISTS / ERROR_ALREADY_EXISTS
+            raise FileExistsError(error, os.strerror(error), str(target))
+        raise ctypes.WinError(error)
+    try:
+        descriptor = msvcrt.open_osfhandle(handle, os.O_WRONLY | os.O_BINARY)
+    except Exception:
+        close_handle(handle)
+        raise
+    try:
+        return os.fdopen(descriptor, "wb")
+    except Exception:
+        os.close(descriptor)
+        raise
+
+
 @dataclass(frozen=True)
 class Bundle:
     directory: Path
@@ -72,7 +126,7 @@ def _write(directory: Path, name: str, text: str) -> str:
     try:
         # Exclusive creation protects the final path even if another process
         # creates a file or symlink after the check above.
-        with target.open("xb") as artifact:
+        with _exclusive_open(target) as artifact:
             artifact.write(redacted.encode("utf-8"))
     except FileExistsError as error:
         raise BundleError(f"refusing to overwrite or follow a bundle path: {name}") from error

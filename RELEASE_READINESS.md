@@ -7,6 +7,9 @@ Full Rust workspace/Clippy, Ruff, 40 focused checks, and Python 2,660/7 pass.
 Rust migration is 52/77 Parity with 25 Partial rows. TASK-161 cross-platform Rust
 CI passes; the frozen context gate and external release inputs remain blockers.
 
+TASK-165 Windows path/open repairs are independently clear locally; hosted
+Windows revalidation is pending and remains a release requirement.
+
 **NOT release ready.** TASK-161 promotes only the independently audited grading
 row: both grading modes, default/injected classifiers, discovery ordering,
 platform detail, context evidence, and process failures are differentially

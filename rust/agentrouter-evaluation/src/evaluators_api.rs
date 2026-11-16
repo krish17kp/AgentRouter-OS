@@ -62,11 +62,14 @@ struct CliSurface {
 }
 
 /// Query the installed AgentRouter CLI instead of grading a caller-provided or
-/// evaluator-local manifest. Resolving it from `PATH` keeps this public library
-/// independent of the executable that happens to embed it. Missing, failing,
-/// or malformed runtime discovery is an error, never a fabricated score.
+/// evaluator-local manifest. Production resolves `agentrouter` from `PATH`;
+/// `AGENTROUTER_EVALUATION_CLI` provides an explicit executable path for
+/// hermetic embedding and process-failure tests. Missing, failing, or malformed
+/// runtime discovery is an error, never a fabricated score.
 pub fn runtime_cli_surface() -> Result<(Vec<String>, Vec<String>), String> {
-    let output = Command::new("agentrouter")
+    let executable =
+        std::env::var_os("AGENTROUTER_EVALUATION_CLI").unwrap_or_else(|| "agentrouter".into());
+    let output = Command::new(executable)
         .arg("__evaluation_surface")
         .output()
         .map_err(|error| format!("could not query the installed Rust CLI surface: {error}"))?;
