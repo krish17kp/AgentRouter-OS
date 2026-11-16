@@ -353,7 +353,10 @@ mod optional_datetime {
             timestamp
         };
         let mut whole = seconds.floor();
-        let mut micros = ((seconds - whole) * 1_000_000.0).round_ties_even() as i64;
+        // pydantic-core rounds a positive exact half microsecond upward. Rust's
+        // `round` has the same half-away-from-zero behavior for this positive
+        // fractional remainder; `round_ties_even` incorrectly erased 0.5 µs.
+        let mut micros = ((seconds - whole) * 1_000_000.0).round() as i64;
         if micros == 1_000_000 {
             whole += 1.0;
             micros = 0;
@@ -481,7 +484,7 @@ mod optional_datetime {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
+#[serde(try_from = "CandidateUnchecked")]
 pub struct Candidate {
     pub id: String,
     pub prompt: String,
@@ -492,6 +495,37 @@ pub struct Candidate {
     pub template: Option<String>,
     #[serde(default)]
     pub notes: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CandidateUnchecked {
+    id: String,
+    prompt: String,
+    category: String,
+    #[serde(default = "default_candidate_source")]
+    source: String,
+    #[serde(default)]
+    template: Option<String>,
+    #[serde(default)]
+    notes: Option<String>,
+}
+
+impl TryFrom<CandidateUnchecked> for Candidate {
+    type Error = String;
+
+    fn try_from(value: CandidateUnchecked) -> Result<Self, Self::Error> {
+        let candidate = Self {
+            id: value.id,
+            prompt: value.prompt,
+            category: value.category,
+            source: value.source,
+            template: value.template,
+            notes: value.notes,
+        };
+        candidate.validate()?;
+        Ok(candidate)
+    }
 }
 
 impl Candidate {
@@ -505,7 +539,7 @@ impl Candidate {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
+#[serde(try_from = "AnnotatorLabelUnchecked")]
 pub struct AnnotatorLabel {
     pub annotator: String,
     #[serde(default)]
@@ -522,6 +556,38 @@ pub struct AnnotatorLabel {
         serialize_with = "optional_datetime::serialize"
     )]
     pub at: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct AnnotatorLabelUnchecked {
+    annotator: String,
+    #[serde(default)]
+    band: Option<ContextBand>,
+    #[serde(default, deserialize_with = "pydantic_bool")]
+    abstain: bool,
+    rationale: String,
+    #[serde(deserialize_with = "pydantic_float")]
+    confidence: f64,
+    #[serde(default, deserialize_with = "optional_datetime::deserialize")]
+    at: Option<String>,
+}
+
+impl TryFrom<AnnotatorLabelUnchecked> for AnnotatorLabel {
+    type Error = String;
+
+    fn try_from(value: AnnotatorLabelUnchecked) -> Result<Self, Self::Error> {
+        let label = Self {
+            annotator: value.annotator,
+            band: value.band,
+            abstain: value.abstain,
+            rationale: value.rationale,
+            confidence: value.confidence,
+            at: value.at,
+        };
+        label.validate()?;
+        Ok(label)
+    }
 }
 
 impl AnnotatorLabel {
@@ -546,13 +612,38 @@ impl AnnotatorLabel {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
+#[serde(try_from = "ItemLabelsUnchecked")]
 pub struct ItemLabels {
     pub candidate_id: String,
     pub prompt: String,
     pub category: String,
     #[serde(default)]
     pub labels: Vec<AnnotatorLabel>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ItemLabelsUnchecked {
+    candidate_id: String,
+    prompt: String,
+    category: String,
+    #[serde(default)]
+    labels: Vec<AnnotatorLabel>,
+}
+
+impl TryFrom<ItemLabelsUnchecked> for ItemLabels {
+    type Error = String;
+
+    fn try_from(value: ItemLabelsUnchecked) -> Result<Self, Self::Error> {
+        let labels = Self {
+            candidate_id: value.candidate_id,
+            prompt: value.prompt,
+            category: value.category,
+            labels: value.labels,
+        };
+        labels.validate()?;
+        Ok(labels)
+    }
 }
 
 impl ItemLabels {
@@ -585,7 +676,7 @@ impl ItemLabels {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
+#[serde(try_from = "AdjudicatedItemUnchecked")]
 pub struct AdjudicatedItem {
     pub id: String,
     pub prompt: String,
@@ -607,6 +698,53 @@ pub struct AdjudicatedItem {
     pub split: Option<String>,
     #[serde(default = "default_pending_review")]
     pub review_status: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct AdjudicatedItemUnchecked {
+    id: String,
+    prompt: String,
+    category: String,
+    #[serde(default)]
+    band: Option<ContextBand>,
+    #[serde(default, deserialize_with = "pydantic_bool")]
+    abstained: bool,
+    label_source: String,
+    #[serde(default)]
+    annotators: Vec<String>,
+    #[serde(default)]
+    adjudicated_by: Option<String>,
+    rationale: String,
+    #[serde(deserialize_with = "pydantic_float")]
+    confidence: f64,
+    #[serde(default)]
+    split: Option<String>,
+    #[serde(default = "default_pending_review")]
+    review_status: String,
+}
+
+impl TryFrom<AdjudicatedItemUnchecked> for AdjudicatedItem {
+    type Error = String;
+
+    fn try_from(value: AdjudicatedItemUnchecked) -> Result<Self, Self::Error> {
+        let item = Self {
+            id: value.id,
+            prompt: value.prompt,
+            category: value.category,
+            band: value.band,
+            abstained: value.abstained,
+            label_source: value.label_source,
+            annotators: value.annotators,
+            adjudicated_by: value.adjudicated_by,
+            rationale: value.rationale,
+            confidence: value.confidence,
+            split: value.split,
+            review_status: value.review_status,
+        };
+        item.validate()?;
+        Ok(item)
+    }
 }
 
 impl AdjudicatedItem {

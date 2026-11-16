@@ -2834,3 +2834,14 @@ review requested Unicode and malformed nullable evidence; 21 added cases closed
 the gap and the final re-review cleared promotion. Focused 93, API Rust tests,
 workspace tests/strict Clippy, and Ruff pass. Full Python regression passes
 2,696/7 in 346.49 seconds. Inventory promoted to 53/77 Parity and 24 Partial.
+
+## TASK-166 annotation schema parity — 2026-11-16
+
+Independent audit exposed a public Rust deserialization validation bypass hidden
+by the probe's later manual `validate()` call. Four artifact types now deserialize
+through checked DTO conversions, so semantic validators and nested-label checks
+cannot be skipped by callers. Added public constants, required/default/null,
+top-level and nested extras, agreement edges, and broader datetime boundaries.
+The new boundary cases found and repaired positive half-microsecond rounding.
+Direct 77, annotation production-path 108, full Rust workspace/Clippy, Ruff, and
+Python 2,719/7 pass. Inventory: 54/77 Parity, 23 Partial.

@@ -2,6 +2,12 @@
 
 ## Current checkpoint — 2026-11-16
 
+**NOT release ready.** TASK-166 promotes the independently audited annotation
+schema only after semantic validation became inseparable from public Rust
+deserialization. Direct 77, annotation production-path 108, evaluation Rust,
+strict Clippy, and Ruff checks pass. Inventory: 54/77 Parity, 23 Partial.
+Full Rust workspace/Clippy and Python 2,719/7 pass.
+
 **NOT release ready.** TASK-164 promotes the independently audited server-schema
 row after complete constants, validation, serialization, passthrough, malformed,
 nullable, and Unicode-boundary differential coverage. Focused 93, API Rust tests,

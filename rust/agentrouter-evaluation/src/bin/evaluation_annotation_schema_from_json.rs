@@ -3,7 +3,8 @@
 use std::io::{self, Read};
 
 use agentrouter_evaluation::annotation_schema::{
-    AdjudicatedItem, AnnotatorLabel, Candidate, DatasetManifest, ItemLabels,
+    AdjudicatedItem, AnnotatorLabel, Candidate, DatasetManifest, ItemLabels, CATEGORIES,
+    LABEL_SOURCES, SCHEMA_VERSION, SPLITS,
 };
 use serde::Deserialize;
 use serde_json::json;
@@ -20,6 +21,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     io::stdin().read_to_string(&mut input)?;
     let request: Request = serde_json::from_str(&input)?;
     match request.model.as_str() {
+        "constants" => {
+            println!(
+                "{}",
+                json!({
+                    "SCHEMA_VERSION": SCHEMA_VERSION,
+                    "CATEGORIES": CATEGORIES,
+                    "SPLITS": SPLITS,
+                    "LABEL_SOURCES": LABEL_SOURCES,
+                })
+            );
+        }
         "candidate" => {
             let value: Candidate = serde_json::from_value(request.value)?;
             value.validate()?;

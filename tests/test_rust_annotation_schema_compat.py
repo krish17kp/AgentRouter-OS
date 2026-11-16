@@ -11,6 +11,10 @@ import pytest
 from pydantic import ValidationError
 
 from agentrouter.annotation.schema import (
+    CATEGORIES,
+    LABEL_SOURCES,
+    SCHEMA_VERSION,
+    SPLITS,
     AdjudicatedItem,
     AnnotatorLabel,
     Candidate,
@@ -42,6 +46,211 @@ def _rust(model, value):
         timeout=120,
         check=False,
     )
+
+
+def test_rust_annotation_schema_public_constants_match_python():
+    process = _rust("constants", {})
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == {
+        "SCHEMA_VERSION": SCHEMA_VERSION,
+        "CATEGORIES": list(CATEGORIES),
+        "SPLITS": list(SPLITS),
+        "LABEL_SOURCES": list(LABEL_SOURCES),
+    }
+
+
+@pytest.mark.parametrize(
+    ("name", "model", "minimal"),
+    [
+        ("candidate", Candidate, {"id": "c", "prompt": "p", "category": "review"}),
+        (
+            "annotator_label",
+            AnnotatorLabel,
+            {
+                "annotator": "a",
+                "band": "small",
+                "rationale": "r",
+                "confidence": 0.5,
+            },
+        ),
+        (
+            "item_labels",
+            ItemLabels,
+            {"candidate_id": "c", "prompt": "p", "category": "review"},
+        ),
+        (
+            "adjudicated_item",
+            AdjudicatedItem,
+            {
+                "id": "c",
+                "prompt": "p",
+                "category": "review",
+                "band": "small",
+                "label_source": "curated",
+                "rationale": "r",
+                "confidence": 0.5,
+            },
+        ),
+        (
+            "dataset_manifest",
+            DatasetManifest,
+            {"version": "v", "created": "2026-11-16T00:00:00Z"},
+        ),
+    ],
+)
+def test_rust_annotation_schema_minimal_defaults_and_unknown_policy_match_python(
+    name, model, minimal
+):
+    expected = model.model_validate(minimal).model_dump(mode="json")
+    process = _rust(name, minimal)
+    assert process.returncode == 0, process.stderr
+    actual = json.loads(process.stdout)
+    assert actual["value"] == expected
+
+    invalid = {**minimal, "unknown_field": "forbidden"}
+    with pytest.raises(ValidationError):
+        model.model_validate(invalid)
+    process = _rust(name, invalid)
+    assert process.returncode != 0
+    assert not process.stdout
+
+
+@pytest.mark.parametrize(
+    ("name", "model", "valid", "required"),
+    [
+        (
+            "candidate",
+            Candidate,
+            {"id": "c", "prompt": "p", "category": "review"},
+            ("id", "prompt", "category"),
+        ),
+        (
+            "annotator_label",
+            AnnotatorLabel,
+            {
+                "annotator": "a",
+                "band": "small",
+                "rationale": "r",
+                "confidence": 0.5,
+            },
+            ("annotator", "rationale", "confidence"),
+        ),
+        (
+            "item_labels",
+            ItemLabels,
+            {"candidate_id": "c", "prompt": "p", "category": "review"},
+            ("candidate_id", "prompt", "category"),
+        ),
+        (
+            "adjudicated_item",
+            AdjudicatedItem,
+            {
+                "id": "c",
+                "prompt": "p",
+                "category": "review",
+                "band": "small",
+                "label_source": "curated",
+                "rationale": "r",
+                "confidence": 0.5,
+            },
+            ("id", "prompt", "category", "label_source", "rationale", "confidence"),
+        ),
+        (
+            "dataset_manifest",
+            DatasetManifest,
+            {"version": "v", "created": "2026-11-16T00:00:00Z"},
+            ("version", "created"),
+        ),
+    ],
+)
+def test_rust_annotation_schema_required_fields_match_python(name, model, valid, required):
+    for field in required:
+        missing = {key: value for key, value in valid.items() if key != field}
+        for invalid in (missing, {**valid, field: None}):
+            with pytest.raises(ValidationError):
+                model.model_validate(invalid)
+            process = _rust(name, invalid)
+            assert process.returncode != 0
+            assert not process.stdout
+
+
+@pytest.mark.parametrize(
+    ("labels", "expected"),
+    [
+        ([], False),
+        ([{"annotator": "a", "band": "small", "rationale": "r", "confidence": 1}], False),
+        (
+            [
+                {
+                    "annotator": "a",
+                    "band": "small",
+                    "rationale": "r",
+                    "confidence": 1,
+                },
+                {
+                    "annotator": "b",
+                    "band": "medium",
+                    "rationale": "r",
+                    "confidence": 1,
+                },
+            ],
+            False,
+        ),
+        (
+            [
+                {
+                    "annotator": "a",
+                    "band": None,
+                    "abstain": True,
+                    "rationale": "r",
+                    "confidence": 1,
+                },
+                {
+                    "annotator": "b",
+                    "band": "large",
+                    "rationale": "r",
+                    "confidence": 1,
+                },
+                {
+                    "annotator": "c",
+                    "band": "large",
+                    "rationale": "r",
+                    "confidence": 1,
+                },
+            ],
+            True,
+        ),
+    ],
+)
+def test_rust_annotation_item_agreement_edge_cases_match_python(labels, expected):
+    payload = {"candidate_id": "c", "prompt": "p", "category": "review", "labels": labels}
+    python = ItemLabels.model_validate(payload)
+    assert python.agrees is expected
+    process = _rust("item_labels", payload)
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout)["agrees"] is expected
+
+
+def test_rust_annotation_nested_labels_forbid_unknown_fields_like_python():
+    payload = {
+        "candidate_id": "c",
+        "prompt": "p",
+        "category": "review",
+        "labels": [
+            {
+                "annotator": "a",
+                "band": "small",
+                "rationale": "r",
+                "confidence": 1,
+                "unknown_field": True,
+            }
+        ],
+    }
+    with pytest.raises(ValidationError):
+        ItemLabels.model_validate(payload)
+    process = _rust("item_labels", payload)
+    assert process.returncode != 0
+    assert not process.stdout
 
 
 def test_rust_annotation_artifact_schemas_match_python():
@@ -156,7 +365,10 @@ def test_rust_annotation_schema_rejects_invalid_models(model, value):
         "2026-11-11 12:30:00.120000",
         "2026-11-11",
         "2026-11-11T12:30:00.123456789Z",
+        "2026-11-11T12:30:00.123456789012345Z",
         "2026-11-11T12:30:00.5Z",
+        "0001-01-01T00:00:00",
+        "9999-12-31T23:59:59.999999",
         "1.0e3",
         "+1",
         "-62135596800",
@@ -179,8 +391,12 @@ def test_rust_annotation_schema_rejects_invalid_models(model, value):
         0,
         1.5,
         20000000001,
+        -20000000000,
+        20000000000,
+        -20000000001,
         1700000000.1234567,
         1.0000015,
+        0.0000005,
         -0.0000005,
         "0",
         None,

@@ -2,6 +2,13 @@
 
 ## Current checkpoint — 2026-11-16
 
+TASK-166 closes annotation-schema parity after repairing a public-deserialization
+validation bypass found by independent audit. Constants, required/default/null,
+unknown and nested fields, agreement edges, arbitrary integers, scalar coercion,
+and expanded datetime boundaries pass 77 direct and 108 production-path checks.
+Evaluation Rust tests, strict Clippy, and Ruff pass. Inventory: 54/77 Parity,
+23 Partial. Full Rust workspace/Clippy and Python 2,719/7 pass.
+
 TASK-164 closes request/response schema parity after independent audit. Public
 constants, defaults, coercions, bounds, extra-field behavior, passthrough and
 owned response shapes, arbitrary-precision integers, and non-BMP Unicode length

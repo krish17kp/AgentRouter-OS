@@ -362,3 +362,14 @@ regression passes 2,696/7 in 346.49 seconds. Inventory: 53/77 Parity, 24 Partial
 Do not discard untracked TASK-163: its audit records that registry parity depends
 on completing adapter-base and real adapter behavior.
 
+## TASK-166 checkpoint — 2026-11-16
+
+Annotation schema parity is independently clear after a P1 repair. Candidate,
+AnnotatorLabel, ItemLabels, and AdjudicatedItem now validate inside public Rust
+deserialization, including nested labels. Public constants, all required/default/
+null and unknown-field cases, agreement edges, arbitrary integers, scalar
+coercions, and expanded datetime boundaries compare directly. A newly exposed
+positive half-microsecond mismatch was repaired. Direct 77, production-path 108,
+evaluation Rust tests, strict Clippy, and Ruff pass. Full Rust workspace/Clippy
+and Python 2,719/7 pass. Inventory: 54/77 Parity, 23 Partial.
+

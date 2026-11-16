@@ -6,7 +6,7 @@ Updated: 2026-11-16
 
 - [ ] PR review and hosted checks: PR #16 is the sole open PR against `main`, with no GitHub reviews or review requests. At code head `5af3c55`, Python 3.10–3.13, Windows/macOS Python, Rust workspace and Python/Rust compatibility on Linux/Windows/macOS, API, build, security, website, and critical mutation all pass. The PR workflow fails at `enforce-release-gate` on frozen context-band accuracy `0.6667 < 0.90`; its push workflow skips that gate. Live smoke skips without credentials. TASK-152 hosted checks await the next RC push.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
-- [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md): 53 rows meet the full-module differential bar and 24 remain Partial. TASK-159–162 close platform, evaluator-facade, grading, and runner parity; TASK-164 closes server schemas; broader migration differences remain.
+- [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md): 54 rows meet the full-module differential bar and 23 remain Partial. TASK-159–162 close platform, evaluator-facade, grading, and runner parity; TASK-164 closes server schemas; TASK-166 closes annotation schemas; broader migration differences remain.
 - [x] Full Python suite: Linux/Python 3.12 passes 2,590 tests and skips 5. The TASK-152 coverage refresh measures 92.052% statement, 87.756% branch, and 91.064% combined; both required thresholds pass. Evidence is in [`docs/COVERAGE_REPORT_2026-11-15-TASK-152.md`](docs/COVERAGE_REPORT_2026-11-15-TASK-152.md).
 - [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations; the Rust release benchmark now runs the same 10/100/1,000 candidate fleets, with a paired local p50 ratio of 2.70×–3.25× under stated synthetic conditions.
 - [x] Changelog, coverage evidence, and local latency measurements are committed to the release candidate. Candidate package version is now `0.5.0rc1`, with draft release notes in `docs/RELEASE_NOTES_v0.5.0rc1.md`; final `0.5.0` packaging and publication remain blocked on parity and all release gates.
@@ -37,6 +37,14 @@ passthrough response shapes, unknown fields, arbitrary-precision integers, and
 non-BMP Unicode boundaries for every constrained string. Focused 93, API Rust
 tests, strict Clippy, and Ruff pass. Full Python regression passes 2,696/7 in
 346.49 seconds. Inventory: 53 Parity / 24 Partial.
+
+TASK-166 closes annotation-schema parity after independent audit exposed and
+repaired a semantic-validation bypass in public Rust deserialization. Constants,
+required/default/null behavior, nested unknown fields, agreement edges, scalar
+coercion, arbitrary integers, and expanded datetime boundaries are covered.
+Direct 77 and annotation production-path 108 checks pass; evaluation Rust tests,
+strict Clippy, and Ruff pass. Inventory: 54 Parity / 23 Partial.
+Full Rust workspace/Clippy and Python 2,719/7 pass.
 
 TASK-153 is reconstructed in the persistent managed worktree after the temporary
 checkout disappeared. Python focused tests pass 88/1; Rust CLI library 75/75,

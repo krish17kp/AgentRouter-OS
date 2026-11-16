@@ -23,7 +23,7 @@ release authority until the full set is complete.
 | `agentrouter/annotation/dedup.py` | `agentrouter-evaluation::annotation_dedup` | Parity |
 | `agentrouter/annotation/graph_signals.py` | `agentrouter-evaluation::annotation_graph_signals` | Parity |
 | `agentrouter/annotation/packs.py` | `agentrouter-evaluation::annotation_packs` | Parity |
-| `agentrouter/annotation/schema.py` | `agentrouter-evaluation::annotation_schema` | Partial |
+| `agentrouter/annotation/schema.py` | `agentrouter-evaluation::annotation_schema` | Parity |
 | `agentrouter/annotation/splits.py` | `agentrouter-evaluation::annotation_splits` | Parity |
 | `agentrouter/annotation/store.py` | `agentrouter-evaluation::annotation_store` | Parity |
 | `agentrouter/bundle.py` | `agentrouter-cli::bundle` | Partial |
@@ -228,10 +228,10 @@ release authority until the full set is complete.
   public types and behavior.
   Annotation manifest schema versions and count maps
   now preserve Python-compatible arbitrary-precision integers exactly in
-  schema validation and JSON storage. Raw timestamp differentials now exercise
-  Pydantic's datetime parsing directly, including reduced-precision times with
-  `Z` and numeric offsets. The annotation schema module remains Partial while
-  broader timestamp grammar coverage is unfinished.
+  schema validation and JSON storage. TASK-166 closes the full annotation schema
+  contract: public deserialization always runs semantic validators; nested labels
+  fail closed; constants, required/default/null and extra-field policies,
+  agreement edges, and extended datetime boundaries are differential-tested.
 - Rust registry dates now normalize the Pydantic-accepted YAML date, midnight
   datetime, and epoch-second/millisecond forms to the same ISO date in JSON;
   differential cases cover all three optional date fields and reject
