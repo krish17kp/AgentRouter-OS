@@ -2,6 +2,9 @@
 
 ## Current migration and release limits (2026-11-16)
 
+- Rust migration remains incomplete at 53/77 full-module parity. TASK-164 closes
+  server schemas; the server lifecycle/service, CLI surfaces, adapter base, and
+  external real-data adapters remain Partial.
 - Rust migration remains incomplete at 52/77 full-module parity. Evaluation
   registry, CLI, adapter base, and external real-data adapters remain Partial.
 - TASK-165's Windows-only executable-search and reparse-point repairs are not

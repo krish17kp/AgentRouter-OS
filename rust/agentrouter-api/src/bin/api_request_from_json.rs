@@ -1,6 +1,9 @@
 use std::io::{self, Read};
 
-use agentrouter_api::schemas::{ClassifyRequest, DryRunRequest, FeedbackRequest, RouteRequest};
+use agentrouter_api::schemas::{
+    ClassifyRequest, DryRunRequest, FeedbackRequest, RouteRequest, MAX_DECISION_ID_CHARS,
+    MAX_NOTE_CHARS, MAX_PREFER_CHARS, MAX_TASK_CHARS, MAX_TOOLS, MAX_TOOL_NAME_CHARS,
+};
 use serde_json::Value;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -30,6 +33,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             parsed.validate()?;
             serde_json::to_value(parsed)?
         }
+        "constants" => serde_json::json!({
+            "MAX_TASK_CHARS": MAX_TASK_CHARS,
+            "MAX_NOTE_CHARS": MAX_NOTE_CHARS,
+            "MAX_TOOLS": MAX_TOOLS,
+            "MAX_TOOL_NAME_CHARS": MAX_TOOL_NAME_CHARS,
+            "MAX_DECISION_ID_CHARS": MAX_DECISION_ID_CHARS,
+            "MAX_PREFER_CHARS": MAX_PREFER_CHARS,
+        }),
         _ => return Err("unknown request kind".into()),
     };
     println!("{}", serde_json::to_string(&value)?);

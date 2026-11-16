@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-14 (TASK-082–150). This inventory covers every Python source module under
+Updated: 2026-11-16 (TASK-082–164). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -85,7 +85,7 @@ release authority until the full set is complete.
 | `agentrouter/server/__init__.py` | `agentrouter-evaluation::package_markers::SERVER_PUBLIC_EXPORTS` | Parity |
 | `agentrouter/server/app.py` | `agentrouter-api::server` + `agentrouter-api-server` | Partial |
 | `agentrouter/server/limits.py` | `agentrouter-limits` (re-exported as `agentrouter_cli::limits`) | Parity |
-| `agentrouter/server/schemas.py` | `agentrouter-api::{schemas,responses}` | Partial |
+| `agentrouter/server/schemas.py` | `agentrouter-api::{schemas,responses}` | Parity |
 | `agentrouter/server/service.py` | `agentrouter-api::service` | Partial |
 | `agentrouter/store.py` | `agentrouter-storage` | Parity |
 | `agentrouter/taxonomy.py` | `agentrouter-policy::taxonomy` | Parity |

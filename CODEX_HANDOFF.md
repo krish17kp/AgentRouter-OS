@@ -350,3 +350,15 @@ mutation pass, while Windows Python exposed two real path/open races. TASK-165
 repairs both; independent review is clear and focused 46/Ruff/Clippy pass. Push
 and require hosted Windows confirmation before considering this repair closed.
 
+## TASK-164 checkpoint — 2026-11-16
+
+Server request/response schemas are independently cleared for Parity. Rust now
+exports every Python constant, including `MAX_TOOL_NAME_CHARS`; the differential
+suite covers defaults, coercions, bounds, extra policy, owned and passthrough
+responses, malformed/nullable risk and tools, arbitrary-precision integers, and
+non-BMP exact/max+1 boundaries for every constrained string. Focused 93, API
+Rust tests, workspace Rust tests/strict Clippy, and Ruff pass. Full Python
+regression passes 2,696/7 in 346.49 seconds. Inventory: 53/77 Parity, 24 Partial.
+Do not discard untracked TASK-163: its audit records that registry parity depends
+on completing adapter-base and real adapter behavior.
+

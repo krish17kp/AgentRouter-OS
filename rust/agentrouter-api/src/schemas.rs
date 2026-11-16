@@ -11,6 +11,7 @@ use serde_json::Value;
 pub const MAX_TASK_CHARS: usize = 100_000;
 pub const MAX_NOTE_CHARS: usize = 10_000;
 pub const MAX_TOOLS: usize = 100;
+pub const MAX_TOOL_NAME_CHARS: usize = 200;
 pub const MAX_DECISION_ID_CHARS: usize = 200;
 pub const MAX_PREFER_CHARS: usize = 200;
 

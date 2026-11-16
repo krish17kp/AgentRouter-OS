@@ -2,6 +2,13 @@
 
 ## Current checkpoint — 2026-11-16
 
+TASK-164 closes request/response schema parity after independent audit. Public
+constants, defaults, coercions, bounds, extra-field behavior, passthrough and
+owned response shapes, arbitrary-precision integers, and non-BMP Unicode length
+boundaries are covered differentially. Focused 93, API Rust tests, strict Clippy,
+and Ruff pass. Full Python regression passes 2,696/7. Inventory: 53/77 Parity,
+24 Partial.
+
 TASK-162 closes runner parity with owned runtime discovery, Python-compatible
 selection/error ordering, bounded concurrently drained provenance commands, and
 a documented runtime-specific environment contract. Independent audit is clear;

@@ -2,6 +2,12 @@
 
 ## Current checkpoint — 2026-11-16
 
+**NOT release ready.** TASK-164 promotes the independently audited server-schema
+row after complete constants, validation, serialization, passthrough, malformed,
+nullable, and Unicode-boundary differential coverage. Focused 93, API Rust tests,
+strict Clippy, and Ruff pass. Rust migration is 53/77 Parity with 24 Partial rows.
+Full Python regression passes 2,696/7; external release gates remain unchanged.
+
 **NOT release ready.** TASK-162 promotes the independently audited runner row.
 Full Rust workspace/Clippy, Ruff, 40 focused checks, and Python 2,660/7 pass.
 Rust migration is 52/77 Parity with 25 Partial rows. TASK-161 cross-platform Rust

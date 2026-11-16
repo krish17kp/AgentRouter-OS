@@ -1,7 +1,7 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-16",
-  "current_phase": "TASK-165 repairs hosted Windows CLI-discovery and dangling-symlink failures after TASK-162. Independent review is clear; focused 46, Ruff, and Clippy pass. Push/revalidate Windows, then continue adapter dependencies for registry parity. Inventory remains 52/77 Parity and 25 Partial.",
+  "current_phase": "TASK-164 closes server-schema parity after independent audit, 93 focused differentials, full Rust workspace/Clippy, and full Python 2696/7. Commit/push and hosted validation are next. TASK-165 hosted Windows revalidation is also running. Inventory is 53/77 Parity and 24 Partial.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
@@ -29,9 +29,9 @@
   "repo_sha_at_takeover": "602321af91ff298c0d5b59d6d36c24f845557fc1",
   "canonical_release_ready": false,
   "in_progress": [
-    "Commit and push TASK-152 to the authorized release candidate branch, then inspect hosted checks.",
-    "Start TASK-153: strict secret redaction for shareable Python/Rust diagnostic bundle artifacts.",
-    "Continue remaining Partial Rust modules while PR #16 is held for human evaluation, review, live validation, and release inputs."
+    "Finish full regression, commit and push TASK-164 to the authorized release candidate branch, then inspect hosted checks.",
+    "Confirm TASK-165 Windows Python and Python/Rust compatibility jobs pass on the repaired head.",
+    "Continue the remaining 24 Partial Rust modules while PR #16 is held for human evaluation, live validation, and release inputs."
   ],
   "completed_iter25": [
     "TASK-015 trusted catalogs MERGED to RC (PR #6 -> merge commit 8661629; task branch deleted local+remote). Closes TASK-013's deferred scope: file-level provenance block (provider, source_url, fetched_at UTC, count, tool_version, cli_args) ignored by the registry loader; atomic refresh via tempfile.mkstemp + os.replace; candidate-deprecation reporting on refresh (report-only, never auto-deletes); rollback with non-destructive backup rotation + new `providers restore`; new `providers doctor` that schema-validates every generated catalog and exits 3 only on real corruption (not staleness).",

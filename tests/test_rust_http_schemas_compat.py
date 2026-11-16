@@ -12,6 +12,12 @@ import pytest
 from pydantic import ValidationError
 
 from agentrouter.server.schemas import (
+    MAX_DECISION_ID_CHARS,
+    MAX_NOTE_CHARS,
+    MAX_PREFER_CHARS,
+    MAX_TASK_CHARS,
+    MAX_TOOL_NAME_CHARS,
+    MAX_TOOLS,
     ClassifyRequest,
     ClassifyResponse,
     DecisionResponse,
@@ -110,6 +116,19 @@ def _rust_service(home: Path, kind: str, request: dict | None = None):
     )
 
 
+def test_rust_http_schema_public_constants_match_python():
+    process = _rust("constants", {})
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == {
+        "MAX_TASK_CHARS": MAX_TASK_CHARS,
+        "MAX_NOTE_CHARS": MAX_NOTE_CHARS,
+        "MAX_TOOLS": MAX_TOOLS,
+        "MAX_TOOL_NAME_CHARS": MAX_TOOL_NAME_CHARS,
+        "MAX_DECISION_ID_CHARS": MAX_DECISION_ID_CHARS,
+        "MAX_PREFER_CHARS": MAX_PREFER_CHARS,
+    }
+
+
 @pytest.mark.parametrize(
     ("kind", "model", "payload"),
     [
@@ -148,6 +167,91 @@ def test_rust_http_request_schema_roundtrips_like_python(kind, model, payload):
     process = _rust(kind, {**payload, "ignored_extra": "Python ignores this"})
     assert process.returncode == 0, process.stderr
     assert json.loads(process.stdout) == expected
+
+
+@pytest.mark.parametrize(
+    ("kind", "model", "payload"),
+    [
+        ("classify", ClassifyRequest, {"task": "x"}),
+        ("route", RouteRequest, {"task": "x"}),
+        ("feedback", FeedbackRequest, {"decision_id": "d", "rating": 1}),
+        ("dry_run", DryRunRequest, {"decision_id": "d"}),
+    ],
+)
+def test_rust_http_request_defaults_match_python(kind, model, payload):
+    expected = model.model_validate(payload).model_dump(mode="json")
+    process = _rust(kind, payload)
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == expected
+
+
+@pytest.mark.parametrize(
+    ("kind", "model", "field", "limit", "base"),
+    [
+        ("classify", ClassifyRequest, "task", MAX_TASK_CHARS, {}),
+        ("route", RouteRequest, "prefer", MAX_PREFER_CHARS, {"task": "x"}),
+        (
+            "feedback",
+            FeedbackRequest,
+            "decision_id",
+            MAX_DECISION_ID_CHARS,
+            {"rating": 3},
+        ),
+        (
+            "feedback",
+            FeedbackRequest,
+            "note",
+            MAX_NOTE_CHARS,
+            {"decision_id": "d", "rating": 3},
+        ),
+        ("dry_run", DryRunRequest, "decision_id", MAX_DECISION_ID_CHARS, {}),
+    ],
+)
+def test_rust_http_string_limits_count_unicode_code_points_like_python(
+    kind, model, field, limit, base
+):
+    non_bmp = "\U0001f680"
+    valid = {**base, field: non_bmp * limit}
+    expected = model.model_validate(valid).model_dump(mode="json")
+    process = _rust(kind, valid)
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == expected
+
+    invalid = {**base, field: non_bmp * (limit + 1)}
+    with pytest.raises(ValidationError):
+        model.model_validate(invalid)
+    process = _rust(kind, invalid)
+    assert process.returncode != 0
+    assert not process.stdout
+
+
+@pytest.mark.parametrize("kind", ["classify", "route"])
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"risk": None, "tools": None},
+        {"risk": "low", "tools": []},
+        {"risk": 1},
+        {"risk": ["high"]},
+        {"tools": "filesystem"},
+        {"tools": {"name": "filesystem"}},
+        {"tools": ["filesystem", None]},
+        {"tools": ["filesystem", 7]},
+    ],
+)
+def test_rust_http_risk_and_tools_nullable_and_malformed_contract(kind, fields):
+    model = ClassifyRequest if kind == "classify" else RouteRequest
+    payload = {"task": "x", **fields}
+    try:
+        expected = model.model_validate(payload).model_dump(mode="json")
+    except ValidationError:
+        process = _rust(kind, payload)
+        assert process.returncode != 0
+        assert not process.stdout
+    else:
+        process = _rust(kind, payload)
+        assert process.returncode == 0, process.stderr
+        assert json.loads(process.stdout) == expected
 
 
 @pytest.mark.parametrize(
@@ -287,6 +391,42 @@ def test_rust_http_response_schema_roundtrips_like_python(kind, model, payload):
     process = _rust_response(kind, payload)
     assert process.returncode == 0, process.stderr
     assert json.loads(process.stdout) == expected
+
+
+@pytest.mark.parametrize(
+    ("kind", "model"),
+    [
+        ("classify", ClassifyResponse),
+        ("route", RouteResponse),
+        ("decision", DecisionResponse),
+        ("dry_run", DryRunResponse),
+    ],
+)
+def test_rust_passthrough_response_defaults_and_extra_policy_match_python(kind, model):
+    for payload in ({}, {"unknown": {"nested": [1, None, "✓"]}}):
+        expected = model.model_validate(payload).model_dump(mode="json")
+        process = _rust_response(kind, payload)
+        assert process.returncode == 0, process.stderr
+        assert json.loads(process.stdout) == expected
+
+
+@pytest.mark.parametrize(
+    ("kind", "model", "payload"),
+    [
+        ("error", ErrorResponse, {}),
+        ("error", ErrorResponse, {"error": {"code": 1, "message": "bad"}}),
+        ("health", HealthResponse, {}),
+        ("model", ModelSummary, {"vendor": None}),
+        ("host", HostStatusResponse, {"host": "h"}),
+        ("feedback", FeedbackResponse, {"decision_id": "d"}),
+    ],
+)
+def test_rust_owned_response_models_reject_python_invalid_shapes(kind, model, payload):
+    with pytest.raises(ValidationError):
+        model.model_validate(payload)
+    process = _rust_response(kind, payload)
+    assert process.returncode != 0
+    assert not process.stdout
 
 
 @pytest.mark.parametrize("context_window", [1.5, "1e3", None, []])

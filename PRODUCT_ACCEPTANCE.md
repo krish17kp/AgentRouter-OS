@@ -2,6 +2,11 @@
 
 ## Current checkpoint — 2026-11-16
 
+Product acceptance remains **not granted**. TASK-164 server-schema parity is
+independently clear with 93 focused differentials, API Rust tests, strict Clippy,
+and Ruff passing. Full Python regression passes 2,696/7. Inventory: 53 Parity /
+24 Partial.
+
 Product acceptance remains **not granted**. TASK-162 runner parity is locally
 complete and independently clear: 2,660/7 Python, full Rust workspace/Clippy,
 Ruff, and 40 focused checks pass. Inventory: 52 Parity / 25 Partial.

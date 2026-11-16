@@ -2823,3 +2823,14 @@ explicit no-shell evaluation executable override and native Windows
 CREATE_NEW|OPEN_REPARSE_POINT creation with complete handle ownership cleanup.
 Independent review found and cleared one descriptor leak. Focused 46, Ruff, and
 strict Clippy pass. Hosted Windows revalidation follows the RC push.
+
+## TASK-164 server schemas parity — 2026-11-16
+
+Audited all public request/response schemas against Rust. Restored the missing
+public tool-name constant and added a constants probe plus request defaults,
+owned-response rejection, passthrough default/extra behavior, nullable/malformed
+risk/tools, and non-BMP exact/max+1 length differentials. The initial independent
+review requested Unicode and malformed nullable evidence; 21 added cases closed
+the gap and the final re-review cleared promotion. Focused 93, API Rust tests,
+workspace tests/strict Clippy, and Ruff pass. Full Python regression passes
+2,696/7 in 346.49 seconds. Inventory promoted to 53/77 Parity and 24 Partial.
