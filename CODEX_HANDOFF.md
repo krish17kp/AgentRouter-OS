@@ -335,3 +335,11 @@ re-audit is clear. Rust workspace/strict Clippy, Ruff, 27 focused checks, and
 full Python 2,642/7 pass. Inventory is 51/77 Parity and 26 Partial. Commit/push,
 inspect Windows/macOS CI, then continue the next Partial evaluation module.
 
+## TASK-162 checkpoint — 2026-11-16
+
+Runner full-module parity is locally complete and independently clear. Rust owns
+runtime discovery and bounded provenance; selection, filtering, failures, CLI
+normalization, and complete scorecards match their Python contracts. Full Rust
+workspace/Clippy, Ruff, 40 focused checks, and Python 2,660/7 pass. Inventory is
+52/77 Parity and 25 Partial. Commit/push, inspect CI, continue the next Partial.
+

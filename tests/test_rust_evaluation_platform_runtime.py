@@ -73,4 +73,4 @@ def test_rust_full_evaluation_uses_the_running_cli_surface():
     platform = report["dimensions"]["cli_platform"]
     assert platform["score"] == 1.0
     assert platform["detail"]["commands_found"] == surface["commands"]
-    assert platform["detail"]["groups_found"] == sorted(surface["groups"])
+    assert platform["detail"]["groups_found"] == sorted([*surface["groups"], "contract"])

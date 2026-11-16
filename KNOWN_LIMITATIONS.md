@@ -2,6 +2,9 @@
 
 ## Current migration and release limits (2026-11-16)
 
+- Rust migration remains incomplete at 52/77 full-module parity. Evaluation
+  registry, CLI, adapter base, and external real-data adapters remain Partial.
+
 - Rust migration remains incomplete at 51/77 full-module parity. TASK-161 closes
   grading itself, while evaluation runner, registry, CLI, adapter-base, and
   several external adapters remain Partial.

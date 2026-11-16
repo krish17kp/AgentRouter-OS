@@ -76,6 +76,27 @@ def test_rust_evaluation_cli_run_matches_python_report_without_artifacts():
     assert actual == expected
 
 
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        [],
+        ["--dataset", "agentrouter-gold", "--profile", "nightly"],
+    ],
+)
+def test_rust_evaluation_cli_run_matches_python_profile_normalization(arguments):
+    process = _cli("run", *arguments, "--limit", "2", "--no-artifacts", "--json")
+    assert process.returncode == 0, process.stderr
+    actual = json.loads(process.stdout)
+    if "--dataset" in arguments:
+        expected = python_run(dataset="agentrouter-gold", limit=2)
+    else:
+        expected = python_run(profile="fast", limit=2)
+    for report in (actual, expected):
+        report.pop("environment")
+        report.pop("classification", None)
+    assert actual == expected
+
+
 def test_rust_evaluation_cli_reports_external_blocker_without_fixture_fallback():
     process = _cli(
         "run",

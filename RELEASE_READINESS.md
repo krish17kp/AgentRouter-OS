@@ -2,6 +2,11 @@
 
 ## Current checkpoint — 2026-11-16
 
+**NOT release ready.** TASK-162 promotes the independently audited runner row.
+Full Rust workspace/Clippy, Ruff, 40 focused checks, and Python 2,660/7 pass.
+Rust migration is 52/77 Parity with 25 Partial rows. TASK-161 cross-platform Rust
+CI passes; the frozen context gate and external release inputs remain blockers.
+
 **NOT release ready.** TASK-161 promotes only the independently audited grading
 row: both grading modes, default/injected classifiers, discovery ordering,
 platform detail, context evidence, and process failures are differentially

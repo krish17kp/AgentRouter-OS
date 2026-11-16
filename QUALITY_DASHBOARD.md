@@ -2,6 +2,13 @@
 
 ## Current checkpoint — 2026-11-16
 
+TASK-162 closes runner parity with owned runtime discovery, Python-compatible
+selection/error ordering, bounded concurrently drained provenance commands, and
+a documented runtime-specific environment contract. Independent audit is clear;
+full Rust workspace/Clippy, Ruff, 40 focused checks, and full Python 2,660/7 pass.
+Inventory: 52/77 Parity, 25 Partial. TASK-161 hosted Rust migration CI passes on
+Linux, Windows, and macOS; its enforcing release gate remains honestly held.
+
 TASK-161 closes `agentrouter/evaluation/grading.py` after three audit findings
 were repaired: classification now precedes dependency discovery, the default
 full scorecard preserves Python's hidden platform-detail contract, and complete

@@ -1,12 +1,16 @@
-//! Offline Rust evaluation runner for caller-supplied normalized cases.
+//! Rust evaluation runner for registered datasets and caller-supplied cases.
 //!
-//! Adapter construction and `measure_all` runtime discovery are still handled
-//! by Python; this entry point runs the complete classification scorecard and
-//! attaches deterministic dataset-quality and caller-supplied provenance.
+//! The registered path owns collection, runtime discovery, grading, and
+//! reproducibility provenance; explicit lower-level seams remain available for
+//! deterministic contract tests and embedding.
 
 use agentrouter_classifier::{classify, ClassifyOptions};
 use agentrouter_core::Classification;
-use std::path::PathBuf;
+use sha2::{Digest, Sha256};
+use std::io::Read;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+use std::time::{Duration, Instant};
 
 use crate::{
     classification_metrics, dataset_quality, evaluate_feedback, evaluate_platform,
@@ -130,18 +134,87 @@ pub struct RegisteredRunOptions {
     pub source: String,
     pub languages: Option<Vec<String>>,
     pub measure_all: bool,
-    pub commands: Vec<String>,
-    pub groups: Vec<String>,
-    pub environment: serde_json::Value,
+}
+
+fn bounded_command_output(program: &str, arguments: &[&str], cwd: &Path) -> Option<Vec<u8>> {
+    let mut child = Command::new(program)
+        .args(arguments)
+        .current_dir(cwd)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .ok()?;
+    let mut stdout = child.stdout.take()?;
+    let reader = std::thread::spawn(move || {
+        let mut bytes = Vec::new();
+        stdout.read_to_end(&mut bytes).ok().map(|_| bytes)
+    });
+    let deadline = Instant::now() + Duration::from_secs(5);
+    let status = loop {
+        match child.try_wait().ok()? {
+            Some(status) => break status,
+            None if Instant::now() < deadline => std::thread::sleep(Duration::from_millis(10)),
+            None => {
+                let _ = child.kill();
+                let _ = child.wait();
+                let _ = reader.join();
+                return None;
+            }
+        }
+    };
+    if !status.success() {
+        let _ = reader.join();
+        return None;
+    }
+    reader.join().ok()?
+}
+
+fn bounded_command_text(program: &str, arguments: &[&str], cwd: &Path) -> Option<String> {
+    let output = String::from_utf8(bounded_command_output(program, arguments, cwd)?).ok()?;
+    let output = output.trim().to_owned();
+    (!output.is_empty()).then_some(output)
+}
+
+fn bounded_git_dirty(project_root: &Path) -> Option<bool> {
+    bounded_command_output(
+        "git",
+        &["status", "--porcelain", "--untracked-files=normal"],
+        project_root,
+    )
+    .map(|output| !output.is_empty())
+}
+
+/// Capture the Rust runner's reproducibility identity. This mirrors Python's
+/// owned git/dirty/classifier identity fields while naming the actual runtime.
+pub fn runtime_environment(project_root: &Path) -> serde_json::Value {
+    let git_sha = bounded_command_text("git", &["rev-parse", "HEAD"], project_root);
+    let git_dirty = bounded_git_dirty(project_root);
+    let rustc = bounded_command_text("rustc", &["--version"], project_root);
+    let classifier_sha256 = format!(
+        "{:x}",
+        Sha256::digest(include_bytes!("../../agentrouter-classifier/src/lib.rs"))
+    );
+    serde_json::json!({
+        "agentrouter_version": agentrouter_core::package_version(),
+        "runtime": "rust",
+        "rustc": rustc,
+        "platform": format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH),
+        "git_sha": git_sha,
+        "git_dirty": git_dirty,
+        "classifier_sha256": classifier_sha256,
+    })
 }
 
 /// Collect registered local fixtures and run the Rust evaluation end to end.
 /// Real data remains explicit: adapters without Rust real loaders produce
 /// `SKIPPED_EXTERNAL` records and never fall back to their fixture files.
 pub fn run_registered(options: RegisteredRunOptions) -> Result<serde_json::Value, String> {
-    let names: Vec<String> = if let Some(dataset) = options.dataset.as_ref() {
-        vec![dataset.clone()]
-    } else if let Some(profile) = options.profile.as_deref() {
+    let selected_dataset = options.dataset.as_deref().filter(|value| !value.is_empty());
+    let selected_profile = options.profile.as_deref().filter(|value| !value.is_empty());
+    let names: Vec<String> = if let Some(dataset) = selected_dataset {
+        crate::adapter_descriptor(dataset)?;
+        vec![dataset.to_owned()]
+    } else if let Some(profile) = selected_profile {
         crate::profile_datasets(profile)?
             .iter()
             .map(|name| (*name).to_owned())
@@ -152,10 +225,24 @@ pub fn run_registered(options: RegisteredRunOptions) -> Result<serde_json::Value
             .map(|name| (*name).to_owned())
             .collect()
     };
+    if !matches!(options.source.as_str(), "fixture" | "real") {
+        return Err(format!(
+            "{}: unknown source '{}'",
+            names.first().map(String::as_str).unwrap_or("dataset"),
+            options.source
+        ));
+    }
     let name_refs = names.iter().map(String::as_str).collect::<Vec<_>>();
-    let massive_languages = (options.dataset.as_deref() == Some("massive"))
-        .then_some(options.languages.as_deref())
-        .flatten();
+    // Python only enters the MASSIVE-specific filter path for a truthy language
+    // list. An explicitly empty list therefore means the same as no filter.
+    let massive_languages = if selected_dataset == Some("massive") {
+        options
+            .languages
+            .as_deref()
+            .filter(|languages| !languages.is_empty())
+    } else {
+        None
+    };
     let collection = crate::registry_api::collect(
         &name_refs,
         &options.project_root,
@@ -169,26 +256,42 @@ pub fn run_registered(options: RegisteredRunOptions) -> Result<serde_json::Value
     } else {
         None
     };
+    let environment = runtime_environment(&options.project_root);
     let run_options = RunOptions {
-        profile: if options.dataset.is_some() {
-            None
-        } else {
-            options.profile
-        },
+        // Dataset selection wins for collection, but Python still records the
+        // caller's profile value in provenance when both are supplied.
+        profile: options.profile,
         seed: options.seed,
         source: options.source,
-        environment: options.environment,
+        environment,
         datasets: collection.datasets,
         context_band_generalization,
     };
     if options.measure_all {
+        // Python grades classification before entering the remaining
+        // dimensions. Preserve that observable callback/error ordering before
+        // runtime model and CLI discovery.
+        let report = run_classification(
+            &collection.cases,
+            run_options.profile.as_deref(),
+            run_options.seed,
+            &run_options.source,
+            run_options.environment.clone(),
+            run_options.datasets.clone(),
+            run_options.context_band_generalization.as_ref(),
+        )?;
         let models = crate::evaluators_api::load_seed_models()?;
-        run_all_dimensions(
+        let (commands, mut groups) = crate::evaluators_api::runtime_cli_surface()?;
+        if !groups.iter().any(|group| group == "contract") {
+            groups.push("contract".to_owned());
+        }
+        complete_all_dimensions_with(
+            report,
             &collection.cases,
             &models,
-            &options.commands,
-            &options.groups,
-            run_options,
+            &commands,
+            &groups,
+            &|task| classify(task, &ClassifyOptions::default()),
         )
     } else {
         run_classification(
@@ -505,6 +608,44 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bounded_runtime_commands_fail_closed_and_drain_large_output() {
+        assert!(bounded_command_text(
+            "agentrouter-command-that-does-not-exist",
+            &[],
+            Path::new(".")
+        )
+        .is_none());
+
+        let directory = tempfile::tempdir().expect("temporary repository");
+        if !Command::new("git")
+            .arg("init")
+            .current_dir(directory.path())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .is_ok_and(|status| status.success())
+        {
+            return;
+        }
+        for index in 0..3_000 {
+            std::fs::write(
+                directory
+                    .path()
+                    .join(format!("untracked-file-{index:04}.txt")),
+                b"fixture",
+            )
+            .expect("write untracked fixture");
+        }
+        assert_eq!(bounded_git_dirty(directory.path()), Some(true));
+        assert!(bounded_command_text(
+            "git",
+            &["config", "--get", "missing.agentrouter.key"],
+            directory.path()
+        )
+        .is_none());
+    }
 
     #[test]
     fn default_grade_propagates_packaged_model_load_failures() {

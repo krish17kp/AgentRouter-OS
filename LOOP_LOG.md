@@ -2804,3 +2804,13 @@ removed for Windows/macOS. Three independent-audit findings and one Windows
 fixture defect were repaired; final re-audit is clear. Rust workspace, strict
 Clippy, Ruff, 27 focused differentials, and full Python 2,642/7 pass. Inventory:
 51 Parity / 26 Partial. Hosted validation follows the RC push.
+
+## TASK-162 evaluation runner parity — 2026-11-16
+
+The Rust registered runner now owns default/profile/dataset selection, complete
+grading, post-classification CLI discovery, context evidence, and bounded
+runtime provenance. Fixed empty MASSIVE filters, dataset+profile provenance,
+invalid-source and combined-error precedence, CLI profile normalization, and
+pipe-buffer deadlock risk. Runtime-specific environment semantics are documented.
+Independent audit cleared three repair rounds. Full Rust workspace/Clippy, Ruff,
+40 focused checks, and full Python 2,660/7 pass. Inventory: 52 Parity / 25 Partial.

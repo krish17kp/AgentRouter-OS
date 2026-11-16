@@ -1,7 +1,7 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-16",
-  "current_phase": "TASK-161 grading parity is independently clear after ordering, platform-detail, complete-report, and cross-platform process-fixture repairs. Rust workspace/Clippy, Ruff, focused 27, and full Python 2,642/7 pass. Inventory is 51/77 Parity and 26 Partial. Commit/push, inspect CI, then continue.",
+  "current_phase": "TASK-162 runner parity is independently clear after runtime discovery, provenance, selection, filtering, error-ordering, and CLI normalization repairs. Rust workspace/Clippy, Ruff, focused 40, and full Python 2,660/7 pass. Inventory is 52/77 Parity and 25 Partial. Commit/push, inspect CI, then continue.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {

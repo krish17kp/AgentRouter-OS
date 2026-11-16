@@ -23,12 +23,6 @@ struct Request {
     languages: Option<Vec<String>>,
     #[serde(default)]
     measure_all: bool,
-    #[serde(default)]
-    commands: Vec<String>,
-    #[serde(default)]
-    groups: Vec<String>,
-    #[serde(default)]
-    environment: serde_json::Value,
 }
 
 fn default_source() -> String {
@@ -48,9 +42,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         source: request.source,
         languages: request.languages,
         measure_all: request.measure_all,
-        commands: request.commands,
-        groups: request.groups,
-        environment: request.environment,
     })
     .map_err(io::Error::other)?;
     println!("{}", serde_json::to_string(&report)?);

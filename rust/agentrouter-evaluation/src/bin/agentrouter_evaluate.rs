@@ -3,38 +3,11 @@
 use agentrouter_evaluation::runner::{run_registered, RegisteredRunOptions};
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 const DEFAULT_OUT: &str = "artifacts/evaluation";
 
 fn project_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
-}
-
-fn runtime_environment(root: &Path) -> Value {
-    let git_sha = Command::new("git")
-        .args(["rev-parse", "HEAD"])
-        .current_dir(root)
-        .output()
-        .ok()
-        .filter(|output| output.status.success())
-        .and_then(|output| String::from_utf8(output.stdout).ok())
-        .map(|sha| sha.trim().to_owned())
-        .filter(|sha| !sha.is_empty());
-    let rustc = Command::new("rustc")
-        .arg("--version")
-        .output()
-        .ok()
-        .filter(|output| output.status.success())
-        .and_then(|output| String::from_utf8(output.stdout).ok())
-        .map(|version| version.trim().to_owned());
-    json!({
-        "agentrouter_version": agentrouter_core::package_version(),
-        "runtime": "rust",
-        "rustc": rustc,
-        "platform": format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH),
-        "git_sha": git_sha,
-    })
 }
 
 fn usage() -> &'static str {
@@ -238,7 +211,7 @@ fn list_datasets(json_output: bool) -> Result<i32, String> {
 fn run_eval(args: impl Iterator<Item = String>) -> Result<i32, String> {
     let root = project_root();
     let mut args = args;
-    let mut profile = "fast".to_owned();
+    let mut profile = Some("fast".to_owned());
     let mut dataset = None;
     let mut limit = None;
     let mut seed = 0;
@@ -251,7 +224,7 @@ fn run_eval(args: impl Iterator<Item = String>) -> Result<i32, String> {
     let mut require_release_ready = false;
     while let Some(arg) = args.next() {
         match arg.as_str() {
-            "--profile" => profile = parse_flag(&mut args, "--profile")?,
+            "--profile" => profile = Some(parse_flag(&mut args, "--profile")?),
             "--dataset" => dataset = Some(parse_flag(&mut args, "--dataset")?),
             "--limit" => limit = Some(parse_i64(&mut args, "--limit")?),
             "--seed" => seed = parse_i64(&mut args, "--seed")?,
@@ -279,29 +252,18 @@ fn run_eval(args: impl Iterator<Item = String>) -> Result<i32, String> {
     if require_release_ready && !measure_all {
         return Err("--require-release-ready requires --all.".to_owned());
     }
-    let cli_surface = if measure_all {
-        Some(agentrouter_evaluation::evaluators_api::runtime_cli_surface()?)
-    } else {
-        None
-    };
+    // Python's Typer command defaults to the fast profile, but an explicit
+    // dataset suppresses profile provenance even if --profile was also passed.
+    let selected_profile = if dataset.is_some() { None } else { profile };
     let result = run_registered(RegisteredRunOptions {
         project_root: root.clone(),
         dataset,
-        profile: Some(profile),
+        profile: selected_profile,
         limit,
         seed,
         source,
         languages,
         measure_all,
-        commands: cli_surface
-            .as_ref()
-            .map(|surface| surface.0.clone())
-            .unwrap_or_default(),
-        groups: cli_surface
-            .as_ref()
-            .map(|surface| surface.1.clone())
-            .unwrap_or_default(),
-        environment: runtime_environment(&root),
     })?;
     if !no_artifacts {
         for path in agentrouter_evaluation::write_reports(&result, &out_dir)
