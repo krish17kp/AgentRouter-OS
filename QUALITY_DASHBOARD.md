@@ -341,3 +341,9 @@ command was run.
 Five orchestration planner tests pass, including duplicate-dependency and
 empty-side-effect rejection. Strict crate Clippy and formatting pass. No
 workflow was dispatched or allowed to mutate a workspace.
+
+## TASK-205 current release smoke — 2026-11-17
+
+Optimized Rust-only smoke: init, route persistence, doctor, and MCP negotiation
+pass; default unavailable-host planning blocks, explicit preview remains
+`execution_enabled=false`. Release build/audit pass; no live provider call ran.

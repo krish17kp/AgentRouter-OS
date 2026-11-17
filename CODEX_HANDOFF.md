@@ -590,3 +590,11 @@ keys before scheduling. Five focused tests and strict crate Clippy pass. The
 workflow crate remains execution-disabled; continue with owner-authorized
 runtime lifecycle work only after adapter and release gates are addressed.
 
+## TASK-205 checkpoint — 2026-11-17
+
+Current optimized Rust-only smoke is green for init, route persistence, doctor,
+and MCP negotiation. Planning correctly fails closed for an unavailable host by
+default and only previews it with `--include-unavailable`; execution remains
+disabled. Release build and cargo audit pass, with the known unmaintained
+chrono warning and no available fixed upgrade.
+

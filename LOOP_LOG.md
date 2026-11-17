@@ -3194,3 +3194,12 @@ and empty side-effect keys before scheduling. Its existing cycle, step/cost,
 retry, tool-allowlist, idempotency, and parallel-conflict guards remain green.
 Focused tests (5), formatting, and strict crate Clippy pass; dispatch and
 workspace mutation remain disabled.
+
+## TASK-205 current optimized release smoke — 2026-11-17
+
+The latest release binary was rebuilt and audited, then run with an isolated
+home, release-only PATH, and no Python environment. Init, route persistence,
+doctor, and MCP initialize passed. Default planning failed closed on the
+unavailable Claude host; explicit `--include-unavailable` produced a redacted,
+`execution_enabled=false` plan. Cargo audit found no advisories; the existing
+unmaintained chrono warning has no fixed upgrade.

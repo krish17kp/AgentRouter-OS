@@ -354,3 +354,10 @@ Malformed workflow dependency and side-effect declarations now fail closed
 before planning. This is a safety improvement only; orchestration dispatch,
 workspace mutation, cancellation, live adapters, and release gates remain
 open.
+
+## TASK-205 current release smoke — 2026-11-17
+
+The current optimized binary passes isolated Rust-only init/route/doctor/MCP
+smoke and release build/audit. Unavailable execution hosts fail closed by
+default; explicit preview mode remains non-executing. This is validation
+evidence, not production deployment or release promotion.
