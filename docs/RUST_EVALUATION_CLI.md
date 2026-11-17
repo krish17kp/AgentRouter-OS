@@ -12,13 +12,18 @@ cargo run --locked -p agentrouter-evaluation --bin agentrouter-evaluate -- valid
 cargo run --locked -p agentrouter-evaluation --bin agentrouter-evaluate -- run --profile fast --json
 cargo run --locked -p agentrouter-evaluation --bin agentrouter-evaluate -- run --profile nightly --all --json
 cargo run --locked -p agentrouter-evaluation --bin agentrouter-evaluate -- status
+cargo run --locked -p agentrouter-evaluation --bin agentrouter-evaluate -- status --json
+cargo run --locked -p agentrouter-evaluation --bin agentrouter-evaluate -- prepare --all --json
 ```
 
 `run` writes the result, scorecard, Markdown report, and classification CSV to
 `artifacts/evaluation` by default. Use `--no-artifacts` for console-only output
 or `--out-dir <path>` to change the output directory. `--source real` reports
 unavailable external datasets as `SKIPPED_EXTERNAL`; it never substitutes a
-fixture. Real Hugging Face loading/preparation, annotation commands, and full
+fixture. `status --json` emits one record per registered dataset with explicit
+`fixture`, `real`, and `blocker` fields. `prepare --json` emits one record per
+requested dataset and preserves the distinction between a real result and an
+honest `SKIPPED_EXTERNAL` blocker. Real Hugging Face loading/preparation, annotation commands, and full
 parity with the main `agentrouter` command tree have not been ported yet.
 
 The Rust CLI runs the same offline fixture profiles and scorecard evaluators as

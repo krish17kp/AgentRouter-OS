@@ -8,6 +8,12 @@ Local release checks are green, but the frozen context-band
 gate, human evaluation, live OpenAI validation, and promotion/deployment inputs
 remain unresolved.
 
+The local continuation also includes TASK-210: Rust evaluation `status` and
+`prepare` now support JSON output with explicit fixture/real availability and
+`SKIPPED_EXTERNAL` blockers. This improves automation readiness; it does not
+provide the missing verified external dataset loaders or clear the release
+gate.
+
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
 advisories across 207 locked dependencies; one unmaintained `chrono` warning

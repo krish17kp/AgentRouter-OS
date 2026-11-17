@@ -162,6 +162,21 @@ def test_rust_evaluation_cli_status_and_prepare_contracts():
     assert all_unavailable.returncode == 0, all_unavailable.stderr
     assert all_unavailable.stdout.count("SKIPPED_EXTERNAL") == 8
 
+    status_json = _cli("status", "--json")
+    assert status_json.returncode == 0, status_json.stderr
+    status_rows = json.loads(status_json.stdout)
+    assert len(status_rows) == 8
+    gold_status = next(row for row in status_rows if row["dataset"] == "agentrouter-gold")
+    assert gold_status["fixture"] is True
+    assert gold_status["real"] is False
+    assert "no real loader configured" in gold_status["blocker"]
+
+    prepare_json = _cli("prepare", "--all", "--json")
+    assert prepare_json.returncode == 0, prepare_json.stderr
+    prepare_rows = json.loads(prepare_json.stdout)
+    assert len(prepare_rows) == 8
+    assert all(row["status"] == "SKIPPED_EXTERNAL" for row in prepare_rows)
+
 
 def test_rust_evaluation_cli_report_and_compare_artifacts(tmp_path):
     baseline_dir = tmp_path / "baseline"

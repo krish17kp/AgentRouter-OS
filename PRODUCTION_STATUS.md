@@ -16,6 +16,11 @@ production deployment: the hosted frozen context-band gate is still
 authorized credential, and hosting/domain credentials plus deployment approval
 are still required.
 
+TASK-210 adds structured JSON output to Rust evaluation `status` and `prepare`;
+the focused compatibility suite is 20/20, and all eight external datasets are
+reported honestly as blocked in this environment. This is automation-ready
+evidence, not a real-loader or release-gate waiver.
+
 - [ ] PR review and hosted checks: PR #16 is the sole open PR against `main`, with no GitHub reviews or review requests. Pushed RC head `71408b2` is green across Rust Linux/Windows/macOS, Python/Rust compatibility on all three platforms, Python 3.10–3.13, Windows, macOS, Security, Website, and Critical Mutation. The enforcing release gate remains honestly held by frozen context-band accuracy `0.6667 < 0.90`; live smoke skips without credentials.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md): 60 rows meet the full-module differential bar and 17 remain Partial. TASK-159–162 close platform, evaluator-facade, grading, and runner parity; TASK-164 closes server schemas; TASK-166 closes annotation schemas; TASK-167 closes server service; TASK-168 closes observability; TASK-169 closes the HTTP application lifecycle; TASK-170 closes packaged annotation CLI resources; TASK-171 closes provider refresh; TASK-176 closes the Python module entrypoint; broader migration differences remain.
@@ -50,6 +55,11 @@ unavailable dataset still exits 1 with an explicit `SKIPPED_EXTERNAL` blocker,
 while `prepare --all` now exits 0 after reporting every unavailable source,
 matching Python without falling back to fixtures. The evaluation crate passes
 and the direct `--all` command reports all eight datasets honestly.
+
+TASK-210 adds `status --json` and `prepare --json` records with explicit
+fixture/real availability and blocker fields. Human-readable output and the
+existing exit semantics remain unchanged; no external loader or fixture
+substitution is claimed.
 
 TASK-180 aligns the human-readable context-band evaluation report: Rust now
 includes the bootstrap macro-F1 interval, renders intervals and per-band recall

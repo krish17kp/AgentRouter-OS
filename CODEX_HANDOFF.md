@@ -30,6 +30,10 @@ TASK-179 repairs the Rust evaluation `prepare` exit contract: one unavailable
 dataset returns 1, while `prepare --all` completes the full blocker report with
 exit 0, matching Python and never substituting fixtures. The evaluation crate
 passes and the direct all-dataset command reports eight external blockers.
+TASK-210 adds JSON contracts to Rust evaluation `status` and `prepare`, with
+explicit fixture/real booleans and `SKIPPED_EXTERNAL` blocker records. The
+focused compatibility suite passes 20/20; real external loaders remain
+unavailable and no release-gate claim is changed.
 TASK-180 aligns context-band human-readable output with Python (bootstrap CI,
 Python-style containers, unquoted checksum, signed delta); JSON remains stable.
 

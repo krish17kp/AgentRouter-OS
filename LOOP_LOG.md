@@ -168,6 +168,16 @@ Linux/Windows/macOS, Python/Rust compatibility on all three platforms, Python
 enforcing release gate remains the expected honest failure at frozen
 context-band accuracy 0.6667 < 0.90; live smoke is skipped without credentials.
 
+## 2026-11-17 — TASK-210 evaluation JSON readiness
+
+Rust `agentrouter-evaluate status --json` now emits one machine-readable row
+per registered dataset with explicit fixture/real booleans and a blocker field.
+`prepare --json` emits structured `REAL` or `SKIPPED_EXTERNAL` records while
+preserving the existing exit semantics and never substituting fixtures. The
+focused compatibility suite passes 20 tests; the full locked Rust workspace,
+formatting, and strict Clippy checks pass. Verified external dataset loaders
+and the frozen release gate remain unresolved.
+
 ## 2026-11-17 — TASK-180 evaluation text report parity
 
 The Rust context-band generalization command now matches Python's visible

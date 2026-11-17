@@ -430,9 +430,13 @@ fn run() -> Result<i32, String> {
             let mut all = false;
             let mut dataset = None;
             let mut limit = None;
+            let mut json_output = false;
             if command == "status" {
-                if let Some(arg) = args.next() {
-                    return Err(format!("unknown option {arg}"));
+                for arg in args.by_ref() {
+                    match arg.as_str() {
+                        "--json" => json_output = true,
+                        _ => return Err(format!("unknown option {arg}")),
+                    }
                 }
             } else {
                 while let Some(arg) = args.next() {
@@ -440,6 +444,7 @@ fn run() -> Result<i32, String> {
                         "--all" => all = true,
                         "--dataset" => dataset = Some(parse_flag(&mut args, "--dataset")?),
                         "--limit" => limit = Some(parse_i64(&mut args, "--limit")?),
+                        "--json" => json_output = true,
                         _ => return Err(format!("unknown option {arg}")),
                     }
                 }
@@ -458,6 +463,7 @@ fn run() -> Result<i32, String> {
             }
             if command == "prepare" {
                 let mut any_ok = false;
+                let mut records = Vec::new();
                 for name in &names {
                     let collection = agentrouter_evaluation::registry_api::collect(
                         &[name],
@@ -473,20 +479,42 @@ fn run() -> Result<i32, String> {
                         .is_some_and(|status| status.starts_with("real:"))
                     {
                         any_ok = true;
-                        println!(
-                            "{name:<16} REAL   records={} repo={} license={}",
-                            info["n"].as_u64().unwrap_or_default(),
-                            info["hf_repo"].as_str().unwrap_or("none"),
-                            info["license"].as_str().unwrap_or("unknown")
-                        );
+                        records.push(json!({
+                            "dataset": name,
+                            "status": "REAL",
+                            "records": info["n"],
+                            "hf_repo": info["hf_repo"],
+                            "license": info["license"],
+                        }));
+                        if !json_output {
+                            println!(
+                                "{name:<16} REAL   records={} repo={} license={}",
+                                info["n"].as_u64().unwrap_or_default(),
+                                info["hf_repo"].as_str().unwrap_or("none"),
+                                info["license"].as_str().unwrap_or("unknown")
+                            );
+                        }
                     } else {
-                        println!(
-                            "{name:<16} SKIPPED_EXTERNAL  {}",
-                            info["blocker"]
-                                .as_str()
-                                .unwrap_or("real preparation is unavailable")
-                        );
+                        records.push(json!({
+                            "dataset": name,
+                            "status": "SKIPPED_EXTERNAL",
+                            "blocker": info["blocker"],
+                        }));
+                        if !json_output {
+                            println!(
+                                "{name:<16} SKIPPED_EXTERNAL  {}",
+                                info["blocker"]
+                                    .as_str()
+                                    .unwrap_or("real preparation is unavailable")
+                            );
+                        }
                     }
+                }
+                if json_output {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(&records).map_err(|error| error.to_string())?
+                    );
                 }
                 // Python's `prepare --all` is a report over every dataset and
                 // succeeds when all external sources are honestly unavailable.
@@ -494,10 +522,13 @@ fn run() -> Result<i32, String> {
                 // and fails when it could not be prepared.
                 return Ok(if any_ok || all { 0 } else { 1 });
             }
-            println!(
-                "{:16} {:9} {:6} blocker/notes",
-                "dataset", "fixture", "real"
-            );
+            let mut records = Vec::new();
+            if !json_output {
+                println!(
+                    "{:16} {:9} {:6} blocker/notes",
+                    "dataset", "fixture", "real"
+                );
+            }
             for name in names {
                 let collected = agentrouter_evaluation::registry_api::collect(
                     &[name.as_str()],
@@ -513,10 +544,24 @@ fn run() -> Result<i32, String> {
                     agentrouter_evaluation::adapter_real_availability(&name, spec.hf_repo);
                 let real = if real_available { "yes" } else { "no" };
                 let note = if real_available { "" } else { &reason };
+                records.push(json!({
+                    "dataset": name,
+                    "fixture": fixture,
+                    "real": real_available,
+                    "blocker": if real_available { Value::Null } else { json!(reason) },
+                }));
+                if !json_output {
+                    println!(
+                        "{name:<16} {:9} {:6} {note}",
+                        if fixture { "yes" } else { "no" },
+                        real
+                    );
+                }
+            }
+            if json_output {
                 println!(
-                    "{name:<16} {:9} {:6} {note}",
-                    if fixture { "yes" } else { "no" },
-                    real
+                    "{}",
+                    serde_json::to_string_pretty(&records).map_err(|error| error.to_string())?
                 );
             }
             Ok(0)

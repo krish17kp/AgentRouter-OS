@@ -35,6 +35,12 @@ CLI slices. It now requires Rust 1.89 because the patched bundled SQLite
 release depends on that compiler minimum. Neither
 change closes the release evaluation gate below or retires Python.
 
+TASK-210 extends the Rust evaluation CLI with structured `status --json` and
+`prepare --json` readiness records. The records preserve explicit
+`SKIPPED_EXTERNAL` blockers, so this is an automation surface improvement and
+not evidence that the real Hugging Face loaders or frozen release gate are
+complete.
+
 Per `AGENT_HANDOFF.md`'s Release truth section: **NOT RELEASE READY.**
 `context_band_accuracy = 0.6667` against the unchanged `0.90` frozen-holdout
 gate (the other six of seven evaluation gates pass). Closing this requires the
