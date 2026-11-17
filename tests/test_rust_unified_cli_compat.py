@@ -216,6 +216,31 @@ def test_workflow_plan_is_read_only_and_rejects_duplicate_dependencies(unified_b
     assert payload["estimated_cost"] == 5
     assert payload["execution_enabled"] is False
 
+    tool_workflow = {"steps": [{"id": "inspect", "required_tools": ["read"], "estimated_cost": 1}]}
+    denied_tool = subprocess.run(
+        [str(unified_binary), "workflow", "plan", "--json"],
+        cwd=ROOT,
+        input=json.dumps(tool_workflow),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=60,
+        check=False,
+    )
+    assert denied_tool.returncode == 2
+    allowed_tool = subprocess.run(
+        [str(unified_binary), "workflow", "plan", "--json", "--allow-tool", "read"],
+        cwd=ROOT,
+        input=json.dumps(tool_workflow),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=60,
+        check=False,
+    )
+    assert allowed_tool.returncode == 0, allowed_tool.stderr
+    assert json.loads(allowed_tool.stdout)["execution_enabled"] is False
+
     malformed = {
         "steps": [
             {"id": "root", "estimated_cost": 1},
