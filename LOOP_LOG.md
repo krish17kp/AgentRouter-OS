@@ -3306,3 +3306,12 @@ zero skips against the Rust loopback API.
   `symlink_metadata` after the no-follow SQLite open.
 - This closes the remaining redirectable read in that collector; full
   handle-native SQLite and sidecar race parity remain open.
+
+## TASK-218 — Live OpenAPI contract check (2026-11-18)
+
+- Added `agentrouter contract check --live URL` with bounded, redirect-free,
+  credential-free transport and local-reference validation.
+- Contract JSON now includes the live compatibility report and returns non-zero
+  on drift.
+- Eight Rust contract tests and a temporary HTTP-server smoke passed; Python
+  framework generation and hosted release approval remain authoritative.

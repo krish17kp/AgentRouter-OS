@@ -22,7 +22,7 @@ fn contract_command(args: &[String]) -> Result<i32, String> {
         .iter()
         .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
     {
-        println!("Usage: agentrouter contract <check [--json]|diff [PATH|-] [--json]|export [--source PATH] [--generated-at RFC3339] [--json]>");
+        println!("Usage: agentrouter contract <check [--json] [--live URL]|diff [PATH|-] [--json]|export [--source PATH] [--generated-at RFC3339] [--json]>");
         println!("Checks, exports, or compares the committed OpenAPI artifact.");
         println!("The diff command is a compatibility surface probe; the Python gate remains authoritative for full live-schema checks.");
         return Ok(0);
@@ -42,30 +42,59 @@ fn contract_command(args: &[String]) -> Result<i32, String> {
                     error.kind.as_str()
                 )
             })?;
-            if args.iter().skip(1).any(|argument| argument != "--json") {
-                return Err("usage: agentrouter contract check [--json]".to_owned());
+            let mut live_url = None;
+            let mut arguments = args.iter().skip(1);
+            while let Some(argument) = arguments.next() {
+                match argument.as_str() {
+                    "--json" => {}
+                    "--live" => {
+                        live_url = Some(arguments.next().ok_or("--live needs a URL")?.clone());
+                    }
+                    option => return Err(format!("unknown contract check option '{option}'")),
+                }
             }
             let (openapi_path, _) = agentrouter_cli::contract::contract_paths(&root);
             let canonical = agentrouter_cli::contract::canonical_openapi_document(&baseline)?;
             let is_canonical = canonical == baseline;
+            let live_report = if let Some(url) = live_url {
+                let live = agentrouter_cli::contract::load_live_contract(&url)?;
+                Some(agentrouter_cli::contract::diff_contracts_surface(
+                    &baseline, &live,
+                )?)
+            } else {
+                None
+            };
+            let live_compatible = live_report
+                .as_ref()
+                .and_then(|report| report["compatible"].as_bool())
+                .unwrap_or(true);
             let payload = serde_json::json!({
-                "status": if is_canonical { "ok" } else { "drift" },
+                "status": if is_canonical && live_compatible { "ok" } else { "drift" },
                 "baseline": openapi_path,
                 "references_valid": true,
                 "canonical": is_canonical,
-                "live_schema_check": false,
+                "live_schema_check": live_report.is_some(),
+                "live_report": live_report,
             });
             if json_output {
                 println!(
                     "{}",
                     serde_json::to_string_pretty(&payload).map_err(|error| error.to_string())?
                 );
-            } else if is_canonical {
-                println!("Contract OK: committed OpenAPI artifact is valid and canonical.");
+            } else if is_canonical && live_compatible {
+                if live_report.is_some() {
+                    println!("Contract OK: committed artifact matches the live OpenAPI surface.");
+                } else {
+                    println!("Contract OK: committed OpenAPI artifact is valid and canonical.");
+                }
             } else {
-                println!("Contract drift: committed OpenAPI artifact is not canonical.");
+                println!("Contract drift: committed artifact is not canonical or differs from live schema.");
             }
-            Ok(if is_canonical { 0 } else { 1 })
+            Ok(if is_canonical && live_compatible {
+                0
+            } else {
+                1
+            })
         }
         "diff" => {
             let baseline = agentrouter_cli::contract::load_baseline(&root).map_err(|error| {

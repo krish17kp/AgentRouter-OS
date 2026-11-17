@@ -12,7 +12,9 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fmt;
 use std::fmt::Write as _;
 use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 const ORDER_INSENSITIVE: &[&str] = &["required", "enum", "tags"];
 const MAX_EXPANDED_NODES: usize = 200_000;
@@ -22,6 +24,8 @@ const CONTRACT_VERSION: &str = "v1";
 const CONTRACT_EXPORT_COMMAND: &str = "agentrouter contract export";
 const CONTRACT_OPENAPI_FILE: &str = "openapi.json";
 const CONTRACT_MANIFEST_FILE: &str = "manifest.json";
+const MAX_LIVE_CONTRACT_BYTES: usize = 4 * 1024 * 1024;
+const LIVE_CONTRACT_TIMEOUT: Duration = Duration::from_secs(5);
 const HTTP_METHODS: &[&str] = &[
     "get", "put", "post", "delete", "patch", "head", "options", "trace",
 ];
@@ -307,6 +311,65 @@ pub fn load_baseline_file(path: &Path) -> Result<Value, BaselineError> {
 /// Load the committed OpenAPI baseline under a repository root.
 pub fn load_baseline(root: &Path) -> Result<Value, BaselineError> {
     load_baseline_file(&baseline_path(root))
+}
+
+/// Fetch and validate an OpenAPI document from a running local/API service.
+///
+/// This is an explicit opt-in release check. Redirects are disabled, no
+/// credentials are attached, the response is bounded, and malformed or
+/// externally referenced documents fail closed before comparison.
+pub fn load_live_contract(url: &str) -> Result<Value, String> {
+    if url.trim().is_empty() {
+        return Err("live contract URL must not be empty".to_owned());
+    }
+    let agent = ureq::AgentBuilder::new()
+        .redirects(0)
+        .timeout_connect(LIVE_CONTRACT_TIMEOUT)
+        .timeout_read(LIVE_CONTRACT_TIMEOUT)
+        .timeout_write(LIVE_CONTRACT_TIMEOUT)
+        .build();
+    let response = match agent.get(url).set("Accept", "application/json").call() {
+        Ok(response) => response,
+        Err(ureq::Error::Status(status, _)) => {
+            return Err(format!("live contract returned HTTP {status}"));
+        }
+        Err(ureq::Error::Transport(_)) => {
+            return Err("live contract request failed".to_owned());
+        }
+    };
+    if !(200..300).contains(&response.status()) {
+        return Err(format!("live contract returned HTTP {}", response.status()));
+    }
+    let mut body = Vec::new();
+    response
+        .into_reader()
+        .take((MAX_LIVE_CONTRACT_BYTES + 1) as u64)
+        .read_to_end(&mut body)
+        .map_err(|_| "live contract response could not be read".to_owned())?;
+    if body.len() > MAX_LIVE_CONTRACT_BYTES {
+        return Err(format!(
+            "live contract response exceeds the {MAX_LIVE_CONTRACT_BYTES}-byte limit"
+        ));
+    }
+    let document: Value = serde_json::from_slice(&body)
+        .map_err(|_| "live contract response is not valid JSON".to_owned())?;
+    let canonical = canonical_openapi_document(&document)?;
+    if !canonical.is_object() || canonical.get("paths").is_none() {
+        return Err("live contract response is not an OpenAPI document (no 'paths')".to_owned());
+    }
+    let invalid = validate_refs(&canonical)?;
+    if !invalid.is_empty() {
+        return Err(format!(
+            "live contract contains unusable $ref(s): {}",
+            invalid
+                .iter()
+                .take(5)
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
+    Ok(canonical)
 }
 
 /// Compare the OpenAPI document and operation surface while the complete
@@ -2412,5 +2475,53 @@ mod tests {
             validate_refs(&document).unwrap_err(),
             format!("contract has more than {MAX_EXPANDED_NODES} nodes; refusing to validate it")
         );
+    }
+
+    #[test]
+    fn live_contract_fetch_is_bounded_and_validates_an_openapi_document() {
+        use std::io::{Read as _, Write as _};
+        use std::net::TcpListener;
+
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let address = listener.local_addr().unwrap();
+        std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = [0_u8; 1024];
+            let _ = stream.read(&mut request);
+            let body = br#"{"openapi":"3.1.0","paths":{}}"#;
+            write!(
+                stream,
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                body.len()
+            )
+            .unwrap();
+            stream.write_all(body).unwrap();
+        });
+
+        let document = load_live_contract(&format!("http://{address}/openapi.json")).unwrap();
+        assert_eq!(document["openapi"], "3.1.0");
+        assert_eq!(document["paths"], json!({}));
+    }
+
+    #[test]
+    fn live_contract_fetch_refuses_redirects() {
+        use std::io::{Read as _, Write as _};
+        use std::net::TcpListener;
+
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let address = listener.local_addr().unwrap();
+        std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = [0_u8; 1024];
+            let _ = stream.read(&mut request);
+            stream
+                .write_all(
+                    b"HTTP/1.1 302 Found\r\nLocation: http://127.0.0.1:9/openapi.json\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+                )
+                .unwrap();
+        });
+
+        let error = load_live_contract(&format!("http://{address}/openapi.json")).unwrap_err();
+        assert!(error.contains("HTTP 302"));
     }
 }

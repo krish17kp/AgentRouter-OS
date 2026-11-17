@@ -35,6 +35,12 @@ the committed Rust OpenAPI artifact; live framework schema generation and the
 complete compatibility classifier remain Python-owned and are still tracked as
 R4 limitations.
 
+TASK-218 adds `agentrouter contract check --live URL`, using a bounded,
+redirect-free, credential-free fetch followed by canonicalization, reference
+validation, and the Rust compatibility surface report. This verifies a running
+service against the committed baseline without replacing Python framework
+generation or the hosted release gate.
+
 The Python CLI now has a default-off OpenAI Responses API text adapter. It is
 gated by provider opt-in, host readiness, the recorded safety decision, and
 `execute --yes`; hermetic tests do not use credentials or paid calls. The
