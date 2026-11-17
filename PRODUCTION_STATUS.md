@@ -75,6 +75,10 @@ validation, checksum, and description are now represented and tested. Real
 HuggingFace loading remains explicitly unavailable in Rust, so the base and
 registry rows stay Partial and no external-data claim is made.
 
+TASK-191 adds fail-closed MCP coverage for malformed JSON-RPC requests and
+invalid tool arguments. The five safe read/route/explain tools remain the only
+advertised surface; broader MCP lifecycle/transport parity remains Partial.
+
 TASK-175 repairs Windows diagnostics contract parity. Rust now renders the
 contract directory through the native path formatter, matching Python's
 platform-specific `Path` representation while retaining forward slashes on

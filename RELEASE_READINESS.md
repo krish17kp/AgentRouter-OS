@@ -73,6 +73,10 @@ facade and fixture lifecycle coverage. Real HuggingFace loaders remain
 explicitly external-only, so evaluation parity and the frozen release gate
 remain unresolved.
 
+**NOT release ready.** TASK-191 hardens MCP malformed-input behavior with
+fail-closed request and argument tests. The MCP row remains Partial for full
+transport/lifecycle parity and all external release gates remain unresolved.
+
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
 evidence. Diagnostics remains Partial for runtime-specific and complete bundle

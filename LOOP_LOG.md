@@ -1,5 +1,12 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-191 MCP malformed-input hardening
+
+Rust MCP now has focused fail-closed coverage for missing tool arguments,
+invalid context-token types, and malformed JSON-RPC requests. The five-tool
+read-only surface is unchanged; broader transport/lifecycle parity remains
+Partial.
+
 ## 2026-11-17 — TASK-190 registry adapter facade parity
 
 Rust evaluation registry entries now expose a concrete adapter facade covering

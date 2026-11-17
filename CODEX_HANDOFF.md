@@ -78,6 +78,10 @@ Real HuggingFace loading remains explicitly unavailable and no parity promotion
 claim is made. Continue with the next Partial module while preserving the
 untracked historical `loop/tasks/TASK-163-registry-parity-audit/` directory.
 
+TASK-191 adds fail-closed MCP regressions for malformed JSON-RPC requests and
+invalid tool arguments. The five safe tools remain unchanged; broader MCP
+transport/lifecycle parity remains Partial.
+
 ## Storage relocation — 2026-11-15
 
 Active release checkout: `/data/AgentRouter-production` on branch

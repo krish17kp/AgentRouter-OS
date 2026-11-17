@@ -519,6 +519,38 @@ mod tests {
     }
 
     #[test]
+    fn malformed_tool_arguments_fail_closed_without_panicking_or_leaking() {
+        let server = Server::new(PathBuf::from("/tmp/agentrouter-mcp-test"));
+        let missing_task = server
+            .handle(&json!({
+                "jsonrpc":"2.0", "id":4, "method":"tools/call",
+                "params":{"name":"classify", "arguments":{}}
+            }))
+            .unwrap();
+        assert_eq!(missing_task["result"]["isError"], true);
+        assert_eq!(
+            missing_task["result"]["content"][0]["text"],
+            "task must be a string"
+        );
+
+        let invalid_context = server
+            .handle(&json!({
+                "jsonrpc":"2.0", "id":5, "method":"tools/call",
+                "params":{"name":"classify", "arguments":{"task":"safe", "context_tokens":1.25}}
+            }))
+            .unwrap();
+        assert_eq!(invalid_context["result"]["isError"], true);
+        assert_eq!(
+            invalid_context["result"]["content"][0]["text"],
+            "context_tokens must be an integer"
+        );
+
+        let malformed = server.handle(&json!({"jsonrpc":"2.0", "id":6})).unwrap();
+        assert_eq!(malformed["error"]["code"], -32600);
+        assert_eq!(malformed["error"]["message"], "Invalid Request");
+    }
+
+    #[test]
     fn oversized_frame_is_bounded_and_does_not_consume_the_next_message() {
         let mut bytes = vec![b'x'; MAX_LINE_BYTES + 1];
         bytes.extend_from_slice(b"\n{}\n");
