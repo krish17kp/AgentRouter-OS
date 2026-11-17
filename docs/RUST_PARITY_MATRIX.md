@@ -372,7 +372,7 @@ edge cases remain open, so service parity is Partial.
 - Baseline/current comparison scoring, UTF-8 result loading, and Markdown/CSV
   artifact generation match Python.
 - The AgentRouter gold adapter now matches Python metadata, availability, description, all 165 records, checksums, and deterministic sampling; the full behavior is differentially tested, including Unicode/default handling.
-- Shared fixture-mode evaluation adapter behavior now matches six fixture-backed adapters for metadata, availability, description, JSONL record loading/checksums, deterministic sampling, and explicit skipped-external behavior. Real dataset downloads, preparation, and adapter-specific real-data mappings remain Python-only.
+- Shared fixture-mode evaluation adapter behavior now matches six fixture-backed adapters for metadata, availability, description, JSONL record loading/checksums, deterministic sampling, and explicit skipped-external behavior. Rust also provides an explicitly opt-in bounded Hugging Face rows-API loader and adapter-specific real-data mappings for CLINC150, Banking77, MASSIVE, LongBench v2, and SWE-bench metadata preparation. LLMRouterBench/TwinRouterBench external sources, Docker/model full runs, and annotation workflows remain Python-only.
 - Evaluation provenance now matches Python for dataset-quality/leakage aggregation and the complete four-field runtime environment snapshot.
 - The Rust plugin module ports the bundled manifest, portable path trust
   boundary, no-follow ownership-state reads, read-only list/doctor and dry-run

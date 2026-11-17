@@ -19,6 +19,7 @@ serde_yaml = { package = "noyalib-serde-yaml", version = "=0.0.60" }
 sha2 = "=0.10.9"
 unicode-general-category = "=0.6.0"
 tempfile = "=3.13.0"
+ureq = { version = "=2.10.1", default-features = false, features = ["tls"] }
 
 [[bin]]
 name = "evaluation_metrics_from_json"

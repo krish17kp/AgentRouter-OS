@@ -178,6 +178,17 @@ focused compatibility suite passes 20 tests; the full locked Rust workspace,
 formatting, and strict Clippy checks pass. Verified external dataset loaders
 and the frozen release gate remain unresolved.
 
+## 2026-11-18 — TASK-211 bounded Hugging Face real loader
+
+The Rust evaluation crate now includes an explicitly opt-in fixed-HTTPS
+datasets-server rows loader for CLINC150, Banking77, MASSIVE, LongBench v2,
+and SWE-bench metadata preparation. Redirects are refused, connect/read/write
+timeouts are 20 seconds, responses are capped at 16 MiB, and datasets at
+100,000 rows. Local transport tests cover valid and malformed rows. A live
+Banking77 preparation produced 3,079 normalized records without fixture
+fallback; CLINC150 was rate-limited on a later probe and remains external.
+Offline defaults still report an explicit opt-in blocker.
+
 ## 2026-11-17 — TASK-180 evaluation text report parity
 
 The Rust context-band generalization command now matches Python's visible

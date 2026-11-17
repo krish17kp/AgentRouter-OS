@@ -474,6 +474,14 @@ real data without substituting fixtures. This separate Rust command does not
 yet replace the full `agentrouter` command tree. Real external dataset
 preparation and annotation workflows remain outstanding.
 
+R9 follow-up (2026-11-18): the Rust registry now has an explicitly opt-in,
+bounded Hugging Face datasets-server rows loader for CLINC150, Banking77,
+MASSIVE, LongBench v2, and SWE-bench metadata preparation. It uses fixed HTTPS,
+20-second phase timeouts, redirect refusal, 16 MiB response/100,000-row caps,
+and never falls back to fixtures. `AGENTROUTER_ENABLE_HF_REAL=1` is required;
+LLMRouterBench/TwinRouterBench external sources, Docker/model full runs, and
+human annotation remain outstanding.
+
 Python (`agentrouter/`) is not removed, deprecated-flagged, or demoted from
 release-gate authority until **all** of the following hold simultaneously:
 

@@ -23,7 +23,9 @@ pub mod registry_api;
 pub mod runner;
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::io::Read;
 use std::path::Path;
+use std::time::Duration;
 
 use agentrouter_core::{
     ApprovalLevel, Classification, ContextBand, Level, OutputType, PricingTier, TaskType,
@@ -1676,8 +1678,181 @@ pub fn adapter_availability(path: &Path) -> &'static str {
     }
 }
 
-/// Rust has no Hugging Face `datasets` runtime. Real mode therefore remains
-/// an explicit skipped-external result and never falls back to fixture data.
+const HF_ROWS_API: &str = "https://datasets-server.huggingface.co/rows";
+const HF_PAGE_SIZE: usize = 100;
+const HF_MAX_ROWS: usize = 100_000;
+const HF_MAX_RESPONSE_BYTES: usize = 16 * 1024 * 1024;
+const HF_TIMEOUT_SECONDS: u64 = 20;
+
+fn hf_real_enabled() -> bool {
+    std::env::var("AGENTROUTER_ENABLE_HF_REAL")
+        .ok()
+        .is_some_and(|value| value == "1" || value.eq_ignore_ascii_case("true"))
+}
+
+#[derive(Debug, Clone)]
+pub struct HfRowsResponse {
+    pub features: serde_json::Value,
+    pub rows: Vec<serde_json::Value>,
+}
+
+fn hf_agent() -> ureq::Agent {
+    ureq::AgentBuilder::new()
+        .redirects(0)
+        .timeout_connect(Duration::from_secs(HF_TIMEOUT_SECONDS))
+        .timeout_read(Duration::from_secs(HF_TIMEOUT_SECONDS))
+        .timeout_write(Duration::from_secs(HF_TIMEOUT_SECONDS))
+        .build()
+}
+
+/// Fetch rows from a Hugging Face datasets-server-compatible endpoint.
+///
+/// The base URL is injectable for deterministic local tests; production calls
+/// use the fixed HTTPS endpoint in `load_hf_rows`. Response and row-count
+/// limits prevent an unbounded remote response from becoming an evaluation
+/// resource-exhaustion path.
+pub fn load_hf_rows_from_base(
+    base_url: &str,
+    dataset: &str,
+    config: Option<&str>,
+    split: &str,
+) -> Result<HfRowsResponse, String> {
+    let agent = hf_agent();
+    let mut offset = 0usize;
+    let mut features = serde_json::Value::Null;
+    let mut rows = Vec::new();
+    let mut total = None;
+    loop {
+        let mut request = agent
+            .get(base_url)
+            .query("dataset", dataset)
+            .query("split", split)
+            .query("offset", &offset.to_string())
+            .query("length", &HF_PAGE_SIZE.to_string())
+            .set("User-Agent", "agentrouter-os");
+        if let Some(config) = config {
+            request = request.query("config", config);
+        }
+        let response = match request.call() {
+            Ok(response) => response,
+            Err(ureq::Error::Status(status, _)) => {
+                return Err(format!("Hugging Face rows API returned HTTP {status}"));
+            }
+            Err(ureq::Error::Transport(_)) => {
+                return Err("Hugging Face rows API network request failed".to_string());
+            }
+        };
+        let mut body = Vec::new();
+        response
+            .into_reader()
+            .take((HF_MAX_RESPONSE_BYTES + 1) as u64)
+            .read_to_end(&mut body)
+            .map_err(|_| "Hugging Face rows API response could not be read".to_string())?;
+        if body.len() > HF_MAX_RESPONSE_BYTES {
+            return Err(format!(
+                "Hugging Face rows API response exceeded the {HF_MAX_RESPONSE_BYTES}-byte limit"
+            ));
+        }
+        let payload: serde_json::Value = serde_json::from_slice(&body)
+            .map_err(|_| "Hugging Face rows API returned invalid JSON".to_string())?;
+        if features.is_null() {
+            features = payload.get("features").cloned().unwrap_or_default();
+        }
+        if total.is_none() {
+            total = payload
+                .get("num_rows_total")
+                .and_then(|value| value.as_u64());
+        }
+        let page = payload
+            .get("rows")
+            .and_then(serde_json::Value::as_array)
+            .ok_or("Hugging Face rows API response has no rows array")?;
+        let page_len = page.len();
+        for item in page {
+            let row = item
+                .get("row")
+                .cloned()
+                .ok_or("Hugging Face rows API row has no row object")?;
+            if !row.is_object() {
+                return Err("Hugging Face rows API row is not an object".to_string());
+            }
+            rows.push(row);
+            if rows.len() > HF_MAX_ROWS {
+                return Err(format!(
+                    "Hugging Face dataset exceeded the {HF_MAX_ROWS}-row limit"
+                ));
+            }
+        }
+        offset = offset.saturating_add(page_len);
+        if page_len < HF_PAGE_SIZE
+            || page_len == 0
+            || total.is_some_and(|count| (offset as u64) >= count)
+        {
+            break;
+        }
+    }
+    Ok(HfRowsResponse { features, rows })
+}
+
+fn load_hf_rows(
+    dataset: &str,
+    config: Option<&str>,
+    split: &str,
+) -> Result<HfRowsResponse, String> {
+    load_hf_rows_from_base(HF_ROWS_API, dataset, config, split)
+}
+
+fn feature_names(features: &serde_json::Value, field: &str) -> Result<Vec<String>, String> {
+    let names = features
+        .get(field)
+        .and_then(|value| value.get("names"))
+        .and_then(serde_json::Value::as_array)
+        .or_else(|| {
+            features.as_array().and_then(|items| {
+                items
+                    .iter()
+                    .find(|item| {
+                        item.get("name").and_then(serde_json::Value::as_str) == Some(field)
+                    })
+                    .and_then(|item| item.get("type"))
+                    .and_then(|value| value.get("names"))
+                    .and_then(serde_json::Value::as_array)
+            })
+        })
+        .ok_or_else(|| format!("Hugging Face response has no ClassLabel names for '{field}'"))?;
+    names
+        .iter()
+        .map(|value| {
+            value.as_str().map(str::to_owned).ok_or_else(|| {
+                format!("Hugging Face ClassLabel '{field}' contains a non-string name")
+            })
+        })
+        .collect()
+}
+
+fn row_text(row: &serde_json::Value, field: &str, dataset: &str) -> Result<String, String> {
+    row.get(field)
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
+        .ok_or_else(|| format!("{dataset}: real row field '{field}' is missing or empty"))
+}
+
+fn row_index(row: &serde_json::Value, field: &str, dataset: &str) -> Result<usize, String> {
+    if let Some(value) = row.get(field).and_then(serde_json::Value::as_u64) {
+        return usize::try_from(value)
+            .map_err(|_| format!("{dataset}: real row field '{field}' is out of range"));
+    }
+    row.get(field)
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| format!("{dataset}: real row field '{field}' is missing"))?
+        .parse::<usize>()
+        .map_err(|_| format!("{dataset}: real row field '{field}' is not an integer"))
+}
+
+/// Check whether the bounded built-in loader is explicitly enabled. Network
+/// evaluation remains opt-in so offline status checks never download data.
 pub fn adapter_real_availability(name: &str, hf_repo: Option<&str>) -> (bool, String) {
     if hf_repo.is_none() {
         return (
@@ -1685,10 +1860,99 @@ pub fn adapter_real_availability(name: &str, hf_repo: Option<&str>) -> (bool, St
             format!("{name}: no real loader configured (source unverified)"),
         );
     }
+    if !hf_real_enabled() {
+        return (
+            false,
+            "set AGENTROUTER_ENABLE_HF_REAL=1 to opt into the bounded Hugging Face datasets rows API loader"
+                .to_string(),
+        );
+    }
     (
-        false,
-        "the `datasets` library is not installed (pip install -e '.[eval]')".to_string(),
+        true,
+        "bounded Hugging Face rows API loader is enabled".to_string(),
     )
+}
+
+fn load_real_rows(
+    metadata: &EvaluationDatasetMetadata,
+    hf_repo: &str,
+) -> Result<Vec<EvaluationCase>, String> {
+    match metadata.name.as_str() {
+        "clinc150" => {
+            let response = load_hf_rows(hf_repo, Some("plus"), "test")?;
+            let labels = feature_names(&response.features, "intent")?;
+            let rows = response
+                .rows
+                .iter()
+                .map(|row| {
+                    Ok(Clinc150RawRow {
+                        text: row_text(row, "text", "clinc150")?,
+                        intent: row_index(row, "intent", "clinc150")?,
+                    })
+                })
+                .collect::<Result<Vec<_>, String>>()?;
+            normalize_clinc150_rows(&labels, &rows)
+        }
+        "banking77" => {
+            let response = load_hf_rows(hf_repo, Some("default"), "test")?;
+            let labels = feature_names(&response.features, "label")?;
+            let rows = response
+                .rows
+                .iter()
+                .map(|row| {
+                    Ok(Banking77RawRow {
+                        text: row_text(row, "text", "banking77")?,
+                        label: row_index(row, "label", "banking77")?,
+                    })
+                })
+                .collect::<Result<Vec<_>, String>>()?;
+            normalize_banking77_rows(&labels, &rows)
+        }
+        "massive" => {
+            let mut batches = BTreeMap::new();
+            for (_language, locale) in [("en", "en-US"), ("hi", "hi-IN"), ("fr", "fr-FR")] {
+                let response = load_hf_rows(hf_repo, Some(locale), "test")?;
+                let rows = response
+                    .rows
+                    .into_iter()
+                    .map(|row| {
+                        serde_json::from_value::<MassiveRawRow>(row)
+                            .map_err(|error| format!("massive: invalid {locale} row: {error}"))
+                    })
+                    .collect::<Result<Vec<_>, String>>()?;
+                batches.insert(locale.to_string(), rows);
+            }
+            normalize_massive_rows(None, &batches)
+        }
+        "longbench-v2" => {
+            let response = load_hf_rows(hf_repo, Some("default"), "train")?;
+            let rows = response
+                .rows
+                .into_iter()
+                .map(|row| {
+                    serde_json::from_value::<LongBenchRawRow>(row)
+                        .map_err(|error| format!("longbench-v2: invalid row: {error}"))
+                })
+                .collect::<Result<Vec<_>, String>>()?;
+            Ok(normalize_longbench_rows(&rows))
+        }
+        "swebench" => {
+            let response = load_hf_rows(hf_repo, Some("default"), "test")?;
+            let rows = response
+                .rows
+                .into_iter()
+                .map(|row| {
+                    serde_json::from_value::<SWEBenchRawRow>(row)
+                        .map_err(|error| format!("swebench: invalid row: {error}"))
+                })
+                .collect::<Result<Vec<_>, String>>()?;
+            Ok(normalize_swebench_rows(&rows))
+        }
+        _ => Err(format!(
+            "{}: no real loader configured (source unverified)",
+            metadata.name
+        )),
+    }
 }
 
 pub fn load_adapter_dataset(
@@ -1701,14 +1965,14 @@ pub fn load_adapter_dataset(
         "fixture" => load_adapter_fixture(path, metadata),
         "real" => {
             let (available, reason) = adapter_real_availability(&metadata.name, hf_repo);
-            if available {
-                Err(format!(
-                    "{}: Rust real dataset loading is unsupported",
-                    metadata.name
-                ))
-            } else {
-                Err(format!("{}: {reason}", metadata.name))
+            if !available {
+                return Err(format!("{}: {reason}", metadata.name));
             }
+            let repo =
+                hf_repo.ok_or_else(|| format!("{}: no real loader configured", metadata.name))?;
+            let cases = load_real_rows(metadata, repo)?;
+            validate_adapter_cases(metadata, &cases)?;
+            Ok(cases)
         }
         _ => Err(format!("{}: unknown source '{source}'", metadata.name)),
     }
@@ -3037,4 +3301,82 @@ pub fn classification_metrics(cases: &[MetricCase]) -> serde_json::Value {
     report.insert("n_cases".to_owned(), serde_json::json!(cases.len()));
     report.insert("failures".to_owned(), serde_json::Value::Array(failures));
     serde_json::Value::Object(report)
+}
+
+#[cfg(test)]
+mod hf_rows_tests {
+    use super::{load_hf_rows_from_base, normalize_clinc150_rows, Clinc150RawRow};
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    use std::thread;
+
+    #[test]
+    fn bounded_rows_loader_reads_features_and_rows_from_a_local_endpoint() {
+        let listener = TcpListener::bind(("127.0.0.1", 0)).expect("bind local test server");
+        let address = listener.local_addr().expect("local address");
+        let body = r#"{"features":{"intent":{"names":["oos","translate"]}},"rows":[{"row":{"text":" translate this ","intent":1}}],"num_rows_total":1}"#;
+        let expected = body.as_bytes().to_vec();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("accept request");
+            let mut request = [0_u8; 2048];
+            let _ = stream.read(&mut request).expect("read request");
+            write!(
+                stream,
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                expected.len(),
+                body
+            )
+            .expect("write response");
+        });
+
+        let response = load_hf_rows_from_base(
+            &format!("http://{address}/rows"),
+            "clinc_oos",
+            Some("plus"),
+            "test",
+        )
+        .expect("load local rows");
+        server.join().expect("join local test server");
+        assert_eq!(response.rows.len(), 1);
+        let labels = response.features["intent"]["names"]
+            .as_array()
+            .expect("labels")
+            .iter()
+            .map(|value| value.as_str().expect("label").to_string())
+            .collect::<Vec<_>>();
+        let rows = response
+            .rows
+            .iter()
+            .map(|row| Clinc150RawRow {
+                text: row["text"].as_str().expect("text").to_string(),
+                intent: row["intent"].as_u64().expect("intent") as usize,
+            })
+            .collect::<Vec<_>>();
+        let cases = normalize_clinc150_rows(&labels, &rows).expect("normalize rows");
+        assert_eq!(cases.len(), 1);
+        assert_eq!(cases[0].task, "translate this");
+    }
+
+    #[test]
+    fn bounded_rows_loader_rejects_missing_row_objects() {
+        let listener = TcpListener::bind(("127.0.0.1", 0)).expect("bind local test server");
+        let address = listener.local_addr().expect("local address");
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("accept request");
+            let mut request = [0_u8; 1024];
+            let _ = stream.read(&mut request).expect("read request");
+            let body = br#"{"rows":[{"not_row":{}}]}"#;
+            write!(
+                stream,
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                std::str::from_utf8(body).expect("utf8")
+            )
+            .expect("write response");
+        });
+        let error = load_hf_rows_from_base(&format!("http://{address}/rows"), "x", None, "test")
+            .expect_err("missing row must fail closed");
+        server.join().expect("join local test server");
+        assert!(error.contains("no row object"));
+    }
 }

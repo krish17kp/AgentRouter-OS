@@ -97,6 +97,7 @@ dependencies = [
  "sha2",
  "tempfile",
  "unicode-general-category",
+ "ureq",
 ]
 
 [[package]]

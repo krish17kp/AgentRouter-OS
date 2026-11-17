@@ -34,6 +34,11 @@ TASK-210 adds JSON contracts to Rust evaluation `status` and `prepare`, with
 explicit fixture/real booleans and `SKIPPED_EXTERNAL` blocker records. The
 focused compatibility suite passes 20/20; real external loaders remain
 unavailable and no release-gate claim is changed.
+TASK-211 adds the bounded opt-in Hugging Face rows-API loader for five
+metadata-oriented adapters. A live Banking77 preparation produced 3,079
+normalized records; CLINC150 was rate-limited during a second live probe and
+remains an honest external result. LLMRouterBench/TwinRouterBench, Docker/model
+runs, annotation, and release gates remain outstanding.
 TASK-180 aligns context-band human-readable output with Python (bootstrap CI,
 Python-style containers, unquoted checksum, signed delta); JSON remains stable.
 
