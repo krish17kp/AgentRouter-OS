@@ -1,7 +1,7 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-18",
-  "current_phase": "TASK-216 adds the public Rust contract export workflow with explicit source selection, deterministic evidence, and fail-closed breaking-change refusal. The default source is the committed Rust OpenAPI artifact; live schema generation and complete compatibility classification remain Python-owned. Complete SQLite handle/sidecar parity, LLMRouterBench/TwinRouterBench, execution adapters, orchestration dispatch, non-stdio MCP transport, human evaluation, and deployment remain external/partial; inventory remains 60/77 Parity and 17 Partial.",
+  "current_phase": "TASK-217 hardens Rust bundle database size reporting with symlink metadata after the no-follow SQLite read. TASK-216 adds the public Rust contract export workflow with explicit source selection, deterministic evidence, and fail-closed breaking-change refusal. Live schema generation, complete SQLite handle/sidecar parity, LLMRouterBench/TwinRouterBench, execution adapters, orchestration dispatch, non-stdio MCP transport, human evaluation, and deployment remain external/partial; inventory remains 60/77 Parity and 17 Partial.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {

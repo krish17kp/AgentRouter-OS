@@ -49,6 +49,10 @@ uses the committed Rust OpenAPI artifact by default; live schema generation and
 complete compatibility classification remain unresolved. Release readiness is
 unchanged.
 
+TASK-217 hardens bundle `size_bytes` reporting with symlink metadata after the
+no-follow SQLite read. This does not change the external release gates or the
+remaining handle/sidecar limitation.
+
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
 advisories across 207 locked dependencies; one unmaintained `chrono` warning

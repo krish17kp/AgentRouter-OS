@@ -3299,3 +3299,10 @@ zero skips against the Rust loopback API.
 - `cargo fmt`, CLI check/build, and an isolated temporary-root export passed.
 - Live framework schema generation and complete compatibility classification
   remain Python-owned; release readiness is unchanged.
+
+## TASK-217 — Bundle database size no-follow (2026-11-18)
+
+- Changed Rust bundle `size_bytes` reporting from path-following metadata to
+  `symlink_metadata` after the no-follow SQLite open.
+- This closes the remaining redirectable read in that collector; full
+  handle-native SQLite and sidecar race parity remain open.

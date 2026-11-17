@@ -138,7 +138,7 @@ fn decision_shape(home: &Path) -> Result<Value, BundleError> {
         Ok((decisions, feedback, journal, integrity))
     })()
     .map_err(|_| BundleError("decision log is missing required tables or is unreadable".into()))?;
-    let size = fs::metadata(&db)
+    let size = fs::symlink_metadata(&db)
         .map_err(|_| BundleError("decision log size could not be read".into()))?
         .len();
     Ok(json!({

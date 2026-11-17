@@ -58,6 +58,9 @@ TASK-216 adds `agentrouter contract export` to the unified Rust CLI. It accepts
 changes, and writes through the existing safe exporter. The default source is
 the committed Rust OpenAPI artifact; live framework schema parity remains
 partial.
+TASK-217 changes Rust bundle database size reporting to `symlink_metadata`,
+closing the remaining path-following read in that collector. Full SQLite
+handle/sidecar parity remains an R4 limitation.
 TASK-180 aligns context-band human-readable output with Python (bootstrap CI,
 Python-style containers, unquoted checksum, signed delta); JSON remains stable.
 
