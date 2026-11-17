@@ -2,6 +2,10 @@
 
 ## Live checkpoint — 2026-11-18
 
+TASK-263 refreshes the full Python evidence after the latest regression test:
+2,782 passed / 7 skipped in 233.09 seconds, with only the existing
+non-failing Starlette/httpx deprecation warning.
+
 TASK-262 aligns `eval prepare --limit` across Python and Rust: full real-source
 validation is followed by the shared deterministic seed-0 subset, with 8 Python
 real-mode tests passing and the locked Rust workspace/format checks green.

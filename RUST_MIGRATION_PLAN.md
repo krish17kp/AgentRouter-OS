@@ -27,6 +27,11 @@
 
 ## Current production status
 
+TASK-263 (2026-11-18) refreshes the full Python verification after the latest
+evaluation regression coverage: 2,782 tests pass with 7 expected skips in
+233.09 seconds. The only warning is the existing non-failing Starlette/httpx
+deprecation; no release gate changed.
+
 TASK-262 (2026-11-18) closes an evaluation prepare-limit mismatch: Python and
 Rust now validate the complete real source and then report the same deterministic
 seed-0 smoke subset for `prepare --limit`. The Python real-mode regression passes

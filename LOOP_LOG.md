@@ -1,5 +1,12 @@
 # LOOP_LOG
 
+## 2026-11-18 — TASK-263 full Python suite evidence
+
+The full Python suite passes 2,782 tests with 7 expected skips in 233.09
+seconds. The only warning is the existing non-failing Starlette/httpx
+deprecation. This refreshes current evidence after TASK-262; release and
+deployment gates are unchanged.
+
 ## 2026-11-18 — TASK-262 evaluation prepare-limit parity
 
 `eval prepare --limit N` now reports the same deterministic smoke subset in
