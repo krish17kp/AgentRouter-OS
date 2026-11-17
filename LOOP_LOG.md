@@ -1,5 +1,11 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-194 registry callable factory parity
+
+Rust now exposes ordered lazy callable adapter factories matching Python's
+`available_adapters()` surface. A focused test constructs all eight registered
+facades; real HuggingFace loading remains explicitly external-only.
+
 ## 2026-11-17 — TASK-193 final local release verification
 
 The optimized locked Rust workspace build passes after the final local slices;

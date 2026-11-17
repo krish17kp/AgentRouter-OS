@@ -92,6 +92,10 @@ vulnerability advisories; RustSec's one unmaintained `chrono` warning has no
 fixed upgrade. Hosted PR #16 is still held by the frozen 0.6667 < 0.90 gate and
 owner-controlled review/credential/promotion/deployment gates.
 
+TASK-194 adds ordered lazy callable adapter factories for all eight registered
+datasets. The registry/base rows remain Partial only for real external loading
+and broader adapter behavior; preserve the untracked TASK-163 audit directory.
+
 ## Storage relocation — 2026-11-15
 
 Active release checkout: `/data/AgentRouter-production` on branch

@@ -34,6 +34,8 @@ pub struct DatasetAdapter {
     spec: DatasetSpec,
 }
 
+pub type AdapterFactory = Box<dyn Fn() -> Result<DatasetAdapter, String> + Send + Sync>;
+
 impl DatasetAdapter {
     pub fn name(&self) -> &'static str {
         self.descriptor.name
@@ -151,6 +153,18 @@ pub fn adapter(name: &str) -> Result<DatasetAdapter, String> {
 
 pub fn try_adapter(name: &str) -> Option<DatasetAdapter> {
     adapter(name).ok()
+}
+
+/// Return lazy, callable factories matching Python's `available_adapters`.
+/// Factories keep construction separate from cheap registry discovery.
+pub fn available_adapter_factories() -> Vec<(&'static str, AdapterFactory)> {
+    ADAPTERS
+        .iter()
+        .map(|descriptor| {
+            let name = descriptor.name;
+            (name, Box::new(move || adapter(name)) as AdapterFactory)
+        })
+        .collect()
 }
 
 pub fn try_get_adapter(name: &str) -> Option<&'static AdapterDescriptor> {
@@ -418,5 +432,15 @@ mod tests {
         assert!(reason.contains("datasets") || reason.contains("real loader"));
         let error = adapter.load(&root, "real").unwrap_err();
         assert!(error.contains("banking77:"));
+    }
+
+    #[test]
+    fn available_factories_construct_each_registered_adapter_lazily() {
+        let factories = available_adapter_factories();
+        assert_eq!(factories.len(), DATASET_NAMES.len());
+        for (name, factory) in factories {
+            let instance = factory().expect("registered factory constructs");
+            assert_eq!(instance.name(), name);
+        }
     }
 }

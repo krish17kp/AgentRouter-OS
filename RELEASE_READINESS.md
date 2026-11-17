@@ -86,6 +86,10 @@ smoke, and dependency audit are green. The frozen context-band gate, human
 evaluation, live validation, PR review, promotion, publication, and deployment
 remain unresolved.
 
+**NOT release ready.** TASK-194 closes the callable-factory portion of the Rust
+registry surface, but real external dataset loaders and the release gates
+remain unresolved.
+
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
 evidence. Diagnostics remains Partial for runtime-specific and complete bundle
