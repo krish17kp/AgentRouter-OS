@@ -2,6 +2,13 @@
 
 Updated: 2026-11-18
 
+## Latest continuation slice — TASK-268
+
+Rust evaluation CLI numeric parsing now accepts negative integers like Python;
+`--limit -1` produces the same empty deterministic sample. The focused Rust
+evaluation CLI suite passes 25 tests. Release and deployment gates are
+unchanged.
+
 ## Latest continuation slice — TASK-267
 
 Rust evaluation CLI parsing now treats `--languages ""` as no filter, matching

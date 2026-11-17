@@ -144,6 +144,25 @@ def test_rust_evaluation_cli_empty_languages_matches_python_no_filter():
     assert actual == expected
 
 
+def test_rust_evaluation_cli_accepts_negative_limit_like_python():
+    process = _cli(
+        "run",
+        "--dataset",
+        "agentrouter-gold",
+        "--limit",
+        "-1",
+        "--no-artifacts",
+        "--json",
+    )
+    assert process.returncode == 0, process.stderr
+    actual = json.loads(process.stdout)
+    expected = python_run(dataset="agentrouter-gold", limit=-1)
+    for report in (actual, expected):
+        report.pop("environment")
+        report.pop("classification", None)
+    assert actual == expected
+
+
 def test_rust_evaluation_cli_reports_external_blocker_without_fixture_fallback():
     process = _cli(
         "run",

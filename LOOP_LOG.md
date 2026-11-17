@@ -1,5 +1,12 @@
 # LOOP_LOG
 
+## 2026-11-18 — TASK-268 negative numeric evaluation CLI values
+
+Rust evaluation CLI numeric options now accept negative integers, matching
+Python's Typer parsing. A `--limit -1` differential regression passes, and the
+focused evaluation CLI suite is 25 tests green. Release and deployment gates
+remain unchanged.
+
 ## 2026-11-18 — TASK-267 empty language option parity
 
 Rust `agentrouter-evaluate run` now treats an explicitly empty `--languages`

@@ -20,7 +20,8 @@ fn parse_flag(args: &mut impl Iterator<Item = String>, flag: &str) -> Result<Str
 }
 
 fn parse_i64(args: &mut impl Iterator<Item = String>, flag: &str) -> Result<i64, String> {
-    parse_flag(args, flag)?
+    args.next()
+        .ok_or_else(|| format!("{flag} needs a value"))?
         .parse::<i64>()
         .map_err(|_| format!("invalid {flag} value"))
 }
