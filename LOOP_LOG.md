@@ -4,8 +4,10 @@
 
 Hardened Rust diagnostic bundle artifact creation by pinning the canonical
 bundle directory with a capability handle and using exclusive creation for both
-allowlisted artifacts and opt-in database snapshots. Added a Unix regression for
-symlinked final paths. Rust bundle tests, strict Clippy, and focused Python
+allowlisted artifacts and opt-in database snapshots. SQLite snapshot reopen now
+uses `SQLITE_OPEN_NOFOLLOW`, closing the post-create pathname race found by
+independent review. Added Unix regressions for symlinked artifact and snapshot
+paths. Rust bundle/storage tests, strict Clippy, and focused Python
 bundle/diagnostics checks pass; bundle parity remains Partial for environment
 metadata and remaining Windows-specific differential cases.
 

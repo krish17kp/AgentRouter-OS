@@ -15,9 +15,10 @@ Updated: 2026-11-17
 ## Current recovery checkpoint
 
 TASK-173 hardens Rust diagnostic bundle writes with a pinned capability directory
-and exclusive creation for artifacts and opt-in database snapshots. The symlink
-escape regression, Rust bundle tests, strict Clippy, and focused Python
-bundle/diagnostics suite pass. Bundle parity remains Partial for full metadata
+and exclusive creation for artifacts and opt-in database snapshots. SQLite
+snapshot reopening uses `SQLITE_OPEN_NOFOLLOW`; artifact and snapshot symlink
+escape regressions, Rust bundle/storage tests, strict Clippy, and focused Python
+bundle/diagnostics checks pass. Bundle parity remains Partial for full metadata
 and Windows-specific differential coverage.
 
 TASK-172 aligns the Rust doctor’s stable package, server-extra, and contract

@@ -6,7 +6,7 @@
 use std::path::Path;
 use std::sync::Mutex;
 
-use rusqlite::{params, types::Type, Connection, OptionalExtension};
+use rusqlite::{params, types::Type, Connection, OpenFlags, OptionalExtension};
 use serde_json::Value;
 
 const SCHEMA: &str = "
@@ -158,7 +158,12 @@ pub fn snapshot(home: &Path, destination: &Path) -> rusqlite::Result<()> {
     if let Some(parent) = destination.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
-    let mut target = Connection::open(destination)?;
+    let mut target = Connection::open_with_flags(
+        destination,
+        OpenFlags::SQLITE_OPEN_READ_WRITE
+            | OpenFlags::SQLITE_OPEN_CREATE
+            | OpenFlags::SQLITE_OPEN_NOFOLLOW,
+    )?;
     let backup = rusqlite::backup::Backup::new(&source, &mut target)?;
     backup.run_to_completion(5, std::time::Duration::from_millis(250), None)?;
     Ok(())
@@ -670,5 +675,23 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM decisions", [], |r| r.get(0))
             .unwrap();
         assert_eq!(count, 1);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn snapshot_refuses_a_symlink_destination() {
+        use std::os::unix::fs::symlink;
+
+        let dir = tempfile::tempdir().unwrap();
+        let conn = connect(dir.path()).unwrap();
+        save_decision(&conn, "task", &json!({})).unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let victim = outside.path().join("victim.db");
+        std::fs::write(&victim, b"keep").unwrap();
+        let dest = dir.path().join("backup.db");
+        symlink(&victim, &dest).unwrap();
+
+        assert!(snapshot(dir.path(), &dest).is_err());
+        assert_eq!(std::fs::read(&victim).unwrap(), b"keep");
     }
 }
