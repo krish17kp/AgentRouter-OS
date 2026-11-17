@@ -2,6 +2,15 @@
 
 Updated: 2026-11-18
 
+## Latest continuation slice — TASK-265
+
+Rust real-mode MASSIVE collection now passes the requested language list into
+the loader, fetching only the selected Hugging Face locale configs and keeping
+Python's empty-list and unknown-language semantics. The focused Rust/Python
+evaluation selection passes 58 tests; the workspace passes all tests, strict
+Clippy, and formatting. This does not change the external-data, human-gate,
+hosted-approval, or deployment state.
+
 ## Latest hosted-state slice — TASK-264
 
 Live PR state confirms PR #16 is still mergeable but unstable: remote head

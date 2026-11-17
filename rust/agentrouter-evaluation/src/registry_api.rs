@@ -5,9 +5,9 @@ use std::path::{Path, PathBuf};
 
 use crate::{
     adapter_availability, adapter_checksum, adapter_descriptor, adapter_real_availability,
-    describe_adapter, load_adapter_dataset, load_agentrouter_gold, profile_datasets,
-    sample_adapter_cases, validate_adapter_cases, AdapterDescriptor, EvaluationCase,
-    EvaluationDatasetMetadata, ADAPTERS, DATASET_NAMES,
+    describe_adapter, load_adapter_dataset, load_adapter_dataset_with_languages,
+    load_agentrouter_gold, profile_datasets, sample_adapter_cases, validate_adapter_cases,
+    AdapterDescriptor, EvaluationCase, EvaluationDatasetMetadata, ADAPTERS, DATASET_NAMES,
 };
 use serde_json::{json, Map, Value};
 
@@ -294,6 +294,8 @@ pub fn collect(
     source: &str,
     massive_languages: Option<&[String]>,
 ) -> Result<DatasetCollection, String> {
+    // Python treats an explicitly empty MASSIVE language list as no filter.
+    let massive_languages = massive_languages.filter(|languages| !languages.is_empty());
     let mut cases = Vec::new();
     let mut per_dataset = Map::new();
     for name in names {
@@ -336,7 +338,17 @@ pub fn collect(
                 .as_str()
                 .unwrap_or("skipped_external")
                 .to_owned();
-            let loaded = load_adapter_dataset(&fixture, &spec.metadata, spec.hf_repo, source);
+            let loaded = if *name == "massive" && source == "real" {
+                load_adapter_dataset_with_languages(
+                    &fixture,
+                    &spec.metadata,
+                    spec.hf_repo,
+                    source,
+                    massive_languages,
+                )
+            } else {
+                load_adapter_dataset(&fixture, &spec.metadata, spec.hf_repo, source)
+            };
             match loaded {
                 Ok(loaded) => (loaded, description, status),
                 Err(blocker) if source == "real" => {

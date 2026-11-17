@@ -1890,9 +1890,10 @@ pub fn adapter_real_availability(name: &str, hf_repo: Option<&str>) -> (bool, St
     )
 }
 
-fn load_real_rows(
+fn load_real_rows_with_languages(
     metadata: &EvaluationDatasetMetadata,
     hf_repo: &str,
+    massive_languages: Option<&[String]>,
 ) -> Result<Vec<EvaluationCase>, String> {
     let api_repo = match hf_repo {
         "clinc_oos" => "clinc/clinc_oos",
@@ -1932,7 +1933,16 @@ fn load_real_rows(
         }
         "massive" => {
             let mut batches = BTreeMap::new();
-            for (_language, locale) in [("en", "en-US"), ("hi", "hi-IN"), ("fr", "fr-FR")] {
+            let requested = massive_languages
+                .map(<[String]>::to_vec)
+                .unwrap_or_else(|| vec!["en".into(), "hi".into(), "fr".into()]);
+            for language in requested.iter() {
+                let locale = match language.as_str() {
+                    "en" => "en-US",
+                    "hi" => "hi-IN",
+                    "fr" => "fr-FR",
+                    _ => return Err(format!("massive: no HF locale mapping for '{language}'")),
+                };
                 let response = load_hf_rows(api_repo, Some(locale), "test")?;
                 let rows = response
                     .rows
@@ -1944,7 +1954,7 @@ fn load_real_rows(
                     .collect::<Result<Vec<_>, String>>()?;
                 batches.insert(locale.to_string(), rows);
             }
-            normalize_massive_rows(None, &batches)
+            normalize_massive_rows(massive_languages, &batches)
         }
         "longbench-v2" => {
             let response = load_hf_rows(api_repo, Some("default"), "train")?;
@@ -1983,6 +1993,16 @@ pub fn load_adapter_dataset(
     hf_repo: Option<&str>,
     source: &str,
 ) -> Result<Vec<EvaluationCase>, String> {
+    load_adapter_dataset_with_languages(path, metadata, hf_repo, source, None)
+}
+
+pub fn load_adapter_dataset_with_languages(
+    path: &Path,
+    metadata: &EvaluationDatasetMetadata,
+    hf_repo: Option<&str>,
+    source: &str,
+    massive_languages: Option<&[String]>,
+) -> Result<Vec<EvaluationCase>, String> {
     match source {
         "fixture" => load_adapter_fixture(path, metadata),
         "real" => {
@@ -1992,7 +2012,7 @@ pub fn load_adapter_dataset(
             }
             let repo =
                 hf_repo.ok_or_else(|| format!("{}: no real loader configured", metadata.name))?;
-            let cases = load_real_rows(metadata, repo)?;
+            let cases = load_real_rows_with_languages(metadata, repo, massive_languages)?;
             validate_adapter_cases(metadata, &cases)?;
             Ok(cases)
         }
@@ -3327,7 +3347,11 @@ pub fn classification_metrics(cases: &[MetricCase]) -> serde_json::Value {
 
 #[cfg(test)]
 mod hf_rows_tests {
-    use super::{load_hf_rows_from_base, normalize_clinc150_rows, Clinc150RawRow};
+    use super::{
+        load_hf_rows_from_base, normalize_clinc150_rows, normalize_massive_rows, Clinc150RawRow,
+        MassiveRawRow,
+    };
+    use std::collections::BTreeMap;
     use std::io::{Read, Write};
     use std::net::TcpListener;
     use std::thread;
@@ -3400,5 +3424,38 @@ mod hf_rows_tests {
             .expect_err("missing row must fail closed");
         server.join().expect("join local test server");
         assert!(error.contains("no row object"));
+    }
+
+    #[test]
+    fn massive_normalization_honors_requested_language_order_and_mapping() {
+        let mut batches = BTreeMap::new();
+        batches.insert(
+            "en-US".to_owned(),
+            vec![MassiveRawRow {
+                utt: "English task".to_owned(),
+                scenario: serde_json::json!("scenario"),
+                intent: serde_json::json!("intent"),
+            }],
+        );
+        batches.insert(
+            "fr-FR".to_owned(),
+            vec![MassiveRawRow {
+                utt: "French task".to_owned(),
+                scenario: serde_json::json!("scenario"),
+                intent: serde_json::json!("intent"),
+            }],
+        );
+        let languages = vec!["fr".to_owned(), "en".to_owned()];
+        let cases = normalize_massive_rows(Some(&languages), &batches).expect("normalize MASSIVE");
+        assert_eq!(
+            cases
+                .iter()
+                .map(|case| case.language.as_str())
+                .collect::<Vec<_>>(),
+            vec!["fr", "en"]
+        );
+        let unknown = vec!["de".to_owned()];
+        let error = normalize_massive_rows(Some(&unknown), &batches).expect_err("unknown locale");
+        assert!(error.contains("no HF locale mapping for 'de'"));
     }
 }

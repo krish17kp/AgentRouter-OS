@@ -1,5 +1,15 @@
 # LOOP_LOG
 
+## 2026-11-18 — TASK-265 MASSIVE locale-fetch parity
+
+Rust real-mode MASSIVE collection now applies the requested language filter at
+the Hugging Face loader boundary instead of downloading all three supported
+locales and filtering afterward. Empty language lists preserve Python's
+no-filter behavior; unknown language codes fail closed before a fetch. The
+focused evaluation compatibility selection passes 58 tests, and the complete
+Rust workspace passes tests, strict Clippy, and formatting. External data,
+human evaluation, hosted approval, and deployment gates remain unchanged.
+
 ## 2026-11-18 — TASK-264 hosted state reconciliation
 
 GitHub PR #16 was checked live: remote head `71408b2` remains mergeable but
