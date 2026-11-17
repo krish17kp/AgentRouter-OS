@@ -119,6 +119,10 @@ smoke is green and reports `execution_enabled: false`. Continue with the
 separately authorized adapter/runtime milestones; this command is intentionally
 read-only.
 
+TASK-200 records matched 2,000-iteration pure-routing benchmarks for 10/100/
+1,000 synthetic fleets. Optimized Rust is faster at p50 and p95 in this local
+Linux run; treat it as comparative evidence only, not a production SLO.
+
 ## Storage relocation — 2026-11-15
 
 Active release checkout: `/data/AgentRouter-production` on branch

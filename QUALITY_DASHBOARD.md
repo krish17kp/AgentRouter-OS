@@ -275,6 +275,8 @@ accuracy in the current report. It is not evidence of held-out generalization.
   deterministic groups are present, but no dispatch or mutation is enabled.
 - CLI plan integration: fresh-home init/route/save/plan optimized smoke passes;
   the JSON plan reports `execution_enabled: false`.
+- Routing benchmark parity: matched local pure-routing runs show Rust p50 at
+  0.78×/0.77×/0.63× of Python for 10/100/1,000 candidates; not an SLO.
 
 ## TASK-153 recovery — 2026-11-15
 

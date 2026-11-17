@@ -115,6 +115,11 @@ TASK-199 wires those boundaries into the unified Rust CLI as read-only
 JSON record with `execution_enabled: false`; no host or provider is invoked.
 Workspace check, strict Clippy, formatting, and focused planner tests pass.
 
+TASK-200 re-runs the matched pure-routing benchmark: optimized Rust p50 is
+26.86/260.33/2244.93 microseconds for 10/100/1,000 candidates versus Python
+34.41/336.12/3560.56, with p95 lower at every fleet size. This is comparative
+local CPU evidence only; it excludes I/O and provider execution.
+
 TASK-175 repairs Windows diagnostics contract parity. Rust now renders the
 contract directory through the native path formatter, matching Python's
 platform-specific `Path` representation while retaining forward slashes on

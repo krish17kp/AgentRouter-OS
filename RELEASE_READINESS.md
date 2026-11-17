@@ -109,6 +109,11 @@ implementation and external release gates are unresolved.
 provider/CLI adapters or multi-agent dispatch, and the external release gates
 remain unresolved.
 
+**NOT release ready.** TASK-200 records matched local Python/Rust routing
+benchmarks with Rust faster across all tested fleets. The result is not a
+production latency SLO and does not clear the frozen evaluation or deployment
+gates.
+
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
 evidence. Diagnostics remains Partial for runtime-specific and complete bundle

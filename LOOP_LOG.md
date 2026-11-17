@@ -26,6 +26,14 @@ Fresh-home init, saved route, and JSON plan smoke pass with
 strict Clippy, formatting, and the 4+3 planning tests pass. This is CLI
 integration evidence, not execution parity.
 
+## 2026-11-17 — TASK-200 routing benchmark parity
+
+The Python and optimized Rust pure-routing benchmarks now run the same 10,
+100, and 1,000 synthetic candidate fleets for 2,000 iterations with 100
+warmups. Rust p50 is 0.78×, 0.77×, and 0.63× of Python respectively; p95 is
+also lower at every fleet size. Measurements exclude I/O, registry, provider,
+and execution time and are not production SLO claims.
+
 ## 2026-11-17 — TASK-195 optimized binary end-to-end smoke
 
 The optimized release binary succeeds from a fresh isolated home for `init`,
