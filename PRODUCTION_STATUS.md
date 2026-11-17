@@ -110,6 +110,11 @@ effects while never dispatching or mutating. Focused tests (4 + 3), strict
 Clippy, and formatting pass. No execution adapter or orchestration runtime is
 claimed.
 
+TASK-199 wires those boundaries into the unified Rust CLI as read-only
+`agentrouter plan`. A fresh-home init/route/save/plan smoke returns a planned
+JSON record with `execution_enabled: false`; no host or provider is invoked.
+Workspace check, strict Clippy, formatting, and focused planner tests pass.
+
 TASK-175 repairs Windows diagnostics contract parity. Rust now renders the
 contract directory through the native path formatter, matching Python's
 platform-specific `Path` representation while retaining forward slashes on

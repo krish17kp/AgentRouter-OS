@@ -17,6 +17,15 @@ dispatching agents or mutating workspaces. Focused tests are 4 and 3 passed;
 strict Clippy and formatting pass. These crates advance the architecture but do
 not claim execution or multi-agent parity.
 
+## 2026-11-17 — TASK-199 CLI planning integration
+
+The unified Rust binary now exposes read-only `agentrouter plan`, loading a
+persisted decision and registry model into the fail-closed execution planner.
+Fresh-home init, saved route, and JSON plan smoke pass with
+`execution_enabled: false`; the command never invokes a host. Workspace check,
+strict Clippy, formatting, and the 4+3 planning tests pass. This is CLI
+integration evidence, not execution parity.
+
 ## 2026-11-17 — TASK-195 optimized binary end-to-end smoke
 
 The optimized release binary succeeds from a fresh isolated home for `init`,

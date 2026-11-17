@@ -104,6 +104,11 @@ They intentionally keep remote execution, provider/CLI adapters, agent
 dispatch, tool grants, and workspace mutation disabled. The remaining runtime
 implementation and external release gates are unresolved.
 
+**NOT release ready.** TASK-199 exposes the planning-only path as
+`agentrouter plan` and verifies fresh-home CLI smoke. It still does not enable
+provider/CLI adapters or multi-agent dispatch, and the external release gates
+remain unresolved.
+
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
 evidence. Diagnostics remains Partial for runtime-specific and complete bundle

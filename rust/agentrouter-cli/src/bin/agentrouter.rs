@@ -14,7 +14,7 @@ use std::process::Command;
 use agentrouter_registry::{load_all_models, load_providers, ModelEntry};
 
 fn usage() -> &'static str {
-    "usage: agentrouter <init|setup|route|explain|feedback|execute|stats|evaluate|prompt|registry|providers|hosts|models|doctor|server|mcp|dashboard|reliability|plugin|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  setup [--preference quality|balanced|cheap|fast] [--sample TEXT]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  execute <decision-id> [--yes] [--dry-run]\n  stats [--json]\n  evaluate [--gold PATH] [--out-dir PATH] [--json] [--no-artifacts]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  server [--host HOST] [--port PORT]\n  mcp (stdio server)\n  dashboard [port]\n  reliability soak [--seconds N] [--workers N] [--batch N] [--home PATH] [--out PATH]\n  plugin <list|install NAME [--dry-run] [--force] [--adopt-identical]|uninstall NAME|doctor [--json]>\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
+    "usage: agentrouter <init|setup|route|explain|feedback|plan|execute|stats|evaluate|prompt|registry|providers|hosts|models|doctor|server|mcp|dashboard|reliability|plugin|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  setup [--preference quality|balanced|cheap|fast] [--sample TEXT]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  plan <decision-id> [--json] [--include-unavailable] [--allow-remote] [--approve]\n  execute <decision-id> [--yes] [--dry-run]\n  stats [--json]\n  evaluate [--gold PATH] [--out-dir PATH] [--json] [--no-artifacts]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  server [--host HOST] [--port PORT]\n  mcp (stdio server)\n  dashboard [port]\n  reliability soak [--seconds N] [--workers N] [--batch N] [--home PATH] [--out PATH]\n  plugin <list|install NAME [--dry-run] [--force] [--adopt-identical]|uninstall NAME|doctor [--json]>\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
 }
 
 fn reliability_soak(args: &[String]) -> Result<i32, String> {
@@ -1199,6 +1199,115 @@ fn plugin(args: &[String]) -> Result<i32, String> {
     }
 }
 
+fn plan_decision(home: &Path, args: &[String]) -> Result<i32, String> {
+    if args
+        .iter()
+        .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
+    {
+        println!(
+            "Usage: agentrouter plan <decision-id> [--json] [--include-unavailable] [--allow-remote] [--approve]"
+        );
+        return Ok(0);
+    }
+    let Some(decision_id) = args.first() else {
+        return Err(
+            "usage: agentrouter plan <decision-id> [--json] [--include-unavailable] [--allow-remote] [--approve]"
+                .to_owned(),
+        );
+    };
+    let mut json_output = false;
+    let mut policy = agentrouter_execution::ExecutionPolicy::default();
+    for argument in args.iter().skip(1) {
+        match argument.as_str() {
+            "--json" => json_output = true,
+            "--include-unavailable" => policy.include_unavailable = true,
+            "--allow-remote" => policy.remote_enabled = true,
+            "--approve" => policy.approval_granted = true,
+            option => return Err(format!("unknown plan option '{option}'")),
+        }
+    }
+
+    let connection = agentrouter_storage::connect(home).map_err(|error| error.to_string())?;
+    let Some(payload) = agentrouter_storage::load_decision(&connection, decision_id)
+        .map_err(|error| error.to_string())?
+    else {
+        if json_output {
+            println!(
+                "{}",
+                serde_json::json!({
+                    "status": "blocked",
+                    "execution_enabled": false,
+                    "model": null,
+                    "reason": format!("no decision found with id '{decision_id}'"),
+                    "requires_approval": false,
+                })
+            );
+            return Ok(1);
+        }
+        eprintln!("No decision found with id '{decision_id}'.");
+        return Ok(2);
+    };
+    let classification = payload
+        .get("classification")
+        .ok_or_else(|| "Execution plan blocked: stored classification is missing.".to_owned())
+        .and_then(|value| {
+            serde_json::from_value::<agentrouter_core::Classification>(value.clone())
+                .map_err(|_| "Execution plan blocked: stored classification is invalid.".to_owned())
+        })?;
+    let model_key = payload
+        .get("recommendation")
+        .and_then(|value| value.get("model"))
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| "Execution plan blocked: decision has no eligible model.".to_owned())?;
+    let models = load_catalog(home)?;
+    let model = models
+        .iter()
+        .find(|candidate| candidate.key() == model_key)
+        .ok_or_else(|| {
+            format!("Execution plan blocked: model '{model_key}' is not in the registry.")
+        })?;
+    match agentrouter_execution::plan(model, &classification, policy) {
+        Ok(plan) => {
+            if json_output {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&plan)
+                        .map_err(|error| format!("could not serialize execution plan: {error}"))?
+                );
+            } else {
+                println!("Status:             {:?}", plan.status);
+                println!("Model:              {}", plan.model);
+                println!("Execution enabled:  {}", plan.execution_enabled);
+                if let Some(host) = plan.host {
+                    println!("Host:               {host}");
+                }
+                if let Some(preview) = plan.command_preview {
+                    println!("Command preview:    {preview}");
+                }
+                println!("Reason:             {}", plan.reason);
+            }
+            Ok(0)
+        }
+        Err(error) => {
+            if json_output {
+                println!(
+                    "{}",
+                    serde_json::json!({
+                        "status": "blocked",
+                        "execution_enabled": false,
+                        "model": model_key,
+                        "reason": error.to_string(),
+                        "requires_approval": false,
+                    })
+                );
+            } else {
+                eprintln!("Execution plan blocked: {error}");
+            }
+            Ok(1)
+        }
+    }
+}
+
 fn run() -> Result<i32, String> {
     let mut args = env::args().skip(1);
     let Some(command) = args.next() else {
@@ -1285,6 +1394,7 @@ fn run() -> Result<i32, String> {
             )
         }
         "feedback" => feedback(&home, &tail),
+        "plan" => plan_decision(&home, &tail),
         "stats" => stats(&home, &tail),
         "prompt" => {
             if tail.first().map(String::as_str) != Some("generate") {

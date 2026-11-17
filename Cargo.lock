@@ -42,6 +42,7 @@ dependencies = [
  "agentrouter-classifier",
  "agentrouter-core",
  "agentrouter-evaluation",
+ "agentrouter-execution",
  "agentrouter-hosts",
  "agentrouter-learning",
  "agentrouter-limits",

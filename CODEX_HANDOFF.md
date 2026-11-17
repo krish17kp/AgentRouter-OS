@@ -113,6 +113,12 @@ crate executes, dispatches, grants tools, reads credentials, or mutates
 workspaces. Continue with separately authorized adapters and runtime
 integration; do not promote these planning crates as execution parity.
 
+TASK-199 wires the execution planner into the unified binary as
+`agentrouter plan <decision-id> [--json]`. Fresh-home init/route/save/plan
+smoke is green and reports `execution_enabled: false`. Continue with the
+separately authorized adapter/runtime milestones; this command is intentionally
+read-only.
+
 ## Storage relocation — 2026-11-15
 
 Active release checkout: `/data/AgentRouter-production` on branch

@@ -273,6 +273,8 @@ accuracy in the current report. It is not evidence of held-out generalization.
   adapters remain disabled.
 - Orchestration planner: 3 Rust unit tests passed; bounded DAG validation and
   deterministic groups are present, but no dispatch or mutation is enabled.
+- CLI plan integration: fresh-home init/route/save/plan optimized smoke passes;
+  the JSON plan reports `execution_enabled: false`.
 
 ## TASK-153 recovery — 2026-11-15
 

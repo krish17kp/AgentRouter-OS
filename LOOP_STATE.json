@@ -1,7 +1,7 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-17",
-  "current_phase": "TASK-197/198 planning boundaries are verified: execution planner 4 passed and orchestration planner 3 passed, with strict Clippy and formatting green. TASK-196 adapter differentials (17 passed), TASK-195 optimized binary smoke, TASK-194 registry factories, TASK-193 optimized locked Rust build/version/help/audit, and TASK-192 full Python regression at 2735 passed/7 skipped remain green. Real HuggingFace loading, execution adapters, orchestration dispatch, and broader MCP lifecycle remain external/partial; inventory remains 60/77 Parity and 17 Partial.",
+  "current_phase": "TASK-199 read-only CLI planning integration is verified by fresh-home optimized init/route/save/plan smoke; the JSON plan reports execution_enabled=false. TASK-197/198 planning boundaries remain green with 4+3 tests, strict Clippy, and formatting. TASK-196 adapter differentials (17 passed), TASK-195 optimized binary smoke, TASK-194 registry factories, TASK-193 optimized locked Rust build/version/help/audit, and TASK-192 full Python regression at 2735 passed/7 skipped remain green. Real HuggingFace loading, execution adapters, orchestration dispatch, and broader MCP lifecycle remain external/partial; inventory remains 60/77 Parity and 17 Partial.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
@@ -32,7 +32,7 @@
     "Continue the remaining 17 Partial Rust modules while PR #16 remains held by the honest evaluation and external release gates.",
     "Keep PR #16 held on the honest context-band, human-evaluation, live-validation, and deployment gates; do not bypass them.",
     "Continue the remaining 17 Partial Rust modules while PR #16 is held for human evaluation, live validation, and release inputs.",
-    "Continue after TASK-197/198 with separately authorized execution adapters and orchestration runtime integration; do not claim execution or multi-agent parity while planning remains execution_enabled=false. Do not claim registry/base parity until real loader behavior is covered, do not claim MCP parity until broader lifecycle/transport behavior is covered, and do not claim reliability, SDK, or plugin lifecycle parity until broader process/runtime behavior is differentially covered."
+    "Continue after TASK-199 with separately authorized execution adapters and orchestration runtime integration; do not claim execution or multi-agent parity while planning remains execution_enabled=false. Do not claim registry/base parity until real loader behavior is covered, do not claim MCP parity until broader lifecycle/transport behavior is covered, and do not claim reliability, SDK, or plugin lifecycle parity until broader process/runtime behavior is differentially covered."
   ],
   "completed_iter26": [
     "TASK-179 aligns Rust evaluation `prepare` exit semantics with Python: one unavailable dataset exits 1, while `prepare --all` exits 0 after reporting every `SKIPPED_EXTERNAL` blocker. No fixture fallback is introduced. The evaluation crate passes 9 tests, formatting passes, direct `prepare --all` reports all 8 datasets, and the Python compatibility suite adds the regression assertion. Evaluation CLI remains Partial for real external loaders and runtime orchestration."
