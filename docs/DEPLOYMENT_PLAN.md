@@ -73,6 +73,16 @@ website does not prove that an API service is deployed.
   offline gate and the service canary are both green. Website publication is
   independently verified by its website workflow.
 
+## Website publication
+
+Build `website/` with `npm ci`, `npm run lint`, and `npm run build`, then publish
+the resulting `dist/` directory to the owner-approved static host. The public
+build must leave `VITE_AGENTROUTER_API_URL` unset: the playground is recorded by
+default and must not expose provider credentials, a private database, or an
+unrestricted API. Configure the host's single-page fallback to `index.html` and
+keep the previous static artifact available for an immediate rollback. The
+repository currently has no hosting connection, domain, or deployment secret.
+
 ## Rollback
 
 1. Stop promotion and route traffic to the last approved artifact.
