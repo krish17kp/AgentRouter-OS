@@ -2,6 +2,11 @@
 
 ## Live checkpoint — 2026-11-18
 
+TASK-259 aligns Rust diagnostic-bundle JSON encoding with Python's ASCII
+escaping contract, including surrogate pairs for emoji. The focused
+diagnostics/bundle selection passes 45 tests with strict Clippy and formatting;
+release gates and deployment state are unchanged.
+
 TASK-258 corrects the unified Rust top-level help so prompt generation shows
 the implemented `[TASK]`, `--from`, `--tool`, and `--out` options. The focused
 help/version compatibility test and formatting pass; this is a help-contract

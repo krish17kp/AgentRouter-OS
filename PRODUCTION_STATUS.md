@@ -18,6 +18,13 @@ full verification passes 2,781 Python tests with 7 expected skips, 893
 Rust/Python compatibility tests with 1 expected skip, and the workspace-wide
 Rust suite with strict Clippy.
 
+## Latest continuation slice — TASK-259
+
+Rust diagnostic-bundle JSON now uses Python-compatible ASCII escaping for
+non-ASCII content, including surrogate pairs for emoji. The focused
+diagnostics/bundle selection passes 45 tests, strict Clippy and formatting
+pass, and bundle safety/redaction behavior is unchanged.
+
 ## Previous continuation slice — TASK-256
 
 Unified Rust `hosts` and `models` inspection commands now preserve Python's

@@ -3651,3 +3651,11 @@ zero skips against the Rust loopback API.
   Rust suite and strict Clippy also pass.
 - No runtime behavior, evaluation inputs, release threshold, or deployment
   state changed.
+
+## TASK-259 — Diagnostic bundle JSON encoding parity (2026-11-18)
+
+- Rust diagnostic-bundle JSON now escapes non-ASCII characters like Python's
+  `json.dumps`, including UTF-16 surrogate pairs for non-BMP code points.
+- The focused diagnostics/bundle selection passes 45/45; strict Clippy and
+  formatting remain green.
+- Redaction, allowlisting, byte limits, and release gates are unchanged.

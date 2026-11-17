@@ -27,6 +27,12 @@
 
 ## Current production status
 
+TASK-259 (2026-11-18) aligns Rust diagnostic-bundle JSON encoding with Python:
+non-ASCII characters are emitted as `\\uXXXX` escapes, including surrogate
+pairs for non-BMP code points. The focused diagnostics/bundle selection passes
+45 tests and strict Clippy/formatting remain green; bundle safety and release
+gates are unchanged.
+
 TASK-258 (2026-11-18) corrects the unified Rust top-level help to advertise
 the complete prompt-generation syntax, including task input and safe output
 options. The focused unified CLI help test and formatting pass; no runtime,

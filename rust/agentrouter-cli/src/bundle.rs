@@ -48,13 +48,36 @@ fn bounded(text: &str) -> String {
     format!("{}{suffix}", &redacted[..end])
 }
 
+fn escape_non_ascii_json(raw: &str) -> String {
+    let mut escaped = String::with_capacity(raw.len());
+    for character in raw.chars() {
+        let codepoint = character as u32;
+        if codepoint <= 0x7f {
+            escaped.push(character);
+        } else if codepoint <= 0xffff {
+            escaped.push_str(&format!("\\u{codepoint:04x}"));
+        } else {
+            let value = codepoint - 0x1_0000;
+            let high = 0xd800 + (value >> 10);
+            let low = 0xdc00 + (value & 0x3ff);
+            escaped.push_str(&format!("\\u{high:04x}\\u{low:04x}"));
+        }
+    }
+    escaped
+}
+
+fn json_pretty_ascii(value: &Value) -> Result<String, BundleError> {
+    let content =
+        serde_json::to_string_pretty(&crate::observability::redact_value_strict(value))
+            .map_err(|_| BundleError("bundle JSON artifact could not be serialized".into()))?;
+    Ok(escape_non_ascii_json(&content))
+}
+
 fn write_text(directory: &Path, name: &str, text: &str) -> Result<(), BundleError> {
     let content = if name.ends_with(".json") {
         let value: Value = serde_json::from_str(text)
             .map_err(|_| BundleError("bundle JSON artifact is malformed".into()))?;
-        let content =
-            serde_json::to_string_pretty(&crate::observability::redact_value_strict(&value))
-                .map_err(|_| BundleError("bundle JSON artifact could not be serialized".into()))?;
+        let content = json_pretty_ascii(&crate::observability::redact_value_strict(&value))?;
         if content.len() > MAX_ARTIFACT_BYTES {
             return Err(BundleError(
                 "bundle JSON artifact exceeds size limit".into(),
@@ -291,6 +314,22 @@ mod tests {
             value["settings"]["AGENTROUTER_API_KEY"],
             "set (value withheld)"
         );
+    }
+
+    #[test]
+    fn json_artifacts_escape_unicode_like_python_json_dumps() {
+        let directory = tempfile::tempdir().unwrap();
+        write_text(
+            directory.path(),
+            "doctor.json",
+            &json!({"message": "café 🚦"}).to_string(),
+        )
+        .unwrap();
+        let raw = fs::read_to_string(directory.path().join("doctor.json")).unwrap();
+        assert!(raw.contains("\\u00e9"));
+        assert!(raw.contains("\\ud83d\\udea6"));
+        assert!(!raw.contains("café"));
+        assert!(!raw.contains("🚦"));
     }
 
     #[test]
