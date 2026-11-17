@@ -3514,3 +3514,10 @@ zero skips against the Rust loopback API.
   3 and 1 contracts instead of panicking.
 - The route compatibility suite passes 36/36; the Rust CLI crate passes 89/89
   with strict Clippy, formatting, and diff checks.
+
+## TASK-244 — Rust compatibility recheck (2026-11-18)
+
+- The complete Rust/Python and Rust CLI compatibility selection passes 867
+  tests with 1 expected skip.
+- The existing Starlette/httpx deprecation warning remains non-failing; no
+  compatibility regression was observed.

@@ -33,6 +33,10 @@ configuration returns exit 3, and runtime storage failures return exit 1; all
 emit no JSON on failure. The focused route suite (36 tests), Rust CLI tests,
 strict Clippy, formatting, and diff checks remain green.
 
+TASK-244 re-ran the complete Rust/Python and Rust CLI compatibility selection:
+867 passed and 1 expected skip, with only the existing non-failing
+Starlette/httpx deprecation warning.
+
 The local RC branch contains additional local commits after pushed head `71408b2`. TASK-208 adds
 read-only Rust contract baseline/surface tooling, and TASK-209 makes the
 Rust-backed TypeScript live suite independent of Python initialization. The

@@ -34,6 +34,10 @@ clean exit-2 `Error:` response, registry/configuration failures exit 3, and
 runtime storage failures exit 1, all with no JSON. Thirty-six route
 compatibility tests and 89 Rust CLI tests pass with strict Clippy, formatting,
 and diff checks.
+
+TASK-244 re-ran the complete Rust/Python and Rust CLI compatibility selection:
+867 passed, 1 skipped, and no compatibility regression. The sole warning is
+the existing Starlette/httpx deprecation notice.
 TASK-223 synchronizes the unified Rust CLI help with the implemented contract
 check/diff/export surface and adds a process-level regression. The fresh full
 Python suite passes 2,743 tests with 7 expected skips; the full locked Rust
