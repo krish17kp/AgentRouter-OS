@@ -58,6 +58,9 @@ database-safety runbook in `docs/DEPLOYMENT_PLAN.md`; website lint/build also
 pass. TASK-227 re-runs the current release gate: 165 cases, score 98.23, exit
 1, `release_ready: false`, and only the unchanged context-band gate fails at
 0.6667 < 0.90. No staging or production deployment has occurred.
+TASK-228 rebuilt the current sdist and wheel with `uv build`; `uvx twine check`
+passes both artifacts. Existing setuptools license metadata deprecation
+warnings remain visible and unchanged.
 TASK-213 enforces the Rust MCP legacy initialize lifecycle (`-32002` before
 initialize) while retaining stateless modern discovery. Eight Rust MCP tests,
 strict Clippy, and the full Python/Rust MCP compatibility test pass; non-stdio

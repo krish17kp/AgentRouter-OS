@@ -3396,3 +3396,10 @@ zero skips against the Rust loopback API.
   remains `0.6667`. The only local dirty-state source is the preserved
   untracked historical task directory; no holdout, threshold, or release data
   was changed.
+
+## TASK-228 — Package artifact verification (2026-11-18)
+
+- Rebuilt the current sdist and wheel with `uv build` and validated both with
+  `uvx twine check`; both passed.
+- Existing setuptools license-table/classifier deprecation warnings remain
+  visible and are not treated as release-gate failures.

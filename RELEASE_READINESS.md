@@ -101,6 +101,10 @@ The authoritative local gate was re-run from the current checkout for TASK-227:
 context-band gate is the only failed gate at `0.6667 < 0.90`; the preserved
 historical untracked task directory accounts for the reported dirty worktree.
 
+TASK-228 rebuilt the current sdist and wheel and passed `twine check` for both.
+The existing setuptools license metadata deprecation warnings remain visible;
+they do not change the evaluation or promotion gates.
+
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
 advisories across 207 locked dependencies; one unmaintained `chrono` warning
