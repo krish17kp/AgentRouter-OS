@@ -1,5 +1,12 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-187 package build and wheel smoke
+
+`uv build` produced the 0.5.0rc1 sdist and wheel. An isolated wheel install
+reported the candidate version and successfully ran `init` and `route --json`
+against a fresh home, proving packaged seeds and CLI entrypoint behavior. No
+publication was attempted.
+
 ## 2026-11-17 — TASK-186 website release smoke
 
 The website passes ESLint with zero warnings, TypeScript/Vite production build,

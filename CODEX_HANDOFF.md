@@ -57,6 +57,10 @@ TASK-186 refreshes website release evidence: ESLint, the TypeScript/Vite
 production build, and the production-only npm audit pass. The bundle is built
 locally; hosting publication and deployment remain owner-controlled.
 
+TASK-187 verifies Python packaging end-to-end: `uv build` creates the sdist and
+wheel, an isolated install reports `0.5.0rc1`, and installed-wheel `init` plus
+`route --json` succeed. PyPI publication remains owner-controlled.
+
 ## Storage relocation — 2026-11-15
 
 Active release checkout: `/data/AgentRouter-production` on branch

@@ -58,6 +58,10 @@ TASK-186 verifies the website with clean lint, a successful TypeScript/Vite
 production build, and zero production npm-audit vulnerabilities. The bundle is
 local-only until the owner supplies hosting publication and deployment approval.
 
+TASK-187 verifies Python sdist/wheel packaging and an isolated installed-wheel
+smoke: version, `init`, and `route --json` all succeed. PyPI publication remains
+blocked on the owner-controlled trusted-publisher setup.
+
 TASK-175 repairs Windows diagnostics contract parity. Rust now renders the
 contract directory through the native path formatter, matching Python's
 platform-specific `Path` representation while retaining forward slashes on

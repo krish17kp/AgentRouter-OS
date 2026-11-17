@@ -49,6 +49,10 @@ TASK-186 confirms the website's lint, production build, and production-only
 dependency audit. The generated bundle is locally valid with zero production
 vulnerabilities; deployment remains gated on hosting credentials/approval.
 
+TASK-187 confirms the Python sdist/wheel build and isolated-wheel smoke. The
+packaged CLI reports `0.5.0rc1` and can initialize and route from a clean home;
+publication remains gated on the PyPI trusted publisher setup.
+
 TASK-173 hardens diagnostic bundle writes with no-follow parent creation, a
 pinned capability directory, and exclusive creation. Serialized snapshots,
 symlink/hard-link, directory-swap, and nested-parent regressions pass; focused

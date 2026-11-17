@@ -56,6 +56,10 @@ unresolved.
 zero production dependency vulnerabilities. Hosting publication/deployment
 credentials and approval remain unresolved.
 
+**NOT release ready.** TASK-187 verifies sdist/wheel creation and isolated
+installed-wheel CLI smoke. PyPI trusted-publisher setup, release creation, and
+deployment approval remain unresolved.
+
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
 evidence. Diagnostics remains Partial for runtime-specific and complete bundle
