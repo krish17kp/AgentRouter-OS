@@ -66,6 +66,8 @@ TASK-229 installed that wheel into an isolated temporary environment; version,
 TASK-231 exercised CycloneDX generation locally: the 1.6 SBOM contains 59
 components including `agentrouter-os==0.5.0rc1`; release attachment and SLSA
 attestation remain owner-controlled workflow steps.
+TASK-232 re-ran the complete Python suite: 2,742 passed, 7 expected skips, and
+one existing non-failing Starlette/httpx TestClient deprecation warning.
 TASK-213 enforces the Rust MCP legacy initialize lifecycle (`-32002` before
 initialize) while retaining stateless modern discovery. Eight Rust MCP tests,
 strict Clippy, and the full Python/Rust MCP compatibility test pass; non-stdio
