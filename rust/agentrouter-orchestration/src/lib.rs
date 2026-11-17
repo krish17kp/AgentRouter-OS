@@ -67,6 +67,8 @@ pub enum WorkflowError {
     DuplicateId(String),
     #[error("step '{step}' depends on unknown step '{dependency}'")]
     UnknownDependency { step: String, dependency: String },
+    #[error("step '{step}' declares dependency '{dependency}' more than once")]
+    DuplicateDependency { step: String, dependency: String },
     #[error("workflow dependency graph contains a cycle")]
     Cycle,
     #[error("workflow has {actual} steps, exceeding the {limit}-step budget")]
@@ -75,6 +77,8 @@ pub enum WorkflowError {
     CostBudget { actual: u64, limit: u64 },
     #[error("parallel steps conflict on side-effect key '{0}'")]
     ParallelConflict(String),
+    #[error("step '{0}' has an empty side-effect key")]
+    EmptySideEffectKey(String),
     #[error("step '{step}' requires tool '{tool}', which is not allowed")]
     ToolNotAllowed { step: String, tool: String },
     #[error("duplicate workflow idempotency key '{0}'")]
@@ -115,6 +119,9 @@ pub fn plan_with_policy(
         if step.max_attempts == 0 {
             return Err(WorkflowError::InvalidAttempts(step.id.clone()));
         }
+        if step.side_effect_key.as_deref() == Some("") {
+            return Err(WorkflowError::EmptySideEffectKey(step.id.clone()));
+        }
         for tool in &step.required_tools {
             if tool.is_empty() || !policy.allowed_tools.contains(tool) {
                 return Err(WorkflowError::ToolNotAllowed {
@@ -151,7 +158,14 @@ pub fn plan_with_policy(
     let mut edges = BTreeMap::<String, Vec<String>>::new();
     for step in steps {
         indegree.insert(step.id.clone(), step.depends_on.len());
+        let mut dependencies = BTreeSet::new();
         for dependency in &step.depends_on {
+            if !dependencies.insert(dependency) {
+                return Err(WorkflowError::DuplicateDependency {
+                    step: step.id.clone(),
+                    dependency: dependency.clone(),
+                });
+            }
             if !by_id.contains_key(dependency) {
                 return Err(WorkflowError::UnknownDependency {
                     step: step.id.clone(),
@@ -338,6 +352,33 @@ mod tests {
             Err(WorkflowError::DuplicateIdempotencyKey(
                 "same-request".into()
             ))
+        );
+    }
+
+    #[test]
+    fn rejects_duplicate_dependencies_and_empty_side_effect_keys() {
+        let duplicate = WorkflowStep {
+            id: "child".into(),
+            depends_on: vec!["root".into(), "root".into()],
+            ..single_step("unused", 1)
+        };
+        let root = single_step("root", 1);
+        assert_eq!(
+            plan(&[root, duplicate], 2, 2),
+            Err(WorkflowError::DuplicateDependency {
+                step: "child".into(),
+                dependency: "root".into()
+            })
+        );
+
+        let empty_key = WorkflowStep {
+            id: "write".into(),
+            side_effect_key: Some(String::new()),
+            ..single_step("unused", 1)
+        };
+        assert_eq!(
+            plan(&[empty_key], 1, 1),
+            Err(WorkflowError::EmptySideEffectKey("write".into()))
         );
     }
 }

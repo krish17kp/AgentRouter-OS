@@ -583,3 +583,10 @@ hardening and orchestration runtime work; do not claim execution or production
 readiness while the hosted context-band gate, human labels, live validation,
 and deployment approvals remain open.
 
+## TASK-204 checkpoint — 2026-11-17
+
+Orchestration planning now rejects duplicate dependencies and empty side-effect
+keys before scheduling. Five focused tests and strict crate Clippy pass. The
+workflow crate remains execution-disabled; continue with owner-authorized
+runtime lifecycle work only after adapter and release gates are addressed.
+

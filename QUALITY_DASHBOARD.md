@@ -335,3 +335,9 @@ Execution planner: 5/5 tests pass. Locked workspace check and formatting pass.
 The planner is read-only and fail-closed; guarded CLI execution now uses it as
 preflight with explicit adapter readiness. No live provider request or local
 command was run.
+
+## TASK-204 orchestration input hardening — 2026-11-17
+
+Five orchestration planner tests pass, including duplicate-dependency and
+empty-side-effect rejection. Strict crate Clippy and formatting pass. No
+workflow was dispatched or allowed to mutate a workspace.

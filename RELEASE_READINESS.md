@@ -347,3 +347,10 @@ flags distinguish API and CLI adapters; dry-run stays preview-only, and the
 planner cannot execute. This improves release safety but does not satisfy the
 remaining live credential, human-evaluation, hosted-gate, or deployment
 requirements.
+
+## TASK-204 orchestration input hardening — 2026-11-17
+
+Malformed workflow dependency and side-effect declarations now fail closed
+before planning. This is a safety improvement only; orchestration dispatch,
+workspace mutation, cancellation, live adapters, and release gates remain
+open.

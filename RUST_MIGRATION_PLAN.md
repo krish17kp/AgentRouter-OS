@@ -372,6 +372,10 @@ side-effect, tool-allowlist, and idempotency-key guards. It always returns
 `execution_enabled: false`; agent dispatch, tool grants, cancellation, and
 workspace mutation remain a later owner-authorized runtime milestone.
 
+R7 follow-up (2026-11-17, input hardening): duplicate dependency entries and
+empty side-effect keys now fail closed before DAG scheduling. The planner still
+does not dispatch agents, grant tools, cancel work, or mutate workspaces.
+
 R4 follow-up (2026-11-10): Rust `registry list` now has JSON/table and filter
 parity probes. Independent review found primitive serde deserialization
 accepted malformed numeric model facts that Python's Pydantic schema rejects.

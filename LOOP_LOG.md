@@ -3186,3 +3186,11 @@ routes; manual routes remain operator handoffs. Authorized API plans still
 report `execution_enabled: false`. Planner tests (5), locked workspace check,
 and formatting pass. Actual provider/process adapters remain separately gated;
 no execution or production deployment is claimed.
+
+## TASK-204 orchestration input hardening — 2026-11-17
+
+The planning-only orchestration crate now rejects duplicate dependency entries
+and empty side-effect keys before scheduling. Its existing cycle, step/cost,
+retry, tool-allowlist, idempotency, and parallel-conflict guards remain green.
+Focused tests (5), formatting, and strict crate Clippy pass; dispatch and
+workspace mutation remain disabled.
