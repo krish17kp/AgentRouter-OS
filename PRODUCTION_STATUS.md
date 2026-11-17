@@ -49,6 +49,11 @@ The native client returns `ReadError` instead of parsing a partial payload;
 focused SDK checks, strict Clippy, formatting, and diff checks pass. Native
 read/write phase taxonomy remains Partial.
 
+TASK-185 fixes plugin doctor handling of a symlinked host root. Rust now emits
+an actionable blocked-destination finding instead of an internal diagnostic
+error, matching Python's fail-closed safety contract; focused regression and
+local symlinked-root smoke pass.
+
 TASK-175 repairs Windows diagnostics contract parity. Rust now renders the
 contract directory through the native path formatter, matching Python's
 platform-specific `Path` representation while retaining forward slashes on

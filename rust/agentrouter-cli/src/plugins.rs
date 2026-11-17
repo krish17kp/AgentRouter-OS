@@ -235,6 +235,22 @@ pub fn diagnose(plugin: &PluginSpec, root: &Path) -> Vec<serde_json::Value> {
         }));
     }
 
+    // A linked or reparse-point plugin root is a safety finding, not a bug in
+    // the doctor. Report it before probing journals/state so users get the
+    // same actionable blocked-destination result as the Python doctor.
+    if let Some(file) = plugin.files.first() {
+        if let Err(error) = check_link_components(root, file.dest) {
+            findings.push(serde_json::json!({
+                "plugin": plugin.name,
+                "check": "destination",
+                "status": "blocked",
+                "summary": format!("cannot inspect the destination: {error}"),
+                "remedy": "resolve the path above, then re-run this check",
+            }));
+            return findings;
+        }
+    }
+
     let transaction = format!(".agentrouter-state/{}.txn.json", plugin.name);
     match relative_entry_exists(root, &transaction) {
         Ok(true) => findings.push(serde_json::json!({
@@ -5937,6 +5953,28 @@ mod tests {
         symlink(&outside, &destination).unwrap();
         assert_eq!(status(plugin, &root), "blocked");
         assert_eq!(std::fs::read_to_string(outside).unwrap(), "leave unchanged");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn diagnose_reports_linked_plugin_root_as_blocked_destination() {
+        use std::os::unix::fs::symlink;
+
+        let plugin = get_plugin("claude-code").unwrap();
+        let temporary = tempfile::tempdir().unwrap();
+        let outside = temporary.path().join("outside");
+        std::fs::create_dir_all(&outside).unwrap();
+        let root = temporary.path().join(plugin.name);
+        symlink(&outside, &root).unwrap();
+
+        let findings = diagnose(plugin, &root);
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0]["check"], "destination");
+        assert_eq!(findings[0]["status"], "blocked");
+        assert!(findings[0]["summary"]
+            .as_str()
+            .unwrap()
+            .contains("link or reparse point"));
     }
 
     #[test]

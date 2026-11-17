@@ -41,6 +41,10 @@ declared-length truncated response is classified as `ReadError`, never as an
 API result. Focused SDK verification, strict Clippy, formatting, and diff
 checks pass; native read/write phase taxonomy remains Partial.
 
+TASK-185 hardens plugin diagnosis for symlinked roots. The Rust doctor now
+returns a path-specific blocked finding rather than an internal-error message,
+matching the Python safety contract; focused regression and local smoke pass.
+
 TASK-173 hardens diagnostic bundle writes with no-follow parent creation, a
 pinned capability directory, and exclusive creation. Serialized snapshots,
 symlink/hard-link, directory-swap, and nested-parent regressions pass; focused

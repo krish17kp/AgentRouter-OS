@@ -47,6 +47,11 @@ regression for truncated response bodies. It prevents partial payloads from
 being parsed as API results; native read/write phase taxonomy and all external
 release gates remain unresolved.
 
+**NOT release ready.** TASK-185 fixes the Rust plugin doctor's symlink-root
+diagnosis so linked host directories fail closed with an actionable blocked
+finding. Plugin lifecycle parity and all external release gates remain
+unresolved.
+
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
 evidence. Diagnostics remains Partial for runtime-specific and complete bundle

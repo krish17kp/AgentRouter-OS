@@ -1,5 +1,13 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-185 plugin doctor symlink-root diagnosis
+
+The Rust plugin doctor now reports linked/reparse-point roots as actionable
+blocked destinations before probing state. A local smoke against the real
+symlinked `~/.claude` root changed the result from the misleading diagnostic
+bug message to a fail-closed path-specific finding. Focused regression,
+Clippy, formatting, and diff checks pass.
+
 ## 2026-11-17 — TASK-184 SDK truncated-response regression
 
 Added a real loopback SDK regression for a peer that declares a 100-byte JSON

@@ -48,6 +48,11 @@ truncated response is reported as `ReadError` rather than parsed as an API
 result. Focused SDK verification, strict Clippy, formatting, and diff checks
 pass. The SDK remains Partial for native read/write phase taxonomy.
 
+TASK-185 fixes a real plugin-doctor safety diagnosis: a symlinked plugin root
+now reports an actionable blocked destination instead of claiming the
+diagnostic itself is broken. The focused Unix regression and local symlinked
+`~/.claude` smoke pass; no linked target is followed.
+
 ## Storage relocation — 2026-11-15
 
 Active release checkout: `/data/AgentRouter-production` on branch
