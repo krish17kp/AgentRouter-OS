@@ -361,3 +361,9 @@ The current optimized binary passes isolated Rust-only init/route/doctor/MCP
 smoke and release build/audit. Unavailable execution hosts fail closed by
 default; explicit preview mode remains non-executing. This is validation
 evidence, not production deployment or release promotion.
+
+## TASK-206 workflow planning CLI — 2026-11-17
+
+The unified CLI exposes bounded workflow planning with execution disabled.
+This adds auditable orchestration planning but does not satisfy live adapter,
+cancellation, deployment, or release-gate requirements.

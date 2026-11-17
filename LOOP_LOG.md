@@ -3203,3 +3203,11 @@ doctor, and MCP initialize passed. Default planning failed closed on the
 unavailable Claude host; explicit `--include-unavailable` produced a redacted,
 `execution_enabled=false` plan. Cargo audit found no advisories; the existing
 unmaintained chrono warning has no fixed upgrade.
+
+## TASK-206 planning-only workflow CLI — 2026-11-17
+
+The unified Rust binary now exposes `workflow plan`, reading a JSON workflow
+from stdin and emitting a bounded deterministic schedule. Valid input reports
+`execution_enabled=false`; duplicate dependencies fail with exit 2. The
+command never dispatches agents, grants tools, calls providers, or mutates a
+workspace.

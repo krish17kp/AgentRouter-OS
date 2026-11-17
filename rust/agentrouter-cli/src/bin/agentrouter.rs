@@ -14,7 +14,80 @@ use std::process::Command;
 use agentrouter_registry::{load_all_models, load_providers, ModelEntry};
 
 fn usage() -> &'static str {
-    "usage: agentrouter <init|setup|route|explain|feedback|plan|execute|stats|evaluate|prompt|registry|providers|hosts|models|doctor|server|mcp|dashboard|reliability|plugin|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  setup [--preference quality|balanced|cheap|fast] [--sample TEXT]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  plan <decision-id> [--json] [--include-unavailable] [--allow-remote] [--approve]\n  execute <decision-id> [--yes] [--dry-run]\n  stats [--json]\n  evaluate [--gold PATH] [--out-dir PATH] [--json] [--no-artifacts]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  server [--host HOST] [--port PORT]\n  mcp (stdio server)\n  dashboard [port]\n  reliability soak [--seconds N] [--workers N] [--batch N] [--home PATH] [--out PATH]\n  plugin <list|install NAME [--dry-run] [--force] [--adopt-identical]|uninstall NAME|doctor [--json]>\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
+    "usage: agentrouter <init|setup|route|explain|feedback|plan|execute|workflow|stats|evaluate|prompt|registry|providers|hosts|models|doctor|server|mcp|dashboard|reliability|plugin|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  setup [--preference quality|balanced|cheap|fast] [--sample TEXT]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  plan <decision-id> [--json] [--include-unavailable] [--allow-remote] [--approve]\n  execute <decision-id> [--yes] [--dry-run]\n  workflow plan [--json] [--max-steps N] [--max-cost N] [--allow-tool TOOL] < workflow.json\n  stats [--json]\n  evaluate [--gold PATH] [--out-dir PATH] [--json] [--no-artifacts]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  server [--host HOST] [--port PORT]\n  mcp (stdio server)\n  dashboard [port]\n  reliability soak [--seconds N] [--workers N] [--batch N] [--home PATH] [--out PATH]\n  plugin <list|install NAME [--dry-run] [--force] [--adopt-identical]|uninstall NAME|doctor [--json]>\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
+}
+
+fn workflow_plan(args: &[String]) -> Result<i32, String> {
+    if args
+        .iter()
+        .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
+    {
+        println!("Usage: agentrouter workflow plan [--json] [--max-steps N] [--max-cost N] [--allow-tool TOOL] < workflow.json");
+        println!(
+            "Reads a workflow JSON object or step array from stdin and emits a read-only plan."
+        );
+        return Ok(0);
+    }
+    if args.first().map(String::as_str) != Some("plan") {
+        return Err("usage: agentrouter workflow plan [--json] [--max-steps N] [--max-cost N] [--allow-tool TOOL] < workflow.json".to_owned());
+    }
+    let mut json_output = false;
+    let mut policy = agentrouter_orchestration::WorkflowPolicy::new(32, 1_000_000);
+    let mut arguments = args.iter().skip(1);
+    while let Some(argument) = arguments.next() {
+        match argument.as_str() {
+            "--json" => json_output = true,
+            "--max-steps" => {
+                policy.max_steps = arguments
+                    .next()
+                    .ok_or("--max-steps needs a value")?
+                    .parse()
+                    .map_err(|_| "--max-steps must be a non-negative integer")?;
+            }
+            "--max-cost" => {
+                policy.max_cost = arguments
+                    .next()
+                    .ok_or("--max-cost needs a value")?
+                    .parse()
+                    .map_err(|_| "--max-cost must be a non-negative integer")?;
+            }
+            "--allow-tool" => {
+                policy.allowed_tools.insert(
+                    arguments
+                        .next()
+                        .ok_or("--allow-tool needs a value")?
+                        .clone(),
+                );
+            }
+            option => return Err(format!("unknown workflow plan option '{option}'")),
+        }
+    }
+    let mut input = String::new();
+    std::io::stdin()
+        .read_to_string(&mut input)
+        .map_err(|error| format!("could not read workflow JSON: {error}"))?;
+    let value: serde_json::Value = serde_json::from_str(&input)
+        .map_err(|error| format!("workflow JSON is invalid: {error}"))?;
+    let steps_value = value.get("steps").unwrap_or(&value);
+    let steps: Vec<agentrouter_orchestration::WorkflowStep> =
+        serde_json::from_value(steps_value.clone())
+            .map_err(|error| format!("workflow steps are invalid: {error}"))?;
+    let plan = agentrouter_orchestration::plan_with_policy(&steps, policy)
+        .map_err(|error| format!("workflow planning blocked: {error}"))?;
+    if json_output {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&plan)
+                .map_err(|error| format!("could not serialize workflow plan: {error}"))?
+        );
+    } else {
+        println!("Workflow status: planning-only");
+        println!("Ordered steps:   {}", plan.ordered_steps.join(", "));
+        println!("Parallel groups: {}", plan.parallel_groups.len());
+        println!("Estimated cost:  {}", plan.estimated_cost);
+        println!("Execution enabled: {}", plan.execution_enabled);
+    }
+    Ok(0)
 }
 
 fn reliability_soak(args: &[String]) -> Result<i32, String> {
@@ -1377,6 +1450,9 @@ fn run() -> Result<i32, String> {
             return Err("usage: agentrouter reliability soak [options]".to_owned());
         }
         return reliability_soak(&tail[1..]);
+    }
+    if command == "workflow" {
+        return workflow_plan(&tail);
     }
 
     let home = home()?;

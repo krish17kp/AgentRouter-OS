@@ -48,6 +48,7 @@ dependencies = [
  "agentrouter-limits",
  "agentrouter-mcp",
  "agentrouter-observability",
+ "agentrouter-orchestration",
  "agentrouter-policy",
  "agentrouter-registry",
  "agentrouter-reliability",

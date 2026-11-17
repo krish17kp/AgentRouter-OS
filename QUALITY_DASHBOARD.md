@@ -347,3 +347,9 @@ workflow was dispatched or allowed to mutate a workspace.
 Optimized Rust-only smoke: init, route persistence, doctor, and MCP negotiation
 pass; default unavailable-host planning blocks, explicit preview remains
 `execution_enabled=false`. Release build/audit pass; no live provider call ran.
+
+## TASK-206 workflow planning CLI — 2026-11-17
+
+Valid workflow JSON produces a deterministic planning-only schedule; malformed
+duplicate dependencies exit nonzero. Locked CLI check, orchestration tests, and
+process smoke pass. No workflow was dispatched.

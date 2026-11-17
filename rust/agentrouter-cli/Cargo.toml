@@ -25,6 +25,7 @@ agentrouter-learning = { path = "../agentrouter-learning" }
 agentrouter-observability = { path = "../agentrouter-observability" }
 agentrouter-evaluation = { path = "../agentrouter-evaluation" }
 agentrouter-execution = { path = "../agentrouter-execution" }
+agentrouter-orchestration = { path = "../agentrouter-orchestration" }
 rusqlite = { version = "=0.41.1", features = ["bundled"] }
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.128"

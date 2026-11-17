@@ -9,7 +9,7 @@ cargo run --locked -p agentrouter-cli --bin agentrouter -- --help
 ```
 
 `agentrouter` currently dispatches `init`, `route`, `explain`, `feedback`,
-read-only `plan`, `execute`, `stats`, `prompt`, `registry list`, provider status/doctor/refresh/rollback/restore,
+read-only `plan`, `execute`, planning-only `workflow plan`, `stats`, `prompt`, `registry list`, provider status/doctor/refresh/rollback/restore,
 `hosts`, `models`, `doctor`, the local HTTP API (`server`), stdio MCP
 (`mcp`), and `dashboard` to their Rust implementations. The server defaults
 to `127.0.0.1:8000`; set `AGENTROUTER_API_KEY` to require API authentication.
@@ -23,6 +23,11 @@ Responses requests require `OPENAI_API_KEY` and are sent once without retries.
 the fail-closed execution planner and reports `execution_enabled: false` even
 when `--allow-remote` or `--approve` is supplied. `--include-unavailable` only
 allows an unavailable host to be described; it does not enable an adapter.
+`workflow plan` reads a JSON step array (or `{ "steps": [...] }`) from stdin,
+validates dependency, budget, tool, idempotency, and side-effect guards, and
+emits a planning-only schedule. It never dispatches agents or mutates a
+workspace; use `--max-steps`, `--max-cost`, and repeated `--allow-tool` to set
+the explicit planning policy.
 The human annotation flow is linked directly:
 
 ```sh

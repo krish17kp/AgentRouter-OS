@@ -598,3 +598,10 @@ default and only previews it with `--include-unavailable`; execution remains
 disabled. Release build and cargo audit pass, with the known unmaintained
 chrono warning and no available fixed upgrade.
 
+## TASK-206 checkpoint — 2026-11-17
+
+`agentrouter workflow plan` is now available as a planning-only CLI surface.
+It accepts JSON workflows, enforces explicit step/cost/tool policy, and rejects
+malformed dependency declarations. Process smoke and locked CLI checks pass;
+dispatch and workspace mutation remain disabled.
+
