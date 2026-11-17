@@ -2,7 +2,7 @@
 
 ## Current checkpoint — 2026-11-18
 
-Latest local verification on 2026-11-18 passes 2,742 Python tests with 7
+Latest local verification on 2026-11-18 passes 2,743 Python tests with 7
 expected environment skips, 89/89 focused Rust contract/unified-CLI tests,
 the locked optimized Rust workspace build, strict Clippy, and cargo audit.
 
@@ -120,6 +120,7 @@ TestClient deprecation warning.
 TASK-233 adds and smoke-tests the package-level Python reliability entrypoint;
 the focused soak and Python/Rust differential suite pass. Native transport
 phase taxonomy and broader lifecycle parity remain partial.
+The post-change full Python rerun passes 2,743 tests with 7 expected skips.
 
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability

@@ -13,6 +13,12 @@ tests/test_soak.py                         7 passed
 tests/test_rust_reliability_compat.py     12 passed
 ```
 
+The complete regression suite was then rerun against the new entrypoint:
+
+```text
+2743 passed, 7 skipped, 1 warning in 196.82s
+```
+
 The remaining reliability Partial status is unchanged: native transport phase
 taxonomy, platform resource sampling, and broader lifecycle parity still need
 separate evidence.

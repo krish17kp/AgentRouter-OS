@@ -3439,3 +3439,5 @@ zero skips against the Rust loopback API.
   parser and lifecycle.
 - The package help subprocess and focused Python/Rust reliability differential
   pass; broader native transport/lifecycle gaps remain explicitly partial.
+- The post-change full Python regression passes 2,743 tests with 7 skips and
+  one existing non-failing dependency warning.
