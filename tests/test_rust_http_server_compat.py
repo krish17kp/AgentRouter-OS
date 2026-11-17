@@ -427,3 +427,79 @@ def test_rust_http_server_rate_limit_and_idempotency_are_bounded(home):
         assert status == 429 and limited["error"]["code"] == "rate_limited"
         assert headers.get("Retry-After") and headers.get("X-Request-ID")
         assert _request(base, "/health")[0] == 200
+
+
+def test_rust_http_short_circuits_keep_request_ids_and_bad_origins_closed(home):
+    settings = {
+        "AGENTROUTER_API_KEY": "short-circuit-secret",
+        "AGENTROUTER_CORS_ORIGINS": "https://console.example",
+        "AGENTROUTER_RATE_LIMIT": "1",
+        "AGENTROUTER_RATE_WINDOW": "60",
+    }
+    with _server(home, settings) as base:
+        status, headers, payload = _request(
+            base,
+            "/v1/models",
+            headers={"X-Request-ID": "unauthorized-request"},
+        )
+        assert status == 401 and payload["error"]["code"] == "unauthorized"
+        assert headers.get("X-Request-ID") == "unauthorized-request"
+
+        valid_headers = {"X-API-Key": "short-circuit-secret", "X-Request-ID": "limited-request"}
+        assert _request(base, "/v1/models", headers=valid_headers)[0] == 200
+        status, headers, payload = _request(base, "/v1/models", headers=valid_headers)
+        assert status == 429 and payload["error"]["code"] == "rate_limited"
+        assert headers.get("X-Request-ID") == "limited-request"
+
+        preflight = urllib.request.Request(
+            base + "/v1/models",
+            headers={
+                "Origin": "https://evil.example",
+                "Access-Control-Request-Method": "GET",
+            },
+            method="OPTIONS",
+        )
+        try:
+            response = urllib.request.urlopen(preflight, timeout=5)
+        except urllib.error.HTTPError as error:
+            response = error
+        assert response.status in {200, 400, 403, 429}
+        assert response.headers.get("Access-Control-Allow-Origin") is None
+        assert response.headers.get("X-Request-ID")
+
+
+def test_rust_http_registry_errors_are_generic_and_logged_once(home):
+    registry = home / "registry" / "models.yaml"
+    registry.write_text("models:\n  - model_id: 'unterminated\n", encoding="utf-8")
+    captured = []
+    with _server(home, stderr_capture=captured) as base:
+        status, headers, payload = _request(base, "/ready")
+        assert status == 503
+        assert payload == {
+            "error": {
+                "code": "registry_unavailable",
+                "message": (
+                    "registry unavailable or invalid; run 'agentrouter doctor' locally for details"
+                ),
+            }
+        }
+        assert headers.get("X-Request-ID")
+    lines = [line for line in captured[0].splitlines() if "api.registry_error" in line]
+    assert len(lines) == 1
+    assert "unterminated" not in lines[0]
+
+
+def test_rust_http_idempotency_does_not_cache_validation_errors(home):
+    with _server(home) as base:
+        headers = {"Idempotency-Key": "invalid-request"}
+        first_status, first_headers, first_payload = _request(
+            base, "/v1/classify", "POST", {}, headers
+        )
+        second_status, second_headers, second_payload = _request(
+            base, "/v1/classify", "POST", {}, headers
+        )
+        assert first_status == second_status == 422
+        assert first_payload == second_payload
+        assert first_headers.get("Idempotency-Replay") == "false"
+        assert second_headers.get("Idempotency-Replay") == "false"
+        assert first_headers.get("X-Request-ID") and second_headers.get("X-Request-ID")

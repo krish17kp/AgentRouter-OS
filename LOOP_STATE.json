@@ -1,7 +1,7 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-17",
-  "current_phase": "TASK-168 closes observability parity after task-local request context, synchronous setter/scoped guard, opt-in logging, strict API-error redaction, active OTel spans, and single-emission server error repairs. Focused observability 9, full Rust workspace/Clippy, and Python 2728/7 pass. Inventory is 56/77 Parity and 21 Partial; commit/push and hosted inspection are next.",
+  "current_phase": "TASK-169 closes HTTP application lifecycle parity after shared OS-aware executable home resolution and process-level request-ID, auth/rate/CORS, registry-error, and idempotency differentials. Focused HTTP/schema compatibility 114, full Rust workspace/Clippy, and Python 2731/7 pass. Inventory is 57/77 Parity and 20 Partial; commit/push and hosted inspection are next.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
@@ -31,7 +31,7 @@
   "in_progress": [
     "Finish full regression, commit and push TASK-167 to the authorized release candidate branch, then inspect hosted checks.",
     "Confirm TASK-164, TASK-165, and TASK-166 hosted checks pass on the current head.",
-    "Continue the remaining 21 Partial Rust modules while PR #16 is held for human evaluation, live validation, and release inputs."
+    "Continue the remaining 20 Partial Rust modules while PR #16 is held for human evaluation, live validation, and release inputs."
   ],
   "completed_iter25": [
     "TASK-015 trusted catalogs MERGED to RC (PR #6 -> merge commit 8661629; task branch deleted local+remote). Closes TASK-013's deferred scope: file-level provenance block (provider, source_url, fetched_at UTC, count, tool_version, cli_args) ignored by the registry loader; atomic refresh via tempfile.mkstemp + os.replace; candidate-deprecation reporting on refresh (report-only, never auto-deletes); rollback with non-destructive backup rotation + new `providers restore`; new `providers doctor` that schema-validates every generated catalog and exits 3 only on real corruption (not staleness).",

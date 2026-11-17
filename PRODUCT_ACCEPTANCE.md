@@ -2,6 +2,13 @@
 
 ## Current checkpoint — 2026-11-17
 
+Product acceptance remains **not granted**. TASK-169 HTTP lifecycle parity is
+independently clear: the executable uses the shared OS-aware home resolver and
+114 focused process/schema checks cover request-ID short circuits, auth/rate/
+CORS, generic registry errors, and idempotency replay semantics. Full Rust
+workspace/Clippy and Python 2,731/7 pass. Inventory: 57 Parity /
+20 Partial.
+
 Product acceptance remains **not granted**. TASK-168 observability parity is
 independently clear: task-local and synchronous request-context APIs, opt-in
 structured events/errors, strict secret redaction, OTel span activation, and

@@ -1,5 +1,16 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-169 HTTP application lifecycle parity
+
+Closed the Rust HTTP application lifecycle row after independent review. The
+API executable now delegates default-home resolution to the shared OS-aware
+service resolver. Added process-level differentials for request IDs on auth,
+rate-limit, and CORS short circuits; generic malformed-registry responses with
+exactly one redacted log; and validation errors that are never idempotency-
+cached. Focused HTTP/schema compatibility passes 114 and the full Rust
+workspace/strict Clippy pass. Inventory advances to 57/77 Parity and 20
+Partial; full Python regression passes 2,731/7.
+
 ## 2026-11-17 — TASK-168 observability parity
 
 Completed the observability parity audit and independent security review. Rust

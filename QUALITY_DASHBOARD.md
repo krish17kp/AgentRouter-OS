@@ -2,6 +2,14 @@
 
 ## Current checkpoint — 2026-11-17
 
+TASK-169 closes the HTTP application lifecycle row after independent review.
+The executable now uses the shared OS-aware home resolver; process-level
+differentials cover request-ID guarantees on auth/rate/CORS short circuits,
+generic registry errors with one redacted log, and non-cached validation
+idempotency responses. Focused HTTP/schema compatibility passes 114, full Rust
+workspace/Clippy passes, and full Python regression passes 2,731/7. Inventory:
+57/77 Parity, 20 Partial.
+
 TASK-168 closes the observability module after independent security review.
 Rust now provides task-local request context with synchronous setter/scoped
 guard compatibility, opt-in logging configuration, generic events, bounded

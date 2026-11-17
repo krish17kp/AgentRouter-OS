@@ -32,6 +32,15 @@ Coverage is 92.021% statement, 87.833% branch, and 91.058% combined.
 
 ## Current checkpoint — 2026-11-17
 
+TASK-169 HTTP application lifecycle parity is independently clear. The API
+executable now delegates default-home resolution to the shared OS-aware service
+resolver. Process-level differentials cover request IDs on auth/rate/CORS short
+circuits, generic malformed-registry responses with one redacted log, and
+non-cached validation idempotency responses. Focused HTTP/schema compatibility
+passes 114; full Rust workspace/strict Clippy pass; full Python regression
+passes 2,731/7. Inventory is 57/77 Parity and 20 Partial. Commit this slice,
+then push and inspect hosted checks.
+
 TASK-168 observability parity is independently clear. Rust now provides
 task-local request context plus a synchronous setter/scoped guard, opt-in
 structured events and route records, bounded strictly redacted API errors,

@@ -83,7 +83,7 @@ release authority until the full set is complete.
 | `agentrouter/schema.py` | `agentrouter-core + agentrouter-registry` | Parity |
 | `agentrouter/sdk.py` | `agentrouter-cli::sdk` | Partial |
 | `agentrouter/server/__init__.py` | `agentrouter-evaluation::package_markers::SERVER_PUBLIC_EXPORTS` | Parity |
-| `agentrouter/server/app.py` | `agentrouter-api::server` + `agentrouter-api-server` | Partial |
+| `agentrouter/server/app.py` | `agentrouter-api::server` + `agentrouter-api-server` | Parity |
 | `agentrouter/server/limits.py` | `agentrouter-limits` (re-exported as `agentrouter_cli::limits`) | Parity |
 | `agentrouter/server/schemas.py` | `agentrouter-api::{schemas,responses}` | Parity |
 | `agentrouter/server/service.py` | `agentrouter-api::service` | Parity |
@@ -339,7 +339,10 @@ release authority until the full set is complete.
   optional API-key header, timeout configuration and structured HTTP errors.
   The local HTTP server and end-to-end client/server contract remain
   Python-only; redirects are disabled so a key cannot be forwarded elsewhere.
-- The Rust API crate now ports classify, route, feedback and dry-run request
+- TASK-169 closes the HTTP application lifecycle row after direct process
+  differentials for auth/rate/CORS short circuits, request-ID guarantees,
+  malformed-registry errors, idempotency non-caching, and executable default
+  home resolution. The Rust API crate now ports classify, route, feedback and dry-run request
   bounds, typed response models, and passthrough envelopes that preserve
   engine-owned fields. Differential checks cover supported Pydantic boolean and
   integer coercions and field-level 422 responses, including unbounded signed
