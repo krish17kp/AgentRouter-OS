@@ -3470,3 +3470,11 @@ zero skips against the Rust loopback API.
   path, matching Python for empty-but-present fixtures.
 - The focused evaluation CLI suite passes 22/22; Rust evaluation tests, strict
   Clippy, formatting, and diff checks pass.
+
+## TASK-238 — Evaluation prepare unknown-dataset parity (2026-11-18)
+
+- Rust `prepare --dataset does-not-exist` now reports
+  `UNAVAILABLE (adapter not importable)` and exits 1, matching Python's
+  unavailable-adapter contract.
+- The focused evaluation CLI suite remains 22/22; Rust evaluation tests and
+  Ruff checks pass.

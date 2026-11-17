@@ -182,6 +182,21 @@ def test_rust_evaluation_cli_status_and_prepare_contracts():
     assert unavailable.returncode == 1
     assert "SKIPPED_EXTERNAL" in unavailable.stdout
 
+    unknown = _cli("prepare", "--dataset", "does-not-exist")
+    assert unknown.returncode == 1
+    assert "does-not-exist" in unknown.stdout
+    assert "UNAVAILABLE (adapter not importable)" in unknown.stdout
+
+    unknown_json = _cli("prepare", "--dataset", "does-not-exist", "--json")
+    assert unknown_json.returncode == 1
+    assert json.loads(unknown_json.stdout) == [
+        {
+            "dataset": "does-not-exist",
+            "status": "UNAVAILABLE",
+            "blocker": "adapter not importable",
+        }
+    ]
+
     all_unavailable = _cli("prepare", "--all")
     assert all_unavailable.returncode == 0, all_unavailable.stderr
     assert all_unavailable.stdout.count("SKIPPED_EXTERNAL") == 8

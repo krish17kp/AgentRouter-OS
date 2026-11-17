@@ -462,6 +462,22 @@ fn run() -> Result<i32, String> {
                 let mut any_ok = false;
                 let mut records = Vec::new();
                 for name in &names {
+                    // Python treats an unknown adapter name as an unavailable
+                    // external source and returns the normal readiness result
+                    // (exit 1 for a single request), rather than surfacing a
+                    // registry lookup error. Keep the Rust CLI's preparation
+                    // contract aligned with that behavior.
+                    if !agentrouter_evaluation::DATASET_NAMES.contains(&name.as_str()) {
+                        records.push(json!({
+                            "dataset": name,
+                            "status": "UNAVAILABLE",
+                            "blocker": "adapter not importable",
+                        }));
+                        if !json_output {
+                            println!("{name:<16} UNAVAILABLE (adapter not importable)");
+                        }
+                        continue;
+                    }
                     let collection = agentrouter_evaluation::registry_api::collect(
                         &[name],
                         &root,

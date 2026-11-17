@@ -138,6 +138,10 @@ TASK-237 closes an evaluation status edge case: Rust now reports an empty but
 present fixture as available, matching Python's path-based contract. Focused
 CLI compatibility and Rust evaluation checks pass.
 
+TASK-238 closes the corresponding unknown-dataset preparation edge: Rust now
+reports an unavailable adapter and returns the Python-compatible exit status
+instead of surfacing a registry lookup error.
+
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
 advisories across 207 locked dependencies; one unmaintained `chrono` warning
