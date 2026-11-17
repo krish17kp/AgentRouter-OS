@@ -85,6 +85,8 @@ than record count; 22 CLI compatibility tests, Rust evaluation tests, Clippy,
 formatting, and diff checks pass.
 TASK-238 fixes Rust evaluation `prepare` for unknown dataset names: it now
 reports `UNAVAILABLE (adapter not importable)` and returns exit 1 like Python.
+TASK-239 fixes guarded Rust execution runtime exits: missing commands and
+provider/host transport failures now return exit 1 (`EXIT_RUNTIME`) like Python.
 TASK-213 enforces the Rust MCP legacy initialize lifecycle (`-32002` before
 initialize) while retaining stateless modern discovery. Eight Rust MCP tests,
 strict Clippy, and the full Python/Rust MCP compatibility test pass; non-stdio

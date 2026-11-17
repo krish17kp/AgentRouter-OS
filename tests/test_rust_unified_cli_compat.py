@@ -842,6 +842,36 @@ def test_unified_execute_revalidates_safety_and_requires_confirmation(tmp_path, 
     assert marker.exists()
 
 
+def test_unified_execute_missing_command_is_runtime_error(tmp_path, unified_binary):
+    home = tmp_path / "agentrouter-home"
+    initialized = _run(unified_binary, "init", home=home)
+    assert initialized.returncode == 0, initialized.stderr
+    routed = _run(
+        unified_binary,
+        "route",
+        "write a short haiku about routers",
+        "--save",
+        "--json",
+        home=home,
+    )
+    assert routed.returncode == 0, routed.stderr
+    payload = json.loads(routed.stdout)
+    provider_file = home / "registry" / "providers.yaml"
+    provider_data = yaml.safe_load(provider_file.read_text(encoding="utf-8"))
+    provider = next(
+        item
+        for item in provider_data["providers"]
+        if item["id"] == payload["recommendation"]["provider"]
+    )
+    provider["supports_execution"] = True
+    provider["exec_command"] = ["agentrouter-command-that-does-not-exist", "{prompt}"]
+    provider_file.write_text(yaml.safe_dump(provider_data), encoding="utf-8")
+
+    failed = _run(unified_binary, "execute", payload["decision_id"], "--yes", home=home)
+    assert failed.returncode == 1
+    assert "Execution failed: command not found" in failed.stderr
+
+
 def test_unified_execute_never_runs_high_risk_decisions(tmp_path, unified_binary):
     home = tmp_path / "agentrouter-home"
     initialized = _run(unified_binary, "init", home=home)

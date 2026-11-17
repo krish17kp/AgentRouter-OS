@@ -173,7 +173,9 @@ pub fn run(home: &Path, args: &[String]) -> Result<i32, String> {
             Ok(code) => Ok(code),
             Err(error) => {
                 eprintln!("{error}");
-                Ok(3)
+                // CLI_SPEC classifies a failed child-process launch as a
+                // runtime error (exit 1), matching Python's EXIT_RUNTIME.
+                Ok(1)
             }
         };
     }
@@ -256,7 +258,7 @@ pub fn run(home: &Path, args: &[String]) -> Result<i32, String> {
             Ok(result) => result,
             Err(error) => {
                 eprintln!("Execution failed: {error}");
-                return Ok(3);
+                return Ok(1);
             }
         };
         println!(
@@ -301,7 +303,7 @@ pub fn run(home: &Path, args: &[String]) -> Result<i32, String> {
         Ok(code) => Ok(code),
         Err(error) => {
             eprintln!("{error}");
-            Ok(3)
+            Ok(1)
         }
     }
 }

@@ -3478,3 +3478,10 @@ zero skips against the Rust loopback API.
   unavailable-adapter contract.
 - The focused evaluation CLI suite remains 22/22; Rust evaluation tests and
   Ruff checks pass.
+
+## TASK-239 — Execution runtime exit-code parity (2026-11-18)
+
+- Rust guarded execution now returns exit 1 (`EXIT_RUNTIME`) for missing child
+  commands and OpenAI/host transport failures, matching the Python CLI.
+- The unified CLI suite passes 20/20 for this process surface; the Rust CLI
+  crate has 89 passing tests with strict Clippy, formatting, and diff checks.

@@ -166,6 +166,10 @@ TASK-238 fixes the complementary `prepare` edge: an unknown dataset now reports
 surfacing a registry lookup error. The focused compatibility suite and Rust
 evaluation tests remain green.
 
+TASK-239 fixes Rust guarded execution exit semantics: missing child commands and
+provider/host transport failures now return Python's runtime code 1 rather than
+code 3. The unified CLI regression and Rust CLI crate checks pass.
+
 - [ ] PR review and hosted checks: PR #16 is the sole open PR against `main`, with no GitHub reviews or review requests. Pushed RC head `71408b2` is green across Rust Linux/Windows/macOS, Python/Rust compatibility on all three platforms, Python 3.10–3.13, Windows, macOS, Security, Website, and Critical Mutation. The enforcing release gate remains honestly held by frozen context-band accuracy `0.6667 < 0.90`; live smoke skips without credentials.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md): 60 rows meet the full-module differential bar and 17 remain Partial. TASK-159–162 close platform, evaluator-facade, grading, and runner parity; TASK-164 closes server schemas; TASK-166 closes annotation schemas; TASK-167 closes server service; TASK-168 closes observability; TASK-169 closes the HTTP application lifecycle; TASK-170 closes packaged annotation CLI resources; TASK-171 closes provider refresh; TASK-176 closes the Python module entrypoint; broader migration differences remain.
@@ -437,7 +441,7 @@ baseline reproduces overwriting an existing artifact in Python; Rust refuses it.
 - [ ] Rust R4 full CLI parity. TASK-089 now serializes race-safe SQLite initialization in both runtimes, but the new `doctor_cli` probe does not yet replace the shipped Python doctor and its bundle contract remains partial.
 - [ ] Rust dashboard renderer/loopback server and Rust/Python feedback-stat parity merged via PR #30 at `bd98b6b`; the command remains a migration probe until the unified Rust CLI lands.
 - [ ] Rust observability redaction/safe-echo helpers and bounded `ureq`/rustls OpenAI Responses transport merged via PR #30; structured logging, request context, traceback handling, and OTel integration remain unported. Live credentials, CLI wiring, and Python/Rust end-to-end parity remain open.
-- [ ] Rust R5-R13 milestones and cross-platform parity. PR #30 added a bounded OpenAI Responses HTTPS transport; integration into the guarded execution command remains outstanding.
+- [ ] Rust R5-R13 milestones and cross-platform parity. The bounded OpenAI Responses HTTPS transport is integrated into the guarded execution command with fail-closed policy checks; live credential smoke, complete lifecycle parity, and hosted validation remain outstanding.
 - [x] PR #31 ported Rust `agentrouter-cli::harness` with eight Python/Rust cases, cross-platform CI, and dependency hardening; merged at `a246cf6`.
 - [x] PR #33 ports Rust context-band model features, artifact validation, and inference; 15 prompts (30 feature/prediction checks) plus artifact-sync test passed locally and on cross-platform CI. It remains disconnected from the default rule classifier until evaluation approves enabling learned routing.
 - [x] Rust AgentRouter gold adapter matches Python metadata, availability, description, loading, checksums, and deterministic sampling; exact JSON parity covers all 165 committed cases and a Unicode/defaults fixture. Cross-platform differential CI is added in this increment.
