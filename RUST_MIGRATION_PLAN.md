@@ -103,9 +103,9 @@ owner/credential/infra action this session cannot take).
 | Execution start/monitor/output-collect/verify/cancel/timeout/retry/recover | MISSING | No code found; this is real, net-new scope, not a port target |
 | Resource/budget limits, audit logging for execution | MISSING | `agentrouter/server/limits.py` (169 lines) exists but limits HTTP request size/rate, not agent-execution budgets — do not conflate the two |
 | **Orchestration (multi-agent)** | | |
-| Workflow/task decomposition | MISSING | No module named or shaped like a planner; `grep -ril "orchestrat\|multi.agent\|workflow"` across `agentrouter/` matches only incidental identifier substrings in `context_model.py`, `classifier.py`, `contract.py`, `evaluation/adapters/twinrouterbench.py` — none is an orchestration engine |
-| Agent selection across a workflow | MISSING | Single-decision routing exists (`engine.route`); no multi-step/multi-agent planner |
-| Dependency graphs, sequential/parallel execution, isolated workspaces, context handoff, intermediate verification, failure recovery, cancellation, result aggregation | MISSING | None of this exists in the codebase today. This is the largest genuine gap the prior foundation review under-scoped — see **Multi-agent orchestration architecture** below, which is net-new design, not a 1:1 Rust port of existing Python |
+| Workflow/task decomposition | PARTIAL (Rust planning only) | `agentrouter-orchestration` accepts explicit workflow steps and exposes a bounded `agentrouter workflow plan` surface; natural-language decomposition is not implemented |
+| Agent selection across a workflow | PARTIAL (Rust planning only) | Single-decision routing exists (`engine.route`); workflow steps are not yet individually classified/routed or dispatched |
+| Dependency graphs, sequential/parallel execution, isolated workspaces, context handoff, intermediate verification, failure recovery, cancellation, result aggregation | PARTIAL (Rust planning/state only) | `agentrouter-orchestration` validates a DAG, budgets, tools, idempotency, side-effect conflicts, retries, cancellation, and result aggregation in an execution-disabled state machine; isolated workspaces, provider dispatch, intermediate verification, and real cancellation of in-flight work remain open |
 | **Codebase intelligence (Graphify)** | | |
 | Graph build/query integration | MISSING on this machine | `AGENT_HANDOFF.md`: verified absent — `~/.local/bin` and `~/.venvs` have no `graphify`; historical node/edge counts are from 2026-08-20 and may be stale. Graphify is an external tool invoked via CLI/PATH, not a module inside `agentrouter/` — there is nothing in-tree to "port"; migrating it means re-establishing (or writing) an equivalent capability, which is a new scope item, not a module on the port-order table |
 | **Extensibility** | | |
@@ -242,7 +242,8 @@ must define, before any execution adapter is written in either language:
 
 ## Multi-agent orchestration architecture (net-new scope)
 
-Also absent from the current codebase (inventory above). Required shape for
+The Rust planning crate now covers the bounded graph/state slice below, while
+the adapter and workspace lifecycle remains open. Required shape for
 `agentrouter-orchestration`:
 
 - **Task decomposition** — split a workflow-shaped request into ordered

@@ -16,3 +16,8 @@ cargo clippy --locked -p agentrouter-orchestration --all-targets -- -D warnings
 
 The runtime result always reports `execution_enabled: false`; actual adapter
 lifecycle and owner authorization remain separate release milestones.
+
+The migration inventory was reconciled at the same checkpoint: workflow
+planning/dependency/state behavior is now marked Partial rather than Missing;
+natural-language decomposition, per-step routing, isolated workspaces, live
+dispatch, and in-flight process cancellation remain explicitly open.
