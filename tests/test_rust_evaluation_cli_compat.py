@@ -217,6 +217,12 @@ def test_rust_evaluation_cli_status_and_prepare_contracts():
     assert all(row["status"] == "SKIPPED_EXTERNAL" for row in prepare_rows)
 
 
+def test_rust_evaluation_validate_dataset_error_prefix_matches_python():
+    process = _cli("validate-dataset", "does-not-exist")
+    assert process.returncode == 3
+    assert process.stderr.startswith("Invalid dataset:")
+
+
 def test_rust_evaluation_status_uses_fixture_presence_not_record_count(tmp_path):
     relocated = tmp_path / "relocated"
     shutil.copytree(

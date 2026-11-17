@@ -348,10 +348,12 @@ fn run() -> Result<i32, String> {
                     0,
                     "fixture",
                     None,
-                )?
+                )
+                .map_err(|error| format!("Invalid dataset: {error}"))?
                 .cases
             } else {
-                agentrouter_evaluation::load_agentrouter_gold(Path::new(&name_or_path))?
+                agentrouter_evaluation::load_agentrouter_gold(Path::new(&name_or_path))
+                    .map_err(|error| format!("Invalid dataset: {error}"))?
             };
             println!("OK: {} cases validated.", cases.len());
             Ok(0)

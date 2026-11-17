@@ -3485,3 +3485,10 @@ zero skips against the Rust loopback API.
   commands and OpenAI/host transport failures, matching the Python CLI.
 - The unified CLI suite passes 20/20 for this process surface; the Rust CLI
   crate has 89 passing tests with strict Clippy, formatting, and diff checks.
+
+## TASK-240 — Evaluation validate error parity (2026-11-18)
+
+- Invalid Rust `validate-dataset` requests now use Python's `Invalid dataset:`
+  stderr prefix and exit 3.
+- The focused evaluation CLI suite passes 23/23; Rust evaluation tests,
+  Clippy, formatting, and diff checks pass.

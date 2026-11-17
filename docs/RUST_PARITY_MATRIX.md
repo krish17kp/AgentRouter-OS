@@ -314,6 +314,10 @@ release authority until the full set is complete.
 - TASK-238 aligns evaluation CLI `prepare` with Python for unknown dataset
   names: the adapter is reported as unavailable and the single-dataset probe
   exits 1 instead of surfacing a registry lookup error.
+- TASK-240 aligns evaluation CLI invalid `validate-dataset` errors with
+  Python's `Invalid dataset:` prefix and exit code 3.
+- TASK-239 aligns guarded execution runtime failures with Python's exit code 1
+  for missing commands and provider/host transport failures.
 - Classification-only grading and gate calculation have differential coverage.
   Rust also supports bounded `measure_all` scoring for caller-supplied cases,
   seed models, and command manifests; automatic runtime discovery remains
