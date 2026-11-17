@@ -18,6 +18,9 @@ Date: 2026-11-18
 cargo fmt --all                                      # passed
 cargo test --locked -p agentrouter-cli contract --lib # 11 passed
 cargo clippy --locked -p agentrouter-cli --all-targets -- -D warnings # passed
+cargo test --locked --workspace                        # all workspace tests passed
+cargo build --locked --workspace --release             # passed
+cargo audit --no-yanked -f Cargo.lock                  # no advisories; chrono unmaintained warning only
 temporary CLI fixture with removed /health endpoint  # acceptance recorded
 ```
 
