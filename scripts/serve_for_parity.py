@@ -76,7 +76,10 @@ def _initialize_home(home: Path, *, implementation: str = "python") -> int:
             check=False,
         )
         if result.returncode != 0:
-            print(f"agentrouter Rust init failed: {result.stderr or result.stdout}", file=sys.stderr)
+            print(
+                f"agentrouter Rust init failed: {result.stderr or result.stdout}",
+                file=sys.stderr,
+            )
         return result.returncode
 
     from typer.testing import CliRunner

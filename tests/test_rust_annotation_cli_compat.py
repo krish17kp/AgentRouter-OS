@@ -200,7 +200,9 @@ def test_annotation_cli_honors_relocated_project_root(tmp_path, rust_evaluate_bi
         env={"AGENTROUTER_PROJECT_ROOT": str(relocated)},
     )
     assert generated.returncode == 0, generated.stderr
-    expected = packs.build_pack(store.load_candidates(benchmark_root / "candidates_v1.yaml"), seed=7)
+    expected = packs.build_pack(
+        store.load_candidates(benchmark_root / "candidates_v1.yaml"), seed=7
+    )
     assert _dump(store.load_candidates(output)) == _dump(expected)
 
 

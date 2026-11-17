@@ -69,7 +69,10 @@ def test_help_and_version_are_available(unified_binary):
     assert "contract" in help_result.stdout
     assert "--live URL" in help_result.stdout
     assert "export" in help_result.stdout
-    assert "prompt generate [TASK] [--from <decision-id>] [--tool <host>] [--out PATH]" in help_result.stdout
+    assert (
+        "prompt generate [TASK] [--from <decision-id>] [--tool <host>] [--out PATH]"
+        in help_result.stdout
+    )
 
     python_help = subprocess.run(
         [sys.executable, "-m", "agentrouter", "--help"],
@@ -242,7 +245,9 @@ def test_explain_supports_python_text_and_json_surfaces(tmp_path, unified_binary
 
     text_result = _run(unified_binary, "explain", decision_id, home=home)
     assert text_result.returncode == 0, text_result.stderr
-    assert text_result.stdout.startswith('Task: "Review this Python repository for security issues."')
+    assert text_result.stdout.startswith(
+        'Task: "Review this Python repository for security issues."'
+    )
     assert "Eligibility:" in text_result.stdout
     assert "Scores" in text_result.stdout
     assert "Gate: approval=" in text_result.stdout
@@ -333,9 +338,7 @@ def test_unified_prompt_accepts_task_text_like_python(tmp_path, unified_binary):
     assert rust.stderr == python.stderr
 
 
-def test_unified_prompt_task_uses_python_weight_config_without_policy_cap(
-    tmp_path, unified_binary
-):
+def test_unified_prompt_task_uses_python_weight_config_without_policy_cap(tmp_path, unified_binary):
     home = tmp_path / "agentrouter-home"
     initialized = _run(unified_binary, "init", home=home)
     assert initialized.returncode == 0, initialized.stderr
@@ -501,7 +504,10 @@ def test_contract_cli_checks_baseline_and_reports_surface_changes(tmp_path, unif
     assert json.loads(breaking_result.stdout)["compatible"] is False
 
     malformed_path = tmp_path / "malformed.json"
-    malformed_path.write_text(json.dumps({"openapi": "3.1.0", "paths": {"/x": {"$ref": "#/missing"}}}), encoding="utf-8")
+    malformed_path.write_text(
+        json.dumps({"openapi": "3.1.0", "paths": {"/x": {"$ref": "#/missing"}}}),
+        encoding="utf-8",
+    )
     malformed_result = _run(unified_binary, "contract", "diff", malformed_path, "--json")
     assert malformed_result.returncode == 2
     assert "unusable $ref" in malformed_result.stderr
