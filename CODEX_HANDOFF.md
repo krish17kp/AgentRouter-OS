@@ -16,6 +16,13 @@ MSRV, API compatibility, build smoke, release-readiness report, Website, and
 Security checks are green. The only hosted failure is the expected frozen
 context-band release gate at 0.6667 < 0.90. Continue the remaining Partial
 parity work without changing thresholds or holdout data.
+
+TASK-241 closes the Rust direct route CLI classifier-option gap: overrides,
+preference flags, no-log, and preview/availability compatibility options now
+match Python. Fifty-one focused route/unified compatibility tests plus the
+locked Rust workspace, strict Clippy, formatting, and diff checks pass. Full R4
+CLI parity remains open, as do the honest context-band, human evaluation, live
+provider, and deployment gates.
 TASK-223 synchronizes the unified Rust CLI help with the implemented contract
 check/diff/export surface and adds a process-level regression. The fresh full
 Python suite passes 2,743 tests with 7 expected skips; the full locked Rust

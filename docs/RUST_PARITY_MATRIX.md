@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-18 (TASK-082–238). This inventory covers every Python source module under
+Updated: 2026-11-18 (TASK-082–241). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -318,6 +318,9 @@ release authority until the full set is complete.
   Python's `Invalid dataset:` prefix and exit code 3.
 - TASK-239 aligns guarded execution runtime failures with Python's exit code 1
   for missing commands and provider/host transport failures.
+- TASK-241 aligns direct Rust `route` with Python classifier overrides,
+  preference flags, no-log behavior, and preview/availability compatibility
+  options. Broader CLI and runtime lifecycle parity remains partial.
 - Classification-only grading and gate calculation have differential coverage.
   Rust also supports bounded `measure_all` scoring for caller-supplied cases,
   seed models, and command manifests; automatic runtime discovery remains

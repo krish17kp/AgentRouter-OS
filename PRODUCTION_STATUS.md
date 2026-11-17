@@ -2,6 +2,15 @@
 
 Updated: 2026-11-18
 
+## Latest continuation slice — TASK-241
+
+Rust direct `route` now accepts Python-compatible classifier overrides,
+preference flags, `--no-log`, and preview/availability compatibility flags.
+The route/unified compatibility selection passes 51 tests, and the locked Rust
+workspace, strict Clippy, formatting, and diff checks pass. This improves R4
+CLI parity but does not close the remaining full CLI, provider, evaluation,
+human-gate, or deployment work.
+
 ## Definition of done
 
 ## Current continuation checkpoint — 2026-11-18

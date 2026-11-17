@@ -3492,3 +3492,10 @@ zero skips against the Rust loopback API.
   stderr prefix and exit 3.
 - The focused evaluation CLI suite passes 23/23; Rust evaluation tests,
   Clippy, formatting, and diff checks pass.
+
+## TASK-241 — Route CLI classifier-option parity (2026-11-18)
+
+- Rust direct `route` now accepts Python classifier overrides, preference flags,
+  `--no-log`, and preview/availability compatibility flags.
+- The focused route and unified CLI compatibility suites pass 51/51; the
+  locked Rust workspace, strict Clippy, formatting, and diff checks pass.

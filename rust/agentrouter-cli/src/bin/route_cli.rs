@@ -13,21 +13,72 @@
 use std::path::PathBuf;
 
 use agentrouter_classifier::{classify, ClassifyOptions};
+use agentrouter_core::Level;
 use agentrouter_policy::controls::RouteControls;
 use agentrouter_registry::{load_all_models, load_providers};
 
-fn parse_options(
-    extra: Vec<String>,
-) -> Result<(bool, bool, Option<String>, RouteControls), String> {
+struct RouteCliOptions {
+    save: bool,
+    verify_live: bool,
+    no_log: bool,
+    prefer: Option<String>,
+    controls: RouteControls,
+    classify: ClassifyOptions,
+}
+
+fn parse_options(extra: Vec<String>) -> Result<RouteCliOptions, String> {
     let mut args = extra.into_iter();
     let mut save = false;
     let mut verify_live = false;
+    let mut no_log = false;
     let mut prefer = None;
     let mut controls = RouteControls::default();
+    let mut classify = ClassifyOptions::default();
+    let mut preference_flags = Vec::new();
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--save" => save = true,
+            "--no-log" => no_log = true,
             "--verify-live" => verify_live = true,
+            "--json" => {}
+            "--context-tokens" => {
+                let value = args.next().ok_or("--context-tokens needs a value")?;
+                let integer = value
+                    .parse::<i128>()
+                    .map_err(|_| "--context-tokens must be an integer")?;
+                classify.context_tokens = Some(
+                    serde_json::Number::from_i128(integer)
+                        .ok_or("--context-tokens is outside the supported integer range")?,
+                );
+            }
+            "--risk" => {
+                let value = args.next().ok_or("--risk needs a value")?;
+                classify.risk = Some(match value.as_str() {
+                    "low" => Level::Low,
+                    "medium" => Level::Medium,
+                    "high" => Level::High,
+                    _ => return Err("--risk must be low, medium, or high".to_owned()),
+                });
+            }
+            "--tool" => {
+                let value = args.next().ok_or("--tool needs a value")?;
+                classify.tools = Some(
+                    value
+                        .split(',')
+                        .map(str::trim)
+                        .filter(|tool| !tool.is_empty())
+                        .map(str::to_owned)
+                        .collect(),
+                );
+            }
+            "--uncertainty-threshold" => {
+                let value = args.next().ok_or("--uncertainty-threshold needs a value")?;
+                classify.uncertainty_threshold = Some(
+                    value
+                        .parse::<f64>()
+                        .map_err(|_| "--uncertainty-threshold must be numeric")?,
+                );
+            }
             "--vendor" => controls
                 .vendor
                 .push(args.next().ok_or("--vendor needs a value")?),
@@ -53,7 +104,9 @@ fn parse_options(
                 controls.max_price = Some(cap);
             }
             "--stable-only" => controls.stable_only = true,
+            "--allow-preview" => {}
             "--available-only" => controls.available_only = true,
+            "--include-unavailable" => {}
             "--prohibit-tool" => {
                 let tool = args.next().ok_or("--prohibit-tool needs a value")?;
                 if !agentrouter_policy::taxonomy::is_known(&tool) {
@@ -61,17 +114,43 @@ fn parse_options(
                 }
                 controls.prohibit_tool.push(tool);
             }
+            "--prefer-quality" => preference_flags.push("quality"),
+            "--prefer-balanced" => preference_flags.push("balanced"),
+            "--prefer-cheap" => preference_flags.push("cheap"),
+            "--prefer-fast" => preference_flags.push("fast"),
             name if name.starts_with('-') => return Err(format!("unknown option {name}")),
             name if prefer.is_none() => prefer = Some(name.to_string()),
             name => return Err(format!("unexpected argument {name}")),
         }
+    }
+    if preference_flags.len() > 1 {
+        return Err(format!(
+            "Use only one --prefer-* flag (got {})",
+            preference_flags.join(", ")
+        ));
+    }
+    if let Some(flag) = preference_flags.pop() {
+        if prefer.is_some() {
+            return Err("a positional preference cannot be combined with --prefer-*".to_owned());
+        }
+        prefer = Some(flag.to_owned());
     }
     if let Some(name) = &prefer {
         if !agentrouter_policy::preference_weights().contains_key(name.as_str()) {
             return Err(format!("unknown routing preference {name}"));
         }
     }
-    Ok((save, verify_live, prefer, controls))
+    if no_log {
+        save = false;
+    }
+    Ok(RouteCliOptions {
+        save,
+        verify_live,
+        no_log,
+        prefer,
+        controls,
+        classify,
+    })
 }
 
 fn main() {
@@ -83,8 +162,7 @@ fn main() {
     let task = args
         .next()
         .expect("usage: route_cli <home> <task> [prefer]");
-    let (save, verify_live, prefer, controls) =
-        parse_options(args.collect()).expect("valid route options");
+    let options = parse_options(args.collect()).expect("valid route options");
 
     let reg_dir = home.join("registry");
     let providers = load_providers(&reg_dir.join("providers.yaml")).expect("load providers");
@@ -93,7 +171,7 @@ fn main() {
         agentrouter_cli::load_route_config(&home).expect("load config");
     let models = agentrouter_cli::apply_policy(models, max_tier.as_deref()).expect("apply policy");
 
-    let cls = classify(&task, &ClassifyOptions::default());
+    let cls = classify(&task, &options.classify);
 
     let conn = agentrouter_storage::connect(&home).expect("connect store");
     let (weights, note) = if learning {
@@ -108,13 +186,13 @@ fn main() {
         &cls,
         weights,
         agentrouter_cli::RouteOptions {
-            prefer: prefer.as_deref(),
+            prefer: options.prefer.as_deref(),
             weight_shift_note: note,
-            controls: &controls,
-            verify_live,
+            controls: &options.controls,
+            verify_live: options.verify_live,
         },
     );
-    if save {
+    if options.save && !options.no_log {
         let decision_id = agentrouter_storage::save_decision(&conn, &task, &payload)
             .expect("save decision to existing SQLite log");
         payload["decision_id"] = serde_json::json!(decision_id);

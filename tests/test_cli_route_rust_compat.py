@@ -178,6 +178,29 @@ def test_rust_route_respects_configured_weights_and_pricing_policy(seeded_home, 
     assert rust == expected
 
 
+def test_rust_route_matches_classifier_overrides_and_preference_flags(seeded_home, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_HOME", str(seeded_home))
+    task = "write a short guide"
+    arguments = [
+        "--context-tokens",
+        "8192",
+        "--risk",
+        "low",
+        "--tool",
+        "file-edit,shell",
+        "--uncertainty-threshold",
+        "0.7",
+        "--prefer-quality",
+    ]
+    python = CliRunner().invoke(app, ["route", task, "--json", "--no-log", *arguments])
+    assert python.exit_code == 0, python.output
+    expected = json.loads(python.stdout)
+    expected.pop("decision_id")
+    expected.pop("task")
+    rust = _rust_route_payload(seeded_home, task, "--no-log", *arguments)
+    assert rust == expected
+
+
 @pytest.mark.parametrize(
     "config",
     [
