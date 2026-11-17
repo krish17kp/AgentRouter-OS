@@ -6,7 +6,7 @@ Updated: 2026-11-17
 
 ## Current continuation checkpoint — 2026-11-17
 
-The local RC branch is 43 commits ahead of pushed head `71408b2`. TASK-208 adds
+The local RC branch contains additional local commits after pushed head `71408b2`. TASK-208 adds
 read-only Rust contract baseline/surface tooling, and TASK-209 makes the
 Rust-backed TypeScript live suite independent of Python initialization. The
 required SDK run is green at 18/18 with zero skips, and the Rust workspace,
