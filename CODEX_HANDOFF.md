@@ -30,7 +30,7 @@ passes and the direct all-dataset command reports eight external blockers.
 TASK-180 aligns context-band human-readable output with Python (bootstrap CI,
 Python-style containers, unquoted checksum, signed delta); JSON remains stable.
 
-TASK-181 is locally verified at the unpushed commit `cb99534`: the Rust SDK's
+TASK-181 is locally verified at the unpushed commit `35e44cb`: the Rust SDK's
 native ureq transport now applies the configured timeout independently to
 connect, read, write, and aggregate request phases. Focused SDK tests pass
 10/10, full workspace tests/Clippy/format pass, and SDK parity remains Partial

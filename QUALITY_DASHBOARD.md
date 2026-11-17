@@ -8,6 +8,12 @@ the Windows diagnostics path-format mismatch. Local Python/Rust release checks r
 frozen context-band gate and owner-supplied validation/deployment inputs remain
 open.
 
+TASK-183 adds fresh local release evidence: `cargo build --release --locked
+--workspace` succeeds, the optimized binary reports `0.5.0rc1`, and
+`cargo audit --no-yanked` reports no vulnerabilities across 205 locked crates.
+RustSec does report one unmaintained `chrono` warning with no available fixed
+upgrade; it is recorded in the dependency-audit note and is not hidden.
+
 TASK-179 closes a concrete evaluation CLI contract gap: Rust `prepare --all`
 now returns success after a complete external-blocker report, while a single
 unavailable dataset remains a nonzero readiness result. All eight blockers are

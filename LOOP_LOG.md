@@ -1,5 +1,14 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-183 release build and dependency audit
+
+The optimized locked Rust workspace build completed successfully. The release
+binary reports `agentrouter 0.5.0rc1` and exposes the unified help surface.
+`cargo audit --no-yanked` scanned 205 locked dependencies with no vulnerability
+advisories and one visible unmaintained-`chrono` warning (`RUSTSEC-2026-0543`),
+for which RustSec currently lists no fixed upgrade. Evidence is recorded in
+`docs/RUST_DEPENDENCY_AUDIT_2026-11-17.md`.
+
 ## 2026-11-17 — TASK-182 reliability response consumption
 
 The Rust reliability harness now drains complete and non-successful HTTP

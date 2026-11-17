@@ -8,6 +8,11 @@ Local release checks are green, but the frozen context-band
 gate, human evaluation, live OpenAI validation, and promotion/deployment inputs
 remain unresolved.
 
+TASK-183 confirms the optimized locked Rust workspace build and release binary
+help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
+advisories across 205 locked dependencies; one unmaintained `chrono` warning
+(`RUSTSEC-2026-0543`, no fixed upgrade currently listed) remains documented.
+
 **NOT release ready.** TASK-173 hardens bundle writes against parent and
 final-component symlink/reparse redirection and preserves opt-in database
 snapshot behavior. Bundle parity remains Partial for complete metadata and

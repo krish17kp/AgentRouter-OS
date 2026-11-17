@@ -14,6 +14,12 @@ Updated: 2026-11-17
 
 ## Current recovery checkpoint
 
+TASK-183 confirms the optimized locked Rust workspace build and release binary
+help/version smoke. The RustSec audit scanned 205 locked dependencies with no
+vulnerability advisories; one unmaintained `chrono` warning has no available
+fixed upgrade and is recorded in
+[`docs/RUST_DEPENDENCY_AUDIT_2026-11-17.md`](docs/RUST_DEPENDENCY_AUDIT_2026-11-17.md).
+
 TASK-177 aligns stable diagnostic-bundle environment metadata. Rust bundles now
 include the shared `agentrouter_version` alongside the Rust probe version and
 explicit runtime marker, while preserving the existing secret-safe settings
