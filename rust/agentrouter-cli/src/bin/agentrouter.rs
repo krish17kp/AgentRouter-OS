@@ -581,10 +581,9 @@ fn prompt_from_task(
     tool: Option<&str>,
     output: Option<&Path>,
 ) -> Result<i32, String> {
-    let mut models = load_catalog(home)?;
-    let (weights, _learning, max_tier) = agentrouter_cli::load_route_config(home)
+    let models = load_catalog(home)?;
+    let (weights, _learning, _max_tier) = agentrouter_cli::load_route_config(home)
         .map_err(|error| format!("Config error: {error}"))?;
-    models = agentrouter_cli::apply_policy(models, max_tier.as_deref())?;
     let classification =
         agentrouter_classifier::classify(task, &agentrouter_classifier::ClassifyOptions::default());
     let route = agentrouter_cli::route_payload(task, &models, &classification, weights, None, None);

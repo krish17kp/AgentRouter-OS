@@ -283,6 +283,35 @@ def test_unified_prompt_accepts_task_text_like_python(tmp_path, unified_binary):
     assert rust.stderr == python.stderr
 
 
+def test_unified_prompt_task_uses_python_weight_config_without_policy_cap(
+    tmp_path, unified_binary
+):
+    home = tmp_path / "agentrouter-home"
+    initialized = _run(unified_binary, "init", home=home)
+    assert initialized.returncode == 0, initialized.stderr
+    (home / "config.yaml").write_text(
+        "weights:\n  w_cap: 0.70\n  w_cost: 0.10\n  w_lat: 0.10\n  w_ctx: 0.10\n"
+        "policy:\n  max_pricing_tier: low\n",
+        encoding="utf-8",
+    )
+    task = "summarize this report"
+    rust = _run(unified_binary, "prompt", "generate", task, home=home)
+    python_env = os.environ.copy()
+    python_env["AGENTROUTER_HOME"] = str(home)
+    python = subprocess.run(
+        [sys.executable, "-m", "agentrouter", "prompt", "generate", task],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env=python_env,
+        timeout=60,
+        check=False,
+    )
+    assert rust.returncode == python.returncode == 0
+    assert rust.stdout == python.stdout
+
+
 def test_read_only_execution_plan_never_enables_execution(tmp_path, unified_binary):
     home = tmp_path / "agentrouter-home"
     initialized = _run(unified_binary, "init", home=home)
