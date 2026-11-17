@@ -491,12 +491,14 @@ fn run() -> Result<i32, String> {
                 )?;
                 let fixture = !collected.cases.is_empty();
                 let spec = agentrouter_evaluation::registry_api::dataset_spec(&name)?;
-                let (_, reason) =
+                let (real_available, reason) =
                     agentrouter_evaluation::adapter_real_availability(&name, spec.hf_repo);
+                let real = if real_available { "yes" } else { "no" };
+                let note = if real_available { "" } else { &reason };
                 println!(
-                    "{name:<16} {:9} {:6} {reason}",
+                    "{name:<16} {:9} {:6} {note}",
                     if fixture { "yes" } else { "no" },
-                    "no"
+                    real
                 );
             }
             Ok(0)

@@ -21,6 +21,11 @@ allowlist. Focused bundle differential and Rust CLI tests cover the fields;
 full runtime metadata parity remains Partial because Python and Rust report
 different interpreter details.
 
+TASK-178 repairs the Rust evaluation CLI `status` surface: it now reports the
+actual real-dataset availability flag and suppresses blocker text when a real
+loader is available, matching the Python command's contract. Evaluation CLI
+focused compatibility (19 tests) and the full evaluation crate pass locally.
+
 TASK-175 repairs Windows diagnostics contract parity. Rust now renders the
 contract directory through the native path formatter, matching Python's
 platform-specific `Path` representation while retaining forward slashes on

@@ -17,6 +17,9 @@ Windows edge evidence; external release gates remain unresolved.
 metadata and preserves redaction. Full interpreter-specific metadata parity and
 the external release gates remain unresolved.
 
+**NOT release ready.** TASK-178 repairs evaluation CLI status reporting; the
+remaining evaluation-loader and external release gates remain unresolved.
+
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
 evidence. Diagnostics remains Partial for runtime-specific and complete bundle

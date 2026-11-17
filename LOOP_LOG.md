@@ -1,5 +1,12 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-178 evaluation CLI status parity
+
+The Rust `agentrouter-evaluate status` command now reports the actual
+real-dataset availability flag and only prints blocker text when the loader is
+unavailable, matching Python's status contract. The evaluation crate and its
+19-test focused CLI compatibility suite pass locally.
+
 ## 2026-11-17 — TASK-177 diagnostic-bundle environment metadata
 
 Rust diagnostic bundles now emit the shared `agentrouter_version` field plus a
