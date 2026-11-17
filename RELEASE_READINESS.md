@@ -80,6 +80,10 @@ without weakening capability-bounded creation or redaction. This is local
 hardening evidence; full bundle metadata parity and external release gates
 remain unresolved.
 
+TASK-222 aligns Rust bundle timestamp formatting with Python's UTC ISO-8601
+contract. This is additional local parity evidence and does not clear the
+remaining metadata/runtime or external release gates.
+
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
 advisories across 207 locked dependencies; one unmaintained `chrono` warning

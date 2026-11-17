@@ -3348,3 +3348,10 @@ zero skips against the Rust loopback API.
   exclusive creation and before content is written.
 - Eight focused Rust bundle tests, four Python/Rust bundle checks, and strict
   Clippy pass; broader bundle metadata/runtime parity remains Partial.
+
+## TASK-222 — Python-compatible bundle timestamps (2026-11-18)
+
+- Rust bundle `generated_at` now uses six fractional digits and an explicit
+  `+00:00` UTC offset, matching Python's ISO-8601 output shape.
+- Nine focused Rust bundle tests, four Python/Rust bundle checks, and strict
+  Clippy pass.

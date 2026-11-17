@@ -82,6 +82,8 @@ requirements are absent.
 TASK-221 sets Unix Rust diagnostic-bundle artifacts to private `0600` mode on
 the opened capability-bounded file handle. Bundle redaction and no-follow tests
 remain green; broader metadata/runtime parity remains Partial.
+TASK-222 aligns Rust bundle `generated_at` with Python's six-digit UTC
+ISO-8601 `+00:00` representation; focused bundle checks remain green.
 TASK-180 aligns context-band human-readable output with Python (bootstrap CI,
 Python-style containers, unquoted checksum, signed delta); JSON remains stable.
 

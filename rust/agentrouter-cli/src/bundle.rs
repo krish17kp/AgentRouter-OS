@@ -8,7 +8,7 @@ use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use chrono::Utc;
+use chrono::{SecondsFormat, Utc};
 use rusqlite::{Connection, OpenFlags};
 use serde_json::{json, Value};
 
@@ -128,6 +128,10 @@ fn environment_summary() -> Value {
     Value::Object(values)
 }
 
+fn generated_at() -> String {
+    Utc::now().to_rfc3339_opts(SecondsFormat::Micros, false)
+}
+
 fn decision_shape(home: &Path) -> Result<Value, BundleError> {
     let db = home.join("agentrouter.db");
     if !db.exists() {
@@ -207,7 +211,7 @@ pub fn create(
 
     let checks = crate::diagnostics::run_all(home);
     let doctor = json!({
-        "generated_at": Utc::now().to_rfc3339(),
+        "generated_at": generated_at(),
         "status": crate::diagnostics::worst(&checks),
         "checks": checks,
     });
@@ -330,6 +334,15 @@ mod tests {
                 & 0o777,
             0o600
         );
+    }
+
+    #[test]
+    fn generated_at_uses_python_compatible_utc_iso8601_precision() {
+        let value = generated_at();
+        assert!(value.ends_with("+00:00"));
+        assert_eq!(value.len(), 32);
+        assert_eq!(value.as_bytes().get(19), Some(&b'.'));
+        assert_eq!(value.as_bytes().get(26), Some(&b'+'));
     }
 
     #[cfg(unix)]
