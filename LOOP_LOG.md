@@ -3403,3 +3403,9 @@ zero skips against the Rust loopback API.
   `uvx twine check`; both passed.
 - Existing setuptools license-table/classifier deprecation warnings remain
   visible and are not treated as release-gate failures.
+
+## TASK-229 — Installed-wheel smoke (2026-11-18)
+
+- Installed the freshly built wheel into an isolated temporary virtual
+  environment; version, `init`, and local `route --json` all passed.
+- The smoke used only the local registry and made no provider request.

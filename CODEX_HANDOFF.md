@@ -61,6 +61,8 @@ pass. TASK-227 re-runs the current release gate: 165 cases, score 98.23, exit
 TASK-228 rebuilt the current sdist and wheel with `uv build`; `uvx twine check`
 passes both artifacts. Existing setuptools license metadata deprecation
 warnings remain visible and unchanged.
+TASK-229 installed that wheel into an isolated temporary environment; version,
+`init`, and local `route --json` passed without a provider request.
 TASK-213 enforces the Rust MCP legacy initialize lifecycle (`-32002` before
 initialize) while retaining stateless modern discovery. Eight Rust MCP tests,
 strict Clippy, and the full Python/Rust MCP compatibility test pass; non-stdio
