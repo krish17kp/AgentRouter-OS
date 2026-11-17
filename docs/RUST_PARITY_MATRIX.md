@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-18 (TASK-082–233). This inventory covers every Python source module under
+Updated: 2026-11-18 (TASK-082–237). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -308,6 +308,9 @@ release authority until the full set is complete.
   counts. It only measures; it does not change classifier thresholds or gates.
 - Evaluation JSON, scorecard, Markdown, failure/holdout CSV, confusion CSV, and
   output file ordering all have a Python/Rust differential fixture.
+- TASK-237 aligns evaluation CLI status with Python's path-based fixture
+  availability: an empty-but-present fixture remains `fixture: true` rather
+  than being inferred missing from a zero record count.
 - Classification-only grading and gate calculation have differential coverage.
   Rust also supports bounded `measure_all` scoring for caller-supplied cases,
   seed models, and command manifests; automatic runtime discovery remains

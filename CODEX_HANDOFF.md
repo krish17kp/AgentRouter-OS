@@ -80,6 +80,9 @@ with only the unchanged context-band gate failing at `0.6667 < 0.90`.
 TASK-236 re-ran the 207-dependency Rust audit and website lint/build: no
 vulnerability advisories, lint/build green, and only the known unmaintained
 chrono warning remains.
+TASK-237 fixes Rust evaluation `status` to use fixture-path presence rather
+than record count; 22 CLI compatibility tests, Rust evaluation tests, Clippy,
+formatting, and diff checks pass.
 TASK-213 enforces the Rust MCP legacy initialize lifecycle (`-32002` before
 initialize) while retaining stateless modern discovery. Eight Rust MCP tests,
 strict Clippy, and the full Python/Rust MCP compatibility test pass; non-stdio

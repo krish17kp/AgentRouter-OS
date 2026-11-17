@@ -527,16 +527,20 @@ fn run() -> Result<i32, String> {
                 );
             }
             for name in names {
-                let collected = agentrouter_evaluation::registry_api::collect(
-                    &[name.as_str()],
-                    &root,
-                    None,
-                    0,
-                    "fixture",
-                    None,
-                )?;
-                let fixture = !collected.cases.is_empty();
                 let spec = agentrouter_evaluation::registry_api::dataset_spec(&name)?;
+                // Python's status command reports fixture availability from
+                // the adapter's path, not from the number of records loaded.
+                // An empty-but-present fixture is still an available fixture
+                // and must not be misreported as missing.
+                let fixture_path = if name == "agentrouter-gold" {
+                    root.join("agentrouter").join(spec.metadata.source.as_str())
+                } else {
+                    root.join("agentrouter/evaluation/fixtures").join(
+                        spec.fixture
+                            .ok_or_else(|| format!("{name}: fixture path is missing"))?,
+                    )
+                };
+                let fixture = fixture_path.exists();
                 let (real_available, reason) =
                     agentrouter_evaluation::adapter_real_availability(&name, spec.hf_repo);
                 let real = if real_available { "yes" } else { "no" };

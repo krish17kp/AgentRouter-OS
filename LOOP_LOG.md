@@ -3463,3 +3463,10 @@ zero skips against the Rust loopback API.
   dependencies with no vulnerability advisories; the known unmaintained chrono
   warning remains and has no fixed upgrade.
 - Website lint and the Vite production build both pass.
+
+## TASK-237 — Evaluation status fixture presence parity (2026-11-18)
+
+- Rust evaluation `status` now reports fixture availability from the registered
+  path, matching Python for empty-but-present fixtures.
+- The focused evaluation CLI suite passes 22/22; Rust evaluation tests, strict
+  Clippy, formatting, and diff checks pass.

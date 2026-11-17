@@ -62,7 +62,10 @@ def test_rust_evaluation_cli_lists_registered_datasets():
 
 def test_rust_evaluation_cli_honors_relocated_project_root(tmp_path):
     relocated = tmp_path / "relocated"
-    shutil.copytree(ROOT / "agentrouter" / "evaluation" / "fixtures", relocated / "agentrouter/evaluation/fixtures")
+    shutil.copytree(
+        ROOT / "agentrouter" / "evaluation" / "fixtures",
+        relocated / "agentrouter/evaluation/fixtures",
+    )
     benchmarks = relocated / "agentrouter/benchmarks"
     benchmarks.mkdir(parents=True)
     shutil.copy2(
@@ -197,6 +200,30 @@ def test_rust_evaluation_cli_status_and_prepare_contracts():
     prepare_rows = json.loads(prepare_json.stdout)
     assert len(prepare_rows) == 8
     assert all(row["status"] == "SKIPPED_EXTERNAL" for row in prepare_rows)
+
+
+def test_rust_evaluation_status_uses_fixture_presence_not_record_count(tmp_path):
+    relocated = tmp_path / "relocated"
+    shutil.copytree(
+        ROOT / "agentrouter" / "evaluation" / "fixtures",
+        relocated / "agentrouter/evaluation/fixtures",
+    )
+    benchmarks = relocated / "agentrouter/benchmarks"
+    benchmarks.mkdir(parents=True)
+    shutil.copy2(
+        ROOT / "agentrouter" / "benchmarks" / "classifier_gold_v1.yaml",
+        benchmarks / "classifier_gold_v1.yaml",
+    )
+    # An empty fixture is still present and therefore fixture-only in Python's
+    # adapter contract; status must not infer availability from record count.
+    (relocated / "agentrouter/evaluation/fixtures/massive_sample.jsonl").write_text(
+        "", encoding="utf-8"
+    )
+    process = _cli("status", "--json", env={"AGENTROUTER_PROJECT_ROOT": str(relocated)})
+    assert process.returncode == 0, process.stderr
+    rows = json.loads(process.stdout)
+    massive = next(row for row in rows if row["dataset"] == "massive")
+    assert massive["fixture"] is True
 
 
 def test_rust_evaluation_cli_report_and_compare_artifacts(tmp_path):
