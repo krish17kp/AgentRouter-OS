@@ -64,7 +64,8 @@ passes 887 tests with 1 expected skip; the existing Starlette/httpx warning
 remains non-failing.
 TASK-250 adds a restrictive-policy/weighted-config differential for task prompt
 generation; the focused decision/unified selection is now 44 tests. A fresh
-full sweep is pending this correction.
+full sweep passes 888 tests with 1 expected skip; the existing Starlette/httpx
+warning remains non-failing.
 TASK-223 synchronizes the unified Rust CLI help with the implemented contract
 check/diff/export surface and adds a process-level regression. The fresh full
 Python suite passes 2,743 tests with 7 expected skips; the full locked Rust

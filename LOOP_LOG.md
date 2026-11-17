@@ -5,7 +5,9 @@
 The task-based Rust prompt path now matches Python's configuration semantics:
 it uses configured scoring weights but does not apply the route policy cap while
 generating a prompt. A restrictive-policy differential passes, bringing the
-focused decision/unified CLI selection to 44 tests.
+focused decision/unified CLI selection to 44 tests. The complete Rust/Python
+and Rust CLI compatibility selection passes 888 tests with 1 expected skip;
+the existing Starlette/httpx warning remains non-failing.
 
 ## 2026-11-18 — TASK-249 task-based prompt parity
 

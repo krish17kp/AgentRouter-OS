@@ -13,3 +13,6 @@ Match Python's task-based prompt generation configuration semantics.
   `max_pricing_tier`; Python and Rust prompt output match.
 - The focused decision/unified CLI selection passes 44 tests; strict Clippy,
   formatting, and diff checks pass.
+- The complete Rust/Python and Rust CLI compatibility selection passes 888
+  tests with 1 expected skip; the existing Starlette/httpx warning remains
+  non-failing.

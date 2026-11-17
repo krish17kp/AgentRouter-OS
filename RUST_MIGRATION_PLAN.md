@@ -32,6 +32,9 @@ configured weights are honored, while the prompt-only route path does not
 apply the policy cap. The focused decision/unified selection passes 44 tests;
 the release gate remains unchanged.
 
+The complete Rust/Python and Rust CLI compatibility selection after TASK-250
+passes 888 tests with 1 expected skip and no compatibility regression.
+
 TASK-249 (2026-11-18) adds unified task-based prompt generation using the Rust
 classifier, routing, safety gates, and prompt pipeline. The focused
 decision/unified selection passes 43 tests; execution remains disabled and the

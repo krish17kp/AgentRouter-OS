@@ -31,6 +31,10 @@ TASK-250 aligns task-prompt configuration semantics: Rust uses configured
 weights but preserves Python's omission of the route policy cap in this
 prompt-only path. The focused decision/unified selection is 44 tests.
 
+The complete Rust/Python and Rust CLI compatibility selection after TASK-250
+passes 888 tests with 1 expected skip; the existing Starlette/httpx warning
+remains non-failing.
+
 The complete Rust/Python and Rust CLI compatibility selection after TASK-249
 passes 887 tests with 1 expected skip; the existing Starlette/httpx warning
 remains non-failing.
