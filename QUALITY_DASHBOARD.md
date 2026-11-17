@@ -79,6 +79,9 @@ the known unmaintained-`chrono` warning has no fixed upgrade.
 TASK-194 confirms ordered lazy callable factories construct all eight Rust
 adapter facades, matching the Python registry construction surface.
 
+TASK-195 confirms the optimized binary's fresh-home `init`, route, doctor,
+version, and five-tool MCP stdio smoke.
+
 TASK-173 hardens diagnostic bundle writes with no-follow parent creation, a
 pinned capability directory, and exclusive creation. Serialized snapshots,
 symlink/hard-link, directory-swap, and nested-parent regressions pass; focused

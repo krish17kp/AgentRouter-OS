@@ -92,6 +92,10 @@ TASK-194 adds ordered lazy callable adapter factories to the Rust registry,
 matching Python's `available_adapters()` construction surface for all eight
 registered datasets. Real HuggingFace loading remains external-only.
 
+TASK-195 exercises the optimized release binary from a fresh isolated home:
+`init`, `route --json`, `doctor --json`, version, and MCP stdio negotiation all
+pass. No credentials or deployment were used.
+
 TASK-175 repairs Windows diagnostics contract parity. Rust now renders the
 contract directory through the native path formatter, matching Python's
 platform-specific `Path` representation while retaining forward slashes on

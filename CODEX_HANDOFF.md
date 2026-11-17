@@ -96,6 +96,10 @@ TASK-194 adds ordered lazy callable adapter factories for all eight registered
 datasets. The registry/base rows remain Partial only for real external loading
 and broader adapter behavior; preserve the untracked TASK-163 audit directory.
 
+TASK-195's optimized binary smoke passes from a fresh isolated home: init,
+route, doctor, version, and MCP initialize/tools-list. No credentials or
+deployment were used.
+
 ## Storage relocation — 2026-11-15
 
 Active release checkout: `/data/AgentRouter-production` on branch

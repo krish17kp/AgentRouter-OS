@@ -1,5 +1,11 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-195 optimized binary end-to-end smoke
+
+The optimized release binary succeeds from a fresh isolated home for `init`,
+`route --json`, and `doctor --json`, reports `0.5.0rc1`, and negotiates MCP
+stdio protocol `2025-11-25` with exactly five safe tools.
+
 ## 2026-11-17 — TASK-194 registry callable factory parity
 
 Rust now exposes ordered lazy callable adapter factories matching Python's

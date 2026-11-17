@@ -90,6 +90,10 @@ remain unresolved.
 registry surface, but real external dataset loaders and the release gates
 remain unresolved.
 
+**NOT release ready.** TASK-195 confirms the optimized binary's fresh-home and
+MCP smoke behavior. This is local evidence only; hosted promotion and external
+release gates remain unresolved.
+
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
 evidence. Diagnostics remains Partial for runtime-specific and complete bundle
