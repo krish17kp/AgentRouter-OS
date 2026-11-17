@@ -88,6 +88,21 @@ fn contract_command(args: &[String]) -> Result<i32, String> {
             };
             let candidate: serde_json::Value = serde_json::from_str(&text)
                 .map_err(|error| format!("candidate contract is invalid JSON: {error}"))?;
+            if !candidate.is_object() || candidate.get("paths").is_none() {
+                return Err("candidate contract is not an OpenAPI document (no 'paths')".to_owned());
+            }
+            let invalid = agentrouter_cli::contract::validate_refs(&candidate)?;
+            if !invalid.is_empty() {
+                return Err(format!(
+                    "candidate contract contains unusable $ref(s): {}",
+                    invalid
+                        .iter()
+                        .take(5)
+                        .cloned()
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ));
+            }
             let candidate = agentrouter_cli::contract::canonical_openapi_document(&candidate)?;
             let report = agentrouter_cli::contract::diff_contracts_surface(&baseline, &candidate)?;
             if json_output {

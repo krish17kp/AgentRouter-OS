@@ -290,6 +290,12 @@ def test_contract_cli_checks_baseline_and_reports_surface_changes(tmp_path, unif
     assert breaking_result.returncode == 1
     assert json.loads(breaking_result.stdout)["compatible"] is False
 
+    malformed_path = tmp_path / "malformed.json"
+    malformed_path.write_text(json.dumps({"openapi": "3.1.0", "paths": {"/x": {"$ref": "#/missing"}}}), encoding="utf-8")
+    malformed_result = _run(unified_binary, "contract", "diff", malformed_path, "--json")
+    assert malformed_result.returncode == 2
+    assert "unusable $ref" in malformed_result.stderr
+
 
 def test_setup_runs_onboarding_and_persists_selected_preference(
     tmp_path, unified_binary, monkeypatch

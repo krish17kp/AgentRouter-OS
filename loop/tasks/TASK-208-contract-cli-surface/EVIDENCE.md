@@ -11,11 +11,13 @@ Date: 2026-11-17
   return exit code 1.
 - Added process coverage for baseline validation, additive diffs, and breaking
   diffs in `tests/test_rust_unified_cli_compat.py`.
+- Candidate diffs now reject non-OpenAPI documents and unusable local `$ref`
+  targets before the surface analyzer runs.
 
 ## Verification
 
 ```text
-2 passed, 16 deselected in 2.21s
+1 passed, 17 deselected in 1.22s
 cargo check --locked -p agentrouter-cli --bin agentrouter  # passed
 ```
 
