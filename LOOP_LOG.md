@@ -8,7 +8,9 @@ doctor now builds the contract directory with `Path::join(...).display()`, so it
 matches native separators without changing the stable POSIX output. The failure
 reproduces in the existing diagnostics differential; Rust CLI tests and the
 Linux differential pass locally. Commit and push this repair, then re-run the
-hosted matrix.
+hosted matrix. The repair was pushed as `ea4dbbd`; the complete hosted Rust,
+Python, Security, Website, and mutation matrix is green, with only the expected
+frozen context-band release gate failing honestly.
 
 ## 2026-11-17 — TASK-174 macOS root-alias repair
 
@@ -18,8 +20,8 @@ provider generated-catalog fixture. The walker now normalizes only `/var`,
 `/tmp`, and `/etc` to `/private/*` before applying the existing no-follow
 component checks; user-controlled links remain rejected. A macOS regression
 test covers all three aliases. Rust CLI unit tests (79), strict Clippy, and
-format checks pass locally; the repair is pushed as `853eca3` and is undergoing
-hosted revalidation on the authorized RC branch.
+format checks pass locally; the repair was pushed as `853eca3` and validated in
+the hosted matrix before the subsequent TASK-175 push.
 
 ## 2026-11-17 — Hosted queue repair and evidence checkpoint
 
