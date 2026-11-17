@@ -72,6 +72,9 @@ TASK-233 adds `python -m agentrouter.reliability` as a package-level soak
 entrypoint; the focused soak/Rust differential suite passes, while native
 transport phase taxonomy and broader lifecycle parity remain partial.
 The post-change full Python rerun passes 2,743 tests with 7 expected skips.
+TASK-234 rebuilt the current wheel/sdist and passed `twine check`; an isolated
+wheel smoke verified the new package help entrypoint, version, init, and local
+routing.
 TASK-213 enforces the Rust MCP legacy initialize lifecycle (`-32002` before
 initialize) while retaining stateless modern discovery. Eight Rust MCP tests,
 strict Clippy, and the full Python/Rust MCP compatibility test pass; non-stdio

@@ -3441,3 +3441,11 @@ zero skips against the Rust loopback API.
   pass; broader native transport/lifecycle gaps remain explicitly partial.
 - The post-change full Python regression passes 2,743 tests with 7 skips and
   one existing non-failing dependency warning.
+
+## TASK-234 — Current wheel rebuild and smoke (2026-11-18)
+
+- Rebuilt the sdist and wheel after TASK-233; both pass `twine check` and the
+  build log contains no metadata deprecation warnings.
+- An isolated wheel install reports the candidate version, exposes package-level
+  reliability help, initializes a new home, and routes locally without a
+  provider request.

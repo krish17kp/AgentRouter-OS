@@ -122,6 +122,10 @@ the focused soak and Python/Rust differential suite pass. Native transport
 phase taxonomy and broader lifecycle parity remain partial.
 The post-change full Python rerun passes 2,743 tests with 7 expected skips.
 
+TASK-234 rebuilt the current sdist and wheel after the entrypoint change;
+`twine check` passes for both without metadata warnings, and an isolated wheel
+smoke covers version, package-level help, initialization, and local routing.
+
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
 advisories across 207 locked dependencies; one unmaintained `chrono` warning
