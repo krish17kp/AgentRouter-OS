@@ -152,6 +152,41 @@ def test_init_and_route_dispatch_to_rust_implementations(tmp_path, unified_binar
     assert "Feedback: 1 rating(s), avg 4" in stats_text.stdout
 
 
+def test_read_only_execution_plan_never_enables_execution(tmp_path, unified_binary):
+    home = tmp_path / "agentrouter-home"
+    initialized = _run(unified_binary, "init", home=home)
+    assert initialized.returncode == 0, initialized.stderr
+    saved = _run(
+        unified_binary,
+        "route",
+        "summarize a support ticket",
+        "--save",
+        "--json",
+        home=home,
+    )
+    assert saved.returncode == 0, saved.stderr
+    decision_id = json.loads(saved.stdout)["decision_id"]
+
+    planned = _run(unified_binary, "plan", decision_id, "--json", home=home)
+    assert planned.returncode == 0, planned.stderr
+    payload = json.loads(planned.stdout)
+    assert payload["status"] == "planned"
+    assert payload["execution_enabled"] is False
+    assert payload["command_preview"].endswith("<prompt redacted>")
+
+    explicitly_requested = _run(
+        unified_binary,
+        "plan",
+        decision_id,
+        "--json",
+        "--allow-remote",
+        "--approve",
+        home=home,
+    )
+    assert explicitly_requested.returncode == 0, explicitly_requested.stderr
+    assert json.loads(explicitly_requested.stdout)["execution_enabled"] is False
+
+
 def test_setup_runs_onboarding_and_persists_selected_preference(
     tmp_path, unified_binary, monkeypatch
 ):

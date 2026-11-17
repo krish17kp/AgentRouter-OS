@@ -118,6 +118,10 @@ gates.
 plan, doctor, and MCP smoke. It does not clear the frozen evaluation gate or
 owner-controlled promotion, publication, and deployment requirements.
 
+**NOT release ready.** TASK-202 adds a process-level CLI regression proving
+that read-only planning stays disabled even when explicit policy flags are
+passed. The external release gates remain unchanged.
+
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
 evidence. Diagnostics remains Partial for runtime-specific and complete bundle

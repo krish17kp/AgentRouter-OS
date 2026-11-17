@@ -129,6 +129,10 @@ removed. Isolated init, saved route, read-only plan, doctor JSON, and MCP
 initialize pass. This is a Rust-only runtime check for those surfaces; keep
 provider execution and deployment gated.
 
+TASK-202 adds a unified CLI process test for read-only planning. It passes with
+the normal and explicit remote/approval flags while asserting
+`execution_enabled: false`.
+
 ## Storage relocation — 2026-11-15
 
 Active release checkout: `/data/AgentRouter-production` on branch

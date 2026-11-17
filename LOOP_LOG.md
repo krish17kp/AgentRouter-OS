@@ -44,6 +44,13 @@ initialize (`2025-11-25`, version `0.5.0rc1`) all succeeded. This is Rust-only
 runtime evidence for the exercised surfaces, not deployment or execution
 authorization.
 
+## 2026-11-17 — TASK-202 CLI plan regression
+
+Added a process-level unified CLI compatibility test for read-only planning.
+Fresh-home route/save/plan passes, the command preview remains redacted, and
+`--allow-remote --approve` still leaves `execution_enabled` false. Focused
+compatibility result: 1 passed, 15 deselected.
+
 ## 2026-11-17 — TASK-195 optimized binary end-to-end smoke
 
 The optimized release binary succeeds from a fresh isolated home for `init`,

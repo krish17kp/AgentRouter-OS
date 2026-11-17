@@ -126,6 +126,10 @@ removed: isolated init, saved route, read-only plan, doctor JSON, and MCP
 initialize all succeed. This proves the exercised surfaces do not require the
 Python package at runtime; provider execution and deployment remain gated.
 
+TASK-202 adds process-level regression coverage for `agentrouter plan`,
+including explicit remote/approval flags that must not enable execution. The
+focused unified CLI test passes 1/1.
+
 TASK-175 repairs Windows diagnostics contract parity. Rust now renders the
 contract directory through the native path formatter, matching Python's
 platform-specific `Path` representation while retaining forward slashes on

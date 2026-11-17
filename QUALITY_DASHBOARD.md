@@ -280,6 +280,8 @@ accuracy in the current report. It is not evidence of held-out generalization.
   0.78×/0.77×/0.63× of Python for 10/100/1,000 candidates; not an SLO.
 - Rust-only runtime: Python-absent optimized init/route/plan/doctor/MCP smoke
   passes; no provider execution or deployment was performed.
+- CLI plan regression: 1 focused process-level compatibility test passed,
+  including explicit remote/approval flags remaining non-executing.
 
 ## TASK-153 recovery — 2026-11-15
 
