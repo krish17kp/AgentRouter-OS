@@ -3646,5 +3646,8 @@ zero skips against the Rust loopback API.
   syntax: optional task text, `--from`, `--tool`, and `--out`.
 - The focused help/version compatibility test passes and `cargo fmt --all --
   --check` remains green.
+- Full verification passes 2,781 Python tests with 7 expected skips and 893
+  Rust/Python compatibility tests with 1 expected skip; the workspace-wide
+  Rust suite and strict Clippy also pass.
 - No runtime behavior, evaluation inputs, release threshold, or deployment
   state changed.

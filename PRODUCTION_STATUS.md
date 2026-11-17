@@ -13,7 +13,10 @@ non-failing; no compatibility regression was observed.
 The unified Rust top-level help now advertises the complete public prompt
 generation syntax (`[TASK]`, `--from`, `--tool`, and `--out`), matching the
 implemented leaf command. The focused help/version compatibility test and
-format check pass; behavior and release gates are unchanged.
+format check pass; behavior and release gates are unchanged. The subsequent
+full verification passes 2,781 Python tests with 7 expected skips, 893
+Rust/Python compatibility tests with 1 expected skip, and the workspace-wide
+Rust suite with strict Clippy.
 
 ## Previous continuation slice — TASK-256
 

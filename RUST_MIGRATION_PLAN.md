@@ -30,7 +30,10 @@
 TASK-258 (2026-11-18) corrects the unified Rust top-level help to advertise
 the complete prompt-generation syntax, including task input and safe output
 options. The focused unified CLI help test and formatting pass; no runtime,
-evaluation, or release-gate behavior changed.
+evaluation, or release-gate behavior changed. Full verification afterward
+passes 2,781 Python tests with 7 expected skips and 893 Rust/Python
+compatibility tests with 1 expected skip; the canonical gate remains held at
+98.23/100 only by frozen context-band accuracy 0.6667 < 0.90.
 
 TASK-257 (2026-11-18) re-runs the complete Rust/Python and Rust CLI
 compatibility selection after the registry-backed exit-code fixes: 893 tests

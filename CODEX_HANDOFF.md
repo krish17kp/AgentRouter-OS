@@ -5,7 +5,9 @@
 TASK-258 corrects the unified Rust top-level help so prompt generation shows
 the implemented `[TASK]`, `--from`, `--tool`, and `--out` options. The focused
 help/version compatibility test and formatting pass; this is a help-contract
-increment only.
+increment only. Full verification afterward passes 2,781 Python tests with 7
+expected skips and 893 Rust/Python compatibility tests with 1 expected skip;
+the canonical gate remains held solely by context-band accuracy 0.6667 < 0.90.
 
 TASK-257's complete Rust/Python and Rust CLI compatibility selection passes
 893 tests with 1 expected skip; the only warning is the existing non-failing
