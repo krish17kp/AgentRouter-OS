@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-18 (TASK-082–227). This inventory covers every Python source module under
+Updated: 2026-11-18 (TASK-082–233). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -224,7 +224,9 @@ release authority until the full set is complete.
   the Rust API, and writes the soak report. Truncated declared-length response
   bodies now classify as `RemoteProtocolError`, matching HTTPX. `ureq` does
   not retain read/write direction for every generic I/O error, and Python
-  module invocation details remain Partial. See
+  package-level invocation now delegates through `python -m
+  agentrouter.reliability`, but native transport phase taxonomy and broader
+  module/runtime parity remain Partial. See
   [`RUST_RELIABILITY.md`](RUST_RELIABILITY.md) for scope.
 - The reliability package initializer's five re-exported names now have an
   exact Python/Rust inventory check. Behavior of `run_load` and `serve_app` is

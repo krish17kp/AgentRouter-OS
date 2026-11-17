@@ -2,10 +2,27 @@
 
 from __future__ import annotations
 
+import subprocess
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 from agentrouter.reliability import soak as soak_module
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_package_module_invocation_exposes_soak_help():
+    result = subprocess.run(
+        [sys.executable, "-m", "agentrouter.reliability", "--help"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0
+    assert "--seconds" in result.stdout
+    assert "--out" in result.stdout
 
 
 def test_resource_samples_cover_empty_growth_and_unavailable_platforms(monkeypatch, tmp_path):

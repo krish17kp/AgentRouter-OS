@@ -117,6 +117,10 @@ TASK-232 re-ran the complete Python suite after the release metadata changes:
 2,742 passed, 7 expected skips, and one existing non-failing Starlette/httpx
 TestClient deprecation warning.
 
+TASK-233 adds and smoke-tests the package-level Python reliability entrypoint;
+the focused soak and Python/Rust differential suite pass. Native transport
+phase taxonomy and broader lifecycle parity remain partial.
+
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
 advisories across 207 locked dependencies; one unmaintained `chrono` warning

@@ -19,6 +19,9 @@ a concurrent HTTP load runner. It is a migration slice for the Python
   stdout and optionally `--out`. With no `--home`, it uses a fresh temporary
   directory. The command clears `AGENTROUTER_API_KEY` in its own process and
   makes no live-provider calls.
+- Python also exposes the equivalent operator entrypoint as
+  `python -m agentrouter.reliability`; it delegates to the same soak parser and
+  report lifecycle as `python -m agentrouter.reliability.soak`.
 - `serve_app` starts the Rust API router on an ephemeral loopback port;
   `serve_router` accepts a caller-supplied Axum router for local tests. The
   returned `RunningApp` owns graceful shutdown, joins its server thread, and

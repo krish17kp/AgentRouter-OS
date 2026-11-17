@@ -3432,3 +3432,10 @@ zero skips against the Rust loopback API.
 - Re-ran the complete Python suite after the release metadata changes:
   2,742 passed, 7 skipped, and one existing non-failing Starlette/httpx
   TestClient deprecation warning.
+
+## TASK-233 — Reliability package entrypoint (2026-11-18)
+
+- Added `python -m agentrouter.reliability`, delegating to the existing soak
+  parser and lifecycle.
+- The package help subprocess and focused Python/Rust reliability differential
+  pass; broader native transport/lifecycle gaps remain explicitly partial.
