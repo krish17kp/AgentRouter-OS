@@ -32,6 +32,12 @@ while `prepare --all` now exits 0 after reporting every unavailable source,
 matching Python without falling back to fixtures. The evaluation crate passes
 and the direct `--all` command reports all eight datasets honestly.
 
+TASK-180 aligns the human-readable context-band evaluation report: Rust now
+includes the bootstrap macro-F1 interval, renders intervals and per-band recall
+with Python-compatible containers, leaves the checksum unquoted, and formats a
+signed four-decimal accuracy delta. JSON output is unchanged; the evaluator
+module remains Partial for real-data loading and runtime orchestration.
+
 TASK-175 repairs Windows diagnostics contract parity. Rust now renders the
 contract directory through the native path formatter, matching Python's
 platform-specific `Path` representation while retaining forward slashes on

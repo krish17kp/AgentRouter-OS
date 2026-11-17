@@ -1402,7 +1402,9 @@ fn python_string(value: &serde_json::Value) -> String {
     }
 }
 
-fn python_repr(value: &serde_json::Value) -> String {
+/// Render JSON values using the stable Python `repr` shape used by the
+/// evaluation CLI's human-readable reports.
+pub fn python_repr(value: &serde_json::Value) -> String {
     match value {
         serde_json::Value::Null => "None".to_owned(),
         serde_json::Value::Bool(true) => "True".to_owned(),

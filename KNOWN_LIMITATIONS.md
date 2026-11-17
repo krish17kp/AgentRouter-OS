@@ -7,6 +7,10 @@
   `SKIPPED_EXTERNAL` rows and exits successfully as a completed report; this is
   not evidence that real evaluation data is available.
 
+- TASK-180 makes human-readable context-band evidence match Python, but Rust
+  still cannot perform the external real-data load or replace the Python
+  evaluation runtime.
+
 - TASK-173 hardens bundle writes but bundle parity remains Partial for complete
   Python/Rust environment metadata and Windows-specific edge cases.
 

@@ -530,25 +530,38 @@ fn run() -> Result<i32, String> {
                     serde_json::to_string_pretty(&result).map_err(|e| e.to_string())?
                 );
             } else {
-                println!("Holdout SHA-256: {}", result["holdout_sha256"]);
+                println!(
+                    "Holdout SHA-256: {}",
+                    result["holdout_sha256"].as_str().unwrap_or_default()
+                );
                 println!(
                     "Current accuracy: {}  95% CI {}",
                     result["current_holdout"]["accuracy"],
-                    result["current_holdout"]["accuracy_ci95"]
+                    agentrouter_evaluation::python_repr(
+                        &result["current_holdout"]["accuracy_ci95"]
+                    )
                 );
                 println!(
-                    "Current macro-F1: {}",
-                    result["current_holdout"]["macro_f1"]
+                    "Current macro-F1: {}  95% bootstrap CI {}",
+                    result["current_holdout"]["macro_f1"],
+                    agentrouter_evaluation::python_repr(
+                        &result["current_holdout"]["macro_f1_bootstrap_ci95"]
+                    )
                 );
                 println!(
                     "Per-band recall: {}",
-                    result["current_holdout"]["per_band_recall"]
+                    agentrouter_evaluation::python_repr(
+                        &result["current_holdout"]["per_band_recall"]
+                    )
                 );
                 println!(
                     "Pre-TASK-004 accuracy: {}",
                     result["pre_task004_holdout"]["accuracy"]
                 );
-                println!("Accuracy delta: {}", result["delta"]["accuracy"]);
+                println!(
+                    "Accuracy delta: {:+.4}",
+                    result["delta"]["accuracy"].as_f64().unwrap_or_default()
+                );
             }
             Ok(0)
         }

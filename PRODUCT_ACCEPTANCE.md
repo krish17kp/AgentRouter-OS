@@ -11,6 +11,10 @@ Product acceptance remains **not granted**. TASK-179 aligns the Rust evaluation
 explicit external blockers. Real-data loaders, human evaluation, and release
 promotion evidence remain outstanding.
 
+Product acceptance remains **not granted**. TASK-180 aligns the visible
+context-band report evidence and formatting with Python; external evaluation,
+human labels, and promotion gates remain outstanding.
+
 Product acceptance remains **not granted**. TASK-172 aligns stable diagnostics
 summaries and adds a direct cross-language check; runtime-specific and complete
 bundle parity remain Partial.

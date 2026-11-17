@@ -15,6 +15,11 @@ reported explicitly and no fixture fallback is introduced. The evaluation
 crate and direct command verification pass; the evaluation module remains
 Partial for real-data loaders and orchestration.
 
+TASK-180 closes the remaining human-readable context-band report differences:
+bootstrap macro-F1 CI, Python-compatible containers, unquoted checksum, and
+signed delta now match Python. JSON output is unchanged and strict Rust checks
+pass; the evaluator remains Partial for external data and runtime orchestration.
+
 TASK-173 hardens diagnostic bundle writes with no-follow parent creation, a
 pinned capability directory, and exclusive creation. Serialized snapshots,
 symlink/hard-link, directory-swap, and nested-parent regressions pass; focused

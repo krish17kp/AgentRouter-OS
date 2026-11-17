@@ -136,6 +136,15 @@ def test_rust_evaluation_cli_context_band_json_contract():
     assert "current_holdout" in payload
 
 
+def test_rust_evaluation_cli_context_band_text_matches_python_formatting():
+    process = _cli("context-band-generalization")
+    assert process.returncode == 0, process.stderr
+    assert 'Holdout SHA-256: "' not in process.stdout
+    assert "95% bootstrap CI" in process.stdout
+    assert "Per-band recall: {" in process.stdout
+    assert "Accuracy delta: +" in process.stdout
+
+
 def test_rust_evaluation_cli_status_and_prepare_contracts():
     status = _cli("status")
     assert status.returncode == 0, status.stderr

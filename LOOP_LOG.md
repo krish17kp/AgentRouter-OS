@@ -1,5 +1,12 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-180 evaluation text report parity
+
+The Rust context-band generalization command now matches Python's visible
+evidence: bootstrap macro-F1 confidence intervals, Python-style list/dict
+rendering, an unquoted holdout checksum, and a signed four-decimal accuracy
+delta. JSON remains unchanged. Rust tests, formatting, and strict Clippy pass.
+
 ## 2026-11-17 — TASK-179 evaluation prepare exit parity
 
 The Rust `agentrouter-evaluate prepare` command now matches Python's distinction
