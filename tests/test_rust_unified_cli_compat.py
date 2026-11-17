@@ -89,6 +89,14 @@ def test_help_and_version_are_available(unified_binary):
     assert version.stdout.strip() == "agentrouter 0.5.0rc1"
 
 
+def test_unified_route_help_is_successful_and_lists_route_options(unified_binary):
+    result = _run(unified_binary, "route", "--help")
+    assert result.returncode == 0
+    assert result.stderr == ""
+    assert result.stdout.startswith("Usage: agentrouter route")
+    assert "--context-tokens" in result.stdout
+
+
 def test_init_and_route_dispatch_to_rust_implementations(tmp_path, unified_binary):
     home = tmp_path / "agentrouter-home"
     initialized = _run(unified_binary, "init", home=home)

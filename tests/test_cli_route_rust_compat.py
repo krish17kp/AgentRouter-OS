@@ -351,6 +351,20 @@ def test_rust_route_missing_positionals_use_cli_error(arguments):
     assert result.stderr.startswith("Error: usage: route_cli")
 
 
+def test_rust_direct_route_help_is_a_successful_cli_surface():
+    result = subprocess.run(
+        ["cargo", "run", "--quiet", "--locked", "--bin", "cli_route_cli", "--", "--help"],
+        cwd=RUST_CRATE_DIR,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert result.returncode == 0
+    assert result.stderr == ""
+    assert result.stdout.startswith("Usage: agentrouter route")
+
+
 @pytest.mark.parametrize(
     "arguments",
     [

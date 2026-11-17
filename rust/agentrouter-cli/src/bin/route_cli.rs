@@ -17,6 +17,10 @@ use agentrouter_core::Level;
 use agentrouter_policy::controls::RouteControls;
 use agentrouter_registry::{load_all_models, load_providers};
 
+fn usage() -> &'static str {
+    "Usage: agentrouter route <task> [options]\n\nOptions: --json --save --no-log --verify-live --context-tokens N --risk low|medium|high --tool TOOLS --uncertainty-threshold N --prefer-quality|--prefer-balanced|--prefer-cheap|--prefer-fast"
+}
+
 struct RouteCliOptions {
     save: bool,
     verify_live: bool,
@@ -161,7 +165,15 @@ fn parse_options(extra: Vec<String>) -> Result<RouteCliOptions, String> {
 }
 
 fn main() {
-    let mut args = std::env::args().skip(1);
+    let raw_args = std::env::args().skip(1).collect::<Vec<_>>();
+    if raw_args
+        .iter()
+        .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
+    {
+        println!("{}", usage());
+        return;
+    }
+    let mut args = raw_args.into_iter();
     let usage = "usage: route_cli <home> <task> [prefer]";
     let home = PathBuf::from(match args.next() {
         Some(home) => home,

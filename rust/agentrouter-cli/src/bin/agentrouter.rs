@@ -1755,6 +1755,14 @@ fn run() -> Result<i32, String> {
     match command.as_str() {
         "init" => run_sibling("init_cli", with_home(&home, tail)),
         "route" => {
+            if tail
+                .iter()
+                .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
+            {
+                println!("Usage: agentrouter route <task> [options]");
+                println!("Options: --json --save --no-log --verify-live --context-tokens N --risk low|medium|high --tool TOOLS --uncertainty-threshold N --prefer-quality|--prefer-balanced|--prefer-cheap|--prefer-fast");
+                return Ok(0);
+            }
             if tail.is_empty() {
                 return Err("route needs a task prompt".to_owned());
             }

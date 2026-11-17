@@ -3512,8 +3512,10 @@ zero skips against the Rust loopback API.
 - Invalid direct Rust route options now emit an `Error:` diagnostic and exit 2,
   while registry/configuration and runtime storage failures use Python's exit
   3 and 1 contracts instead of panicking.
-- The route compatibility suite passes 36/36; the Rust CLI crate passes 89/89
-  with strict Clippy, formatting, and diff checks.
+- Direct and unified `route --help` now succeed with the supported option list.
+- The direct route suite passes 37/37 and the direct+unified route/CLI
+  selection passes 58/58; the Rust CLI crate passes 89/89 with strict Clippy,
+  formatting, and diff checks.
 
 ## TASK-244 — Rust compatibility recheck (2026-11-18)
 
