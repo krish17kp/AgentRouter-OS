@@ -2,6 +2,11 @@
 
 ## Current checkpoint — 2026-11-16
 
+Product acceptance remains **not granted**. TASK-167 server-service parity is
+independently clear: 102 focused checks, active-span wiring, full Rust workspace,
+strict Clippy, and Ruff pass. Inventory: 55 Parity / 22 Partial; full Python
+regression passes 2,728/7.
+
 Product acceptance remains **not granted**. TASK-166 annotation-schema parity is
 independently clear after the public deserialization fail-closed repair. Direct
 77 and production-path 108 checks pass with evaluation Rust tests, strict Clippy,

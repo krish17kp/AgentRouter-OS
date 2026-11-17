@@ -2845,3 +2845,13 @@ top-level and nested extras, agreement edges, and broader datetime boundaries.
 The new boundary cases found and repaired positive half-microsecond rounding.
 Direct 77, annotation production-path 108, full Rust workspace/Clippy, Ruff, and
 Python 2,719/7 pass. Inventory: 54/77 Parity, 23 Partial.
+
+## TASK-167 server service parity — 2026-11-17
+
+Added Python-compatible home/load-registry and direct-argument facades, raw
+default/risk handling, active metadata-only OpenTelemetry spans using
+`in_span_with_builder`, and single correlated route-decision logging across the
+service/server boundary. Corrected an audit false lead by reproducing Python's
+unconditional registry load in dry-run. Focused 102, full Rust workspace/Clippy,
+and Ruff pass; full Python regression passes 2,728/7. Inventory: 55/77 Parity,
+22 Partial.

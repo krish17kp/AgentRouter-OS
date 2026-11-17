@@ -11,6 +11,9 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use unicode_general_category::{get_general_category, GeneralCategory};
 
+use opentelemetry::trace::Tracer;
+use opentelemetry::{global, KeyValue};
+
 const ECHO_LIMIT: usize = 64;
 const MAX_REDACT_DEPTH: usize = 6;
 
@@ -209,6 +212,33 @@ pub fn logging_enabled() -> bool {
             "1" | "true" | "yes" | "on"
         )
     })
+}
+
+/// Execute an operation inside an opt-in metadata-only OpenTelemetry span.
+/// The global no-op provider keeps this silent when no SDK/exporter is installed.
+pub fn with_route_span<T>(
+    name: &str,
+    attributes: &[(&str, String)],
+    operation: impl FnOnce() -> T,
+) -> T {
+    if !std::env::var("AGENTROUTER_OTEL").ok().is_some_and(|value| {
+        matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes" | "on"
+        )
+    }) {
+        return operation();
+    }
+    let tracer = global::tracer("agentrouter");
+    let attributes = attributes
+        .iter()
+        .map(|(key, value)| KeyValue::new((*key).to_owned(), value.clone()));
+    tracer.in_span_with_builder(
+        tracer
+            .span_builder(name.to_owned())
+            .with_attributes(attributes),
+        |_context| operation(),
+    )
 }
 
 /// Write one redacted JSON route record when logging is enabled.

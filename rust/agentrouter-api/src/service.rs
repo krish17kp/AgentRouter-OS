@@ -1,6 +1,6 @@
 //! Business logic mirrored from `agentrouter.server.service`.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use agentrouter_classifier::{classify, ClassifyOptions};
 use agentrouter_core::{ApprovalLevel, Classification, Level};
@@ -29,7 +29,21 @@ impl std::fmt::Display for ServiceError {
 
 impl std::error::Error for ServiceError {}
 
-fn load_registry(home: &Path) -> Result<Vec<ModelEntry>, ServiceError> {
+/// Match Python `service.home()`: explicit relocation first, then the user's
+/// platform home, with the same `.agentrouter` suffix.
+pub fn home() -> PathBuf {
+    if let Some(home) = std::env::var_os("AGENTROUTER_HOME") {
+        return PathBuf::from(home);
+    }
+    let base = home::home_dir().unwrap_or_else(|| PathBuf::from("."));
+    base.join(".agentrouter")
+}
+
+pub fn load_registry() -> Result<Vec<ModelEntry>, ServiceError> {
+    load_registry_at(&home())
+}
+
+pub fn load_registry_at(home: &Path) -> Result<Vec<ModelEntry>, ServiceError> {
     let registry = home.join("registry");
     let providers = load_providers(&registry.join("providers.yaml"))
         .map_err(|error| ServiceError::Registry(error.to_string()))?;
@@ -56,8 +70,38 @@ pub fn classify_task(request: &ClassifyRequest) -> Result<Value, ServiceError> {
     serde_json::to_value(result).map_err(|error| ServiceError::Internal(error.to_string()))
 }
 
+fn service_risk(risk: Option<&str>) -> Result<Option<Level>, ServiceError> {
+    match risk {
+        None | Some("") => Ok(None),
+        Some("low") => Ok(Some(Level::Low)),
+        Some("medium") => Ok(Some(Level::Medium)),
+        Some("high") => Ok(Some(Level::High)),
+        Some(value) => Err(ServiceError::Validation(format!(
+            "{value:?} is not a valid Level"
+        ))),
+    }
+}
+
+/// Direct-call facade matching Python `classify_task` defaults without applying
+/// the HTTP request-size schema. HTTP callers continue to use `classify_task`.
+pub fn classify_task_args(
+    task: &str,
+    context_tokens: Option<serde_json::Number>,
+    risk: Option<&str>,
+    tools: Option<Vec<String>>,
+) -> Result<Value, ServiceError> {
+    let options = ClassifyOptions {
+        context_tokens,
+        risk: service_risk(risk)?,
+        tools,
+        uncertainty_threshold: None,
+    };
+    serde_json::to_value(classify(task, &options))
+        .map_err(|error| ServiceError::Internal(error.to_string()))
+}
+
 pub fn list_models(home: &Path) -> Result<Vec<Value>, ServiceError> {
-    let mut models = load_registry(home)?;
+    let mut models = load_registry_at(home)?;
     models.sort_by(|left, right| {
         left.vendor()
             .cmp(right.vendor())
@@ -234,8 +278,21 @@ fn route_service_payload(
     classification: &Classification,
     prefer: Option<&str>,
 ) -> Result<Value, ServiceError> {
-    let result: RouteResult =
-        agentrouter_routing::route(models, classification, Weights::default(), prefer);
+    let task_type = serde_json::to_value(classification.task_type)
+        .unwrap_or(Value::Null)
+        .as_str()
+        .unwrap_or_default()
+        .to_owned();
+    let risk = serde_json::to_value(classification.risk)
+        .unwrap_or(Value::Null)
+        .as_str()
+        .unwrap_or_default()
+        .to_owned();
+    let result: RouteResult = agentrouter_observability::with_route_span(
+        "route",
+        &[("task_type", task_type), ("risk", risk)],
+        || agentrouter_routing::route(models, classification, Weights::default(), prefer),
+    );
     let result_json =
         serde_json::to_value(result).map_err(|error| ServiceError::Internal(error.to_string()))?;
     let recommendation = &result_json["recommendation"];
@@ -268,25 +325,73 @@ fn route_service_payload(
 }
 
 pub fn route_task(home: &Path, request: &RouteRequest) -> Result<Value, ServiceError> {
+    route_task_with_request_id(home, request, None)
+}
+
+pub fn route_task_with_request_id(
+    home: &Path,
+    request: &RouteRequest,
+    request_id: Option<&str>,
+) -> Result<Value, ServiceError> {
     request
         .validate()
         .map_err(|error| ServiceError::Validation(error.to_string()))?;
-    let models = load_registry(home)?;
     let options = classifier_options(&request.classify)?;
-    let classification = classify(&request.classify.task, &options);
-    let payload = route_service_payload(
+    route_task_values(
+        home,
         &request.classify.task,
-        &models,
-        &classification,
         request.prefer.as_deref(),
-    )?;
-    let decision_id = if request.no_log {
+        options,
+        request.no_log,
+        request_id,
+    )
+}
+
+/// Direct-call facade matching Python `route_task` argument defaults without
+/// applying the HTTP request-size schema.
+#[allow(clippy::too_many_arguments)]
+pub fn route_task_args(
+    home: &Path,
+    task: &str,
+    prefer: Option<&str>,
+    context_tokens: Option<serde_json::Number>,
+    risk: Option<&str>,
+    tools: Option<Vec<String>>,
+    no_log: bool,
+) -> Result<Value, ServiceError> {
+    route_task_values(
+        home,
+        task,
+        prefer,
+        ClassifyOptions {
+            context_tokens,
+            risk: service_risk(risk)?,
+            tools,
+            uncertainty_threshold: None,
+        },
+        no_log,
+        None,
+    )
+}
+
+fn route_task_values(
+    home: &Path,
+    task: &str,
+    prefer: Option<&str>,
+    options: ClassifyOptions,
+    no_log: bool,
+    request_id: Option<&str>,
+) -> Result<Value, ServiceError> {
+    let models = load_registry_at(home)?;
+    let classification = classify(task, &options);
+    let payload = route_service_payload(task, &models, &classification, prefer)?;
+    let decision_id = if no_log {
         None
     } else {
         let connection = agentrouter_storage::connect(home)
             .map_err(|error| ServiceError::Internal(error.to_string()))?;
         Some(
-            agentrouter_storage::save_decision(&connection, &request.classify.task, &payload)
+            agentrouter_storage::save_decision(&connection, task, &payload)
                 .map_err(|error| ServiceError::Internal(error.to_string()))?,
         )
     };
@@ -294,14 +399,21 @@ pub fn route_task(home: &Path, request: &RouteRequest) -> Result<Value, ServiceE
     let object = response.as_object_mut().ok_or_else(|| {
         ServiceError::Internal("route pipeline returned a non-object payload".to_string())
     })?;
-    object.insert(
-        "task".to_string(),
-        Value::String(request.classify.task.clone()),
-    );
+    object.insert("task".to_string(), Value::String(task.to_owned()));
     object.insert(
         "decision_id".to_string(),
-        decision_id.map(Value::String).unwrap_or(Value::Null),
+        decision_id
+            .as_ref()
+            .map(|value| Value::String(value.clone()))
+            .unwrap_or(Value::Null),
     );
+    let record = agentrouter_observability::route_decision_record(
+        task,
+        &response,
+        decision_id.as_deref(),
+        request_id,
+    );
+    agentrouter_observability::emit_route_decision(&record);
     Ok(response)
 }
 
@@ -348,7 +460,7 @@ pub fn execute_dry_run(
         .get("execution_route")
         .cloned()
         .unwrap_or(Value::Null);
-    let models = load_registry(home)?;
+    let models = load_registry_at(home)?;
     let argv = recommendation
         .get("model")
         .and_then(Value::as_str)

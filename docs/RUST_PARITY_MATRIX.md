@@ -86,7 +86,7 @@ release authority until the full set is complete.
 | `agentrouter/server/app.py` | `agentrouter-api::server` + `agentrouter-api-server` | Partial |
 | `agentrouter/server/limits.py` | `agentrouter-limits` (re-exported as `agentrouter_cli::limits`) | Parity |
 | `agentrouter/server/schemas.py` | `agentrouter-api::{schemas,responses}` | Parity |
-| `agentrouter/server/service.py` | `agentrouter-api::service` | Partial |
+| `agentrouter/server/service.py` | `agentrouter-api::service` | Parity |
 | `agentrouter/store.py` | `agentrouter-storage` | Parity |
 | `agentrouter/taxonomy.py` | `agentrouter-policy::taxonomy` | Parity |
 | `agentrouter/usage.py` | `agentrouter-usage::{check_usage,apply_live_verification}` | Parity |

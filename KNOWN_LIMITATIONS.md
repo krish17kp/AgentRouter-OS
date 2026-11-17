@@ -2,6 +2,9 @@
 
 ## Current migration and release limits (2026-11-16)
 
+- Rust migration remains incomplete at 55/77 full-module parity. TASK-167 closes
+  server service; observability's remaining logging API, server lifecycle, CLI,
+  adapter base, and external real-data adapters remain Partial.
 - Rust migration remains incomplete at 54/77 full-module parity. TASK-166 closes
   annotation schemas; annotation CLI, server lifecycle/service, primary CLI,
   adapter base, and external real-data adapters remain Partial.

@@ -22,6 +22,7 @@ serde_json = { version = "1.0.128", features = ["arbitrary_precision"] }
 tokio = { version = "=1.54.1", features = ["macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
 tower-http = { version = "=0.7.1", features = ["catch-panic", "cors"] }
 unicode-general-category = "=0.6.0"
+home = "=0.5.12"
 
 [[bin]]
 name = "api_request_from_json"

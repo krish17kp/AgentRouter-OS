@@ -373,3 +373,12 @@ positive half-microsecond mismatch was repaired. Direct 77, production-path 108,
 evaluation Rust tests, strict Clippy, and Ruff pass. Full Rust workspace/Clippy
 and Python 2,719/7 pass. Inventory: 54/77 Parity, 23 Partial.
 
+## TASK-167 checkpoint — 2026-11-17
+
+Server-service parity is independently clear. Rust now provides home and
+no-argument registry facades, direct-call argument defaults, metadata-only active
+OpenTelemetry spans, and correlated route logging without duplication. The
+service differential covers list/classify/route/persistence/feedback/dry-run and
+malformed/error paths. Focused 102, full Rust workspace/Clippy, and Ruff pass;
+full Python regression passes 2,728/7. Inventory: 55/77 Parity, 22 Partial.
+

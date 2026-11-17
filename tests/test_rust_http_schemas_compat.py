@@ -93,7 +93,12 @@ def _rust_response(kind: str, response: dict) -> subprocess.CompletedProcess[str
     )
 
 
-def _rust_service(home: Path, kind: str, request: dict | None = None):
+def _rust_service(
+    home: Path,
+    kind: str,
+    request: dict | None = None,
+    env: dict[str, str] | None = None,
+):
     return subprocess.run(
         [
             "cargo",
@@ -109,7 +114,7 @@ def _rust_service(home: Path, kind: str, request: dict | None = None):
         capture_output=True,
         text=True,
         encoding="utf-8",
-        env=_cargo_env(),
+        env={**_cargo_env(), **(env or {})},
         cwd=ROOT,
         timeout=120,
         check=False,
@@ -506,6 +511,29 @@ def test_rust_api_service_list_models_matches_python(home):
     assert json.loads(process.stdout) == expected
 
 
+def test_rust_api_service_home_and_registry_facade_match_python(home, monkeypatch):
+    from agentrouter.server import service
+
+    monkeypatch.setenv("AGENTROUTER_HOME", str(home))
+    process = _rust_service(home, "home")
+    assert process.returncode == 0, process.stderr
+    assert Path(json.loads(process.stdout)) == service.home()
+
+    expected = [model.model_dump(mode="json") for model in service.load_registry()]
+    process = _rust_service(home, "load_registry")
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == expected
+
+
+def test_rust_api_service_default_home_uses_platform_resolution(home, monkeypatch):
+    from agentrouter.server import service
+
+    monkeypatch.delenv("AGENTROUTER_HOME", raising=False)
+    process = _rust_service(home, "home")
+    assert process.returncode == 0, process.stderr
+    assert Path(json.loads(process.stdout)) == service.home()
+
+
 def test_rust_api_service_list_hosts_matches_python(home):
     from agentrouter.server import service
 
@@ -535,6 +563,32 @@ def test_rust_api_service_classification_matches_python(home):
     assert json.loads(process.stdout) == expected
 
 
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"task": "", "risk": ""},
+        {"task": "review this", "context_tokens": 123, "risk": "high", "tools": []},
+    ],
+)
+def test_rust_api_service_direct_classify_arguments_match_python(home, payload):
+    from agentrouter.server import service
+
+    expected = service.classify_task(**payload)
+    process = _rust_service(home, "classify_args", payload)
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == expected
+
+
+def test_rust_api_service_direct_invalid_risk_matches_python(home):
+    from agentrouter.server import service
+
+    with pytest.raises(ValueError):
+        service.classify_task("task", risk="critical")
+    process = _rust_service(home, "classify_args", {"task": "task", "risk": "critical"})
+    assert process.returncode != 0
+    assert not process.stdout
+
+
 def test_rust_api_service_preserves_unbounded_context_tokens(home):
     from agentrouter.server import service
 
@@ -561,6 +615,43 @@ def test_rust_api_service_route_preview_matches_python(home):
     }
     expected = service.route_task(**payload)
     process = _rust_service(home, "route", payload)
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == expected
+
+
+def test_rust_api_service_direct_route_defaults_match_python(home):
+    from agentrouter.server import service
+
+    payload = {"task": "", "risk": "", "no_log": True}
+    expected = service.route_task(**payload)
+    process = _rust_service(home, "route_args", payload)
+    assert process.returncode == 0, process.stderr
+    assert json.loads(process.stdout) == expected
+
+
+def test_rust_api_service_route_emits_private_metadata_log_for_direct_call(home):
+    task = "summarize private-token-sk-1234567890"
+    process = _rust_service(
+        home,
+        "route",
+        {"task": task, "no_log": True},
+        {"AGENTROUTER_LOG": "1"},
+    )
+    assert process.returncode == 0, process.stderr
+    records = [json.loads(line) for line in process.stderr.splitlines() if line.startswith("{")]
+    assert len(records) == 1
+    assert records[0]["event"] == "route_decision"
+    assert records[0]["task_len"] == len(task)
+    assert task not in process.stderr
+    assert "sk-1234567890" not in process.stderr
+
+
+def test_rust_api_service_opt_in_route_span_keeps_result_contract(home):
+    from agentrouter.server import service
+
+    payload = {"task": "summarize a report", "no_log": True}
+    expected = service.route_task(**payload)
+    process = _rust_service(home, "route_args", payload, {"AGENTROUTER_OTEL": "1"})
     assert process.returncode == 0, process.stderr
     assert json.loads(process.stdout) == expected
 
@@ -663,3 +754,27 @@ def test_rust_api_service_missing_record_behavior_matches_python(home, kind, pay
     assert process.returncode == 0, process.stderr
     assert actual == expected
     assert json.loads(process.stdout) == expected
+
+
+def test_rust_api_dry_run_without_recommendation_still_requires_registry(tmp_path, monkeypatch):
+    from agentrouter import store
+    from agentrouter.registry import RegistryError
+    from agentrouter.server import service
+
+    isolated_home = tmp_path / "no-registry"
+    isolated_home.mkdir()
+    connection = store.connect(isolated_home)
+    decision_id = store.save_decision(
+        connection,
+        "manual task",
+        {"recommendation": None, "gates": {}, "execution_route": None},
+    )
+    connection.close()
+    monkeypatch.setenv("AGENTROUTER_HOME", str(isolated_home))
+
+    with pytest.raises(RegistryError, match="Registry file not found"):
+        service.execute_dry_run(decision_id)
+    process = _rust_service(isolated_home, "dry_run", {"decision_id": decision_id})
+    assert process.returncode != 0
+    assert not process.stdout
+    assert "providers.yaml" in process.stderr

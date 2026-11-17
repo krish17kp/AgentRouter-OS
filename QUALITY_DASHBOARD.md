@@ -2,6 +2,12 @@
 
 ## Current checkpoint — 2026-11-16
 
+TASK-167 closes server-service parity after adding home/registry and direct-call
+facades, fail-closed raw argument handling, active OpenTelemetry route spans,
+correlated direct-service logging, and full service differentials. Focused 102,
+full Rust workspace/Clippy, and Ruff pass; full Python regression is running.
+Full Python regression passes 2,728/7. Inventory: 55/77 Parity, 22 Partial.
+
 TASK-166 closes annotation-schema parity after repairing a public-deserialization
 validation bypass found by independent audit. Constants, required/default/null,
 unknown and nested fields, agreement edges, arbitrary integers, scalar coercion,

@@ -547,16 +547,9 @@ async fn route_task(
 ) -> Result<Json<Value>, ApiError> {
     let request: RouteRequest = decode(body, RequestKind::Route)?;
     let home = state.home;
-    let task = request.classify.task.clone();
-    let result = blocking(move || service::route_task(&home, &request)).await?;
-    let decision_id = result.get("decision_id").and_then(Value::as_str);
-    let record = agentrouter_observability::route_decision_record(
-        &task,
-        &result,
-        decision_id,
-        Some(&request_id.0),
-    );
-    agentrouter_observability::emit_route_decision(&record);
+    let result =
+        blocking(move || service::route_task_with_request_id(&home, &request, Some(&request_id.0)))
+            .await?;
     Ok(Json(result))
 }
 

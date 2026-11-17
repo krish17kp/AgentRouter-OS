@@ -2,6 +2,12 @@
 
 ## Current checkpoint — 2026-11-16
 
+**NOT release ready.** TASK-167 promotes the independently audited server-service
+row. Home and registry facades, direct argument defaults, active metadata-only
+OTel spans, correlated logging, and 102 focused checks pass with full Rust
+validation. Inventory: 55/77 Parity, 22 Partial; full Python regression is still
+running. Full Python regression passes 2,728/7.
+
 **NOT release ready.** TASK-166 promotes the independently audited annotation
 schema only after semantic validation became inseparable from public Rust
 deserialization. Direct 77, annotation production-path 108, evaluation Rust,
