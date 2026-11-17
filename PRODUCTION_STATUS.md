@@ -280,16 +280,17 @@ baseline reproduces overwriting an existing artifact in Python; Rust refuses it.
 - OpenAI live validation: provide `OPENAI_API_KEY` through a local environment or a protected secret store and authorize one bounded Responses API smoke request, which may incur usage charges. Offline request/response fixtures are ready; no key is stored in the repository.
 - Production release/deployment: after the local and hosted release gates pass, provide the production hosting/domain credentials and authorize any paid infrastructure and deployment. The Rust server is loopback-only and no production deployment has run.
 
-Latest completed full local verification: Python 3.12 passes 2,580 tests with 5
-skips on pytest 9.0.3 in 237.14 seconds. Coverage is 92.030% statement
-(6,905/7,503), 87.712% branch (1,963/2,238), and 91.038% combined
-(8,868/9,741), above required thresholds; evidence is in
+Latest completed full local verification: Python 3.12 passes 2,733 tests with 7
+skips on pytest 9.0.3 in 404.04 seconds. The committed coverage evidence remains
+92.052% statement, 87.756% branch, and 91.064% combined, above required
+thresholds; evidence is in
 [`docs/COVERAGE_REPORT_2026-11-14-TASK-150.md`](docs/COVERAGE_REPORT_2026-11-14-TASK-150.md).
 The run includes the API large-integer response differential, nested JSON
 redaction, route-envelope cases, and earlier regressions. Rust workspace tests
 pass locally, as do API crate tests, strict API Clippy, the full API schema
 differential selection (57 tests), Rust formatting, Ruff, and `git diff --check`.
-The last pushed code head `9a7dc7a` passes all Rust workspace OS jobs and Linux
+The last pushed code head `5108b9c` is queued for fresh hosted validation after
+the bundle-parent hardening; prior Rust workspace OS jobs and Linux
 and macOS Python/Rust compatibility; Windows compatibility and most Python jobs
 were running at the time of this update. PR #16's enforcing gate continues to
 fail honestly at frozen context-band accuracy 0.6667 < 0.90. Human annotation,
