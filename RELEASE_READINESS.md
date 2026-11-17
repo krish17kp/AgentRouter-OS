@@ -3,7 +3,7 @@
 ## Current checkpoint — 2026-11-18
 
 Latest local verification on 2026-11-18 passes 2,738 Python tests with 7
-expected environment skips, 88/88 focused Rust contract/unified-CLI tests,
+expected environment skips, 89/89 focused Rust contract/unified-CLI tests,
 the locked optimized Rust workspace build, strict Clippy, and cargo audit.
 
 At pushed RC head `71408b2`, the macOS root-alias repair and TASK-175 Windows

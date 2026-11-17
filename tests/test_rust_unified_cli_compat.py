@@ -297,6 +297,67 @@ def test_contract_cli_checks_baseline_and_reports_surface_changes(tmp_path, unif
     assert "unusable $ref" in malformed_result.stderr
 
 
+def test_contract_export_requires_and_records_owner_acceptance(tmp_path, unified_binary):
+    contract_dir = tmp_path / "contracts" / "http" / "v1"
+    contract_dir.mkdir(parents=True)
+    baseline_path = ROOT / "contracts" / "http" / "v1" / "openapi.json"
+    manifest_path = ROOT / "contracts" / "http" / "v1" / "manifest.json"
+    shutil.copy2(baseline_path, contract_dir / "openapi.json")
+    shutil.copy2(manifest_path, contract_dir / "manifest.json")
+
+    candidate = json.loads(baseline_path.read_text(encoding="utf-8"))
+    candidate["paths"] = dict(candidate["paths"])
+    removed_path = next(iter(candidate["paths"]))
+    candidate["paths"].pop(removed_path)
+    candidate_path = tmp_path / "candidate.json"
+    candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
+
+    refused = subprocess.run(
+        [
+            str(unified_binary),
+            "contract",
+            "export",
+            "--source",
+            str(candidate_path),
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=60,
+        check=False,
+    )
+    assert refused.returncode == 2
+    assert "breaking change" in refused.stderr
+
+    accepted = subprocess.run(
+        [
+            str(unified_binary),
+            "contract",
+            "export",
+            "--source",
+            str(candidate_path),
+            "--accept-breaking",
+            "--reason",
+            "owner-approved compatibility break",
+            "--json",
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=60,
+        check=False,
+    )
+    assert accepted.returncode == 0, accepted.stderr
+    payload = json.loads(accepted.stdout)
+    assert payload["accepted_breaking_changes"] == 1
+    manifest = json.loads((contract_dir / "manifest.json").read_text(encoding="utf-8"))
+    entry = manifest["accepted_breaking_changes"][-1]
+    assert entry["reason"] == "owner-approved compatibility break"
+    assert any(change["location"] == removed_path for change in entry["changes"])
+
+
 def test_setup_runs_onboarding_and_persists_selected_preference(
     tmp_path, unified_binary, monkeypatch
 ):

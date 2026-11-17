@@ -22,6 +22,7 @@ cargo test --locked --workspace                        # all workspace tests pas
 cargo build --locked --workspace --release             # passed
 cargo audit --no-yanked -f Cargo.lock                  # no advisories; chrono unmaintained warning only
 temporary CLI fixture with removed /health endpoint  # acceptance recorded
+Python/Rust contract + unified-CLI differential suite # 89 passed
 ```
 
 This closes the local Rust acceptance workflow gap; Python remains the
