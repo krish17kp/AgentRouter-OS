@@ -32,6 +32,13 @@ Coverage is 92.021% statement, 87.833% branch, and 91.058% combined.
 
 ## Current checkpoint — 2026-11-17
 
+TASK-172 tightens diagnostics stable-contract parity. Rust now reports the same
+package version, server-extra wording, and contract path summary as Python;
+the direct stable-check differential and 41-test diagnostics suite pass with
+strict Clippy. Diagnostics remains Partial for runtime-specific and full bundle
+field parity. Commit/push this small repair, inspect hosted checks, then
+continue the next Partial module.
+
 TASK-171 provider refresh parity is independently clear. Rust refresh uses
 no-follow registry traversal, fixed bounded HTTPS transport, Python-compatible
 OpenRouter/OpenAI mapping, provenance, deprecation warnings, dry-run, and atomic

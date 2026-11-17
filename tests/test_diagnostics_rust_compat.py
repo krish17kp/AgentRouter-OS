@@ -77,6 +77,26 @@ def test_json_report_has_stable_ids_and_check_shape(tmp_path):
     assert next(check for check in checks if check["id"] == "server.extra")["status"] == "ok"
 
 
+def test_stable_product_contract_checks_match_python(tmp_path):
+    from agentrouter import diagnostics
+
+    home = tmp_path / "agentrouter"
+    home.mkdir()
+    python_checks = {
+        check.id: check.as_dict()
+        for check in diagnostics.run_all(home)
+        if check.id in {"app.version", "server.extra", "contract.version"}
+    }
+    result = _doctor(home, "--json")
+    assert result.returncode == 1
+    rust_checks = {
+        check["id"]: check
+        for check in json.loads(result.stdout)["checks"]
+        if check["id"] in python_checks
+    }
+    assert rust_checks == python_checks
+
+
 def test_plugin_health_rollup_matches_python_for_missing_destinations(tmp_path, monkeypatch):
     from agentrouter import diagnostics
 

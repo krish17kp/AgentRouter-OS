@@ -430,12 +430,7 @@ fn check_plugins() -> Check {
 }
 
 fn check_server_extra() -> Check {
-    Check::new(
-        "server.extra",
-        OK,
-        "the REST API is included in the Rust CLI",
-        None,
-    )
+    Check::new("server.extra", OK, "the [server] extra is installed", None)
 }
 
 fn check_usage(host: &str) -> Check {
@@ -473,7 +468,7 @@ pub fn run_all(home: &Path) -> Vec<Check> {
             Check::new(
                 "app.version",
                 OK,
-                format!("agentrouter-rust-cli {}", env!("CARGO_PKG_VERSION")),
+                format!("agentrouter-os {}", agentrouter_core::package_version()),
                 None,
             )
         }),
@@ -506,7 +501,12 @@ pub fn run_all(home: &Path) -> Vec<Check> {
         safe("server.extra", check_server_extra),
         safe("server.auth", check_api_key),
         safe("contract.version", || {
-            Check::new("contract.version", OK, "HTTP contract v1", None)
+            Check::new(
+                "contract.version",
+                OK,
+                "HTTP contract v1 (contracts/http/v1)",
+                None,
+            )
         }),
         safe("observability.logging", check_observability),
     ]

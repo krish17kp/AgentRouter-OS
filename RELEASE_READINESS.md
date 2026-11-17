@@ -2,6 +2,11 @@
 
 ## Current checkpoint — 2026-11-17
 
+**NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
+server-extra, and contract summaries with Python and adds direct differential
+evidence. Diagnostics remains Partial for runtime-specific and complete bundle
+field parity; all external release gates remain unresolved.
+
 **NOT release ready.** TASK-171 closes the provider refresh row after
 independent review. Fixed HTTPS retrieval, bounded transport, key-only headers,
 OpenRouter/OpenAI mapping, warnings/deprecations, dry-run, provenance, atomic

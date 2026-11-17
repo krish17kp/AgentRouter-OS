@@ -2,6 +2,10 @@
 
 ## Current checkpoint — 2026-11-17
 
+Product acceptance remains **not granted**. TASK-172 aligns stable diagnostics
+summaries and adds a direct cross-language check; runtime-specific and complete
+bundle parity remain Partial.
+
 Product acceptance remains **not granted**. TASK-171 provider refresh parity is
 independently clear: deterministic process evidence covers OpenRouter/OpenAI
 success and failure semantics, dry-run and malformed-fetch no-write behavior,

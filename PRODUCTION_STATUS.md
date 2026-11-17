@@ -14,6 +14,11 @@ Updated: 2026-11-17
 
 ## Current recovery checkpoint
 
+TASK-172 aligns the Rust doctor’s stable package, server-extra, and contract
+summaries with Python. The direct stable-check differential, diagnostics suite
+(41 focused checks), Rust diagnostics tests, and strict Clippy pass. The row
+remains Partial for runtime-specific and complete bundle field parity.
+
 TASK-171 closes provider refresh parity after independent review. Generated
 catalog writes now traverse the registry without following symlinks/reparse
 points. Fixed HTTPS transport remains bounded and header-only; OpenRouter and

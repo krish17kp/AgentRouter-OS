@@ -1,5 +1,15 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-172 diagnostics stable-contract alignment
+
+Aligned the Rust doctor’s stable product-facing summaries with Python:
+`app.version` now reports the package version, `server.extra` uses the shared
+installed-extra wording, and `contract.version` includes the contract path.
+Added a direct Python/Rust differential for those checks. Diagnostics
+compatibility now passes 41 focused checks plus Rust diagnostics tests and
+strict Clippy. The module remains Partial for runtime-specific and complete
+bundle parity; no unsupported parity claim was made.
+
 ## 2026-11-17 — TASK-171 provider refresh parity audit
 
 Completed the provider-refresh audit and repaired a registry write escape:

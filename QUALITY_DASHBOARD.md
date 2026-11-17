@@ -2,6 +2,10 @@
 
 ## Current checkpoint — 2026-11-17
 
+TASK-172 aligns Rust doctor stable summaries with Python and adds a direct
+cross-language check. Diagnostics compatibility passes 41 focused checks and
+strict Clippy; runtime-specific and full bundle parity remain Partial.
+
 TASK-171 closes provider refresh parity after independent security review. Rust
 refresh now uses no-follow registry traversal, fixed HTTPS endpoints, bounded
 header-only transport, Python-compatible OpenRouter/OpenAI mapping, provenance,
