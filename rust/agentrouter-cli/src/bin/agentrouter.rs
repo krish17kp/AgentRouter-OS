@@ -22,7 +22,7 @@ fn contract_command(args: &[String]) -> Result<i32, String> {
         .iter()
         .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
     {
-        println!("Usage: agentrouter contract <check [--json]|diff [PATH|-] [--json]|export [--source PATH] [--json]>");
+        println!("Usage: agentrouter contract <check [--json]|diff [PATH|-] [--json]|export [--source PATH] [--generated-at RFC3339] [--json]>");
         println!("Checks, exports, or compares the committed OpenAPI artifact.");
         println!("The diff command is a compatibility surface probe; the Python gate remains authoritative for full live-schema checks.");
         return Ok(0);
