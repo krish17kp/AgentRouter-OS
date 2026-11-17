@@ -373,3 +373,11 @@ cancellation, deployment, or release-gate requirements.
 Workflow lifecycle transitions, retry budgets, cancellation, and aggregation
 are now testable without dispatch. This improves safety evidence but does not
 constitute live execution, deployment, or release readiness.
+
+## TASK-208 Rust contract CLI surface — 2026-11-17
+
+The unified CLI now exposes read-only `contract check` and `contract diff`
+commands over the committed OpenAPI baseline. This improves CLI surface
+coverage but explicitly does not replace the Python live-schema gate; human
+evaluation, live credentials, promotion, and deployment approvals remain
+unresolved.

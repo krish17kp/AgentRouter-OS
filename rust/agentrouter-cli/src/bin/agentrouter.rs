@@ -14,7 +14,102 @@ use std::process::Command;
 use agentrouter_registry::{load_all_models, load_providers, ModelEntry};
 
 fn usage() -> &'static str {
-    "usage: agentrouter <init|setup|route|explain|feedback|plan|execute|workflow|stats|evaluate|prompt|registry|providers|hosts|models|doctor|server|mcp|dashboard|reliability|plugin|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  setup [--preference quality|balanced|cheap|fast] [--sample TEXT]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  plan <decision-id> [--json] [--include-unavailable] [--allow-remote] [--approve]\n  execute <decision-id> [--yes] [--dry-run]\n  workflow plan [--json] [--max-steps N] [--max-cost N] [--allow-tool TOOL] < workflow.json\n  stats [--json]\n  evaluate [--gold PATH] [--out-dir PATH] [--json] [--no-artifacts]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  server [--host HOST] [--port PORT]\n  mcp (stdio server)\n  dashboard [port]\n  reliability soak [--seconds N] [--workers N] [--batch N] [--home PATH] [--out PATH]\n  plugin <list|install NAME [--dry-run] [--force] [--adopt-identical]|uninstall NAME|doctor [--json]>\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
+    "usage: agentrouter <init|setup|route|explain|feedback|plan|execute|workflow|stats|evaluate|prompt|registry|providers|hosts|models|doctor|server|mcp|dashboard|reliability|plugin|contract|dataset|eval> [options]\n\nRust commands currently available:\n  init [--force]\n  setup [--preference quality|balanced|cheap|fast] [--sample TEXT]\n  route <task> [preference] [routing controls] [--json]\n  explain <decision-id>\n  feedback <decision-id> --rating 1..5 [--note TEXT]\n  plan <decision-id> [--json] [--include-unavailable] [--allow-remote] [--approve]\n  execute <decision-id> [--yes] [--dry-run]\n  workflow plan [--json] [--max-steps N] [--max-cost N] [--allow-tool TOOL] < workflow.json\n  stats [--json]\n  evaluate [--gold PATH] [--out-dir PATH] [--json] [--no-artifacts]\n  prompt generate --from <decision-id> [--tool <host>]\n  registry list [options]\n  providers <status|doctor|refresh [PROVIDER] [--limit N] [--match TEXT] [--dry-run]|rollback PROVIDER|restore PROVIDER>\n  hosts <list|doctor|show HOST>\n  models <list|show KEY>\n  doctor [options]\n  server [--host HOST] [--port PORT]\n  mcp (stdio server)\n  dashboard [port]\n  reliability soak [--seconds N] [--workers N] [--batch N] [--home PATH] [--out PATH]\n  plugin <list|install NAME [--dry-run] [--force] [--adopt-identical]|uninstall NAME|doctor [--json]>\n  contract <check [--json]|diff [PATH|-] [--json]>\n  dataset <annotation workflow command>\n  eval <evaluation command> (requires agentrouter-evaluate installed)"
+}
+
+fn contract_command(args: &[String]) -> Result<i32, String> {
+    if args
+        .iter()
+        .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
+    {
+        println!("Usage: agentrouter contract <check [--json]|diff [PATH|-] [--json]>");
+        println!("Checks the committed OpenAPI artifact or compares a candidate surface.");
+        println!("The diff command is a compatibility surface probe; the Python gate remains authoritative for full live-schema checks.");
+        return Ok(0);
+    }
+    let subcommand = args
+        .first()
+        .map(String::as_str)
+        .ok_or_else(|| "usage: agentrouter contract <check|diff> [PATH|-] [--json]".to_owned())?;
+    let json_output = args.iter().any(|argument| argument == "--json");
+    let root = env::current_dir()
+        .map_err(|error| format!("could not resolve repository root: {error}"))?;
+    let baseline = agentrouter_cli::contract::load_baseline(&root).map_err(|error| {
+        format!(
+            "contract baseline invalid ({}): {error}",
+            error.kind.as_str()
+        )
+    })?;
+
+    match subcommand {
+        "check" => {
+            if args.iter().skip(1).any(|argument| argument != "--json") {
+                return Err("usage: agentrouter contract check [--json]".to_owned());
+            }
+            let (openapi_path, _) = agentrouter_cli::contract::contract_paths(&root);
+            let canonical = agentrouter_cli::contract::canonical_openapi_document(&baseline)?;
+            let is_canonical = canonical == baseline;
+            let payload = serde_json::json!({
+                "status": if is_canonical { "ok" } else { "drift" },
+                "baseline": openapi_path,
+                "references_valid": true,
+                "canonical": is_canonical,
+                "live_schema_check": false,
+            });
+            if json_output {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&payload).map_err(|error| error.to_string())?
+                );
+            } else if is_canonical {
+                println!("Contract OK: committed OpenAPI artifact is valid and canonical.");
+            } else {
+                println!("Contract drift: committed OpenAPI artifact is not canonical.");
+            }
+            Ok(if is_canonical { 0 } else { 1 })
+        }
+        "diff" => {
+            let candidate = args
+                .iter()
+                .skip(1)
+                .find(|argument| argument.as_str() != "--json")
+                .map(String::as_str)
+                .unwrap_or("-");
+            let text = if candidate == "-" {
+                let mut text = String::new();
+                std::io::stdin()
+                    .read_to_string(&mut text)
+                    .map_err(|error| format!("could not read candidate contract: {error}"))?;
+                text
+            } else {
+                std::fs::read_to_string(candidate).map_err(|error| {
+                    format!("could not read candidate contract {candidate}: {error}")
+                })?
+            };
+            let candidate: serde_json::Value = serde_json::from_str(&text)
+                .map_err(|error| format!("candidate contract is invalid JSON: {error}"))?;
+            let candidate = agentrouter_cli::contract::canonical_openapi_document(&candidate)?;
+            let report = agentrouter_cli::contract::diff_contracts_surface(&baseline, &candidate)?;
+            if json_output {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&report).map_err(|error| error.to_string())?
+                );
+            } else {
+                println!("Compatible: {}", report["compatible"]);
+                println!(
+                    "Changes:    {}",
+                    report["changes"].as_array().map_or(0, Vec::len)
+                );
+            }
+            Ok(if report["compatible"].as_bool().unwrap_or(false) {
+                0
+            } else {
+                1
+            })
+        }
+        _ => Err("usage: agentrouter contract <check|diff> [PATH|-] [--json]".to_owned()),
+    }
 }
 
 fn workflow_plan(args: &[String]) -> Result<i32, String> {
@@ -1440,6 +1535,9 @@ fn run() -> Result<i32, String> {
     }
     if command == "plugin" {
         return plugin(&tail);
+    }
+    if command == "contract" {
+        return contract_command(&tail);
     }
     if command == "setup" {
         let home = home()?;

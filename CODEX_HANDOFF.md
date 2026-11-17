@@ -612,3 +612,10 @@ dependency unlocks, retry budgets, cancellation, and aggregated outputs/errors.
 Seven focused tests and strict Clippy pass. Keep actual adapter lifecycle and
 workspace mutation behind the owner-authorized execution milestone.
 
+## TASK-208 checkpoint — 2026-11-17
+
+The unified Rust CLI now exposes read-only `contract check` and `contract diff`
+surface tooling. Baseline validation, additive compatibility, and breaking
+surface exit behavior are covered by focused process tests. The command reports
+that it is not a live-schema check; Python remains authoritative for that gate.
+

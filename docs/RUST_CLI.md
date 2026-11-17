@@ -28,6 +28,11 @@ validates dependency, budget, tool, idempotency, and side-effect guards, and
 emits a planning-only schedule. It never dispatches agents or mutates a
 workspace; use `--max-steps`, `--max-cost`, and repeated `--allow-tool` to set
 the explicit planning policy.
+`contract check --json` validates the committed OpenAPI baseline and
+`contract diff PATH --json` reports the bounded Rust surface comparison. These
+commands are read-only compatibility tooling; `contract check` reports
+`live_schema_check: false`, and the Python live-schema gate remains
+authoritative.
 The human annotation flow is linked directly:
 
 ```sh
@@ -38,7 +43,7 @@ cargo run --locked -p agentrouter-cli --bin agentrouter -- dataset --help
 `$HOME/.agentrouter` (or `%USERPROFILE%\.agentrouter` on Windows). `eval`
 forwards to an installed `agentrouter-evaluate` executable. Provider refresh
 supports `openrouter` and `openai` with `--limit`, `--match`, and
-`--dry-run`; OpenAI refresh requires `OPENAI_API_KEY`. Contract export/check
-and the remaining broader Python CLI semantics are still migration gaps; the
-Rust plugin commands are present but remain partial until their full lifecycle
-parity is independently closed.
+`--dry-run`; OpenAI refresh requires `OPENAI_API_KEY`. Full contract export and
+live-schema parity, plus the remaining broader Python CLI semantics, are still
+migration gaps; the Rust plugin commands are present but remain partial until
+their full lifecycle parity is independently closed.

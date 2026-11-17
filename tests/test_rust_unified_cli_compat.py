@@ -261,6 +261,36 @@ def test_workflow_plan_is_read_only_and_rejects_duplicate_dependencies(unified_b
     assert "dependency" in rejected.stderr and "more than once" in rejected.stderr
 
 
+def test_contract_cli_checks_baseline_and_reports_surface_changes(tmp_path, unified_binary):
+    checked = _run(unified_binary, "contract", "check", "--json")
+    assert checked.returncode == 0, checked.stderr
+    payload = json.loads(checked.stdout)
+    assert payload["status"] == "ok"
+    assert payload["references_valid"] is True
+    assert payload["live_schema_check"] is False
+
+    baseline = json.loads((ROOT / "contracts/http/v1/openapi.json").read_text(encoding="utf-8"))
+    additive = dict(baseline)
+    additive["paths"] = dict(baseline["paths"])
+    additive["paths"]["/__compat_probe__"] = {"get": {"responses": {"200": {"description": "ok"}}}}
+    additive_path = tmp_path / "additive.json"
+    additive_path.write_text(json.dumps(additive), encoding="utf-8")
+    additive_result = _run(unified_binary, "contract", "diff", additive_path, "--json")
+    assert additive_result.returncode == 0, additive_result.stderr
+    additive_report = json.loads(additive_result.stdout)
+    assert additive_report["compatible"] is True
+    assert additive_report["counts"]["additive"] == 1
+
+    breaking = dict(baseline)
+    breaking["paths"] = dict(baseline["paths"])
+    breaking["paths"].pop(next(iter(breaking["paths"])))
+    breaking_path = tmp_path / "breaking.json"
+    breaking_path.write_text(json.dumps(breaking), encoding="utf-8")
+    breaking_result = _run(unified_binary, "contract", "diff", breaking_path, "--json")
+    assert breaking_result.returncode == 1
+    assert json.loads(breaking_result.stdout)["compatible"] is False
+
+
 def test_setup_runs_onboarding_and_persists_selected_preference(
     tmp_path, unified_binary, monkeypatch
 ):

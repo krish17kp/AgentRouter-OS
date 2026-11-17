@@ -3219,3 +3219,11 @@ machine with dependency readiness, bounded retries, terminal failures, and
 result aggregation. Seven focused tests and strict crate Clippy pass. It stays
 adapter-neutral and execution-disabled; no process, provider, tool, or
 workspace mutation is performed.
+
+## TASK-208 Rust contract CLI surface — 2026-11-17
+
+Added unified read-only `contract check` and `contract diff` commands over the
+bounded Rust OpenAPI baseline/surface analyzer. Focused process coverage passes
+for baseline validation, additive changes, and breaking changes. The command
+reports `live_schema_check: false`; the Python live-schema compatibility gate
+remains authoritative.
