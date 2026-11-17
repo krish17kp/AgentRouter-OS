@@ -9,6 +9,9 @@
   the HTTP application lifecycle row; CLI/annotation, MCP lifecycle, plugin,
   reliability, registry refresh, SDK transport, and external adapters remain
   Partial.
+- Rust migration remains incomplete at 58/77 full-module parity. TASK-170 closes
+  the annotation CLI packaged-resource row; MCP lifecycle, plugin, reliability,
+  registry refresh, SDK transport, and external adapters remain Partial.
 - Rust HTTP service errors intentionally provide bounded, strictly redacted
   message-only evidence; direct observability callers can supply a rendered
   traceback, but the service does not retain Python traceback objects across

@@ -2,6 +2,13 @@
 
 ## Current checkpoint — 2026-11-17
 
+TASK-170 closes packaged annotation CLI parity after independent review. The
+Rust evaluator embeds the candidate pool and frozen holdout, prefers checked-out
+files for source-tree development, and falls back to embedded bytes elsewhere.
+Exact resource hashes/counts and source-independent fallback are tested;
+annotation CLI/schema compatibility passes 88. Inventory: 58/77 Parity,
+19 Partial.
+
 TASK-169 closes the HTTP application lifecycle row after independent review.
 The executable now uses the shared OS-aware home resolver; process-level
 differentials cover request-ID guarantees on auth/rate/CORS short circuits,

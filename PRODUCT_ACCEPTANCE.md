@@ -2,6 +2,11 @@
 
 ## Current checkpoint — 2026-11-17
 
+Product acceptance remains **not granted**. TASK-170 packaged annotation CLI
+parity is independently clear: embedded candidate/holdout resources, exact
+resource evidence, source-independent fallback, and 88 annotation CLI/schema
+checks pass. Inventory: 58 Parity / 19 Partial.
+
 Product acceptance remains **not granted**. TASK-169 HTTP lifecycle parity is
 independently clear: the executable uses the shared OS-aware home resolver and
 114 focused process/schema checks cover request-ID short circuits, auth/rate/

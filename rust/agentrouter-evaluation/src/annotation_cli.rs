@@ -17,6 +17,11 @@ use crate::annotation_schema::{
 };
 use crate::{AnnotationAdjudication, AnnotationInputItem};
 
+const DEFAULT_CANDIDATES_YAML: &str =
+    include_str!("../../../agentrouter/benchmarks/context_band/candidates_v1.yaml");
+const FROZEN_HOLDOUT_YAML: &str =
+    include_str!("../../../agentrouter/benchmarks/context_band_holdout_v1.yaml");
+
 fn project_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
@@ -44,14 +49,20 @@ fn read_labels(path: &Path) -> Result<Vec<ItemLabels>, String> {
     crate::annotation_store::load_labels(path)
 }
 
+fn load_pack_candidates(path: &Path, default_path: &Path) -> Result<Vec<Candidate>, String> {
+    if path == default_path && !path.exists() {
+        crate::annotation_store::load_candidates_text(DEFAULT_CANDIDATES_YAML)
+    } else {
+        read_candidates(path)
+    }
+}
+
 fn read_frozen_prompts(root: &Path) -> Vec<String> {
     let path = root.join("agentrouter/benchmarks/context_band_holdout_v1.yaml");
-    let Ok(text) = std::fs::read_to_string(path) else {
-        return Vec::new();
-    };
-    let Ok(value) = serde_yaml::from_str::<Value>(&text) else {
-        return Vec::new();
-    };
+    let text = std::fs::read_to_string(path).unwrap_or_else(|_| FROZEN_HOLDOUT_YAML.to_owned());
+    let value = serde_yaml::from_str::<Value>(&text)
+        .or_else(|_| serde_yaml::from_str::<Value>(FROZEN_HOLDOUT_YAML));
+    let Ok(value) = value else { return Vec::new() };
     value["cases"]
         .as_array()
         .into_iter()
@@ -114,7 +125,8 @@ fn pack(args: impl Iterator<Item = String>) -> Result<i32, String> {
     let annotator = annotator.ok_or_else(|| "--annotator is required".to_owned())?;
     let seed = seed.ok_or_else(|| "--seed is required".to_owned())?;
     let out = out.ok_or_else(|| "--out is required".to_owned())?;
-    let candidates = read_candidates(&candidates)?;
+    let default_path = root.join("agentrouter/benchmarks/context_band/candidates_v1.yaml");
+    let candidates = load_pack_candidates(&candidates, &default_path)?;
     let ordered = crate::annotation_packs::build_pack(&candidates, &seed)?;
     crate::annotation_store::save_candidates(&out, &ordered)?;
     println!(
@@ -665,5 +677,37 @@ pub fn run(args: impl Iterator<Item = String>) -> Result<i32, String> {
         "compare" => compare(args),
         "leakage" => leakage(args),
         _ => Err(format!("unknown dataset command '{command}'")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn packaged_annotation_resources_are_embedded_and_parseable() {
+        use sha2::{Digest, Sha256};
+
+        let candidates = crate::annotation_store::load_candidates_text(DEFAULT_CANDIDATES_YAML)
+            .expect("embedded candidate pool");
+        assert_eq!(candidates.len(), 63);
+        assert_eq!(DEFAULT_CANDIDATES_YAML.len(), 10_568);
+        assert_eq!(
+            format!("{:x}", Sha256::digest(DEFAULT_CANDIDATES_YAML.as_bytes())),
+            "8205b492e6d41dc86846fedecf448ce0406cb4af305c4b4f6e6c4dfa6e48f150"
+        );
+        let prompts = read_frozen_prompts(Path::new("/path/that/does/not/exist"));
+        assert_eq!(prompts.len(), 45);
+        assert_eq!(FROZEN_HOLDOUT_YAML.len(), 6_068);
+        assert_eq!(
+            format!("{:x}", Sha256::digest(FROZEN_HOLDOUT_YAML.as_bytes())),
+            "ca07dfa09f08cd877d383067b8e1163c0f196a5a1f0c4e641adefed12b17508f"
+        );
+        let fallback = load_pack_candidates(
+            Path::new("/path/that/does/not/exist"),
+            Path::new("/path/that/does/not/exist"),
+        )
+        .expect("embedded default candidate fallback");
+        assert_eq!(fallback.len(), 63);
     }
 }

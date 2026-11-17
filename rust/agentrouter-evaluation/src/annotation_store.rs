@@ -213,7 +213,12 @@ pub fn save_candidates(path: &Path, candidates: &[Candidate]) -> Result<(), Stri
 }
 
 pub fn load_candidates(path: &Path) -> Result<Vec<Candidate>, String> {
-    let raw = parse_document(path)?;
+    let text = std::fs::read_to_string(path).map_err(|error| error.to_string())?;
+    load_candidates_text(&text)
+}
+
+pub fn load_candidates_text(text: &str) -> Result<Vec<Candidate>, String> {
+    let raw: Value = serde_yaml::from_str(text).map_err(|error| error.to_string())?;
     let candidates = raw
         .get("candidates")
         .and_then(Value::as_array)

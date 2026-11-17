@@ -32,6 +32,14 @@ Coverage is 92.021% statement, 87.833% branch, and 91.058% combined.
 
 ## Current checkpoint — 2026-11-17
 
+TASK-170 packaged annotation CLI parity is independently clear. Rust embeds the
+candidate pool and frozen holdout, prefers checked-out files for development,
+and falls back to deterministic embedded bytes for installed binaries. Exact
+hash/count evidence and source-independent default-pack fallback tests pass;
+annotation CLI/schema compatibility passes 88. Inventory is 58/77 Parity and
+19 Partial. Commit/push this slice after the full workspace regression, inspect
+hosted checks, then continue the next Partial module.
+
 TASK-169 HTTP application lifecycle parity is independently clear. The API
 executable now delegates default-home resolution to the shared OS-aware service
 resolver. Process-level differentials cover request IDs on auth/rate/CORS short

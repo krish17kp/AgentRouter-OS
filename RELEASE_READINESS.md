@@ -2,6 +2,13 @@
 
 ## Current checkpoint — 2026-11-17
 
+**NOT release ready.** TASK-170 closes packaged annotation CLI parity after
+independent review. Candidate and frozen-holdout resources are embedded with
+checked-out-file precedence and deterministic fallback; exact hashes/counts and
+the annotation CLI differential suite (88 checks) pass. Inventory: 58/77
+Parity, 19 Partial. External evaluation, credential, hosted, and promotion
+gates remain unresolved.
+
 **NOT release ready.** TASK-169 closes the HTTP application lifecycle row after
 independent review. The API executable uses the shared OS-aware home resolver,
 and 114 focused HTTP/schema compatibility checks cover short-circuit request

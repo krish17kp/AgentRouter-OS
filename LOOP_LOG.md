@@ -1,5 +1,14 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-170 packaged annotation CLI parity
+
+Completed the annotation CLI packaged-resource audit. Rust now embeds the
+candidate pool and frozen holdout, prefers checked-out resources when present,
+and uses deterministic embedded fallback bytes for installed binaries or other
+working directories. Exact resource hashes, lengths, candidate/prompt counts,
+and source-independent default-pack fallback are tested. Annotation CLI/schema
+compatibility passes 88; inventory advances to 58/77 Parity and 19 Partial.
+
 ## 2026-11-17 — TASK-169 HTTP application lifecycle parity
 
 Closed the Rust HTTP application lifecycle row after independent review. The
