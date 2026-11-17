@@ -2,7 +2,7 @@
 
 ## Current checkpoint — 2026-11-17
 
-At pushed RC head `544e520`, the macOS root-alias repair is recorded with the bundle
+At pushed RC head `5324174`, the macOS root-alias repair is recorded with the bundle
 hardening evidence and the hosted Rust/Python matrix is green; TASK-175 repaired
 the Windows diagnostics path-format mismatch. Local Python/Rust release checks remain green; the
 frozen context-band gate and owner-supplied validation/deployment inputs remain

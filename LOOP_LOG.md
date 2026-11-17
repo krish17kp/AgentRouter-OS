@@ -1,5 +1,13 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-180 hosted validation
+
+The complete hosted matrix for RC head `5324174` is green across Rust
+Linux/Windows/macOS, Python/Rust compatibility on all three platforms, Python
+3.10–3.13, Windows, macOS, Security, Website, and Critical Mutation. The
+enforcing release gate remains the expected honest failure at frozen
+context-band accuracy 0.6667 < 0.90; live smoke is skipped without credentials.
+
 ## 2026-11-17 — TASK-180 evaluation text report parity
 
 The Rust context-band generalization command now matches Python's visible

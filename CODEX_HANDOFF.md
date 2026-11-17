@@ -3,12 +3,12 @@
 ## Live checkpoint — 2026-11-17
 
 Active release checkout: `/data/AgentRouter-production`, branch
-`release/agentrouter-v0.5-rc1`, pushed head `544e520`. TASK-175 repaired the
+`release/agentrouter-v0.5-rc1`, pushed head `5324174`. TASK-175 repaired the
 hosted Windows diagnostics path-format mismatch and its full matrix is green.
 PR #16 is
 the only open PR; no reviews or review requests are present. The macOS-only
 no-follow path regression is repaired and pushed; the Windows mismatch is
-repaired and validated; the prior head’s Linux Rust,
+repaired and validated; the current head’s Linux Rust,
 MSRV, API compatibility, build smoke, release-readiness report, Website, and
 Security checks are green. The only hosted failure is the expected frozen
 context-band release gate at 0.6667 < 0.90. Continue the remaining Partial
