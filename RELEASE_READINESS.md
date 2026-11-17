@@ -62,6 +62,12 @@ local smoke matched the committed OpenAPI baseline; this does not clear the
 frozen evaluation gate, live provider credential requirement, or deployment
 approval gates.
 
+TASK-219 aligns the Rust exporter with the owner-reviewed acceptance workflow:
+routine exports still refuse breaking changes, while
+`--accept-breaking --reason TEXT` records exact findings without erasing prior
+manifest history. Full Rust workspace tests, strict Clippy, optimized build,
+audit, and the acceptance smoke pass; release readiness is unchanged.
+
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
 advisories across 207 locked dependencies; one unmaintained `chrono` warning
