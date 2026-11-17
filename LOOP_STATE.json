@@ -1,12 +1,12 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-17",
-  "current_phase": "TASK-173 hardens Rust diagnostic bundle writes with pinned capability-directory exclusive creation after TASK-172 diagnostics stable-summary alignment. Focused bundle/diagnostics checks, Rust bundle tests, and strict Clippy pass; bundle parity remains Partial. Inventory is 59/77 Parity and 18 Partial.",
+  "current_phase": "TASK-173 hardens Rust diagnostic bundle writes with pinned capability-directory exclusive creation and serialized, handle-based SQLite snapshots after TASK-172 diagnostics stable-summary alignment. Focused bundle/diagnostics checks, Rust bundle tests, strict Clippy, and directory-swap regression pass; bundle parity remains Partial. Inventory is 59/77 Parity and 18 Partial.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
     "main": "Main remains unchanged. PR #16 is the sole open PR and has no submitted reviews or review requests. Current enforcing CI fails because frozen context-band accuracy is 0.6667 < 0.90. No promotion, tag, release, or gate bypass.",
-    "release/agentrouter-v0.5-rc1": "Latest pushed code is 5af3c55. Hosted Python 3.10-3.13, Windows/macOS, Rust workspace and Python/Rust compatibility on Linux/Windows/macOS, API, build, security, website, and critical mutation pass. PR #16 fails only the unchanged context-band 0.6667 < 0.90 gate; live smoke skips. TASK-152 is local and awaiting push.",
+    "release/agentrouter-v0.5-rc1": "Latest pushed code is d82bfa9. Hosted checks for this head are queued/in progress; prior head 5b64fe9 passed Security, Website, and Critical Mutation while CI/Rust migration were still queued. PR #16 remains held by the unchanged context-band 0.6667 < 0.90 gate; live smoke skips without credentials.",
     "task/rust-r1-workspace": "PR #25 open against RC; 6ee8d3e passed complete GitHub CI; 32eee6f forced-init push failed Windows compile, file-handle repair awaits remote recheck; SQLite path-race blocker remains; Rust R4 partial and OpenAI execution hardening",
     "task/repo-cleanup-architecture-ponytail": "MERGED to RC (PR #14, merge commit 1ae3155); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/dynamic-skill-discovery": "MERGED to RC (PR #15, merge commit 62d5289); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
@@ -29,7 +29,7 @@
   "repo_sha_at_takeover": "602321af91ff298c0d5b59d6d36c24f845557fc1",
   "canonical_release_ready": false,
   "in_progress": [
-    "Commit and push TASK-173 to the authorized release candidate branch, then inspect hosted checks.",
+    "Inspect hosted CI for TASK-173 commit d82bfa9 and repair any platform-specific failures without weakening gates.",
     "Confirm the latest hosted Windows/Rust migration checks pass after the cross-platform embedded-resource repair.",
     "Continue the remaining 18 Partial Rust modules while PR #16 is held for human evaluation, live validation, and release inputs."
   ],
