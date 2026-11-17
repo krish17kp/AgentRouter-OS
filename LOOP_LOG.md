@@ -8,8 +8,10 @@ temporary directories, causing storage and evaluation parity tests to fail
 with `SQLITE_CANTOPEN`. `agentrouter-storage::connect` now canonicalizes
 existing parent components before opening the database while retaining
 `SQLITE_OPEN_NOFOLLOW` on the final database leaf; `/proc/self/fd/<dirfd>`
-capability paths remain untouched. The full locked Rust workspace passes, the
-storage crate passes 15 tests, and the focused Python/Rust storage/evaluation
+capability paths remain untouched. A Unix regression test now proves that
+symlinked parent components work while the database leaf remains protected.
+The full locked Rust workspace passes, the storage crate passes 16 tests, and
+the focused Python/Rust storage/evaluation
 selection passes 69 tests. Hosted Rust migration CI `44197430454` is green on
 Linux/Windows/macOS; push CI `44197421590`, Website `44197430434`, Security
 `44197430634`, and Critical Mutation `44197430506` are also green for

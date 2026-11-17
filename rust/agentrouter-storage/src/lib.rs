@@ -764,6 +764,26 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
+    fn connect_allows_symlinked_parent_components() {
+        use std::os::unix::fs::symlink;
+
+        let root = tempfile::tempdir().unwrap();
+        let real = root.path().join("real");
+        std::fs::create_dir(&real).unwrap();
+        let alias = root.path().join("alias");
+        symlink(&real, &alias).unwrap();
+        let home = alias.join("home");
+
+        let conn = connect(&home).unwrap();
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM decisions", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(count, 0);
+        assert!(real.join("home/agentrouter.db").is_file());
+    }
+
+    #[cfg(unix)]
+    #[test]
     fn snapshot_refuses_a_symlink_destination() {
         use std::os::unix::fs::symlink;
 
