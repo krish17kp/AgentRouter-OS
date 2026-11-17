@@ -124,6 +124,11 @@ TASK-200 records matched 2,000-iteration pure-routing benchmarks for 10/100/
 1,000 synthetic fleets. Optimized Rust is faster at p50 and p95 in this local
 Linux run; treat it as comparative evidence only, not a production SLO.
 
+TASK-201 verifies the optimized Rust binary with Python environment variables
+removed. Isolated init, saved route, read-only plan, doctor JSON, and MCP
+initialize pass. This is a Rust-only runtime check for those surfaces; keep
+provider execution and deployment gated.
+
 ## Storage relocation — 2026-11-15
 
 Active release checkout: `/data/AgentRouter-production` on branch

@@ -278,6 +278,8 @@ accuracy in the current report. It is not evidence of held-out generalization.
   the JSON plan reports `execution_enabled: false`.
 - Routing benchmark parity: matched local pure-routing runs show Rust p50 at
   0.78×/0.77×/0.63× of Python for 10/100/1,000 candidates; not an SLO.
+- Rust-only runtime: Python-absent optimized init/route/plan/doctor/MCP smoke
+  passes; no provider execution or deployment was performed.
 
 ## TASK-153 recovery — 2026-11-15
 

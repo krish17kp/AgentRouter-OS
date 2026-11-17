@@ -35,6 +35,15 @@ warmups. Rust p50 is 0.78×, 0.77×, and 0.63× of Python respectively; p95 is
 also lower at every fleet size. Measurements exclude I/O, registry, provider,
 and execution time and are not production SLO claims.
 
+## 2026-11-17 — TASK-201 Python-absent Rust runtime
+
+The optimized Rust workspace binary ran with isolated `HOME`/`AGENTROUTER_HOME`,
+release-only `PATH`, and Python environment variables removed. Fresh-home init,
+saved route, read-only plan (`execution_enabled: false`), doctor JSON, and MCP
+initialize (`2025-11-25`, version `0.5.0rc1`) all succeeded. This is Rust-only
+runtime evidence for the exercised surfaces, not deployment or execution
+authorization.
+
 ## 2026-11-17 — TASK-195 optimized binary end-to-end smoke
 
 The optimized release binary succeeds from a fresh isolated home for `init`,

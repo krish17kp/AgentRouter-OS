@@ -114,6 +114,10 @@ benchmarks with Rust faster across all tested fleets. The result is not a
 production latency SLO and does not clear the frozen evaluation or deployment
 gates.
 
+**NOT release ready.** TASK-201 verifies Python-absent Rust-only init, route,
+plan, doctor, and MCP smoke. It does not clear the frozen evaluation gate or
+owner-controlled promotion, publication, and deployment requirements.
+
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
 evidence. Diagnostics remains Partial for runtime-specific and complete bundle

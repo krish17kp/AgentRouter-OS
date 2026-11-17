@@ -121,6 +121,11 @@ TASK-200 re-runs the matched pure-routing benchmark: optimized Rust p50 is
 34.41/336.12/3560.56, with p95 lower at every fleet size. This is comparative
 local CPU evidence only; it excludes I/O and provider execution.
 
+TASK-201 verifies the optimized Rust runtime with Python environment variables
+removed: isolated init, saved route, read-only plan, doctor JSON, and MCP
+initialize all succeed. This proves the exercised surfaces do not require the
+Python package at runtime; provider execution and deployment remain gated.
+
 TASK-175 repairs Windows diagnostics contract parity. Rust now renders the
 contract directory through the native path formatter, matching Python's
 platform-specific `Path` representation while retaining forward slashes on
