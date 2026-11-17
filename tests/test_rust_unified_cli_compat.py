@@ -67,6 +67,20 @@ def test_help_and_version_are_available(unified_binary):
     assert "dataset" in help_result.stdout
     assert "route" in help_result.stdout
 
+    python_help = subprocess.run(
+        [sys.executable, "-m", "agentrouter", "--help"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=60,
+        check=False,
+    )
+    assert python_help.returncode == 0, python_help.stderr
+    for command in ("route", "registry", "providers", "doctor"):
+        assert command in python_help.stdout
+        assert command in help_result.stdout
+
     version = _run(unified_binary, "--version")
     assert version.returncode == 0
     assert version.stdout.strip() == "agentrouter 0.5.0rc1"

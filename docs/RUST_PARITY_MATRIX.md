@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-17 (TASK-082–171). This inventory covers every Python source module under
+Updated: 2026-11-17 (TASK-082–176). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -14,7 +14,7 @@ release authority until the full set is complete.
 | Python module | Rust counterpart | Status |
 |---|---|---|
 | `agentrouter/__init__.py` | `agentrouter-core::package_version` | Parity |
-| `agentrouter/__main__.py` | `agentrouter-cli::bin::agentrouter` | Partial |
+| `agentrouter/__main__.py` | `agentrouter-cli::bin::agentrouter` | Parity |
 | `agentrouter/annotation/__init__.py` | `agentrouter-evaluation::annotation_api` | Parity |
 | `agentrouter/annotation/adjudicate.py` | `agentrouter-evaluation::{annotation_needs_adjudication,resolve_annotation}` | Parity |
 | `agentrouter/annotation/candidates.py` | `agentrouter-evaluation::annotation_candidates` | Parity |
@@ -92,6 +92,12 @@ release authority until the full set is complete.
 | `agentrouter/usage.py` | `agentrouter-usage::{check_usage,apply_live_verification}` | Parity |
 
 ## Release interpretation
+
+- TASK-176 adds a direct entrypoint differential: `python -m agentrouter --help`
+  and the Rust unified binary both expose the public route, registry, providers,
+  and doctor commands and return successful help/version responses. The one-line
+  Python module is now contract-covered as Parity; broader CLI behavior remains
+  tracked by the `agentrouter/cli.py` row.
 
 - TASK-140 adds direct nine-endpoint wire-contract comparisons for the Python and
   Rust SDKs, including API-key variants and structured API errors. TASK-141 adds

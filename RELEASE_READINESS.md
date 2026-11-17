@@ -34,6 +34,10 @@ the annotation CLI differential suite (88 checks) pass. Inventory: 58/77
 Parity, 19 Partial. External evaluation, credential, hosted, and promotion
 gates remain unresolved.
 
+**NOT release ready.** TASK-176 closes the Python module entrypoint row with a
+direct help/version differential; inventory is now 60/77 Parity and 17 Partial.
+The remaining parity and external release gates are unresolved.
+
 **NOT release ready.** TASK-169 closes the HTTP application lifecycle row after
 independent review. The API executable uses the shared OS-aware home resolver,
 and 114 focused HTTP/schema compatibility checks cover short-circuit request

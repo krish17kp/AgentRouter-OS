@@ -1,5 +1,13 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-176 Python module entrypoint parity
+
+Added a direct differential for `python -m agentrouter --help` versus the Rust
+unified binary's help/version surface. Both expose the public route, registry,
+providers, and doctor commands and return successful entrypoint responses. The
+parity inventory advances to 60/77 Parity and 17 Partial; focused Rust unified
+CLI compatibility passes locally.
+
 ## 2026-11-17 — TASK-175 Windows diagnostics path parity
 
 Hosted Windows exposed one contract differential: Python rendered

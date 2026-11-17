@@ -14,6 +14,10 @@ symlink/hard-link, directory-swap, and nested-parent regressions pass; focused
 bundle/diagnostics checks and strict Clippy pass. Full bundle parity remains
 Partial.
 
+TASK-176 closes the `agentrouter/__main__.py` parity row with a direct
+`python -m agentrouter --help` versus Rust unified-binary help/version
+differential. Inventory: 60/77 Parity, 17 Partial.
+
 TASK-172 aligns Rust doctor stable summaries with Python and adds a direct
 cross-language check. Diagnostics compatibility passes 41 focused checks and
 strict Clippy; runtime-specific and full bundle parity remain Partial.
