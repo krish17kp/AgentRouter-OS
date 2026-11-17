@@ -33,6 +33,9 @@ output with no-follow semantics. The focused decision/unified CLI selection
 passes 42 tests; the release gate and owner-controlled production requirements
 remain unchanged.
 
+The complete Rust/Python and Rust CLI compatibility selection after TASK-248
+passes 886 tests with 1 expected skip and no compatibility regression.
+
 TASK-247 (2026-11-18) aligns the unified Rust stored-decision command with
 Python's text and structured JSON `explain` forms. The focused unified CLI
 selection passes 36 tests and the Rust CLI crate passes 89 tests with strict

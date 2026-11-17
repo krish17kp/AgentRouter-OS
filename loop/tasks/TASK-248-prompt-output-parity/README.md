@@ -15,3 +15,6 @@ unified CLI and direct compatibility probe.
   decision/unified CLI selection passes 42 tests.
 - The Rust CLI crate remains green at 89 tests with strict Clippy, formatting,
   and diff checks.
+- The complete Rust/Python and Rust CLI compatibility selection passes 886
+  tests with 1 expected skip; the existing Starlette/httpx warning remains
+  non-failing.

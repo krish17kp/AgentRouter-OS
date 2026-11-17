@@ -7,7 +7,9 @@ Python-compatible `--out PATH` file output through both the unified command and
 the direct decision probe. Prompt files use no-follow opening and reject
 multiple-hard-link targets. The focused decision/unified CLI selection passes
 42 tests; the Rust CLI crate remains green at 89 tests with strict Clippy and
-formatting.
+formatting. The complete Rust/Python and Rust CLI compatibility selection passes
+886 tests with 1 expected skip; the existing Starlette/httpx warning remains
+non-failing.
 
 ## 2026-11-18 — TASK-247 stored-decision explain parity
 

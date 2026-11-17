@@ -22,6 +22,10 @@ prompt generation through the unified command and direct decision probe. The
 focused decision/unified selection is 42 tests; output files use no-follow
 opening and reject hard-linked destinations.
 
+The complete Rust/Python and Rust CLI compatibility selection after TASK-248
+passes 886 tests with 1 expected skip; the existing Starlette/httpx warning
+remains non-failing.
+
 The complete Rust/Python and Rust CLI compatibility selection after TASK-247
 passes 884 tests with 1 expected skip; the existing Starlette/httpx warning
 remains non-failing.
