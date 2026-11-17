@@ -201,6 +201,19 @@ def test_rust_route_matches_classifier_overrides_and_preference_flags(seeded_hom
     assert rust == expected
 
 
+def test_rust_route_empty_tool_override_matches_python(seeded_home, monkeypatch):
+    monkeypatch.setenv("AGENTROUTER_HOME", str(seeded_home))
+    task = "write a short guide"
+    arguments = ["--tool", "", "--no-log"]
+    python = CliRunner().invoke(app, ["route", task, "--json", *arguments])
+    assert python.exit_code == 0, python.output
+    expected = json.loads(python.stdout)
+    expected.pop("decision_id")
+    expected.pop("task")
+    rust = _rust_route_payload(seeded_home, task, *arguments)
+    assert rust == expected
+
+
 @pytest.mark.parametrize(
     "config",
     [
@@ -232,8 +245,9 @@ def test_rust_route_rejects_invalid_config(seeded_home, config):
         timeout=120,
         check=False,
     )
-    assert result.returncode != 0
+    assert result.returncode == 3
     assert result.stdout == ""
+    assert result.stderr.startswith("Config error:")
 
 
 @pytest.mark.parametrize("learning", [True, False])
@@ -317,5 +331,53 @@ def test_rust_route_fails_closed_on_unknown_controls(seeded_home, extra):
         timeout=120,
         check=False,
     )
-    assert result.returncode != 0
+    assert result.returncode == 2
     assert result.stdout == ""
+    assert result.stderr.startswith("Error:")
+
+
+@pytest.mark.parametrize("arguments", [(), ("/tmp/agentrouter",)])
+def test_rust_route_missing_positionals_use_cli_error(arguments):
+    result = subprocess.run(
+        ["cargo", "run", "--quiet", "--locked", "--bin", "cli_route_cli", "--", *arguments],
+        cwd=RUST_CRATE_DIR,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert result.returncode == 2
+    assert result.stdout == ""
+    assert result.stderr.startswith("Error: usage: route_cli")
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ("--stable-only", "--allow-preview"),
+        ("--available-only", "--include-unavailable"),
+    ],
+)
+def test_rust_route_rejects_conflicting_availability_flags(seeded_home, arguments):
+    result = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "--bin",
+            "cli_route_cli",
+            "--",
+            str(seeded_home),
+            "write a function",
+            *arguments,
+        ],
+        cwd=RUST_CRATE_DIR,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert result.returncode == 2
+    assert result.stdout == ""
+    assert result.stderr.startswith("Error: Use only one of")

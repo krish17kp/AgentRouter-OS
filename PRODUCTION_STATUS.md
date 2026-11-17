@@ -27,6 +27,12 @@ TASK-242 rechecked the canonical gate after the route CLI slice: 165 cases,
 the unchanged 0.90 threshold. No holdout, threshold, or evaluation input was
 changed.
 
+TASK-243 also aligns direct route error handling: invalid options and missing
+positionals now return a clean exit-2 `Error:` diagnostic, invalid registry or
+configuration returns exit 3, and runtime storage failures return exit 1; all
+emit no JSON on failure. The focused route suite (36 tests), Rust CLI tests,
+strict Clippy, formatting, and diff checks remain green.
+
 The local RC branch contains additional local commits after pushed head `71408b2`. TASK-208 adds
 read-only Rust contract baseline/surface tooling, and TASK-209 makes the
 Rust-backed TypeScript live suite independent of Python initialization. The

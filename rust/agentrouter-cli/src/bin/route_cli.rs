@@ -31,6 +31,8 @@ fn parse_options(extra: Vec<String>) -> Result<RouteCliOptions, String> {
     let mut save = false;
     let mut verify_live = false;
     let mut no_log = false;
+    let mut allow_preview = false;
+    let mut include_unavailable = false;
     let mut prefer = None;
     let mut controls = RouteControls::default();
     let mut classify = ClassifyOptions::default();
@@ -62,14 +64,13 @@ fn parse_options(extra: Vec<String>) -> Result<RouteCliOptions, String> {
             }
             "--tool" => {
                 let value = args.next().ok_or("--tool needs a value")?;
-                classify.tools = Some(
-                    value
-                        .split(',')
-                        .map(str::trim)
-                        .filter(|tool| !tool.is_empty())
-                        .map(str::to_owned)
-                        .collect(),
-                );
+                let tools = value
+                    .split(',')
+                    .map(str::trim)
+                    .filter(|tool| !tool.is_empty())
+                    .map(str::to_owned)
+                    .collect::<Vec<_>>();
+                classify.tools = (!tools.is_empty()).then_some(tools);
             }
             "--uncertainty-threshold" => {
                 let value = args.next().ok_or("--uncertainty-threshold needs a value")?;
@@ -104,9 +105,9 @@ fn parse_options(extra: Vec<String>) -> Result<RouteCliOptions, String> {
                 controls.max_price = Some(cap);
             }
             "--stable-only" => controls.stable_only = true,
-            "--allow-preview" => {}
+            "--allow-preview" => allow_preview = true,
             "--available-only" => controls.available_only = true,
-            "--include-unavailable" => {}
+            "--include-unavailable" => include_unavailable = true,
             "--prohibit-tool" => {
                 let tool = args.next().ok_or("--prohibit-tool needs a value")?;
                 if !agentrouter_policy::taxonomy::is_known(&tool) {
@@ -128,6 +129,12 @@ fn parse_options(extra: Vec<String>) -> Result<RouteCliOptions, String> {
             "Use only one --prefer-* flag (got {})",
             preference_flags.join(", ")
         ));
+    }
+    if controls.stable_only && allow_preview {
+        return Err("Use only one of --stable-only / --allow-preview.".to_owned());
+    }
+    if controls.available_only && include_unavailable {
+        return Err("Use only one of --available-only / --include-unavailable.".to_owned());
     }
     if let Some(flag) = preference_flags.pop() {
         if prefer.is_some() {
@@ -155,27 +162,76 @@ fn parse_options(extra: Vec<String>) -> Result<RouteCliOptions, String> {
 
 fn main() {
     let mut args = std::env::args().skip(1);
-    let home = PathBuf::from(
-        args.next()
-            .expect("usage: route_cli <home> <task> [prefer]"),
-    );
-    let task = args
-        .next()
-        .expect("usage: route_cli <home> <task> [prefer]");
-    let options = parse_options(args.collect()).expect("valid route options");
+    let usage = "usage: route_cli <home> <task> [prefer]";
+    let home = PathBuf::from(match args.next() {
+        Some(home) => home,
+        None => {
+            eprintln!("Error: {usage}");
+            std::process::exit(2);
+        }
+    });
+    let task = match args.next() {
+        Some(task) => task,
+        None => {
+            eprintln!("Error: {usage}");
+            std::process::exit(2);
+        }
+    };
+    let options = match parse_options(args.collect()) {
+        Ok(options) => options,
+        Err(error) => {
+            eprintln!("Error: {error}");
+            std::process::exit(2);
+        }
+    };
 
     let reg_dir = home.join("registry");
-    let providers = load_providers(&reg_dir.join("providers.yaml")).expect("load providers");
-    let (models, _warnings) = load_all_models(&reg_dir, &providers).expect("load models");
-    let (configured_weights, learning, max_tier) =
-        agentrouter_cli::load_route_config(&home).expect("load config");
-    let models = agentrouter_cli::apply_policy(models, max_tier.as_deref()).expect("apply policy");
+    let providers = match load_providers(&reg_dir.join("providers.yaml")) {
+        Ok(providers) => providers,
+        Err(error) => {
+            eprintln!("Registry error: {error}");
+            std::process::exit(3);
+        }
+    };
+    let (models, _warnings) = match load_all_models(&reg_dir, &providers) {
+        Ok(result) => result,
+        Err(error) => {
+            eprintln!("Registry error: {error}");
+            std::process::exit(3);
+        }
+    };
+    let (configured_weights, learning, max_tier) = match agentrouter_cli::load_route_config(&home) {
+        Ok(config) => config,
+        Err(error) => {
+            eprintln!("Config error: {error}");
+            std::process::exit(3);
+        }
+    };
+    let models = match agentrouter_cli::apply_policy(models, max_tier.as_deref()) {
+        Ok(models) => models,
+        Err(error) => {
+            eprintln!("Config error: {error}");
+            std::process::exit(3);
+        }
+    };
 
     let cls = classify(&task, &options.classify);
 
-    let conn = agentrouter_storage::connect(&home).expect("connect store");
+    let conn = match agentrouter_storage::connect(&home) {
+        Ok(connection) => connection,
+        Err(error) => {
+            eprintln!("Runtime error: {error}");
+            std::process::exit(1);
+        }
+    };
     let (weights, note) = if learning {
-        agentrouter_learning::learned_weights(&conn, &configured_weights).expect("learned weights")
+        match agentrouter_learning::learned_weights(&conn, &configured_weights) {
+            Ok(weights) => weights,
+            Err(error) => {
+                eprintln!("Runtime error: {error}");
+                std::process::exit(1);
+            }
+        }
     } else {
         (configured_weights, None)
     };
@@ -193,8 +249,13 @@ fn main() {
         },
     );
     if options.save && !options.no_log {
-        let decision_id = agentrouter_storage::save_decision(&conn, &task, &payload)
-            .expect("save decision to existing SQLite log");
+        let decision_id = match agentrouter_storage::save_decision(&conn, &task, &payload) {
+            Ok(decision_id) => decision_id,
+            Err(error) => {
+                eprintln!("Runtime error: {error}");
+                std::process::exit(1);
+            }
+        };
         payload["decision_id"] = serde_json::json!(decision_id);
         payload["task"] = serde_json::json!(task);
     }

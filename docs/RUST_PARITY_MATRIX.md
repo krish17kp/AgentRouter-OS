@@ -321,6 +321,9 @@ release authority until the full set is complete.
 - TASK-241 aligns direct Rust `route` with Python classifier overrides,
   preference flags, no-log behavior, and preview/availability compatibility
   options. Broader CLI and runtime lifecycle parity remains partial.
+- TASK-243 aligns direct Rust `route` invalid-option failures with Python's
+  exit-2 `Error:` contract; broader CLI and runtime lifecycle parity remains
+  partial.
 - Classification-only grading and gate calculation have differential coverage.
   Rust also supports bounded `measure_all` scoring for caller-supplied cases,
   seed models, and command manifests; automatic runtime discovery remains

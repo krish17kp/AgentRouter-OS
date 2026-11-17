@@ -28,6 +28,12 @@ TASK-242 re-ran the full Python regression (2,747 passed, 7 skips) and the
 canonical release gate. The gate remains `release_ready=false` at 98.23/100
 because context-band accuracy is 0.6667 < 0.90; no holdout, threshold, or
 evaluation input changed.
+
+TASK-243 repairs direct route error parity: malformed options now produce a
+clean exit-2 `Error:` response, registry/configuration failures exit 3, and
+runtime storage failures exit 1, all with no JSON. Thirty-six route
+compatibility tests and 89 Rust CLI tests pass with strict Clippy, formatting,
+and diff checks.
 TASK-223 synchronizes the unified Rust CLI help with the implemented contract
 check/diff/export surface and adds a process-level regression. The fresh full
 Python suite passes 2,743 tests with 7 expected skips; the full locked Rust

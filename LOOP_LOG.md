@@ -3506,3 +3506,11 @@ zero skips against the Rust loopback API.
   existing dependency deprecation warning.
 - The canonical release gate remains honestly blocked at 98.23/100: 165 cases,
   with only `context_band_accuracy` failing at `0.6667 < 0.90`.
+
+## TASK-243 — Route CLI error parity (2026-11-18)
+
+- Invalid direct Rust route options now emit an `Error:` diagnostic and exit 2,
+  while registry/configuration and runtime storage failures use Python's exit
+  3 and 1 contracts instead of panicking.
+- The route compatibility suite passes 36/36; the Rust CLI crate passes 89/89
+  with strict Clippy, formatting, and diff checks.
