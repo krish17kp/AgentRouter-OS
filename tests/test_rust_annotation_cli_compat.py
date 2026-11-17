@@ -52,7 +52,15 @@ def rust_evaluate_binary():
     return executable
 
 
-def _run(binary, *args: str, input_text: str | None = None):
+def _run(
+    binary,
+    *args: str,
+    input_text: str | None = None,
+    env: dict[str, str] | None = None,
+):
+    process_env = os.environ.copy()
+    if env:
+        process_env.update(env)
     return subprocess.run(
         [str(binary), "dataset", *map(str, args)],
         cwd=ROOT,
@@ -62,6 +70,7 @@ def _run(binary, *args: str, input_text: str | None = None):
         encoding="utf-8",
         timeout=60,
         check=False,
+        env=process_env,
     )
 
 
@@ -164,6 +173,35 @@ def test_candidate_generation_pack_progress_and_adjudication_pack(tmp_path, rust
     expected = packs.adjudication_candidates(one_label, [_label(pack[0], "ann_b", "large")])
     assert _dump(disputed) == _dump(expected)
     assert len(disputed) == 1 and disputed[0].source == "curated"
+
+
+def test_annotation_cli_honors_relocated_project_root(tmp_path, rust_evaluate_binary):
+    relocated = tmp_path / "relocated"
+    benchmark_root = relocated / "agentrouter/benchmarks/context_band"
+    benchmark_root.mkdir(parents=True)
+    shutil.copy2(
+        ROOT / "agentrouter/benchmarks/context_band/candidates_v1.yaml",
+        benchmark_root / "candidates_v1.yaml",
+    )
+    shutil.copy2(
+        ROOT / "agentrouter/benchmarks/context_band_holdout_v1.yaml",
+        relocated / "agentrouter/benchmarks/context_band_holdout_v1.yaml",
+    )
+    output = tmp_path / "pack.yaml"
+    generated = _run(
+        rust_evaluate_binary,
+        "pack",
+        "--annotator",
+        "relocated",
+        "--seed",
+        "7",
+        "--out",
+        output,
+        env={"AGENTROUTER_PROJECT_ROOT": str(relocated)},
+    )
+    assert generated.returncode == 0, generated.stderr
+    expected = packs.build_pack(store.load_candidates(benchmark_root / "candidates_v1.yaml"), seed=7)
+    assert _dump(store.load_candidates(output)) == _dump(expected)
 
 
 def test_interactive_annotation_resumes_and_exports_human_input(tmp_path, rust_evaluate_binary):

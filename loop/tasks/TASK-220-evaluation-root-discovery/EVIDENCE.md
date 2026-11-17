@@ -6,6 +6,8 @@ Date: 2026-11-18
 
 - Added `AGENTROUTER_PROJECT_ROOT` override support to the Rust evaluation CLI.
 - Added current-working-directory ancestor discovery for repository roots.
+- Applied the same discovery to `agentrouter-evaluate dataset` annotation
+  commands, including default candidate-pack resources.
 - Kept the build-time Cargo-manifest fallback only as a final compatibility
   path.
 
@@ -18,6 +20,7 @@ cargo clippy --locked -p agentrouter-evaluation --all-targets -- -D warnings # p
 cargo build --locked --workspace --release                      # passed
 cargo audit --no-yanked -f Cargo.lock                           # no advisories; chrono warning only
 tests/test_rust_evaluation_cli_compat.py                    # 21 passed
+tests/test_rust_annotation_cli_compat.py                     # 5 passed
 git diff --check                                            # passed
 ```
 

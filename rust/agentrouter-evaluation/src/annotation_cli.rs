@@ -40,6 +40,18 @@ fn frozen_holdout_yaml() -> String {
 }
 
 fn project_root() -> PathBuf {
+    if let Some(override_root) = std::env::var_os("AGENTROUTER_PROJECT_ROOT") {
+        if !override_root.is_empty() {
+            return PathBuf::from(override_root);
+        }
+    }
+    if let Ok(start) = std::env::current_dir() {
+        for candidate in start.ancestors() {
+            if candidate.join(".git").exists() || candidate.join("agentrouter").is_dir() {
+                return candidate.to_path_buf();
+            }
+        }
+    }
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
