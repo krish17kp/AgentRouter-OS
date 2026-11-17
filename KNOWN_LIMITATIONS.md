@@ -1,6 +1,14 @@
 # Known Limitations
 
-## Current migration and release limits (2026-11-16)
+## Current migration and release limits (2026-11-17)
+
+- Rust migration remains incomplete at 56/77 full-module parity. TASK-168 closes
+  observability; CLI/annotation, MCP lifecycle, plugin, reliability, registry
+  refresh, SDK transport, and external real-data adapter surfaces remain Partial.
+- Rust HTTP service errors intentionally provide bounded, strictly redacted
+  message-only evidence; direct observability callers can supply a rendered
+  traceback, but the service does not retain Python traceback objects across
+  its blocking boundary.
 
 - Rust migration remains incomplete at 55/77 full-module parity. TASK-167 closes
   server service; observability's remaining logging API, server lifecycle, CLI,

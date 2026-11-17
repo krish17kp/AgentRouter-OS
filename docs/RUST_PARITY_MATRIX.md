@@ -70,7 +70,7 @@ release authority until the full set is complete.
 | `agentrouter/hosts.py` | `agentrouter-hosts` | Parity |
 | `agentrouter/learning.py` | `agentrouter-learning::learned_weights` | Parity |
 | `agentrouter/mcp_server.py` | `agentrouter-mcp::{Server,run_stdio}` | Partial |
-| `agentrouter/observability.py` | `agentrouter-observability` (shared API/CLI redaction and route record) | Partial |
+| `agentrouter/observability.py` | `agentrouter-observability` (task-local/synchronous request context, redaction, route/event/error records, OTel spans) | Parity |
 | `agentrouter/openai_adapter.py` | `agentrouter-cli::openai` | Parity |
 | `agentrouter/plugins.py` | `agentrouter-cli::plugins` (inventory, portable paths, no-follow state, list/status/doctor/plan, safe install/uninstall, forced unmanaged replacement, identity-checked journal recovery) | Partial |
 | `agentrouter/prompts.py` | `agentrouter-cli::generate_prompt` | Parity |
@@ -123,8 +123,10 @@ release authority until the full set is complete.
 - TASK-152 shares Rust redaction across API and CLI, matches Python route
   decision metadata, and emits opt-in JSON route records correlated through
   SHA-256 request-ID digests, with strict redaction of nested metadata values
-  and keys. The observability module remains Partial for spans, optional OTel,
-  and full API-error record parity.
+  and keys. TASK-168 completes task-local/synchronous request context, opt-in
+  logging, generic events, bounded API-error records, active OTel spans, and
+  single-emission server error paths. HTTP service errors use bounded,
+  message-only evidence when no rendered traceback is available.
 - TASK-150 preserves Pydantic's arbitrary-precision `ModelSummary.context_window`
   response value in Rust, including values outside signed 64-bit range, and
   differentially checks accepted and rejected coercions. The schema module stays

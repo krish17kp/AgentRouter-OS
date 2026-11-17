@@ -1,6 +1,16 @@
 # Release Readiness
 
-## Current checkpoint — 2026-11-16
+## Current checkpoint — 2026-11-17
+
+**NOT release ready.** TASK-168 promotes observability after independent review:
+task-local request IDs, compatible setter/scoped restoration, opt-in logging,
+strict redaction, bounded API-error records, active OTel spans, and single-log
+server error paths are covered. Nine focused tests, full Rust workspace/Clippy,
+and Python 2,728/7 pass. Inventory: 56/77 Parity, 21 Partial. The frozen
+context-band gate, human evaluation, live OpenAI validation, hosted checks,
+main promotion, tag, and deployment remain unresolved.
+
+## Previous checkpoint — 2026-11-16
 
 **NOT release ready.** TASK-167 promotes the independently audited server-service
 row. Home and registry facades, direct argument defaults, active metadata-only

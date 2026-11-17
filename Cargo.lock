@@ -139,6 +139,7 @@ dependencies = [
  "regex",
  "serde_json",
  "sha2",
+ "tokio",
  "unicode-general-category",
 ]
 

@@ -103,6 +103,18 @@ impl ApiError {
     }
 
     fn internal() -> Self {
+        agentrouter_observability::log_api_error(
+            "api.internal_error",
+            "InternalError",
+            None,
+            false,
+            None,
+            None,
+        );
+        Self::internal_response()
+    }
+
+    fn internal_response() -> Self {
         Self {
             status: StatusCode::INTERNAL_SERVER_ERROR,
             code: "internal_error",
@@ -151,8 +163,28 @@ impl From<ServiceError> for ApiError {
     fn from(error: ServiceError) -> Self {
         match error {
             ServiceError::Validation(message) => Self::validation(message),
-            ServiceError::Registry(_) => Self::registry_unavailable(),
-            ServiceError::Internal(_) => Self::internal(),
+            ServiceError::Registry(_message) => {
+                agentrouter_observability::log_api_error(
+                    "api.registry_error",
+                    "RegistryError",
+                    None,
+                    false,
+                    None,
+                    Some("run 'agentrouter doctor' on the host to see the offending registry file"),
+                );
+                Self::registry_unavailable()
+            }
+            ServiceError::Internal(message) => {
+                agentrouter_observability::log_api_error(
+                    "api.unhandled_error",
+                    "InternalError",
+                    Some(&message),
+                    true,
+                    None,
+                    None,
+                );
+                Self::internal_response()
+            }
         }
     }
 }
@@ -264,13 +296,8 @@ async fn request_id(State(state): State<ApiState>, mut request: Request, next: N
     let header_value = HeaderValue::try_from(id.as_str())
         .unwrap_or_else(|_| HeaderValue::from_static("request-id-invalid"));
     request.extensions_mut().insert(RequestId(id.clone()));
-    let mut response = next.run(request).await;
-    let safe_id = agentrouter_observability::log_request_id(&id);
-    if response.status() == StatusCode::SERVICE_UNAVAILABLE {
-        eprintln!("api.registry_error request_id={safe_id}");
-    } else if response.status().is_server_error() {
-        eprintln!("api.internal_error request_id={safe_id}");
-    }
+    let mut response =
+        agentrouter_observability::with_request_id(Some(id.clone()), next.run(request)).await;
     response
         .headers_mut()
         .insert(REQUEST_ID_HEADER, header_value);

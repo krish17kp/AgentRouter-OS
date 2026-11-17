@@ -1,6 +1,14 @@
 # Product Acceptance Evidence
 
-## Current checkpoint — 2026-11-16
+## Current checkpoint — 2026-11-17
+
+Product acceptance remains **not granted**. TASK-168 observability parity is
+independently clear: task-local and synchronous request-context APIs, opt-in
+structured events/errors, strict secret redaction, OTel span activation, and
+single-emission server error paths pass nine focused Rust tests, full Rust
+workspace/Clippy, and Python 2,728/7. Inventory: 56 Parity / 21 Partial.
+
+## Previous checkpoint — 2026-11-16
 
 Product acceptance remains **not granted**. TASK-167 server-service parity is
 independently clear: 102 focused checks, active-span wiring, full Rust workspace,

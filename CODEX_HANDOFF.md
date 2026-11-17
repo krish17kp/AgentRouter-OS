@@ -30,6 +30,18 @@ classification accuracy. Focused 6/6, evaluation compatibility 40/40, full Rust
 workspace, strict Clippy, independent review, and full Python 2,609/7 pass.
 Coverage is 92.021% statement, 87.833% branch, and 91.058% combined.
 
+## Current checkpoint — 2026-11-17
+
+TASK-168 observability parity is independently clear. Rust now provides
+task-local request context plus a synchronous setter/scoped guard, opt-in
+structured events and route records, bounded strictly redacted API errors,
+active OTel spans, and one-record server error paths. Focused observability
+tests (9), full Rust workspace/strict Clippy, and Python 2,728/7 pass. The
+inventory is 56/77 Parity and 21 Partial. Service errors intentionally retain
+bounded message-only evidence when a traceback object is unavailable across
+the blocking boundary. Continue with the next Partial module after pushing
+the TASK-168 commit and inspecting hosted checks.
+
 TASK-155 was committed and pushed as 613550d. TASK-156 routes one injected
 Rust classifier consistently through classification, routing, safety, and
 performance. Compatibility passes 42/42 and full Python passes 2,610/7 at

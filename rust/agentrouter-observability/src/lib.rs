@@ -3,7 +3,10 @@
 //! This crate is shared by the Rust API service and CLI so route records are
 //! built and redacted consistently at the logging boundary.
 
+use std::cell::RefCell;
 use std::fmt::Display;
+use std::future::Future;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::OnceLock;
 
 use regex::{Captures, Regex};
@@ -16,6 +19,74 @@ use opentelemetry::{global, KeyValue};
 
 const ECHO_LIMIT: usize = 64;
 const MAX_REDACT_DEPTH: usize = 6;
+
+static LOGGING_CONFIGURED: AtomicBool = AtomicBool::new(false);
+
+tokio::task_local! {
+    static REQUEST_ID: RefCell<Option<String>>;
+}
+
+thread_local! {
+    static SYNC_REQUEST_ID: RefCell<Option<String>> = const { RefCell::new(None) };
+}
+
+/// Set the request identifier for the current synchronous/task-local context.
+/// HTTP callers should use [`with_request_id`] so the value follows the async
+/// task rather than a worker thread. Use [`scoped_request_id`] for restoration.
+pub fn set_request_id(request_id: Option<String>) {
+    if REQUEST_ID
+        .try_with(|current| *current.borrow_mut() = request_id.clone())
+        .is_err()
+    {
+        SYNC_REQUEST_ID.with(|current| *current.borrow_mut() = request_id);
+    }
+}
+
+/// Read the current request identifier, if one has been installed.
+pub fn get_request_id() -> Option<String> {
+    REQUEST_ID
+        .try_with(|current| current.borrow().clone())
+        .unwrap_or_else(|_| SYNC_REQUEST_ID.with(|current| current.borrow().clone()))
+}
+
+/// RAII guard for temporarily replacing a request identifier.
+pub struct RequestIdGuard {
+    previous: Option<String>,
+    task_local: bool,
+}
+
+impl Drop for RequestIdGuard {
+    fn drop(&mut self) {
+        if self.task_local {
+            let _ = REQUEST_ID.try_with(|current| *current.borrow_mut() = self.previous.clone());
+        } else {
+            SYNC_REQUEST_ID.with(|current| *current.borrow_mut() = self.previous.clone());
+        }
+    }
+}
+
+pub fn scoped_request_id(request_id: Option<String>) -> RequestIdGuard {
+    if let Ok(previous) = REQUEST_ID.try_with(|current| {
+        let previous = current.borrow().clone();
+        *current.borrow_mut() = request_id.clone();
+        previous
+    }) {
+        RequestIdGuard {
+            previous,
+            task_local: true,
+        }
+    } else {
+        let previous = SYNC_REQUEST_ID.with(|current| {
+            let previous = current.borrow().clone();
+            *current.borrow_mut() = request_id;
+            previous
+        });
+        RequestIdGuard {
+            previous,
+            task_local: false,
+        }
+    }
+}
 
 fn secret_pattern() -> &'static Regex {
     static SECRET_RE: OnceLock<Regex> = OnceLock::new();
@@ -133,6 +204,13 @@ pub fn log_request_id(request_id: &str) -> String {
     format!("sha256:{digest:x}")
 }
 
+pub async fn with_request_id<F>(request_id: Option<String>, future: F) -> F::Output
+where
+    F: Future,
+{
+    REQUEST_ID.scope(RefCell::new(request_id), future).await
+}
+
 /// Redact structured fields and replace raw request identifiers with a digest.
 pub fn redact_log_record(record: &Value) -> Value {
     let mut safe = redact_value_strict(record);
@@ -164,7 +242,8 @@ pub fn route_decision_record(
         "event".to_owned(),
         Value::String("route_decision".to_owned()),
     );
-    insert_string(&mut record, "request_id", request_id);
+    let request_id = request_id.map(ToOwned::to_owned).or_else(get_request_id);
+    insert_string(&mut record, "request_id", request_id.as_deref());
     insert_string(&mut record, "decision_id", decision_id);
 
     let classification = payload
@@ -206,12 +285,103 @@ pub fn route_decision_record(
 
 /// Whether INFO route records were explicitly enabled by the host process.
 pub fn logging_enabled() -> bool {
-    std::env::var("AGENTROUTER_LOG").ok().is_some_and(|value| {
+    LOGGING_CONFIGURED.load(Ordering::Relaxed)
+        || std::env::var("AGENTROUTER_LOG").ok().is_some_and(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+}
+
+pub fn configure_logging(force: bool) -> bool {
+    let enabled = force
+        || std::env::var("AGENTROUTER_LOG").ok().is_some_and(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        });
+    if enabled {
+        LOGGING_CONFIGURED.store(true, Ordering::Relaxed);
+    }
+    enabled
+}
+
+pub fn otel_enabled() -> bool {
+    std::env::var("AGENTROUTER_OTEL").ok().is_some_and(|value| {
         matches!(
             value.trim().to_ascii_lowercase().as_str(),
             "1" | "true" | "yes" | "on"
         )
     })
+}
+
+pub fn log_route_decision(
+    task: &str,
+    payload: &Value,
+    decision_id: Option<&str>,
+    request_id: Option<&str>,
+) -> Value {
+    let record = route_decision_record(task, payload, decision_id, request_id);
+    emit_route_decision(&record);
+    record
+}
+
+pub fn log_event(event: &str, fields: &Value) -> Value {
+    let mut record = fields.as_object().cloned().unwrap_or_default();
+    record.insert("event".to_owned(), Value::String(event.to_owned()));
+    if let Some(request_id) = get_request_id() {
+        record.insert("request_id".to_owned(), Value::String(request_id));
+    }
+    let record = Value::Object(record);
+    let safe = redact_value(&record);
+    if logging_enabled() {
+        eprintln!(
+            "{}",
+            serde_json::to_string(&redact_log_record(&record)).unwrap_or_default()
+        );
+    }
+    safe
+}
+
+pub fn log_api_error(
+    event: &str,
+    error_type: &str,
+    message: Option<&str>,
+    detail: bool,
+    traceback: Option<&str>,
+    remedy: Option<&str>,
+) -> Value {
+    let mut record = serde_json::Map::new();
+    record.insert("event".to_owned(), Value::String(event.to_owned()));
+    record.insert(
+        "error_type".to_owned(),
+        Value::String(error_type.to_owned()),
+    );
+    if detail {
+        if let Some(message) = message {
+            let bounded: String = message.chars().take(500).collect();
+            record.insert("message".to_owned(), Value::String(bounded));
+        }
+    }
+    if let Some(remedy) = remedy {
+        record.insert("remedy".to_owned(), Value::String(remedy.to_owned()));
+    }
+    if let Some(request_id) = get_request_id() {
+        record.insert("request_id".to_owned(), Value::String(request_id));
+    }
+    let record = redact_log_record(&Value::Object(record));
+    if let Some(traceback) = traceback.filter(|_| detail) {
+        eprintln!(
+            "{}\n{}",
+            serde_json::to_string(&record).unwrap_or_default(),
+            redact_strict(traceback)
+        );
+    } else {
+        eprintln!("{}", serde_json::to_string(&record).unwrap_or_default());
+    }
+    record
 }
 
 /// Execute an operation inside an opt-in metadata-only OpenTelemetry span.
@@ -221,12 +391,7 @@ pub fn with_route_span<T>(
     attributes: &[(&str, String)],
     operation: impl FnOnce() -> T,
 ) -> T {
-    if !std::env::var("AGENTROUTER_OTEL").ok().is_some_and(|value| {
-        matches!(
-            value.trim().to_ascii_lowercase().as_str(),
-            "1" | "true" | "yes" | "on"
-        )
-    }) {
+    if !otel_enabled() {
         return operation();
     }
     let tracer = global::tracer("agentrouter");
@@ -452,5 +617,75 @@ mod tests {
         let serialized = record.to_string();
         assert!(!serialized.contains("λx"));
         assert!(!serialized.contains("prompt"));
+    }
+
+    #[test]
+    fn structured_error_facade_is_secret_safe() {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .build()
+            .expect("runtime");
+        runtime.block_on(with_request_id(Some("request-ctx".to_owned()), async {
+            let record = route_decision_record("task", &json!({}), None, None);
+            assert_eq!(record["request_id"], "request-ctx");
+
+            let event = log_event("diagnostic", &json!({"token": "supersecret123"}));
+            assert_eq!(event["request_id"], "request-ctx");
+            assert_eq!(event["token"], "supersecret123");
+
+            let error = log_api_error(
+                "api_error",
+                "RegistryError",
+                Some("password=supersecret123"),
+                true,
+                Some("trace password=supersecret123"),
+                Some("run init"),
+            );
+            assert_eq!(error["request_id"], log_request_id("request-ctx"));
+            assert_eq!(error["message"], "[redacted]");
+
+            let quiet_error = log_api_error(
+                "api.registry_error",
+                "RegistryError",
+                Some(&"password=supersecret123 ".repeat(80)),
+                false,
+                Some("trace password=supersecret123"),
+                Some("run doctor"),
+            );
+            assert!(quiet_error.get("message").is_none());
+            assert_eq!(quiet_error["remedy"], "run doctor");
+            assert_eq!(quiet_error["request_id"], log_request_id("request-ctx"));
+        }));
+    }
+
+    #[test]
+    fn route_span_executes_with_opt_in_guard() {
+        let value = with_route_span("route", &[("risk", "low".to_owned())], || 42);
+        assert_eq!(value, 42);
+    }
+
+    #[test]
+    fn request_id_setter_and_scoped_guard_restore_nested_values() {
+        set_request_id(Some("sync-id".to_owned()));
+        assert_eq!(get_request_id().as_deref(), Some("sync-id"));
+        {
+            let _guard = scoped_request_id(Some("nested-sync".to_owned()));
+            assert_eq!(get_request_id().as_deref(), Some("nested-sync"));
+        }
+        assert_eq!(get_request_id().as_deref(), Some("sync-id"));
+        set_request_id(None);
+
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .build()
+            .expect("runtime");
+        runtime.block_on(with_request_id(Some("task-id".to_owned()), async {
+            set_request_id(Some("updated-task-id".to_owned()));
+            assert_eq!(get_request_id().as_deref(), Some("updated-task-id"));
+            {
+                let _guard = scoped_request_id(Some("nested-task-id".to_owned()));
+                assert_eq!(get_request_id().as_deref(), Some("nested-task-id"));
+            }
+            assert_eq!(get_request_id().as_deref(), Some("updated-task-id"));
+        }));
+        assert_eq!(get_request_id(), None);
     }
 }

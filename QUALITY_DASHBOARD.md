@@ -1,6 +1,17 @@
 # Quality Dashboard — AgentRouter OS
 
-## Current checkpoint — 2026-11-16
+## Current checkpoint — 2026-11-17
+
+TASK-168 closes the observability module after independent security review.
+Rust now provides task-local request context with synchronous setter/scoped
+guard compatibility, opt-in logging configuration, generic events, bounded
+strictly redacted API errors, active OTel spans, and one-record server error
+paths. Focused observability tests (9), full Rust workspace/Clippy, and the
+full Python regression (2,728 passed, 7 skipped) pass. Inventory: 56/77 Parity,
+21 Partial. HTTP service errors intentionally retain bounded message-only
+evidence because no traceback object crosses the blocking boundary.
+
+## Previous checkpoint — 2026-11-16
 
 TASK-167 closes server-service parity after adding home/registry and direct-call
 facades, fail-closed raw argument handling, active OpenTelemetry route spans,

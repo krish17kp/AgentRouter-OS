@@ -1,5 +1,17 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-168 observability parity
+
+Completed the observability parity audit and independent security review. Rust
+now has task-local request IDs with a synchronous setter and nested restoration
+guard, opt-in logging configuration, generic event records, bounded strict API
+error records, active metadata-only OTel spans, and single-emission server
+error logging. Added nine focused Rust tests covering context restoration,
+redaction, detail-disabled errors, and span guards. Full Rust workspace/strict
+Clippy and Python regression pass 2,728/7. Inventory advances to 56/77 Parity
+and 21 Partial. Service errors intentionally retain bounded message-only
+evidence where no traceback object exists across the blocking boundary.
+
 ## 2026-11-15 — TASK-152 Rust route observability
 
 At pushed `5af3c55`, hosted Python, Rust, and compatibility jobs pass on all
