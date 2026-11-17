@@ -68,7 +68,8 @@ full sweep passes 888 tests with 1 expected skip; the existing Starlette/httpx
 warning remains non-failing.
 TASK-251 aligns the unified stored-prompt trailing newline with Python while
 preserving direct probe compatibility; the focused decision/unified selection
-is now 45 tests. A fresh full sweep is pending this slice.
+is now 45 tests. The fresh full sweep passes 889 tests with 1 expected skip;
+the existing Starlette/httpx warning remains non-failing.
 TASK-223 synchronizes the unified Rust CLI help with the implemented contract
 check/diff/export surface and adds a process-level regression. The fresh full
 Python suite passes 2,743 tests with 7 expected skips; the full locked Rust

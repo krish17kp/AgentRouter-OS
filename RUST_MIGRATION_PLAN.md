@@ -31,6 +31,9 @@ TASK-251 (2026-11-18) aligns the unified stored-prompt output newline with
 Python while preserving the direct probe's historical output. The focused
 decision/unified selection passes 45 tests; the release gate remains unchanged.
 
+The complete Rust/Python and Rust CLI compatibility selection after TASK-251
+passes 889 tests with 1 expected skip and no compatibility regression.
+
 TASK-250 (2026-11-18) aligns task-prompt configuration semantics with Python:
 configured weights are honored, while the prompt-only route path does not
 apply the policy cap. The focused decision/unified selection passes 44 tests;

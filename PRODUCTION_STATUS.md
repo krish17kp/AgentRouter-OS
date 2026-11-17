@@ -35,6 +35,10 @@ TASK-251 aligns the public stored-prompt trailing newline with Python while
 preserving the direct probe's historical output contract. The focused
 decision/unified selection is 45 tests.
 
+The complete Rust/Python and Rust CLI compatibility selection after TASK-251
+passes 889 tests with 1 expected skip; the existing Starlette/httpx warning
+remains non-failing.
+
 The complete Rust/Python and Rust CLI compatibility selection after TASK-250
 passes 888 tests with 1 expected skip; the existing Starlette/httpx warning
 remains non-failing.

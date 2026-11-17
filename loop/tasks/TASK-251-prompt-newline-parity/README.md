@@ -12,3 +12,6 @@ the unified public `prompt generate --from` output identical to Python.
 - A process-level Python/Rust comparison covers the public stored-prompt path.
 - The focused decision/unified CLI selection passes 45 tests; strict Clippy,
   formatting, and diff checks pass.
+- The complete Rust/Python and Rust CLI compatibility selection passes 889
+  tests with 1 expected skip; the existing Starlette/httpx warning remains
+  non-failing.

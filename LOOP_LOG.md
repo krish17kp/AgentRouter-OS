@@ -5,7 +5,9 @@
 Unified Rust `prompt generate --from` now matches Python's final newline while
 the standalone decision probe keeps its historical newline-free output. A new
 public process differential passes; the focused decision/unified CLI selection
-is 45 tests.
+is 45 tests. The complete Rust/Python and Rust CLI compatibility selection
+passes 889 tests with 1 expected skip; the existing Starlette/httpx warning
+remains non-failing.
 
 ## 2026-11-18 — TASK-250 prompt configuration parity
 
