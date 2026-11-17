@@ -10,8 +10,12 @@ existing parent components before opening the database while retaining
 `SQLITE_OPEN_NOFOLLOW` on the final database leaf; `/proc/self/fd/<dirfd>`
 capability paths remain untouched. The full locked Rust workspace passes, the
 storage crate passes 15 tests, and the focused Python/Rust storage/evaluation
-selection passes 69 tests. A hosted recheck is required; release, human
-evaluation, live-smoke, approval, and deployment gates remain unchanged.
+selection passes 69 tests. Hosted Rust migration CI `44197430454` is green on
+Linux/Windows/macOS; push CI `44197421590`, Website `44197430434`, Security
+`44197430634`, and Critical Mutation `44197430506` are also green for
+`231d4a8`. The PR-event duplicate still reports only the intentional frozen
+context-band enforcement failure; live-smoke remains skipped without provider
+credentials.
 
 ## 2026-11-18 — TASK-273 current Rust/Python compatibility verification
 
