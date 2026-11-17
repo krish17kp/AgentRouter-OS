@@ -1,26 +1,11 @@
 //! Rust evaluation command line for offline-first evaluation workflows.
 
+use agentrouter_evaluation::project_root;
 use agentrouter_evaluation::runner::{run_registered, RegisteredRunOptions};
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 
 const DEFAULT_OUT: &str = "artifacts/evaluation";
-
-fn project_root() -> PathBuf {
-    if let Some(override_root) = std::env::var_os("AGENTROUTER_PROJECT_ROOT") {
-        if !override_root.is_empty() {
-            return PathBuf::from(override_root);
-        }
-    }
-    if let Ok(start) = std::env::current_dir() {
-        for candidate in start.ancestors() {
-            if candidate.join(".git").exists() || candidate.join("agentrouter").is_dir() {
-                return candidate.to_path_buf();
-            }
-        }
-    }
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
-}
 
 fn usage() -> &'static str {
     "usage: agentrouter-evaluate <legacy-gold|routing-gold|dataset|list-datasets|validate-dataset|run|report|compare|prepare|status|context-band-generalization> [options]"

@@ -24,7 +24,7 @@ pub mod runner;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Read;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use agentrouter_core::{
@@ -54,6 +54,24 @@ pub const DATASET_NAMES: [&str; 8] = [
     "llmrouterbench",
     "twinrouterbench",
 ];
+
+/// Resolve the repository/data root for CLI resources without relying on the
+/// checkout where the binary was compiled.
+pub fn project_root() -> PathBuf {
+    if let Some(override_root) = std::env::var_os("AGENTROUTER_PROJECT_ROOT") {
+        if !override_root.is_empty() {
+            return PathBuf::from(override_root);
+        }
+    }
+    if let Ok(start) = std::env::current_dir() {
+        for candidate in start.ancestors() {
+            if candidate.join(".git").exists() || candidate.join("agentrouter").is_dir() {
+                return candidate.to_path_buf();
+            }
+        }
+    }
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
+}
 
 #[derive(Debug, Clone, Copy, Serialize)]
 pub struct AdapterDescriptor {

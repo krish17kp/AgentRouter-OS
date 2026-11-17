@@ -15,7 +15,7 @@ use serde_json::{json, Value};
 use crate::annotation_schema::{
     AdjudicatedItem, AnnotatorLabel, Candidate, DatasetManifest, ItemLabels, CATEGORIES, SPLITS,
 };
-use crate::{AnnotationAdjudication, AnnotationInputItem};
+use crate::{project_root, AnnotationAdjudication, AnnotationInputItem};
 
 const DEFAULT_CANDIDATES_BYTES: &[u8] =
     include_bytes!("../../../agentrouter/benchmarks/context_band/candidates_v1.yaml");
@@ -37,22 +37,6 @@ fn default_candidates_yaml() -> String {
 
 fn frozen_holdout_yaml() -> String {
     embedded_text(FROZEN_HOLDOUT_BYTES)
-}
-
-fn project_root() -> PathBuf {
-    if let Some(override_root) = std::env::var_os("AGENTROUTER_PROJECT_ROOT") {
-        if !override_root.is_empty() {
-            return PathBuf::from(override_root);
-        }
-    }
-    if let Ok(start) = std::env::current_dir() {
-        for candidate in start.ancestors() {
-            if candidate.join(".git").exists() || candidate.join("agentrouter").is_dir() {
-                return candidate.to_path_buf();
-            }
-        }
-    }
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
 fn parse_value(args: &mut impl Iterator<Item = String>, flag: &str) -> Result<String, String> {
