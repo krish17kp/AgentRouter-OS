@@ -47,3 +47,10 @@ supports `openrouter` and `openai` with `--limit`, `--match`, and
 live-schema parity, plus the remaining broader Python CLI semantics, are still
 migration gaps; the Rust plugin commands are present but remain partial until
 their full lifecycle parity is independently closed.
+
+The TypeScript SDK live suite can target the Rust API without Python:
+
+```sh
+cargo build --workspace --locked
+AGENTROUTER_PARITY_SERVER=rust AGENTROUTER_REQUIRE_LIVE=1 npm test --prefix sdk/typescript
+```

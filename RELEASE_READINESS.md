@@ -381,3 +381,10 @@ commands over the committed OpenAPI baseline. This improves CLI surface
 coverage but explicitly does not replace the Python live-schema gate; human
 evaluation, live credentials, promotion, and deployment approvals remain
 unresolved.
+
+## TASK-209 TypeScript SDK live Rust parity — 2026-11-17
+
+The TypeScript SDK's Rust live parity now initializes homes with the Rust
+`init_cli` binary and passes all 18 loopback tests with zero skips. This closes
+a local integration gap but does not clear the frozen evaluation, promotion,
+or deployment gates.

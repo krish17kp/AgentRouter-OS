@@ -3227,3 +3227,9 @@ bounded Rust OpenAPI baseline/surface analyzer. Focused process coverage passes
 for baseline validation, additive changes, and breaking changes. The command
 reports `live_schema_check: false`; the Python live-schema compatibility gate
 remains authoritative.
+
+## TASK-209 TypeScript SDK live Rust parity — 2026-11-17
+
+The TypeScript Rust parity helper no longer initializes through Python/Typer.
+It uses the Rust init binary, and the required live suite passes 18/18 with
+zero skips against the Rust loopback API.

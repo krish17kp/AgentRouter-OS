@@ -53,11 +53,31 @@ def _sweep_stale_homes() -> None:
             continue
 
 
-def _initialize_home(home: Path) -> int:
+def _initialize_home(home: Path, *, implementation: str = "python") -> int:
     os.environ["AGENTROUTER_HOME"] = str(home)
     # Auth off: parity covers the authenticated path in the Python suite, where
     # the key can be set without leaking it into a child process's environment.
     os.environ.pop("AGENTROUTER_API_KEY", None)
+
+    if implementation == "rust":
+        executable_name = "init_cli.exe" if os.name == "nt" else "init_cli"
+        executable = Path(__file__).resolve().parents[1] / "target" / "debug" / executable_name
+        if not executable.is_file():
+            print(
+                f"Rust init binary is missing: {executable}; build the workspace first",
+                file=sys.stderr,
+            )
+            return 1
+        result = subprocess.run(  # nosec B603: fixed workspace binary and argv; shell is disabled
+            [str(executable), str(home)],
+            cwd=Path(__file__).resolve().parents[1],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            print(f"agentrouter Rust init failed: {result.stderr or result.stdout}", file=sys.stderr)
+        return result.returncode
 
     from typer.testing import CliRunner
 
@@ -71,7 +91,7 @@ def _initialize_home(home: Path) -> int:
 
 
 def _serve_python(home: Path) -> int:
-    if _initialize_home(home) != 0:
+    if _initialize_home(home, implementation="python") != 0:
         return 1
 
     import uvicorn
@@ -98,7 +118,7 @@ def _serve_python(home: Path) -> int:
 def _serve_rust(home: Path) -> int:
     global _RUST_SERVER
 
-    if _initialize_home(home) != 0:
+    if _initialize_home(home, implementation="rust") != 0:
         return 1
 
     executable_name = "agentrouter-api-server.exe" if os.name == "nt" else "agentrouter-api-server"

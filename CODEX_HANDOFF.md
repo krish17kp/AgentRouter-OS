@@ -619,3 +619,9 @@ surface tooling. Baseline validation, additive compatibility, and breaking
 surface exit behavior are covered by focused process tests. The command reports
 that it is not a live-schema check; Python remains authoritative for that gate.
 
+## TASK-209 checkpoint — 2026-11-17
+
+The TypeScript parity helper now initializes Rust homes with the Rust `init_cli`
+binary. The required Rust-backed live suite passes all 18 tests with zero skips;
+it remains local evidence and does not clear external release gates.
+
