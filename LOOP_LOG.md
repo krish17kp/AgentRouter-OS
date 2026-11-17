@@ -178,7 +178,7 @@ focused compatibility suite passes 20 tests; the full locked Rust workspace,
 formatting, and strict Clippy checks pass. Verified external dataset loaders
 and the frozen release gate remain unresolved.
 
-## 2026-11-18 — TASK-211 bounded Hugging Face real loader
+## 2026-11-17 — TASK-211 bounded Hugging Face real loader
 
 The Rust evaluation crate now includes an explicitly opt-in fixed-HTTPS
 datasets-server rows loader for CLINC150, Banking77, MASSIVE, LongBench v2,
