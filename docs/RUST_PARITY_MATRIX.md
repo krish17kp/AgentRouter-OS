@@ -120,6 +120,9 @@ release authority until the full set is complete.
   Rust `init_cli` binary. With `AGENTROUTER_REQUIRE_LIVE=1`, all 18 TypeScript
   tests pass against the Rust loopback server with zero skips; the remaining SDK
   row is partial only for broader lifecycle/native transport parity.
+- TASK-225 aligns native Rust SDK truncation handling with HTTPX by classifying
+  a declared-length body that ends early as `RemoteProtocolError`; generic
+  native phase-specific I/O and lifecycle parity remain Partial.
 - TASK-142 expands the evaluator facade differential from model identity fields
   to every normalized `ModelEntry` JSON field and compares the Rust export list
   directly with Python's `__all__`. TASK-160 adds success-only cached loading,

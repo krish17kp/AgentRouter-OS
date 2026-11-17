@@ -40,6 +40,11 @@ truncated HTTP response bodies with HTTPX while retaining distinct timeout and
 generic read errors. This closes one reviewed differential without claiming
 complete reliability lifecycle parity.
 
+TASK-225 (2026-11-18) aligns the native Rust SDK's truncated-response
+classification with Python/httpx while retaining distinct timeout and generic
+read errors. Native lifecycle and complete phase-specific transport parity
+remain R5 work.
+
 TASK-216 (2026-11-18) wires the existing safe Rust contract exporter into the
 unified CLI as `agentrouter contract export`. It supports an explicit source
 file, deterministic timestamp injection, JSON output, and fail-closed refusal

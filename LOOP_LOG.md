@@ -3370,3 +3370,11 @@ zero skips against the Rust loopback API.
 - The focused truncated-body differential, reliability crate tests, strict
   Clippy, and formatting checks pass; broader reliability lifecycle parity
   remains Partial.
+
+## TASK-225 — SDK protocol-error parity (2026-11-18)
+
+- Rust SDK response draining now maps truncated declared-length bodies to its
+  `RemoteProtocolError` category, matching Python/httpx while retaining
+  distinct timeout and generic read errors.
+- The focused native regression and the 23-test Rust/Python SDK suites pass;
+  broader native lifecycle/transport parity remains Partial.

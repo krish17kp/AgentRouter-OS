@@ -222,10 +222,13 @@ impl SdkTransport for UreqTransport {
             .read_to_end(&mut body)
             .map_err(|error| {
                 SdkTransportError::new(
-                    if error.kind() == std::io::ErrorKind::TimedOut {
-                        SdkTransportErrorKind::ReadTimeout
-                    } else {
-                        SdkTransportErrorKind::ReadError
+                    match error.kind() {
+                        std::io::ErrorKind::TimedOut => SdkTransportErrorKind::ReadTimeout,
+                        // HTTPX reports a body that ends before Content-Length
+                        // as RemoteProtocolError; ureq surfaces that wire
+                        // defect as UnexpectedEof while draining the body.
+                        std::io::ErrorKind::UnexpectedEof => SdkTransportErrorKind::ProtocolError,
+                        _ => SdkTransportErrorKind::ReadError,
                     },
                     "response body read failed",
                 )
@@ -1018,7 +1021,7 @@ mod tests {
     }
 
     #[test]
-    fn truncated_response_body_is_a_read_error_not_an_api_result() {
+    fn truncated_response_body_is_a_protocol_error_not_an_api_result() {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let address = listener.local_addr().unwrap();
         let server = thread::spawn(move || {
@@ -1041,7 +1044,7 @@ mod tests {
         assert!(matches!(
             result,
             Err(ClientError::Transport(SdkTransportError {
-                kind: SdkTransportErrorKind::ReadError,
+                kind: SdkTransportErrorKind::ProtocolError,
                 ..
             }))
         ));
