@@ -3456,3 +3456,10 @@ zero skips against the Rust loopback API.
   package changes: 165 cases, 98.23/100, exit 1, `release_ready: false`.
 - The sole failure remains context-band accuracy at `0.6667 < 0.90`; no
   holdout, threshold, or evaluation input changed.
+
+## TASK-236 — Security and website recheck (2026-11-18)
+
+- `cargo audit --no-yanked -f Cargo.lock` passes across 207 locked
+  dependencies with no vulnerability advisories; the known unmaintained chrono
+  warning remains and has no fixed upgrade.
+- Website lint and the Vite production build both pass.

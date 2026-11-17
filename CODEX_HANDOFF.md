@@ -77,6 +77,9 @@ wheel smoke verified the new package help entrypoint, version, init, and local
 routing.
 TASK-235 re-ran the release gate after these changes: 165 cases, 98.23, exit 1,
 with only the unchanged context-band gate failing at `0.6667 < 0.90`.
+TASK-236 re-ran the 207-dependency Rust audit and website lint/build: no
+vulnerability advisories, lint/build green, and only the known unmaintained
+chrono warning remains.
 TASK-213 enforces the Rust MCP legacy initialize lifecycle (`-32002` before
 initialize) while retaining stateless modern discovery. Eight Rust MCP tests,
 strict Clippy, and the full Python/Rust MCP compatibility test pass; non-stdio

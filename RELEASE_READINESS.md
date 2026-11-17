@@ -130,6 +130,10 @@ TASK-235 re-ran the authoritative release gate after these package changes:
 165 cases, score 98.23, exit 1, with only context-band accuracy failing at
 `0.6667 < 0.90`; no holdout or threshold was changed.
 
+TASK-236 re-ran `cargo audit` and the website lint/build. The 207-dependency
+audit has no vulnerability advisories; website lint and production build pass.
+Only the known unmaintained chrono warning remains, with no fixed upgrade.
+
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
 advisories across 207 locked dependencies; one unmaintained `chrono` warning
