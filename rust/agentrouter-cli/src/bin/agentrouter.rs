@@ -1809,10 +1809,13 @@ fn run() -> Result<i32, String> {
             let id = tail
                 .first()
                 .ok_or_else(|| "explain needs a decision id".to_owned())?;
-            run_sibling(
-                "decision_cli",
-                with_home(&home, ["explain".to_owned(), id.clone()]),
-            )
+            let mut forwarded = vec!["explain".to_owned(), id.clone()];
+            if tail.iter().any(|argument| argument == "--json") {
+                forwarded.push("--json".to_owned());
+            } else {
+                forwarded.push("--text".to_owned());
+            }
+            run_sibling("decision_cli", with_home(&home, forwarded))
         }
         "feedback" => feedback(&home, &tail),
         "plan" => plan_decision(&home, &tail),

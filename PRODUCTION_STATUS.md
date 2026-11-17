@@ -2,7 +2,7 @@
 
 Updated: 2026-11-18
 
-## Latest continuation slice — TASK-246
+## Latest continuation slice — TASK-247
 
 Rust unified command help now matches Python's successful `--help` behavior for
 the leaf commands `init`, `explain`, `feedback`, `stats`, `prompt`, `doctor`,
@@ -11,6 +11,11 @@ The combined route/unified compatibility selection passes 72 tests; the locked
 Rust CLI crate, strict Clippy, formatting, and diff checks pass. This improves
 R4 CLI parity but does not close the remaining full CLI, provider, evaluation,
 human-gate, or deployment work.
+
+TASK-247 adds Python-compatible text and structured JSON output to unified Rust
+`explain`, with a process-level regression for both forms. The focused unified
+selection is 36 tests and the Rust CLI crate remains green at 89 tests with
+strict Clippy and formatting. This remains an R4 parity increment only.
 
 ## Definition of done
 

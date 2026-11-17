@@ -201,6 +201,35 @@ def test_init_and_route_dispatch_to_rust_implementations(tmp_path, unified_binar
     assert "Feedback: 1 rating(s), avg 4" in stats_text.stdout
 
 
+def test_explain_supports_python_text_and_json_surfaces(tmp_path, unified_binary):
+    home = tmp_path / "agentrouter-home"
+    initialized = _run(unified_binary, "init", home=home)
+    assert initialized.returncode == 0, initialized.stderr
+    routed = _run(
+        unified_binary,
+        "route",
+        "Review this Python repository for security issues.",
+        "--save",
+        "--json",
+        home=home,
+    )
+    assert routed.returncode == 0, routed.stderr
+    decision_id = json.loads(routed.stdout)["decision_id"]
+
+    json_result = _run(unified_binary, "explain", decision_id, "--json", home=home)
+    assert json_result.returncode == 0, json_result.stderr
+    payload = json.loads(json_result.stdout)
+    assert payload["task"] == "Review this Python repository for security issues."
+    assert payload["classification"]["risk"] == "medium"
+
+    text_result = _run(unified_binary, "explain", decision_id, home=home)
+    assert text_result.returncode == 0, text_result.stderr
+    assert text_result.stdout.startswith('Task: "Review this Python repository for security issues."')
+    assert "Eligibility:" in text_result.stdout
+    assert "Scores" in text_result.stdout
+    assert "Gate: approval=" in text_result.stdout
+
+
 def test_read_only_execution_plan_never_enables_execution(tmp_path, unified_binary):
     home = tmp_path / "agentrouter-home"
     initialized = _run(unified_binary, "init", home=home)

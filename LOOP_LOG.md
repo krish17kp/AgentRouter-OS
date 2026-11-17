@@ -1,5 +1,13 @@
 # LOOP_LOG
 
+## 2026-11-18 — TASK-247 stored-decision explain parity
+
+Rust unified `agentrouter explain` now renders the Python-compatible text
+reconstruction (classification, eligibility, scores, weights, and safety
+gate), while `--json` returns the structured stored decision. A new process
+regression covers both forms; the focused unified selection is 36 tests and
+the Rust CLI crate remains green at 89 tests with strict Clippy and formatting.
+
 ## 2026-11-18 — TASK-246 leaf-command help parity
 
 Rust unified `agentrouter` now handles `--help` successfully for the existing

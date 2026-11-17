@@ -27,6 +27,12 @@
 
 ## Current production status
 
+TASK-247 (2026-11-18) aligns the unified Rust stored-decision command with
+Python's text and structured JSON `explain` forms. The focused unified CLI
+selection passes 36 tests and the Rust CLI crate passes 89 tests with strict
+Clippy and formatting. A complete compatibility sweep follows this increment;
+the release gate and owner-controlled production requirements are unchanged.
+
 TASK-246 (2026-11-18) aligns the unified Rust CLI's `--help` behavior for the
 remaining existing leaf commands (`init`, `explain`, `feedback`, `stats`,
 `prompt`, `doctor`, and `dashboard`). The focused route/unified compatibility
