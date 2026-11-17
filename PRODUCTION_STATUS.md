@@ -2,7 +2,7 @@
 
 Updated: 2026-11-18
 
-## Latest continuation slice — TASK-250
+## Latest continuation slice — TASK-251
 
 Rust unified command help now matches Python's successful `--help` behavior for
 the leaf commands `init`, `explain`, `feedback`, `stats`, `prompt`, `doctor`,
@@ -30,6 +30,10 @@ disabled.
 TASK-250 aligns task-prompt configuration semantics: Rust uses configured
 weights but preserves Python's omission of the route policy cap in this
 prompt-only path. The focused decision/unified selection is 44 tests.
+
+TASK-251 aligns the public stored-prompt trailing newline with Python while
+preserving the direct probe's historical output contract. The focused
+decision/unified selection is 45 tests.
 
 The complete Rust/Python and Rust CLI compatibility selection after TASK-250
 passes 888 tests with 1 expected skip; the existing Starlette/httpx warning

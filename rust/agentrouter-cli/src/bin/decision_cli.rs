@@ -185,12 +185,14 @@ fn run() -> Result<(), String> {
     let id = args.next().ok_or("decision id is required")?;
     let mut json_output = false;
     let mut text_output = false;
+    let mut public_newline = false;
     let mut tool = None;
     let mut output_path = None;
     while let Some(argument) = args.next() {
         match argument.as_str() {
             "--json" => json_output = true,
             "--text" => text_output = true,
+            "--newline" => public_newline = true,
             "--tool" => {
                 tool = Some(args.next().ok_or("--tool needs a value")?);
             }
@@ -221,7 +223,11 @@ fn run() -> Result<(), String> {
                     .unwrap_or("manual/human-operator");
                 println!("Wrote execution prompt for {target} -> {}", path.display());
             } else {
-                print!("{prompt}");
+                if public_newline {
+                    println!("{prompt}");
+                } else {
+                    print!("{prompt}");
+                }
             }
         }
         _ => return Err(format!("unknown operation '{op}'")),

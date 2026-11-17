@@ -260,6 +260,38 @@ def test_unified_prompt_can_write_an_execution_file(tmp_path, unified_binary):
     assert generated.stdout.endswith(f" -> {output}\n")
 
 
+def test_unified_stored_prompt_matches_python_newline_contract(tmp_path, unified_binary):
+    home = tmp_path / "agentrouter-home"
+    initialized = _run(unified_binary, "init", home=home)
+    assert initialized.returncode == 0, initialized.stderr
+    routed = _run(
+        unified_binary,
+        "route",
+        "Summarize this report",
+        "--save",
+        "--json",
+        home=home,
+    )
+    assert routed.returncode == 0, routed.stderr
+    decision_id = json.loads(routed.stdout)["decision_id"]
+    rust = _run(unified_binary, "prompt", "generate", "--from", decision_id, home=home)
+    python_env = os.environ.copy()
+    python_env["AGENTROUTER_HOME"] = str(home)
+    python = subprocess.run(
+        [sys.executable, "-m", "agentrouter", "prompt", "generate", "--from", decision_id],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env=python_env,
+        timeout=60,
+        check=False,
+    )
+    assert rust.returncode == python.returncode == 0
+    assert rust.stdout == python.stdout
+    assert rust.stderr == python.stderr
+
+
 def test_unified_prompt_accepts_task_text_like_python(tmp_path, unified_binary):
     home = tmp_path / "agentrouter-home"
     initialized = _run(unified_binary, "init", home=home)

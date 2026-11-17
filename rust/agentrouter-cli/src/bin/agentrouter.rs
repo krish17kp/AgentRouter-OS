@@ -1917,6 +1917,7 @@ fn run() -> Result<i32, String> {
             }
             if let Some(id) = id {
                 let mut forwarded = vec!["prompt".to_owned(), id];
+                forwarded.push("--newline".to_owned());
                 if let Some(tool) = tool {
                     forwarded.extend(["--tool".to_owned(), tool]);
                 }

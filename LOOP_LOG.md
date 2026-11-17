@@ -1,5 +1,12 @@
 # LOOP_LOG
 
+## 2026-11-18 — TASK-251 public stored-prompt newline parity
+
+Unified Rust `prompt generate --from` now matches Python's final newline while
+the standalone decision probe keeps its historical newline-free output. A new
+public process differential passes; the focused decision/unified CLI selection
+is 45 tests.
+
 ## 2026-11-18 — TASK-250 prompt configuration parity
 
 The task-based Rust prompt path now matches Python's configuration semantics:

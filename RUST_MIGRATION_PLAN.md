@@ -27,6 +27,10 @@
 
 ## Current production status
 
+TASK-251 (2026-11-18) aligns the unified stored-prompt output newline with
+Python while preserving the direct probe's historical output. The focused
+decision/unified selection passes 45 tests; the release gate remains unchanged.
+
 TASK-250 (2026-11-18) aligns task-prompt configuration semantics with Python:
 configured weights are honored, while the prompt-only route path does not
 apply the policy cap. The focused decision/unified selection passes 44 tests;
