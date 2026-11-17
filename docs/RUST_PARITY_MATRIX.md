@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-18 (TASK-082–245). This inventory covers every Python source module under
+Updated: 2026-11-18 (TASK-082–259). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -137,8 +137,9 @@ release authority until the full set is complete.
   fallback. External dataset loading and full evaluator orchestration remain
   Partial.
 - TASK-221 sets Unix Rust diagnostic-bundle artifacts to private `0600` mode on
-  the opened capability-bounded handle. Bundle metadata/runtime parity remains
-  Partial.
+  the opened capability-bounded handle. TASK-259 additionally aligns JSON
+  artifacts with Python's ASCII escaping, including surrogate pairs for
+  non-BMP characters. Bundle metadata/runtime parity remains Partial.
 - TASK-144 tightens the existing OpenAI adapter parity: both implementations
   reject all non-2xx responses regardless of whether the concrete transport or
   an injected fixture produced the status. Redirects remain disabled.
