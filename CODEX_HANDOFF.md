@@ -51,8 +51,9 @@ successful leaf-command help for `init`, `explain`, `feedback`, `stats`,
 The fresh complete Rust/Python and Rust CLI compatibility selection is 883
 passed, 1 skipped, with only the existing non-failing Starlette/httpx warning.
 TASK-247 aligns unified `explain` with Python's text and `--json` forms and adds
-a process regression; the focused unified selection is now 36 tests. A fresh
-full compatibility sweep is pending this slice.
+a process regression; the focused unified selection is now 36 tests. The fresh
+full compatibility sweep passes 884 tests with 1 expected skip; the existing
+Starlette/httpx warning remains non-failing.
 TASK-223 synchronizes the unified Rust CLI help with the implemented contract
 check/diff/export surface and adds a process-level regression. The fresh full
 Python suite passes 2,743 tests with 7 expected skips; the full locked Rust

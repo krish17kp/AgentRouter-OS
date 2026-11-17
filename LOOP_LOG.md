@@ -7,6 +7,8 @@ reconstruction (classification, eligibility, scores, weights, and safety
 gate), while `--json` returns the structured stored decision. A new process
 regression covers both forms; the focused unified selection is 36 tests and
 the Rust CLI crate remains green at 89 tests with strict Clippy and formatting.
+The complete Rust/Python and Rust CLI compatibility selection passes 884 tests
+with 1 expected skip; the existing Starlette/httpx warning remains non-failing.
 
 ## 2026-11-18 — TASK-246 leaf-command help parity
 

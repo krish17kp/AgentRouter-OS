@@ -16,6 +16,13 @@ fn value_text(value: Option<&Value>) -> String {
     }
 }
 
+fn score_text(value: Option<&Value>) -> String {
+    value
+        .and_then(Value::as_f64)
+        .map(|number| format!("{number:.3}"))
+        .unwrap_or_else(|| value_text(value))
+}
+
 fn explain_text(payload: &Value) -> Result<String, String> {
     let classification = payload
         .get("classification")
@@ -90,7 +97,7 @@ fn explain_text(payload: &Value) -> Result<String, String> {
             value_text(terms.get("lat")),
             value_text(terms.get("ctx")),
             value_text(terms.get("adj")),
-            value_text(item.get("score")),
+            score_text(item.get("score")),
             marker
         ));
     }
@@ -114,10 +121,15 @@ fn explain_text(payload: &Value) -> Result<String, String> {
         .get("gates")
         .and_then(Value::as_object)
         .ok_or_else(|| "stored decision has invalid gates".to_owned())?;
+    let auto_execute = gates
+        .get("auto_execute_allowed")
+        .and_then(Value::as_bool)
+        .map(|allowed| if allowed { "True" } else { "False" })
+        .unwrap_or("-");
     output.push_str(&format!(
         "Gate: approval={}, auto_execute_allowed={}\n",
         value_text(gates.get("approval_level")),
-        value_text(gates.get("auto_execute_allowed")),
+        auto_execute,
     ));
     Ok(output)
 }

@@ -17,6 +17,10 @@ TASK-247 adds Python-compatible text and structured JSON output to unified Rust
 selection is 36 tests and the Rust CLI crate remains green at 89 tests with
 strict Clippy and formatting. This remains an R4 parity increment only.
 
+The complete Rust/Python and Rust CLI compatibility selection after TASK-247
+passes 884 tests with 1 expected skip; the existing Starlette/httpx warning
+remains non-failing.
+
 ## Definition of done
 
 ## Current continuation checkpoint — 2026-11-18
