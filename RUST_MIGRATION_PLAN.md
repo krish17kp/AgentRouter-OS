@@ -27,6 +27,12 @@
 
 ## Current production status
 
+TASK-248 (2026-11-18) completes the stored prompt output slice: unified and
+direct Rust prompt generation now support named tool overrides and safe file
+output with no-follow semantics. The focused decision/unified CLI selection
+passes 42 tests; the release gate and owner-controlled production requirements
+remain unchanged.
+
 TASK-247 (2026-11-18) aligns the unified Rust stored-decision command with
 Python's text and structured JSON `explain` forms. The focused unified CLI
 selection passes 36 tests and the Rust CLI crate passes 89 tests with strict

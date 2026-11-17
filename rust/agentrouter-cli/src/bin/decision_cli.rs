@@ -4,6 +4,7 @@
 //! Usage: decision_cli <home> <explain|prompt> <decision_id> [tool]
 
 use serde_json::Value;
+use std::io::Write;
 use std::path::PathBuf;
 
 fn value_text(value: Option<&Value>) -> String {
@@ -134,6 +135,46 @@ fn explain_text(payload: &Value) -> Result<String, String> {
     Ok(output)
 }
 
+fn write_prompt_file(path: &std::path::Path, prompt: &str) -> Result<(), String> {
+    let parent_path = path.parent().unwrap_or_else(|| std::path::Path::new("."));
+    let leaf = path
+        .file_name()
+        .ok_or_else(|| "prompt output path must name a file".to_owned())?;
+    let parent = cap_std::fs::Dir::open_ambient_dir(parent_path, cap_std::ambient_authority())
+        .map_err(|error| format!("could not open prompt output directory: {error}"))?;
+    let parent_file = parent
+        .try_clone()
+        .map_err(|error| format!("could not inspect prompt output directory: {error}"))?
+        .into_std_file();
+    let mut options = fs_at::OpenOptions::default();
+    options
+        .read(true)
+        .write(fs_at::OpenOptionsWriteMode::Write)
+        .create(true)
+        .truncate(true)
+        .follow(false);
+    let mut file = options
+        .open_at(&parent_file, std::path::Path::new(leaf))
+        .map_err(|error| format!("could not open prompt output safely: {error}"))?;
+    let metadata = file
+        .metadata()
+        .map_err(|error| format!("could not inspect prompt output: {error}"))?;
+    if !metadata.is_file() || metadata.file_type().is_symlink() {
+        return Err("prompt output must be a regular, unlinked file".to_owned());
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        if metadata.nlink() > 1 {
+            return Err(
+                "prompt output has multiple hard links; refusing to overwrite it".to_owned(),
+            );
+        }
+    }
+    file.write_all(prompt.as_bytes())
+        .map_err(|error| format!("could not write prompt output: {error}"))
+}
+
 fn run() -> Result<(), String> {
     let mut args = std::env::args().skip(1);
     let home = PathBuf::from(
@@ -145,12 +186,16 @@ fn run() -> Result<(), String> {
     let mut json_output = false;
     let mut text_output = false;
     let mut tool = None;
+    let mut output_path = None;
     while let Some(argument) = args.next() {
         match argument.as_str() {
             "--json" => json_output = true,
             "--text" => text_output = true,
             "--tool" => {
                 tool = Some(args.next().ok_or("--tool needs a value")?);
+            }
+            "--out" => {
+                output_path = Some(PathBuf::from(args.next().ok_or("--out needs a path")?));
             }
             value if op == "prompt" && tool.is_none() => tool = Some(value.to_owned()),
             option => return Err(format!("unknown option '{option}'")),
@@ -168,7 +213,16 @@ fn run() -> Result<(), String> {
         ),
         "prompt" => {
             let prompt = agentrouter_cli::prompt_from_decision(&payload, tool.as_deref())?;
-            print!("{prompt}");
+            if let Some(path) = output_path {
+                write_prompt_file(&path, &prompt)?;
+                let target = tool
+                    .as_deref()
+                    .or_else(|| payload["recommendation"]["model"].as_str())
+                    .unwrap_or("manual/human-operator");
+                println!("Wrote execution prompt for {target} -> {}", path.display());
+            } else {
+                print!("{prompt}");
+            }
         }
         _ => return Err(format!("unknown operation '{op}'")),
     }

@@ -2,7 +2,7 @@
 
 Updated: 2026-11-18
 
-## Latest continuation slice — TASK-247
+## Latest continuation slice — TASK-248
 
 Rust unified command help now matches Python's successful `--help` behavior for
 the leaf commands `init`, `explain`, `feedback`, `stats`, `prompt`, `doctor`,
@@ -16,6 +16,11 @@ TASK-247 adds Python-compatible text and structured JSON output to unified Rust
 `explain`, with a process-level regression for both forms. The focused unified
 selection is 36 tests and the Rust CLI crate remains green at 89 tests with
 strict Clippy and formatting. This remains an R4 parity increment only.
+
+TASK-248 adds named `--tool` forwarding and Python-compatible `--out PATH`
+prompt generation through the unified command and direct decision probe. The
+focused decision/unified selection is 42 tests; output files use no-follow
+opening and reject hard-linked destinations.
 
 The complete Rust/Python and Rust CLI compatibility selection after TASK-247
 passes 884 tests with 1 expected skip; the existing Starlette/httpx warning

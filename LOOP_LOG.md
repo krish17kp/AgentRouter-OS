@@ -1,5 +1,14 @@
 # LOOP_LOG
 
+## 2026-11-18 — TASK-248 prompt output parity
+
+Rust `prompt generate --from` now supports named `--tool` forwarding and
+Python-compatible `--out PATH` file output through both the unified command and
+the direct decision probe. Prompt files use no-follow opening and reject
+multiple-hard-link targets. The focused decision/unified CLI selection passes
+42 tests; the Rust CLI crate remains green at 89 tests with strict Clippy and
+formatting.
+
 ## 2026-11-18 — TASK-247 stored-decision explain parity
 
 Rust unified `agentrouter explain` now renders the Python-compatible text

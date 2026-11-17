@@ -230,6 +230,36 @@ def test_explain_supports_python_text_and_json_surfaces(tmp_path, unified_binary
     assert "Gate: approval=" in text_result.stdout
 
 
+def test_unified_prompt_can_write_an_execution_file(tmp_path, unified_binary):
+    home = tmp_path / "agentrouter-home"
+    initialized = _run(unified_binary, "init", home=home)
+    assert initialized.returncode == 0, initialized.stderr
+    routed = _run(
+        unified_binary,
+        "route",
+        "Summarize this report",
+        "--save",
+        "--json",
+        home=home,
+    )
+    assert routed.returncode == 0, routed.stderr
+    decision_id = json.loads(routed.stdout)["decision_id"]
+    output = tmp_path / "execution-prompt.md"
+    generated = _run(
+        unified_binary,
+        "prompt",
+        "generate",
+        "--from",
+        decision_id,
+        "--out",
+        output,
+        home=home,
+    )
+    assert generated.returncode == 0, generated.stderr
+    assert output.read_text(encoding="utf-8").startswith("# Execution Prompt\n")
+    assert generated.stdout.endswith(f" -> {output}\n")
+
+
 def test_read_only_execution_plan_never_enables_execution(tmp_path, unified_binary):
     home = tmp_path / "agentrouter-home"
     initialized = _run(unified_binary, "init", home=home)

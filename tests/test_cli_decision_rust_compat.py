@@ -73,6 +73,24 @@ def test_rust_prompt_from_decision_matches_python_cli(decision, tool):
     assert result.stdout == expected.stdout.removesuffix("\n")
 
 
+def test_rust_prompt_output_file_matches_python_cli(decision, tmp_path):
+    home, decision_id = decision
+    python_path = tmp_path / "python-prompt.md"
+    rust_path = tmp_path / "rust-prompt.md"
+    expected = runner.invoke(
+        app,
+        ["prompt", "generate", "--from", decision_id, "--out", str(python_path)],
+    )
+    assert expected.exit_code == 0, expected.output
+    result = rust_decision(home, "prompt", decision_id, "--out", str(rust_path))
+    assert result.returncode == 0, result.stderr
+    assert rust_path.read_text(encoding="utf-8") == python_path.read_text(encoding="utf-8")
+    assert result.stdout.startswith("Wrote execution prompt for ")
+    assert result.stdout.endswith(f" -> {rust_path}\n")
+    assert expected.stdout.startswith("Wrote execution prompt for ")
+    assert expected.stdout.endswith(f" -> {python_path}\n")
+
+
 def test_rust_explain_missing_decision_is_nonzero(decision):
     home, _decision_id = decision
     result = rust_decision(home, "explain", "d_99999")

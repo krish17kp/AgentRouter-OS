@@ -1716,7 +1716,7 @@ fn run() -> Result<i32, String> {
                 return Ok(0);
             }
             "prompt" => {
-                println!("Usage: agentrouter prompt generate --from <decision-id> [--tool <host>]");
+                println!("Usage: agentrouter prompt generate [TASK] [--from <decision-id>] [--tool <host>] [--out PATH]");
                 return Ok(0);
             }
             "doctor" => {
@@ -1823,17 +1823,19 @@ fn run() -> Result<i32, String> {
         "prompt" => {
             if tail.first().map(String::as_str) != Some("generate") {
                 return Err(
-                    "usage: agentrouter prompt generate --from <decision-id> [--tool <host>]"
+                    "usage: agentrouter prompt generate [TASK] [--from <decision-id>] [--tool <host>] [--out PATH]"
                         .to_owned(),
                 );
             }
             let mut id = None;
             let mut tool = None;
+            let mut output = None;
             let mut rest = tail.into_iter().skip(1);
             while let Some(arg) = rest.next() {
                 match arg.as_str() {
                     "--from" => id = rest.next(),
                     "--tool" => tool = rest.next(),
+                    "--out" => output = rest.next(),
                     option => return Err(format!("unknown prompt option '{option}'")),
                 }
             }
@@ -1841,7 +1843,10 @@ fn run() -> Result<i32, String> {
                 id.ok_or_else(|| "prompt generate requires --from <decision-id>".to_owned())?;
             let mut forwarded = vec!["prompt".to_owned(), id];
             if let Some(tool) = tool {
-                forwarded.push(tool);
+                forwarded.extend(["--tool".to_owned(), tool]);
+            }
+            if let Some(output) = output {
+                forwarded.extend(["--out".to_owned(), output]);
             }
             run_sibling("decision_cli", with_home(&home, forwarded))
         }
