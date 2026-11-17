@@ -3,10 +3,12 @@
 ## Live checkpoint — 2026-11-17
 
 Active release checkout: `/data/AgentRouter-production`, branch
-`release/agentrouter-v0.5-rc1`, pushed head `25e783d`. PR #16 is the only open
-PR; no reviews or review requests are present. Hosted CI for this head is running
-across CI, Rust migration, Security, Website, and Critical Mutation workflows;
-build smoke, API compatibility, release-readiness report, and Website are green.
+`release/agentrouter-v0.5-rc1`, local head `34d6366` (not yet pushed). PR #16 is
+the only open PR; no reviews or review requests are present. The macOS-only
+no-follow path regression is repaired locally; the prior head’s Linux Rust,
+MSRV, API compatibility, build smoke, release-readiness report, Website, and
+Security checks are green. Push this repair to the authorized RC branch, then
+inspect the new cross-platform matrix.
 The local full Python suite remains 2,733 passed / 7 skipped; Rust workspace,
 strict Clippy, formatting, Ruff, Bandit, dependency audits, wheel/sdist build,
 and clean-wheel smoke are green. The frozen context-band gate remains 0.6667

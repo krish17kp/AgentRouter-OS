@@ -2,8 +2,8 @@
 
 ## Current checkpoint — 2026-11-17
 
-At pushed head `25e783d`, the bundle hardening evidence is recorded and the
-current-head hosted matrix is running. Local Python/Rust release checks remain green; the
+At local head `34d6366`, the macOS root-alias repair is recorded with the bundle
+hardening evidence and awaits hosted validation. Local Python/Rust release checks remain green; the
 frozen context-band gate and owner-supplied validation/deployment inputs remain
 open.
 

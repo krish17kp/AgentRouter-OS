@@ -1,5 +1,16 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-174 macOS root-alias repair
+
+Hosted Rust workspace exposed three macOS-only failures: the no-follow walker
+rejected Apple’s OS-owned `/var` alias, breaking temporary bundle paths and the
+provider generated-catalog fixture. The walker now normalizes only `/var`,
+`/tmp`, and `/etc` to `/private/*` before applying the existing no-follow
+component checks; user-controlled links remain rejected. A macOS regression
+test covers all three aliases. Rust CLI unit tests (79), strict Clippy, and
+format checks pass locally; the repair is committed locally as `34d6366` and is
+ready for hosted revalidation on the authorized RC branch.
+
 ## 2026-11-17 — Hosted queue repair and evidence checkpoint
 
 The current release-candidate head is `25e783d`. Stale queued duplicate push and

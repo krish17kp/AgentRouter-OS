@@ -2,8 +2,8 @@
 
 ## Current checkpoint — 2026-11-17
 
-At pushed head `25e783d`, hosted validation is running after the final bundle
-evidence checkpoint. Local release checks are green, but the frozen context-band
+At local head `34d6366`, the macOS root-alias repair is ready for hosted
+validation after the final bundle evidence checkpoint. Local release checks are green, but the frozen context-band
 gate, human evaluation, live OpenAI validation, and promotion/deployment inputs
 remain unresolved.
 
