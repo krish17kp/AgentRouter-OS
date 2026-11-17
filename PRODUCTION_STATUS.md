@@ -2,7 +2,13 @@
 
 Updated: 2026-11-18
 
-## Latest continuation slice — TASK-256
+## Latest continuation slice — TASK-257
+
+The complete Rust/Python and Rust CLI compatibility selection after TASK-256
+passes 893 tests with 1 expected skip. The existing Starlette/httpx warning is
+non-failing; no compatibility regression was observed.
+
+## Previous continuation slice — TASK-256
 
 Unified Rust `hosts` and `models` inspection commands now preserve Python's
 registry failure exit code (3) when the home is uninitialized, with four

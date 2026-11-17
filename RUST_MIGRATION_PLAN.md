@@ -27,6 +27,11 @@
 
 ## Current production status
 
+TASK-257 (2026-11-18) re-runs the complete Rust/Python and Rust CLI
+compatibility selection after the registry-backed exit-code fixes: 893 tests
+pass with 1 expected skip and only the existing non-failing Starlette/httpx
+deprecation warning. The release gate remains unchanged.
+
 TASK-256 (2026-11-18) aligns unified Rust registry-backed inspection errors:
 `hosts list/show` and `models list/show` now return exit 3 for unreadable or
 missing registries, matching Python instead of the generic exit 2. Four

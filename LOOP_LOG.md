@@ -3633,3 +3633,9 @@ zero skips against the Rust loopback API.
 - Four process-level regressions pass; the focused selection passes 5/5 and
   strict Clippy remains green.
 - The release gate and owner-controlled production requirements are unchanged.
+## TASK-257 — CLI compatibility recheck (2026-11-18)
+
+- The complete Rust/Python and Rust CLI compatibility selection passes 893/893
+  tests with 1 expected skip.
+- The existing Starlette/httpx deprecation warning remains non-failing; the
+  canonical release gate still fails only frozen context-band accuracy.
