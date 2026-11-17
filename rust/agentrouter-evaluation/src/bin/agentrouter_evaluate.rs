@@ -227,12 +227,15 @@ fn run_eval(args: impl Iterator<Item = String>) -> Result<i32, String> {
             "--seed" => seed = parse_i64(&mut args, "--seed")?,
             "--languages" => {
                 let value = parse_flag(&mut args, "--languages")?;
-                languages = Some(
+                // Typer's `if languages` guard treats an explicitly empty
+                // value as absent; preserve that observable behavior while
+                // retaining empty entries in non-empty comma lists.
+                languages = (!value.is_empty()).then(|| {
                     value
                         .split(',')
                         .map(|part| part.trim().to_owned())
-                        .collect(),
-                );
+                        .collect()
+                });
             }
             "--source" => source = parse_flag(&mut args, "--source")?,
             "--out-dir" => out_dir = PathBuf::from(parse_flag(&mut args, "--out-dir")?),

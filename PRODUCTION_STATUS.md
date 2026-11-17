@@ -2,6 +2,12 @@
 
 Updated: 2026-11-18
 
+## Latest continuation slice — TASK-267
+
+Rust evaluation CLI parsing now treats `--languages ""` as no filter, matching
+Python. The focused evaluation CLI/runner selection passes 44 tests. Release
+and deployment gates are unchanged.
+
 ## Latest continuation slice — TASK-266
 
 The Rust registry facade now reports the committed `agentrouter-gold` benchmark

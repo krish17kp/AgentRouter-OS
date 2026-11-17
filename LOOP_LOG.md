@@ -1,5 +1,12 @@
 # LOOP_LOG
 
+## 2026-11-18 — TASK-267 empty language option parity
+
+Rust `agentrouter-evaluate run` now treats an explicitly empty `--languages`
+value as omitted, matching Python's CLI behavior. The focused evaluation
+CLI/registered-runner selection passes 44 tests; release and deployment gates
+remain unchanged.
+
 ## 2026-11-18 — TASK-266 gold adapter availability parity
 
 Rust `DatasetAdapter::availability()` now uses the committed gold benchmark's
