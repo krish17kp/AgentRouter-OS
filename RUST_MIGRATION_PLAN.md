@@ -27,6 +27,14 @@
 
 ## Current production status
 
+TASK-246 (2026-11-18) aligns the unified Rust CLI's `--help` behavior for the
+remaining existing leaf commands (`init`, `explain`, `feedback`, `stats`,
+`prompt`, `doctor`, and `dashboard`). The focused route/unified compatibility
+selection passes 72 tests and the Rust CLI crate passes 89 tests with strict
+Clippy and formatting. This is an R4 parity increment only; the frozen
+context-band gate, provider credentials, human evaluation, and deployment
+requirements remain unchanged.
+
 TASK-223 (2026-11-18) synchronizes the unified Rust CLI top-level help with
 the implemented contract check/diff/export surface and adds a process-level
 regression for live and explicit-baseline checks. Fresh local verification

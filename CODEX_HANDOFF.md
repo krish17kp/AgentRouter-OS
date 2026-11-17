@@ -45,7 +45,9 @@ responses listing classifier and preference options; the focused route suite is
 
 TASK-245 adds successful subgroup help for `models list`, `hosts doctor`, and
 `providers status`, `registry list`, and provider refresh/rollback/restore; the
-combined route/unified compatibility selection is now 65 tests.
+combined route/unified compatibility selection is now 65 tests. TASK-246 adds
+successful leaf-command help for `init`, `explain`, `feedback`, `stats`,
+`prompt`, `doctor`, and `dashboard`, bringing that selection to 72 tests.
 TASK-223 synchronizes the unified Rust CLI help with the implemented contract
 check/diff/export surface and adds a process-level regression. The fresh full
 Python suite passes 2,743 tests with 7 expected skips; the full locked Rust

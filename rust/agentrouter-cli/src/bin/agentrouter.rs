@@ -1694,6 +1694,42 @@ fn run() -> Result<i32, String> {
         return Ok(0);
     }
     let tail = args.collect::<Vec<_>>();
+    if tail
+        .iter()
+        .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
+    {
+        match command.as_str() {
+            "init" => {
+                println!("Usage: agentrouter init [--force]");
+                return Ok(0);
+            }
+            "explain" => {
+                println!("Usage: agentrouter explain <decision-id>");
+                return Ok(0);
+            }
+            "feedback" => {
+                println!("Usage: agentrouter feedback <decision-id> --rating 1..5 [--note TEXT]");
+                return Ok(0);
+            }
+            "stats" => {
+                println!("Usage: agentrouter stats [--json]");
+                return Ok(0);
+            }
+            "prompt" => {
+                println!("Usage: agentrouter prompt generate --from <decision-id> [--tool <host>]");
+                return Ok(0);
+            }
+            "doctor" => {
+                println!("Usage: agentrouter doctor [--json] [--verify-live] [--bundle <new-dir>] [--include-database]");
+                return Ok(0);
+            }
+            "dashboard" => {
+                println!("Usage: agentrouter dashboard [port]");
+                return Ok(0);
+            }
+            _ => {}
+        }
+    }
     if command == "__evaluation_surface" {
         if !tail.is_empty() {
             return Err("internal evaluation surface command takes no options".to_owned());

@@ -2,13 +2,14 @@
 
 Updated: 2026-11-18
 
-## Latest continuation slice — TASK-241
+## Latest continuation slice — TASK-246
 
-Rust direct `route` now accepts Python-compatible classifier overrides,
-preference flags, `--no-log`, and preview/availability compatibility flags.
-The route/unified compatibility selection passes 51 tests, and the locked Rust
-workspace, strict Clippy, formatting, and diff checks pass. This improves R4
-CLI parity but does not close the remaining full CLI, provider, evaluation,
+Rust unified command help now matches Python's successful `--help` behavior for
+the leaf commands `init`, `explain`, `feedback`, `stats`, `prompt`, `doctor`,
+and `dashboard`, in addition to the route and core subgroup help slices.
+The combined route/unified compatibility selection passes 72 tests; the locked
+Rust CLI crate, strict Clippy, formatting, and diff checks pass. This improves
+R4 CLI parity but does not close the remaining full CLI, provider, evaluation,
 human-gate, or deployment work.
 
 ## Definition of done
@@ -45,6 +46,12 @@ TASK-245 adds successful Rust subgroup help for `models list`, `hosts doctor`,
 and `providers status`; `registry list` and provider refresh/rollback/restore
 help are now covered as well, and the combined route/unified compatibility
 selection is now 65 tests.
+
+TASK-246 adds successful help handling for the remaining existing leaf command
+paths (`init`, `explain`, `feedback`, `stats`, `prompt`, `doctor`, and
+`dashboard`). The combined route/unified compatibility selection is now 72
+tests. The canonical gate remains unchanged and release readiness is still
+false.
 
 The local RC branch contains additional local commits after pushed head `71408b2`. TASK-208 adds
 read-only Rust contract baseline/surface tooling, and TASK-209 makes the

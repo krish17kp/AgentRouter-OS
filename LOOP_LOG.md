@@ -1,5 +1,15 @@
 # LOOP_LOG
 
+## 2026-11-18 — TASK-246 leaf-command help parity
+
+Rust unified `agentrouter` now handles `--help` successfully for the existing
+`init`, `explain`, `feedback`, `stats`, `prompt`, `doctor`, and `dashboard`
+commands instead of forwarding the flag as a runtime argument. Seven new
+process-level compatibility cases pass; the combined route/unified selection
+is 72 passing tests. The locked Rust CLI crate remains green at 89 tests with
+strict Clippy, formatting, and diff checks. The canonical release gate is
+unchanged at 98.23/100 with context-band accuracy 0.6667 < 0.90.
+
 ## 2026-11-17 — TASK-213 MCP legacy lifecycle hardening
 
 Rust MCP now rejects legacy tools/resources/ping requests before a successful

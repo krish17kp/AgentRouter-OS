@@ -100,6 +100,25 @@ def test_unified_route_help_is_successful_and_lists_route_options(unified_binary
 @pytest.mark.parametrize(
     ("arguments", "expected"),
     [
+        (("init", "--help"), "Usage: agentrouter init"),
+        (("explain", "--help"), "Usage: agentrouter explain"),
+        (("feedback", "--help"), "Usage: agentrouter feedback"),
+        (("stats", "--help"), "Usage: agentrouter stats"),
+        (("prompt", "--help"), "Usage: agentrouter prompt"),
+        (("doctor", "--help"), "Usage: agentrouter doctor"),
+        (("dashboard", "--help"), "Usage: agentrouter dashboard"),
+    ],
+)
+def test_unified_leaf_command_help_is_successful(unified_binary, arguments, expected):
+    result = _run(unified_binary, *arguments)
+    assert result.returncode == 0
+    assert result.stderr == ""
+    assert result.stdout.startswith(expected)
+
+
+@pytest.mark.parametrize(
+    ("arguments", "expected"),
+    [
         (("models", "list", "--help"), "Usage: agentrouter models list"),
         (("hosts", "doctor", "--help"), "Usage: agentrouter hosts doctor"),
         (("providers", "status", "--help"), "Usage: agentrouter providers status"),
