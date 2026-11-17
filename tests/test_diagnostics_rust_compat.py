@@ -97,6 +97,19 @@ def test_stable_product_contract_checks_match_python(tmp_path):
     assert rust_checks == python_checks
 
 
+def test_registry_count_matches_python_after_initialization(tmp_path):
+    from agentrouter import diagnostics
+
+    home = tmp_path / "agentrouter"
+    assert _init(home).returncode == 0
+    python_check = next(check for check in diagnostics.run_all(home) if check.id == "registry.load")
+    result = _doctor(home, "--json")
+    rust_check = next(
+        check for check in json.loads(result.stdout)["checks"] if check["id"] == "registry.load"
+    )
+    assert rust_check == python_check.as_dict()
+
+
 def test_contract_diagnostic_honors_relocated_project_root(tmp_path):
     home = tmp_path / "agentrouter"
     home.mkdir()

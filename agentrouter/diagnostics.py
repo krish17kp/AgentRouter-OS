@@ -151,7 +151,7 @@ def check_registry(home: Path) -> Check:
     reg = home / "registry"
     try:
         providers = load_providers(reg / "providers.yaml")
-        models = load_models(reg / "models.yaml", providers)
+        models, _warnings = load_models(reg / "models.yaml", providers)
     except RegistryError as exc:
         # The message can quote the offending file contents, so it is summarised
         # rather than echoed — the same reason the API returns a fixed message.

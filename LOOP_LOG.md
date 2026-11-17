@@ -3602,3 +3602,11 @@ zero skips against the Rust loopback API.
 - This does not alter the release gate or claim full observability lifecycle
   parity; the frozen context-band gate and owner-controlled release inputs are
   unchanged.
+## TASK-253 — Doctor registry-count parity (2026-11-18)
+
+- Fixed Python `diagnostics.check_registry`, which was reporting the length of
+  the `(models, warnings)` loader tuple (`2`) instead of the actual model count.
+- Added a process-level Python/Rust differential for the initialized registry;
+  the focused diagnostics selection now passes 17/17.
+- TASK-252's OTel status parity remains covered. The release gate, holdout data,
+  and owner-controlled production approvals are unchanged.

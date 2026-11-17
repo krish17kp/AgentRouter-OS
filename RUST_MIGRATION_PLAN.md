@@ -27,6 +27,13 @@
 
 ## Current production status
 
+TASK-253 (2026-11-18) fixes a shipping Python diagnostic bug exposed by the
+Rust differential: `diagnostics.check_registry` now unpacks `load_models()`
+and reports the actual initialized model count instead of the tuple length.
+The process-level Python/Rust registry check passes, and the focused
+diagnostics compatibility suite passes 17 tests. Release gates and the
+remaining broader observability/CLI parity work are unchanged.
+
 TASK-252 (2026-11-18) aligns the Rust unified doctor's observability summary
 with the shared Rust implementation: a truthy `AGENTROUTER_OTEL` now reports
 `OTel on` instead of a hard-coded `OTel off`. The focused diagnostics

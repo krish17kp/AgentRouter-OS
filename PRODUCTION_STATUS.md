@@ -2,7 +2,18 @@
 
 Updated: 2026-11-18
 
-## Latest continuation slice — TASK-252
+## Latest continuation slice — TASK-253
+
+The unified Python and Rust doctors now agree on initialized registry counts.
+Python diagnostics previously reported the loader tuple length (`2`) instead
+of the eight loaded seed models; it now unpacks the loader result, with a
+process-level differential covering the complete `registry.load` check.
+
+The focused diagnostics compatibility suite passes 17 tests. TASK-252's OTel
+reporting fix remains included; broader observability lifecycle and release
+gates are unchanged.
+
+## Previous continuation slice — TASK-252
 
 Rust `doctor --json` now reports the actual OpenTelemetry opt-in state through
 the shared observability crate. The focused diagnostics compatibility suite

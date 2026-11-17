@@ -2,6 +2,13 @@
 
 ## Live checkpoint — 2026-11-18
 
+TASK-253 fixes a shipping diagnostics bug found by the Rust comparison: Python
+now unpacks `load_models()` and reports the actual eight initialized seed models,
+matching Rust instead of reporting tuple length `2`. The focused diagnostics
+compatibility selection passes 17/17. TASK-252 also makes Rust doctor report
+truthy `AGENTROUTER_OTEL` as `OTel on`; broader parity and release blockers are
+unchanged.
+
 TASK-252 aligns Rust `doctor --json` observability reporting with the shared
 Rust observability crate: truthy `AGENTROUTER_OTEL` now yields `OTel on`.
 Diagnostics compatibility passes 16/16; the `agentrouter-cli` crate passes
