@@ -3341,3 +3341,10 @@ zero skips against the Rust loopback API.
 - Rust evaluation compatibility passes 21/21, annotation compatibility 5/5,
   and diagnostics compatibility 15/15; formatting and strict Clippy pass, and
   external dataset blockers remain honestly reported.
+
+## TASK-221 — Private Rust diagnostic-bundle artifacts (2026-11-18)
+
+- Rust bundle artifacts now receive Unix mode `0600` after capability-bounded
+  exclusive creation and before content is written.
+- Eight focused Rust bundle tests, four Python/Rust bundle checks, and strict
+  Clippy pass; broader bundle metadata/runtime parity remains Partial.

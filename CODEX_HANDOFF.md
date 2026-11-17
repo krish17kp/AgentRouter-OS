@@ -79,6 +79,9 @@ and current-working-directory root discovery before the build-time fallback.
 The evaluation suite passes 21/21, annotation 5/5, and diagnostics 15/15;
 real external dataset availability remains an explicit blocker when its
 requirements are absent.
+TASK-221 sets Unix Rust diagnostic-bundle artifacts to private `0600` mode on
+the opened capability-bounded file handle. Bundle redaction and no-follow tests
+remain green; broader metadata/runtime parity remains Partial.
 TASK-180 aligns context-band human-readable output with Python (bootstrap CI,
 Python-style containers, unquoted checksum, signed delta); JSON remains stable.
 

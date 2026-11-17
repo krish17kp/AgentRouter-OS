@@ -73,11 +73,21 @@ fn write_text(directory: &Path, name: &str, text: &str) -> Result<(), BundleErro
     );
     let mut options = cap_std::fs::OpenOptions::new();
     options.write(true).create_new(true);
-    let mut file = parent.open_with(name, &options).map_err(|_| {
+    let file = parent.open_with(name, &options).map_err(|_| {
         BundleError(format!(
             "refusing to overwrite or follow a bundle path: {name}"
         ))
     })?;
+    #[cfg(unix)]
+    let mut file = {
+        use std::os::unix::fs::PermissionsExt;
+        let file = file.into_std();
+        file.set_permissions(std::fs::Permissions::from_mode(0o600))
+            .map_err(|_| BundleError(format!("could not restrict bundle artifact: {name}")))?;
+        file
+    };
+    #[cfg(not(unix))]
+    let mut file = file.into_std();
     file.write_all(content.as_bytes())
         .map_err(|_| BundleError(format!("could not write bundle artifact: {name}")))
 }
@@ -303,6 +313,23 @@ mod tests {
             assert!(write_text(directory.path(), "doctor.json", &text).is_err());
             assert!(!directory.path().join("doctor.json").exists());
         }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn bundle_artifacts_are_private_by_default() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let directory = tempfile::tempdir().unwrap();
+        write_text(directory.path(), "README.txt", "safe").unwrap();
+        assert_eq!(
+            fs::metadata(directory.path().join("README.txt"))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o600
+        );
     }
 
     #[cfg(unix)]

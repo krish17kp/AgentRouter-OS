@@ -133,6 +133,9 @@ release authority until the full set is complete.
   current-working-directory repository discovery before the build-time
   fallback. External dataset loading and full evaluator orchestration remain
   Partial.
+- TASK-221 sets Unix Rust diagnostic-bundle artifacts to private `0600` mode on
+  the opened capability-bounded handle. Bundle metadata/runtime parity remains
+  Partial.
 - TASK-144 tightens the existing OpenAI adapter parity: both implementations
   reject all non-2xx responses regardless of whether the concrete transport or
   an injected fixture produced the status. Redirects remain disabled.

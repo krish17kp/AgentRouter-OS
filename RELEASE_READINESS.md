@@ -75,6 +75,11 @@ working-directory discovery. Relocated-fixture smokes plus the 21-test
 evaluation, 5-test annotation, and 15-test diagnostics compatibility suites
 pass; this does not provide the external datasets or clear release gates.
 
+TASK-221 sets Rust diagnostic-bundle artifacts to private Unix mode `0600`
+without weakening capability-bounded creation or redaction. This is local
+hardening evidence; full bundle metadata parity and external release gates
+remain unresolved.
+
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
 advisories across 207 locked dependencies; one unmaintained `chrono` warning
