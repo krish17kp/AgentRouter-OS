@@ -18,7 +18,7 @@
   Rust-vs-Python runtime reporting, OTel capability discovery, and complete
   bundle field parity.
 
-- Rust migration remains incomplete at 59/77 full-module parity. TASK-171 closes
+- Rust migration remains incomplete at 60/77 full-module parity. TASK-171 closes
   provider refresh; CLI entrypoints, contract, diagnostics, MCP lifecycle,
   plugins, reliability, SDK transport, and external real-data adapters remain
   Partial.

@@ -1,12 +1,12 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-17",
-  "current_phase": "TASK-180 evaluation CLI text-report parity is implemented locally after TASK-179 prepare parity. Human-readable context-band evidence now matches Python formatting; inventory remains 60/77 Parity and 17 Partial.",
+  "current_phase": "TASK-181 Rust SDK phase timeout bounds are implemented and locally verified. The SDK remains Partial for native read/write error classification; inventory remains 60/77 Parity and 17 Partial.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
     "main": "Main remains unchanged. PR #16 is the sole open PR and has no submitted reviews or review requests. Current enforcing CI fails because frozen context-band accuracy is 0.6667 < 0.90. No promotion, tag, release, or gate bypass.",
-    "release/agentrouter-v0.5-rc1": "Latest pushed RC head is 5324174; hosted Rust Linux/Windows/macOS, Python/Rust compatibility on all platforms, Python 3.10-3.13, Windows/macOS, Security, Website, and Critical Mutation are green. The only required failure is the unchanged enforcing context-band gate at 0.6667 < 0.90; live smoke skips without credentials. Bundle-hardening head 75ac6c7 passed the local full Python suite (2,733 passed, 7 skipped), focused bundle/storage tests, and strict Clippy.",
+    "release/agentrouter-v0.5-rc1": "Latest pushed RC head is 71408b2; hosted Rust Linux/Windows/macOS, Python/Rust compatibility on all platforms, Python 3.10–3.13, Windows/macOS, Security, Website, and Critical Mutation are green. The only required failure is the unchanged enforcing context-band gate at 0.6667 < 0.90; live smoke skips without credentials. Bundle-hardening head 75ac6c7 passed the local full Python suite (2,733 passed, 7 skipped), focused bundle/storage tests, and strict Clippy.",
     "task/rust-r1-workspace": "PR #25 open against RC; 6ee8d3e passed complete GitHub CI; 32eee6f forced-init push failed Windows compile, file-handle repair awaits remote recheck; SQLite path-race blocker remains; Rust R4 partial and OpenAI execution hardening",
     "task/repo-cleanup-architecture-ponytail": "MERGED to RC (PR #14, merge commit 1ae3155); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/dynamic-skill-discovery": "MERGED to RC (PR #15, merge commit 62d5289); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
@@ -32,7 +32,7 @@
     "Continue the remaining 17 Partial Rust modules while PR #16 remains held by the honest evaluation and external release gates.",
     "Keep PR #16 held on the honest context-band, human-evaluation, live-validation, and deployment gates; do not bypass them.",
     "Continue the remaining 17 Partial Rust modules while PR #16 is held for human evaluation, live validation, and release inputs.",
-    "Push TASK-180 on the authorized release-candidate branch, inspect the complete hosted matrix, and repair only reproducible failures."
+    "Continue the next Partial Rust parity slice after TASK-181; do not claim SDK parity until native read/write error classification is differentially covered."
   ],
   "completed_iter26": [
     "TASK-179 aligns Rust evaluation `prepare` exit semantics with Python: one unavailable dataset exits 1, while `prepare --all` exits 0 after reporting every `SKIPPED_EXTERNAL` blocker. No fixture fallback is introduced. The evaluation crate passes 9 tests, formatting passes, direct `prepare --all` reports all 8 datasets, and the Python compatibility suite adds the regression assertion. Evaluation CLI remains Partial for real external loaders and runtime orchestration."

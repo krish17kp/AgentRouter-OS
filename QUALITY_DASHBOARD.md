@@ -2,7 +2,7 @@
 
 ## Current checkpoint — 2026-11-17
 
-At pushed RC head `5324174`, the macOS root-alias repair is recorded with the bundle
+At pushed RC head `71408b2`, the macOS root-alias repair is recorded with the bundle
 hardening evidence and the hosted Rust/Python matrix is green; TASK-175 repaired
 the Windows diagnostics path-format mismatch. Local Python/Rust release checks remain green; the
 frozen context-band gate and owner-supplied validation/deployment inputs remain
@@ -19,6 +19,11 @@ TASK-180 closes the remaining human-readable context-band report differences:
 bootstrap macro-F1 CI, Python-compatible containers, unquoted checksum, and
 signed delta now match Python. JSON output is unchanged and strict Rust checks
 pass; the evaluator remains Partial for external data and runtime orchestration.
+
+TASK-181 tightens the Rust SDK's native timeout contract by applying the
+configured bound independently to connect, read, write, and aggregate request
+phases. Focused SDK tests, workspace Clippy, and formatting pass; native
+read/write error classification remains Partial.
 
 TASK-173 hardens diagnostic bundle writes with no-follow parent creation, a
 pinned capability directory, and exclusive creation. Serialized snapshots,

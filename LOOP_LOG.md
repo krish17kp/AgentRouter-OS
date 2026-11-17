@@ -1,8 +1,17 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-181 SDK phase timeout bounds
+
+The default Rust SDK transport now applies the configured timeout to ureq's
+connect, read, write, and aggregate request phases, retaining redirect refusal
+and credential-safe diagnostics. The focused SDK suite passes 10/10, workspace
+Clippy and formatting pass, and the full workspace had already passed before
+the slice. SDK parity remains Partial because native ureq errors do not always
+preserve HTTPX's read/write phase distinction.
+
 ## 2026-11-17 — TASK-180 hosted validation
 
-The complete hosted matrix for RC head `5324174` is green across Rust
+The complete hosted matrix for RC head `71408b2` is green across Rust
 Linux/Windows/macOS, Python/Rust compatibility on all three platforms, Python
 3.10–3.13, Windows, macOS, Security, Website, and Critical Mutation. The
 enforcing release gate remains the expected honest failure at frozen

@@ -178,6 +178,11 @@ fn ureq_agent_builder(timeout: Duration) -> ureq::AgentBuilder {
     ureq::AgentBuilder::new()
         .redirects(0)
         .timeout_connect(timeout)
+        // Keep the native transport's phase-specific bounds aligned with the
+        // Python SDK's httpx timeout contract. The aggregate deadline below
+        // remains the final cap for DNS, request, and response handling.
+        .timeout_read(timeout)
+        .timeout_write(timeout)
         .timeout(timeout)
 }
 

@@ -23,7 +23,7 @@ accuracy, macro-F1, per-band recall and confidence intervals, and compares the f
 rules with the current classifier. `agentrouter eval run --all` uses final-holdout accuracy for the
 existing `context_band_accuracy>=0.90` gate; the other six release gates are unchanged.
 `--require-release-ready` turns any failed gate into a nonzero exit for CI/release enforcement.
-The current frozen-holdout accuracy is 0.5778, so this command intentionally fails until a future
+The current frozen-holdout accuracy is 0.6667, so this command intentionally fails until a future
 development-only classifier revision generalizes past the unchanged 0.90 threshold.
 
 Linux mutation CI is bounded to critical modules:

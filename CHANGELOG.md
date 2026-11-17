@@ -361,9 +361,10 @@ All notable changes to AgentRouter OS. Format loosely follows
   model eligibility and scoring (not just the displayed context band), so the
   recommended model may change for context-sensitive tasks. Output shape is
   unchanged and the behavior is eval-gated (`context_band_accuracy`).
-- **Canonical readiness is held by the frozen context holdout:** the final accuracy is 0.5778
-  after a development-only generalization revision, below the unchanged 0.90 gate. The other six
-  gates pass; a valid lower result is reported instead of preserving the previous in-sample claim.
+- **Canonical readiness is held by the frozen context holdout:** the shipped rules-active accuracy
+  is 0.6667 after a development-only generalization revision, below the unchanged 0.90 gate. The
+  other six gates pass; a valid lower result is reported instead of preserving the previous
+  in-sample claim.
 
 ### Security
 - **An unknown plugin name was echoed back unbounded and unsanitised.** `get_plugin`

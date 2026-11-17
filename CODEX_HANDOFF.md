@@ -3,7 +3,7 @@
 ## Live checkpoint — 2026-11-17
 
 Active release checkout: `/data/AgentRouter-production`, branch
-`release/agentrouter-v0.5-rc1`, pushed head `5324174`. TASK-175 repaired the
+`release/agentrouter-v0.5-rc1`, pushed head `71408b2`. TASK-175 repaired the
 hosted Windows diagnostics path-format mismatch and its full matrix is green.
 PR #16 is
 the only open PR; no reviews or review requests are present. The macOS-only
@@ -29,6 +29,13 @@ exit 0, matching Python and never substituting fixtures. The evaluation crate
 passes and the direct all-dataset command reports eight external blockers.
 TASK-180 aligns context-band human-readable output with Python (bootstrap CI,
 Python-style containers, unquoted checksum, signed delta); JSON remains stable.
+
+TASK-181 is locally verified at the unpushed commit `cb99534`: the Rust SDK's
+native ureq transport now applies the configured timeout independently to
+connect, read, write, and aggregate request phases. Focused SDK tests pass
+10/10, full workspace tests/Clippy/format pass, and SDK parity remains Partial
+for native read/write error classification. Do not push this commit while the
+enforcing release gate is failing without fresh owner authorization.
 
 ## Storage relocation — 2026-11-15
 

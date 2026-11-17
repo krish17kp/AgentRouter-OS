@@ -2,7 +2,7 @@
 
 ## Current checkpoint — 2026-11-17
 
-At pushed RC head `5324174`, the macOS root-alias repair and TASK-175 Windows
+At pushed RC head `71408b2`, the macOS root-alias repair and TASK-175 Windows
 diagnostics path-format repair passed the complete hosted Rust/Python matrix.
 Local release checks are green, but the frozen context-band
 gate, human evaluation, live OpenAI validation, and promotion/deployment inputs
@@ -28,6 +28,10 @@ gate remain unresolved.
 **NOT release ready.** TASK-180 aligns the context-band command's human-readable
 confidence intervals and formatting with Python. This improves evidence parity
 but does not provide real external datasets or clear the frozen evaluation gate.
+
+**NOT release ready.** TASK-181 tightens Rust SDK connect/read/write and
+aggregate timeout bounds. Native read/write error classification and the
+remaining external release gates remain unresolved.
 
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
