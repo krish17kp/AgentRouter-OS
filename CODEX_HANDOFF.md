@@ -22,8 +22,9 @@ Python suite passes 2,742 tests with 7 expected skips; the full locked Rust
 workspace tests, focused 89/89 contract/unified-CLI differential, release
 build, strict Clippy, formatting, and cargo audit are green. TASK-178 repairs the Rust evaluation CLI status real-availability column. TASK-177 aligns stable diagnostic-bundle environment metadata while preserving
 the secret-safe allowlist. TASK-176 adds a direct `python -m agentrouter` versus Rust unified help/version
-differential and advances the inventory to 60/77 Parity, 17 Partial. The local
-full Python suite remains 2,733 passed / 7 skipped; Rust workspace,
+differential and advances the inventory to 60/77 Parity, 17 Partial. The
+historical TASK-176 Python run was 2,733 passed / 7 skipped; the current
+full-suite checkpoint is 2,742 passed / 7 skipped. Rust workspace,
 strict Clippy, formatting, Ruff, Bandit, dependency audits, wheel/sdist build,
 and clean-wheel smoke are green. The frozen context-band gate remains 0.6667
 against 0.90, so the branch is not release-ready. Continue by polling hosted
@@ -47,6 +48,11 @@ TASK-212 hardens ordinary Rust SQLite opens with `SQLITE_OPEN_NOFOLLOW` and
 adds a symlink-leaf regression without changing the capability-pinned Linux
 init path. Complete handle-native SQLite initialization and sidecar race
 closure remain R4 limitations; focused storage/CLI tests pass.
+TASK-224 aligns reliability truncated-response classification with HTTPX, and
+TASK-225 aligns the native SDK's corresponding classification. Their focused
+differentials, crate/client tests, strict Clippy, formatting, optimized build,
+and cargo audit pass. The SDK and reliability rows remain Partial for broader
+native lifecycle and phase-specific transport parity.
 TASK-213 enforces the Rust MCP legacy initialize lifecycle (`-32002` before
 initialize) while retaining stateless modern discovery. Eight Rust MCP tests,
 strict Clippy, and the full Python/Rust MCP compatibility test pass; non-stdio
