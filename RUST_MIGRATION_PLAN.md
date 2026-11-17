@@ -50,6 +50,10 @@ artifact/provenance, and database-safety deployment procedure in
 `docs/DEPLOYMENT_PLAN.md`; it does not claim that staging or production has
 been exercised.
 
+TASK-227 (2026-11-18) re-runs the authoritative local release gate: 165 cases,
+score 98.23, exit 1, and `release_ready=false`. The unchanged context-band
+gate remains `0.6667 < 0.90`; no holdout, threshold, or release input changed.
+
 TASK-216 (2026-11-18) wires the existing safe Rust contract exporter into the
 unified CLI as `agentrouter contract export`. It supports an explicit source
 file, deterministic timestamp injection, JSON output, and fail-closed refusal
