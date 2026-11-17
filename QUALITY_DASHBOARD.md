@@ -10,7 +10,7 @@ open.
 
 TASK-183 adds fresh local release evidence: `cargo build --release --locked
 --workspace` succeeds, the optimized binary reports `0.5.0rc1`, and
-`cargo audit --no-yanked` reports no vulnerabilities across 205 locked crates.
+`cargo audit --no-yanked` reports no vulnerabilities across 207 locked crates.
 RustSec does report one unmaintained `chrono` warning with no available fixed
 upgrade; it is recorded in the dependency-audit note and is not hidden.
 
@@ -266,6 +266,13 @@ accuracy in the current report. It is not evidence of held-out generalization.
 - (Resolved) Linux mutation score: overall 0.9837, all gates pass.
 - (Resolved) Full verification matrix + release-branch GitHub checks: green except
   the honest release-gate above.
+
+## Planning boundary evidence — 2026-11-17
+
+- Execution planner: 4 Rust unit tests passed; remote/API execution and all
+  adapters remain disabled.
+- Orchestration planner: 3 Rust unit tests passed; bounded DAG validation and
+  deterministic groups are present, but no dispatch or mutation is enabled.
 
 ## TASK-153 recovery — 2026-11-15
 

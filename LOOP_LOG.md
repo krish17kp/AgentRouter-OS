@@ -6,6 +6,17 @@ All existing adapter/base Python/Rust differentials pass: 17 tests covering
 banking77, CLINC150, LongBench, MASSIVE, SWE-bench, and the shared adapter
 contract. Real HuggingFace loading remains explicitly external-only.
 
+## 2026-11-17 — TASK-197/198 planning boundaries
+
+Added Rust-native, fail-closed planning crates for the next missing migration
+surface: `agentrouter-execution` resolves a routed host and records approval,
+availability, remote-policy, and manual-handoff decisions without executing;
+`agentrouter-orchestration` validates bounded dependency graphs, deterministic
+parallel levels, budgets, cycles, and conflicting side effects without
+dispatching agents or mutating workspaces. Focused tests are 4 and 3 passed;
+strict Clippy and formatting pass. These crates advance the architecture but do
+not claim execution or multi-agent parity.
+
 ## 2026-11-17 — TASK-195 optimized binary end-to-end smoke
 
 The optimized release binary succeeds from a fresh isolated home for `init`,
@@ -22,7 +33,7 @@ facades; real HuggingFace loading remains explicitly external-only.
 
 The optimized locked Rust workspace build passes after the final local slices;
 the release binary reports `0.5.0rc1` and returns the unified help surface.
-`cargo audit --no-yanked` scans 205 dependencies with no vulnerability
+`cargo audit --no-yanked` scans 207 dependencies with no vulnerability
 advisories; the sole unmaintained-`chrono` warning has no fixed upgrade and is
 documented. No publication or deployment was attempted.
 

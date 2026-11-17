@@ -1,0 +1,15 @@
+[package]
+name = "agentrouter-execution"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+agentrouter-core = { path = "../agentrouter-core" }
+agentrouter-hosts = { path = "../agentrouter-hosts" }
+agentrouter-registry = { path = "../agentrouter-registry" }
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = { version = "1.0.128", features = ["arbitrary_precision", "preserve_order"] }
+serde_yaml = { package = "noyalib-serde-yaml", version = "=0.0.60" }
+thiserror = "2.0.17"

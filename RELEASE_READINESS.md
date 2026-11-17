@@ -10,7 +10,7 @@ remain unresolved.
 
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
-advisories across 205 locked dependencies; one unmaintained `chrono` warning
+advisories across 207 locked dependencies; one unmaintained `chrono` warning
 (`RUSTSEC-2026-0543`, no fixed upgrade currently listed) remains documented.
 
 **NOT release ready.** TASK-173 hardens bundle writes against parent and
@@ -97,6 +97,12 @@ release gates remain unresolved.
 **NOT release ready.** TASK-196 confirms 17 adapter/base differential tests
 pass. This does not provide Rust real-dataset loading or clear the frozen
 evaluation and promotion gates.
+
+**NOT release ready.** TASK-197/198 add planning-only execution and
+orchestration crates with 7 focused unit tests and strict Clippy/format checks.
+They intentionally keep remote execution, provider/CLI adapters, agent
+dispatch, tool grants, and workspace mutation disabled. The remaining runtime
+implementation and external release gates are unresolved.
 
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential

@@ -98,6 +98,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "agentrouter-execution"
+version = "0.1.0"
+dependencies = [
+ "agentrouter-core",
+ "agentrouter-hosts",
+ "agentrouter-registry",
+ "noyalib-serde-yaml",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "agentrouter-hosts"
 version = "0.1.0"
 dependencies = [
@@ -141,6 +154,14 @@ dependencies = [
  "sha2",
  "tokio",
  "unicode-general-category",
+]
+
+[[package]]
+name = "agentrouter-orchestration"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "thiserror 2.0.21",
 ]
 
 [[package]]

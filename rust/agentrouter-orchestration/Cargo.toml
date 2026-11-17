@@ -1,0 +1,10 @@
+[package]
+name = "agentrouter-orchestration"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { version = "1.0.210", features = ["derive"] }
+thiserror = "2.0.17"

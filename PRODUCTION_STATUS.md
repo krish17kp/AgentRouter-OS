@@ -15,7 +15,8 @@ Updated: 2026-11-17
 ## Current recovery checkpoint
 
 TASK-183 confirms the optimized locked Rust workspace build and release binary
-help/version smoke. The RustSec audit scanned 205 locked dependencies with no
+help/version smoke. After adding the planning crates, the RustSec audit scans
+207 locked dependencies with no
 vulnerability advisories; one unmaintained `chrono` warning has no available
 fixed upgrade and is recorded in
 [`docs/RUST_DEPENDENCY_AUDIT_2026-11-17.md`](docs/RUST_DEPENDENCY_AUDIT_2026-11-17.md).
@@ -99,6 +100,15 @@ pass. No credentials or deployment were used.
 TASK-196 re-runs the adapter/base Python/Rust differential suite: 17 tests pass
 across banking77, CLINC150, LongBench, MASSIVE, SWE-bench, and shared adapter
 behavior. Real HuggingFace loading remains explicitly external-only.
+
+TASK-197/198 add planning-only Rust boundaries for the previously missing
+execution and multi-agent orchestration surfaces. Execution planning is
+approval-gated, availability-aware, remote-disabled by default, and always
+returns `execution_enabled: false`; orchestration planning validates bounded
+DAGs, deterministic parallel groups, budgets, cycles, and conflicting side
+effects while never dispatching or mutating. Focused tests (4 + 3), strict
+Clippy, and formatting pass. No execution adapter or orchestration runtime is
+claimed.
 
 TASK-175 repairs Windows diagnostics contract parity. Rust now renders the
 contract directory through the native path formatter, matching Python's

@@ -12,6 +12,8 @@ members = [
     "rust/agentrouter-routing",
     "rust/agentrouter-hosts",
     "rust/agentrouter-usage",
+    "rust/agentrouter-execution",
+    "rust/agentrouter-orchestration",
     "rust/agentrouter-learning",
     "rust/agentrouter-observability",
     "rust/agentrouter-evaluation",

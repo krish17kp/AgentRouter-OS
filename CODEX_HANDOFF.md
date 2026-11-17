@@ -87,7 +87,7 @@ passed, 7 skipped, one existing Starlette/httpx deprecation warning, in 449.37
 seconds. No frozen evaluation data or threshold changed.
 
 TASK-193 re-ran the optimized locked Rust build and audit. The release binary
-reports `0.5.0rc1`, help succeeds, and 205 locked dependencies have no
+reports `0.5.0rc1`, help succeeds, and 207 locked dependencies have no
 vulnerability advisories; RustSec's one unmaintained `chrono` warning has no
 fixed upgrade. Hosted PR #16 is still held by the frozen 0.6667 < 0.90 gate and
 owner-controlled review/credential/promotion/deployment gates.
@@ -103,6 +103,15 @@ deployment were used.
 TASK-196's adapter/base differential regression passes 17/17 tests across all
 five external adapter normalizers and the shared contract. Keep real external
 loading explicitly blocked until its runtime and credentials are available.
+
+TASK-197/198 add planning-only Rust boundaries for execution and orchestration.
+The execution planner is fail-closed around host availability, approval,
+remote policy, and manual handoff; the orchestration planner validates bounded
+dependency graphs and deterministic parallel groups with conflict and budget
+checks. Seven focused tests plus strict Clippy and formatting pass. Neither
+crate executes, dispatches, grants tools, reads credentials, or mutates
+workspaces. Continue with separately authorized adapters and runtime
+integration; do not promote these planning crates as execution parity.
 
 ## Storage relocation — 2026-11-15
 
