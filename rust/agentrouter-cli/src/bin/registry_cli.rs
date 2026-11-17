@@ -38,7 +38,15 @@ fn model_json(model: &ModelEntry) -> Result<Value, String> {
 }
 
 fn run() -> Result<(), (i32, String)> {
-    let mut args = std::env::args().skip(1);
+    let raw_args = std::env::args().skip(1).collect::<Vec<_>>();
+    if raw_args
+        .iter()
+        .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
+    {
+        println!("Usage: agentrouter registry list [--provider ID] [--active-only] [--json]");
+        return Ok(());
+    }
+    let mut args = raw_args.into_iter();
     let home = PathBuf::from(
         args.next()
             .ok_or((2, "usage: registry_cli <home> [options]".to_string()))?,

@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-18 (TASK-082–241). This inventory covers every Python source module under
+Updated: 2026-11-18 (TASK-082–245). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -323,6 +323,9 @@ release authority until the full set is complete.
   options. Broader CLI and runtime lifecycle parity remains partial.
 - TASK-243 aligns direct Rust `route` invalid-option failures with Python's
   exit-2 `Error:` contract; broader CLI and runtime lifecycle parity remains
+  partial.
+- TASK-245 adds successful unified subgroup help for core `models`, `hosts`,
+  `providers`, and `registry` inspection commands; full CLI behavior remains
   partial.
 - Classification-only grading and gate calculation have differential coverage.
   Rust also supports bounded `measure_all` scoring for caller-supplied cases,

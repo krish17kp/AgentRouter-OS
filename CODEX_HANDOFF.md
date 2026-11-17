@@ -42,6 +42,10 @@ the existing Starlette/httpx deprecation notice.
 The route CLI surface now also has successful direct and unified `route --help`
 responses listing classifier and preference options; the focused route suite is
 37 tests and the combined route/unified selection is 58 tests.
+
+TASK-245 adds successful subgroup help for `models list`, `hosts doctor`, and
+`providers status`, `registry list`, and provider refresh/rollback/restore; the
+combined route/unified compatibility selection is now 65 tests.
 TASK-223 synchronizes the unified Rust CLI help with the implemented contract
 check/diff/export surface and adds a process-level regression. The fresh full
 Python suite passes 2,743 tests with 7 expected skips; the full locked Rust

@@ -41,6 +41,11 @@ The route parity slice also now covers successful direct and unified `route
 --help` output; the focused direct route suite is 37 tests and the combined
 route/unified selection is 58 tests.
 
+TASK-245 adds successful Rust subgroup help for `models list`, `hosts doctor`,
+and `providers status`; `registry list` and provider refresh/rollback/restore
+help are now covered as well, and the combined route/unified compatibility
+selection is now 65 tests.
+
 The local RC branch contains additional local commits after pushed head `71408b2`. TASK-208 adds
 read-only Rust contract baseline/surface tooling, and TASK-209 makes the
 Rust-backed TypeScript live suite independent of Python initialization. The

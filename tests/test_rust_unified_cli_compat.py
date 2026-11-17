@@ -97,6 +97,25 @@ def test_unified_route_help_is_successful_and_lists_route_options(unified_binary
     assert "--context-tokens" in result.stdout
 
 
+@pytest.mark.parametrize(
+    ("arguments", "expected"),
+    [
+        (("models", "list", "--help"), "Usage: agentrouter models list"),
+        (("hosts", "doctor", "--help"), "Usage: agentrouter hosts doctor"),
+        (("providers", "status", "--help"), "Usage: agentrouter providers status"),
+        (("providers", "refresh", "--help"), "Usage: agentrouter providers refresh"),
+        (("providers", "rollback", "--help"), "Usage: agentrouter providers rollback"),
+        (("providers", "restore", "--help"), "Usage: agentrouter providers restore"),
+        (("registry", "list", "--help"), "Usage: agentrouter registry list"),
+    ],
+)
+def test_unified_core_group_help_is_successful(unified_binary, arguments, expected):
+    result = _run(unified_binary, *arguments)
+    assert result.returncode == 0
+    assert result.stderr == ""
+    assert result.stdout.startswith(expected)
+
+
 def test_init_and_route_dispatch_to_rust_implementations(tmp_path, unified_binary):
     home = tmp_path / "agentrouter-home"
     initialized = _run(unified_binary, "init", home=home)

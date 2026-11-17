@@ -3523,3 +3523,11 @@ zero skips against the Rust loopback API.
   tests with 1 expected skip.
 - The existing Starlette/httpx deprecation warning remains non-failing; no
   compatibility regression was observed.
+
+## TASK-245 — Core CLI help parity (2026-11-18)
+
+- Rust unified `models`, `hosts`, `providers`, and `registry` command groups now
+  return successful subgroup help for their core inspection commands, including
+  provider refresh/rollback/restore.
+- The route/unified compatibility selection passes 65/65; formatting and diff
+  checks pass.

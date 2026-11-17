@@ -1807,12 +1807,65 @@ fn run() -> Result<i32, String> {
             run_sibling("decision_cli", with_home(&home, forwarded))
         }
         "registry" => {
+            if tail
+                .iter()
+                .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
+            {
+                println!(
+                    "Usage: agentrouter registry list [--provider ID] [--active-only] [--json]"
+                );
+                return Ok(0);
+            }
             if tail.first().map(String::as_str) != Some("list") {
                 return Err("usage: agentrouter registry list [options]".to_owned());
             }
             run_sibling("registry_cli", with_home(&home, tail.into_iter().skip(1)))
         }
         "providers" => match tail.first().map(String::as_str) {
+            Some("--help") | Some("-h") => {
+                println!("Usage: agentrouter providers <status|doctor|refresh|rollback|restore> [options]");
+                Ok(0)
+            }
+            Some("status")
+                if tail
+                    .iter()
+                    .any(|argument| matches!(argument.as_str(), "--help" | "-h")) =>
+            {
+                println!("Usage: agentrouter providers status");
+                Ok(0)
+            }
+            Some("doctor")
+                if tail
+                    .iter()
+                    .any(|argument| matches!(argument.as_str(), "--help" | "-h")) =>
+            {
+                println!("Usage: agentrouter providers doctor");
+                Ok(0)
+            }
+            Some("refresh")
+                if tail
+                    .iter()
+                    .any(|argument| matches!(argument.as_str(), "--help" | "-h")) =>
+            {
+                println!("Usage: agentrouter providers refresh [openrouter|openai] [--limit N] [--match TEXT] [--dry-run]");
+                Ok(0)
+            }
+            Some("rollback")
+                if tail
+                    .iter()
+                    .any(|argument| matches!(argument.as_str(), "--help" | "-h")) =>
+            {
+                println!("Usage: agentrouter providers rollback PROVIDER");
+                Ok(0)
+            }
+            Some("restore")
+                if tail
+                    .iter()
+                    .any(|argument| matches!(argument.as_str(), "--help" | "-h")) =>
+            {
+                println!("Usage: agentrouter providers restore PROVIDER");
+                Ok(0)
+            }
             Some("status") if tail.len() == 1 => run_sibling(
                 "providers_status_cli",
                 [home.to_string_lossy().into_owned()],
@@ -1827,12 +1880,44 @@ fn run() -> Result<i32, String> {
             ),
         },
         "hosts" => match tail.first().map(String::as_str) {
+            Some("--help") | Some("-h") => {
+                println!("Usage: agentrouter hosts <list|doctor|show HOST>");
+                Ok(0)
+            }
+            Some(command)
+                if tail
+                    .iter()
+                    .any(|argument| matches!(argument.as_str(), "--help" | "-h")) =>
+            {
+                println!("Usage: agentrouter hosts {command}");
+                Ok(0)
+            }
             Some("list") if tail.len() == 1 => hosts_list(&home),
             Some("doctor") if tail.len() == 1 => hosts_doctor(),
             Some("show") if tail.len() == 2 => hosts_show(&home, &tail[1]),
             _ => Err("usage: agentrouter hosts <list|doctor|show HOST>".to_owned()),
         },
         "models" => match tail.first().map(String::as_str) {
+            Some("--help") | Some("-h") => {
+                println!("Usage: agentrouter models <list [--available]|show KEY>");
+                Ok(0)
+            }
+            Some("list")
+                if tail
+                    .iter()
+                    .any(|argument| matches!(argument.as_str(), "--help" | "-h")) =>
+            {
+                println!("Usage: agentrouter models list [--available]");
+                Ok(0)
+            }
+            Some("show")
+                if tail
+                    .iter()
+                    .any(|argument| matches!(argument.as_str(), "--help" | "-h")) =>
+            {
+                println!("Usage: agentrouter models show KEY");
+                Ok(0)
+            }
             Some("list") => {
                 let available_only = tail.iter().skip(1).try_fold(false, |_found, arg| {
                     if arg == "--available" {
