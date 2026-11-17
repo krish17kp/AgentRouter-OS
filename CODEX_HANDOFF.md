@@ -64,6 +64,9 @@ TASK-187 verifies Python packaging end-to-end: `uv build` creates the sdist and
 wheel, an isolated install reports `0.5.0rc1`, and installed-wheel `init` plus
 `route --json` succeed. PyPI publication remains owner-controlled.
 
+TASK-188 re-ran the affected Python/Rust compatibility surfaces in isolation:
+SDK, reliability, plugins, and diagnostics total 77 passed in 26.33 seconds.
+
 ## Storage relocation — 2026-11-15
 
 Active release checkout: `/data/AgentRouter-production` on branch

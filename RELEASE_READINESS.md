@@ -60,6 +60,10 @@ credentials and approval remain unresolved.
 installed-wheel CLI smoke. PyPI trusted-publisher setup, release creation, and
 deployment approval remain unresolved.
 
+**NOT release ready.** TASK-188 re-runs the affected cross-language surfaces
+with 77 isolated compatibility tests passing. The external evaluation,
+credential, promotion, and deployment gates remain unresolved.
+
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
 evidence. Diagnostics remains Partial for runtime-specific and complete bundle

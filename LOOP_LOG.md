@@ -1,5 +1,10 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-188 focused compatibility regression
+
+The isolated Python/Rust compatibility pass covering SDK, reliability, plugin,
+and diagnostics surfaces is green: 77 tests passed in 26.33 seconds.
+
 ## 2026-11-17 — TASK-187 package build and wheel smoke
 
 `uv build` produced the 0.5.0rc1 sdist and wheel. An isolated wheel install

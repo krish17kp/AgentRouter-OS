@@ -62,6 +62,9 @@ TASK-187 verifies Python sdist/wheel packaging and an isolated installed-wheel
 smoke: version, `init`, and `route --json` all succeed. PyPI publication remains
 blocked on the owner-controlled trusted-publisher setup.
 
+TASK-188 re-runs the SDK, reliability, plugin, and diagnostics Python/Rust
+compatibility suites in isolation: 77 tests pass in 26.33 seconds.
+
 TASK-175 repairs Windows diagnostics contract parity. Rust now renders the
 contract directory through the native path formatter, matching Python's
 platform-specific `Path` representation while retaining forward slashes on

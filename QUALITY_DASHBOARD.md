@@ -53,6 +53,9 @@ TASK-187 confirms the Python sdist/wheel build and isolated-wheel smoke. The
 packaged CLI reports `0.5.0rc1` and can initialize and route from a clean home;
 publication remains gated on the PyPI trusted publisher setup.
 
+TASK-188 confirms the focused SDK/reliability/plugin/diagnostics compatibility
+regression: 77 isolated Python/Rust tests pass in 26.33 seconds.
+
 TASK-173 hardens diagnostic bundle writes with no-follow parent creation, a
 pinned capability directory, and exclusive creation. Serialized snapshots,
 symlink/hard-link, directory-swap, and nested-parent regressions pass; focused
