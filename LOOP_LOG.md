@@ -3318,3 +3318,14 @@ zero skips against the Rust loopback API.
   falsely blocking a live report.
 - Eight Rust contract tests and a temporary HTTP-server smoke passed; Python
   framework generation and hosted release approval remain authoritative.
+
+## TASK-219 — Rust contract export acceptance workflow (2026-11-18)
+
+- Added explicit `--accept-breaking --reason TEXT` handling to Rust contract
+  export, matching the Python owner-review workflow.
+- Routine exports still refuse breaking changes; accepted entries preserve
+  manifest history and record exact current findings.
+- Manifest updates reuse the no-follow, hardlink-safe atomic writer.
+- Eleven focused Rust contract tests, strict Clippy, and a temporary CLI
+  fixture removing `/health` passed; release readiness remains held by the
+  external evaluation, credential, review, and deployment gates.

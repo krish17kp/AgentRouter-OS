@@ -22,7 +22,7 @@ fn contract_command(args: &[String]) -> Result<i32, String> {
         .iter()
         .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
     {
-        println!("Usage: agentrouter contract <check [--json] [--live URL] [--baseline PATH]|diff [PATH|-] [--json]|export [--source PATH] [--generated-at RFC3339] [--json]>");
+        println!("Usage: agentrouter contract <check [--json] [--live URL] [--baseline PATH]|diff [PATH|-] [--json]|export [--source PATH] [--generated-at RFC3339] [--accept-breaking --reason TEXT] [--json]>");
         println!("Checks, exports, or compares the committed OpenAPI artifact.");
         println!("The diff command is a compatibility surface probe; the Python gate remains authoritative for full live-schema checks.");
         return Ok(0);
@@ -174,10 +174,16 @@ fn contract_command(args: &[String]) -> Result<i32, String> {
         "export" => {
             let mut source = None;
             let mut generated_at = None;
+            let mut accept_breaking = false;
+            let mut reason = None;
             let mut arguments = args.iter().skip(1);
             while let Some(argument) = arguments.next() {
                 match argument.as_str() {
                     "--json" => {}
+                    "--accept-breaking" => accept_breaking = true,
+                    "--reason" => {
+                        reason = Some(arguments.next().ok_or("--reason needs a value")?.clone());
+                    }
                     "--source" => {
                         source = Some(arguments.next().ok_or("--source needs a path")?.clone());
                     }
@@ -232,9 +238,9 @@ fn contract_command(args: &[String]) -> Result<i32, String> {
                         .join(", ")
                 ));
             }
-            if let Some(baseline) = baseline {
+            if let Some(baseline) = baseline.as_ref() {
                 let report =
-                    agentrouter_cli::contract::diff_contracts_surface(&baseline, &canonical)?;
+                    agentrouter_cli::contract::diff_contracts_surface(baseline, &canonical)?;
                 let breaking = report["changes"]
                     .as_array()
                     .into_iter()
@@ -242,9 +248,19 @@ fn contract_command(args: &[String]) -> Result<i32, String> {
                     .filter(|change| change["severity"] == "breaking")
                     .count();
                 if breaking > 0 {
-                    return Err(format!(
-                        "refusing to update the baseline: {breaking} breaking change(s); use `contract diff` for details"
-                    ));
+                    if !accept_breaking {
+                        return Err(format!(
+                            "refusing to update the baseline: {breaking} breaking change(s); use `contract diff` for details or re-run with `--accept-breaking --reason <text>`"
+                        ));
+                    }
+                    if reason
+                        .as_deref()
+                        .map(str::trim)
+                        .unwrap_or_default()
+                        .is_empty()
+                    {
+                        return Err("--accept-breaking requires --reason".to_owned());
+                    }
                 }
             }
             let (path, exported) = agentrouter_cli::contract::export_contract(
@@ -252,10 +268,32 @@ fn contract_command(args: &[String]) -> Result<i32, String> {
                 &canonical,
                 generated_at.as_deref(),
             )?;
+            let acceptance_count = if accept_breaking {
+                let report = baseline
+                    .as_ref()
+                    .map(|baseline| {
+                        agentrouter_cli::contract::diff_contracts_surface(baseline, &canonical)
+                    })
+                    .transpose()?;
+                report
+                    .as_ref()
+                    .map(|report| {
+                        agentrouter_cli::contract::record_breaking_acceptance(
+                            &root,
+                            report,
+                            reason.as_deref().unwrap_or_default(),
+                        )
+                    })
+                    .transpose()?
+                    .unwrap_or(0)
+            } else {
+                0
+            };
             let payload = serde_json::json!({
                 "status": "exported",
                 "path": path,
                 "canonical": true,
+                "accepted_breaking_changes": acceptance_count,
                 "document": exported,
             });
             if json_output {

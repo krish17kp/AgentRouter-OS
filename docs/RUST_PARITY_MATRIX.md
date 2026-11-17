@@ -31,7 +31,7 @@ release authority until the full set is complete.
 | `agentrouter/classifier.py` | `agentrouter-classifier` | Parity |
 | `agentrouter/cli.py` | `agentrouter-cli::bin::agentrouter` plus command modules | Partial |
 | `agentrouter/context_model.py` | `agentrouter-classifier::context_model` | Parity |
-| `agentrouter/contract.py` | `agentrouter-cli::contract::{canonicalize,dumps,validate_refs,load_baseline,load_live_contract,diff_contracts_surface,apply_recorded_acceptances}` | Partial |
+| `agentrouter/contract.py` | `agentrouter-cli::contract::{canonicalize,dumps,validate_refs,load_baseline,load_live_contract,diff_contracts_surface,apply_recorded_acceptances,record_breaking_acceptance}` | Partial |
 | `agentrouter/controls.py` | `agentrouter-policy::controls` | Parity |
 | `agentrouter/dashboard.py` | `agentrouter-cli::dashboard` | Parity |
 | `agentrouter/diagnostics.py` | `agentrouter-cli::diagnostics` | Partial |

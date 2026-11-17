@@ -41,6 +41,11 @@ validation, and the Rust compatibility surface report. This verifies a running
 service against the committed baseline without replacing Python framework
 generation or the hosted release gate.
 
+TASK-219 aligns the Rust exporter with the Python owner-acceptance workflow:
+routine exports refuse breaking changes, while an explicit
+`--accept-breaking --reason TEXT` records exact findings in append-only
+manifest history using the existing fail-closed writer.
+
 The Python CLI now has a default-off OpenAI Responses API text adapter. It is
 gated by provider opt-in, host readiness, the recorded safety decision, and
 `execute --yes`; hermetic tests do not use credentials or paid calls. The

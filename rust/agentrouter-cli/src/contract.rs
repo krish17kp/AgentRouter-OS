@@ -178,6 +178,63 @@ pub fn export_contract(
     Ok((openapi_path, canonical))
 }
 
+/// Append an owner-reviewed breaking-change acceptance to the exported
+/// manifest. The acceptance is deliberately tied to the checker findings so
+/// a later, different break cannot be excused by an old approval.
+pub fn record_breaking_acceptance(
+    root: &Path,
+    report: &Value,
+    reason: &str,
+) -> Result<usize, String> {
+    let reason = reason.trim();
+    if reason.is_empty() {
+        return Err("breaking-change acceptance requires a non-empty reason".to_owned());
+    }
+    let breaking = report
+        .get("changes")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter(|change| change.get("severity").and_then(Value::as_str) == Some("breaking"))
+        .cloned()
+        .collect::<Vec<_>>();
+    if breaking.is_empty() {
+        return Ok(0);
+    }
+
+    let (_, manifest_path) = contract_paths(root);
+    let manifest_text = fs::read_to_string(&manifest_path).map_err(|error| {
+        format!(
+            "could not read contract manifest {}: {error}",
+            manifest_path.display()
+        )
+    })?;
+    let mut manifest: Value = serde_json::from_str(&manifest_text)
+        .map_err(|error| format!("contract manifest is invalid JSON: {error}"))?;
+    let object = manifest
+        .as_object_mut()
+        .ok_or_else(|| "contract manifest must be a JSON object".to_owned())?;
+    let history_len = {
+        let history = object
+            .entry("accepted_breaking_changes")
+            .or_insert_with(|| Value::Array(Vec::new()));
+        let history = history.as_array_mut().ok_or_else(|| {
+            "contract manifest accepted_breaking_changes must be an array".to_owned()
+        })?;
+        history.push(json!({
+            "reason": reason,
+            "product_version": agentrouter_core::package_version(),
+            "changes": breaking,
+        }));
+        history.len()
+    };
+    let text = dumps(&manifest).map_err(|error| error.to_string())?;
+    let (resolved_root, parent) = open_contract_parent(root)?;
+    let _ = resolved_root;
+    safe_write_contract_artifact(&parent, CONTRACT_MANIFEST_FILE, &manifest_path, &text)?;
+    Ok(history_len)
+}
+
 fn source_commit(root: Option<&Path>) -> String {
     let mut command = std::process::Command::new("git");
     command.args(["rev-parse", "HEAD"]);
@@ -2607,5 +2664,37 @@ mod tests {
         assert_eq!(report["compatible"], true);
         assert_eq!(report["counts"]["accepted"], 1);
         assert_eq!(report["changes"][0]["severity"], "accepted");
+    }
+
+    #[test]
+    fn records_breaking_acceptance_without_erasing_manifest_history() {
+        let root = tempfile::tempdir().unwrap();
+        let (_, manifest) = contract_paths(root.path());
+        std::fs::create_dir_all(manifest.parent().unwrap()).unwrap();
+        std::fs::write(
+            &manifest,
+            r#"{"product_version":"0.5.0rc1","accepted_breaking_changes":[{"reason":"old","changes":[]}]}"#,
+        )
+        .unwrap();
+        let report = json!({
+            "changes": [{"severity":"breaking","kind":"endpoint_removed","location":"/v1/old","detail":"removed"}]
+        });
+        assert_eq!(
+            record_breaking_acceptance(root.path(), &report, "owner approved").unwrap(),
+            2
+        );
+        let manifest: Value =
+            serde_json::from_str(&std::fs::read_to_string(manifest).unwrap()).unwrap();
+        assert_eq!(
+            manifest["accepted_breaking_changes"]
+                .as_array()
+                .unwrap()
+                .len(),
+            2
+        );
+        assert_eq!(
+            manifest["accepted_breaking_changes"][1]["reason"],
+            "owner approved"
+        );
     }
 }
