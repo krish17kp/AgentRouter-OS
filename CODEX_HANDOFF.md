@@ -48,6 +48,8 @@ TASK-245 adds successful subgroup help for `models list`, `hosts doctor`, and
 combined route/unified compatibility selection is now 65 tests. TASK-246 adds
 successful leaf-command help for `init`, `explain`, `feedback`, `stats`,
 `prompt`, `doctor`, and `dashboard`, bringing that selection to 72 tests.
+The fresh complete Rust/Python and Rust CLI compatibility selection is 883
+passed, 1 skipped, with only the existing non-failing Starlette/httpx warning.
 TASK-223 synchronizes the unified Rust CLI help with the implemented contract
 check/diff/export surface and adds a process-level regression. The fresh full
 Python suite passes 2,743 tests with 7 expected skips; the full locked Rust

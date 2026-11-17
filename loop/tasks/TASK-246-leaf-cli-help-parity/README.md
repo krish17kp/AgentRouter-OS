@@ -13,5 +13,8 @@ existing Python CLI for the remaining leaf command paths.
   route cases plus the unified CLI selection).
 - `cargo test --locked -p agentrouter-cli` passes 89 tests; strict Clippy,
   formatting, and `git diff --check` pass.
+- The complete Rust/Python and Rust CLI compatibility selection passes 883
+  tests with 1 expected skip; the existing Starlette/httpx warning remains
+  non-failing.
 - The canonical evaluation gate remains unchanged at 165 cases and 98.23/100;
   `context_band_accuracy=0.6667` remains below the required 0.90 threshold.

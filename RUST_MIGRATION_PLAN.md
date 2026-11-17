@@ -35,6 +35,10 @@ Clippy and formatting. This is an R4 parity increment only; the frozen
 context-band gate, provider credentials, human evaluation, and deployment
 requirements remain unchanged.
 
+The complete Rust/Python and Rust CLI compatibility selection was re-run after
+the change: 883 tests passed with 1 expected skip and no compatibility
+regression.
+
 TASK-223 (2026-11-18) synchronizes the unified Rust CLI top-level help with
 the implemented contract check/diff/export surface and adds a process-level
 regression for live and explicit-baseline checks. Fresh local verification

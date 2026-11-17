@@ -23,6 +23,10 @@ RustSec audit. The historical 2,740/5 figure below remains the earlier
 TASK-211 evidence; the two additional skips are environment-dependent and do
 not represent failures.
 
+The fresh complete Rust/Python and Rust CLI compatibility selection after
+TASK-246 passes 883 tests with 1 expected skip; the existing Starlette/httpx
+deprecation warning remains non-failing.
+
 TASK-242 rechecked the canonical gate after the route CLI slice: 165 cases,
 98.23/100, and the sole failure remains context-band accuracy at 0.6667 versus
 the unchanged 0.90 threshold. No holdout, threshold, or evaluation input was
