@@ -39,6 +39,10 @@ metadata-oriented adapters. A live Banking77 preparation produced 3,079
 normalized records; CLINC150 was rate-limited during a second live probe and
 remains an honest external result. LLMRouterBench/TwinRouterBench, Docker/model
 runs, annotation, and release gates remain outstanding.
+TASK-212 hardens ordinary Rust SQLite opens with `SQLITE_OPEN_NOFOLLOW` and
+adds a symlink-leaf regression without changing the capability-pinned Linux
+init path. Complete handle-native SQLite initialization and sidecar race
+closure remain R4 limitations; focused storage/CLI tests pass.
 TASK-180 aligns context-band human-readable output with Python (bootstrap CI,
 Python-style containers, unquoted checksum, signed delta); JSON remains stable.
 

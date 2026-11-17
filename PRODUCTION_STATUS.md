@@ -28,10 +28,17 @@ Offline defaults still report the opt-in blocker; no fixture is substituted.
 After preserving the existing Python-facing metadata/error surface, the full
 Python regression suite passes 2,740 tests with 5 documented skips.
 
+TASK-212 hardens the Rust SQLite open with `SQLITE_OPEN_NOFOLLOW` for ordinary
+database paths and adds a regression proving a symlinked database leaf cannot
+redirect writes to an outside target. The Linux capability-pinned init path
+continues to survive a parent-directory swap and create its database/WAL/SHM in
+the pinned directory. Complete handle-native SQLite initialization and the
+remaining sidecar leaf-swap race are still tracked as R4 limitations.
+
 - [ ] PR review and hosted checks: PR #16 is the sole open PR against `main`, with no GitHub reviews or review requests. Pushed RC head `71408b2` is green across Rust Linux/Windows/macOS, Python/Rust compatibility on all three platforms, Python 3.10–3.13, Windows, macOS, Security, Website, and Critical Mutation. The enforcing release gate remains honestly held by frozen context-band accuracy `0.6667 < 0.90`; live smoke skips without credentials.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md): 60 rows meet the full-module differential bar and 17 remain Partial. TASK-159–162 close platform, evaluator-facade, grading, and runner parity; TASK-164 closes server schemas; TASK-166 closes annotation schemas; TASK-167 closes server service; TASK-168 closes observability; TASK-169 closes the HTTP application lifecycle; TASK-170 closes packaged annotation CLI resources; TASK-171 closes provider refresh; TASK-176 closes the Python module entrypoint; broader migration differences remain.
-- [x] Full Python suite: Linux/Python 3.12 passes 2,733 tests and skips 7 (latest run after TASK-173). The TASK-152 coverage refresh measures 92.052% statement, 87.756% branch, and 91.064% combined; both required thresholds pass. Evidence is in [`docs/COVERAGE_REPORT_2026-11-15-TASK-152.md`](docs/COVERAGE_REPORT_2026-11-15-TASK-152.md).
+- [x] Full Python suite: Linux/Python 3.12 passes 2,740 tests and skips 5 (authoritative rerun after TASK-211). The TASK-152 coverage refresh measures 92.052% statement, 87.756% branch, and 91.064% combined; both required thresholds pass. Evidence is in [`docs/COVERAGE_REPORT_2026-11-15-TASK-152.md`](docs/COVERAGE_REPORT_2026-11-15-TASK-152.md).
 - [x] Routing benchmark suite runs: 12/12 gold scenarios and 15 focused tests pass; dated results document records scope and limitations; the Rust release benchmark now runs the same 10/100/1,000 candidate fleets, with a paired local p50 ratio of 2.70×–3.25× under stated synthetic conditions.
 - [x] Changelog, coverage evidence, and local latency measurements are committed to the release candidate. Candidate package version is now `0.5.0rc1`, with draft release notes in `docs/RELEASE_NOTES_v0.5.0rc1.md`; final `0.5.0` packaging and publication remain blocked on parity and all release gates.
 - [ ] Release candidate promoted to `main` with a tagged release.

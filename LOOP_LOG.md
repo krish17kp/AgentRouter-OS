@@ -1,5 +1,15 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-212 SQLite leaf no-follow hardening
+
+Rust storage now opens ordinary `agentrouter.db` paths with SQLite's
+`SQLITE_OPEN_NOFOLLOW` flag and rejects a symlinked database leaf without
+touching its outside target. The Linux capability-pinned initialization path
+continues to survive a parent-directory swap and create database/WAL/SHM in
+the pinned directory. Focused storage/CLI tests pass (81 CLI, 15 storage), as
+does formatting. The remaining pathname-based sidecar/leaf-swap limitation is
+documented as incomplete R4 handle-native initialization.
+
 ## 2026-11-17 — TASK-196 adapter differential regression
 
 All existing adapter/base Python/Rust differentials pass: 17 tests covering

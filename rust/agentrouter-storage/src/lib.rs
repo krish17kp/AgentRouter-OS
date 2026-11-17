@@ -7,7 +7,7 @@ use std::io::Write;
 use std::path::Path;
 use std::sync::Mutex;
 
-use rusqlite::{params, types::Type, Connection, OptionalExtension};
+use rusqlite::{params, types::Type, Connection, OpenFlags, OptionalExtension};
 use serde_json::Value;
 
 const SCHEMA: &str = "
@@ -143,7 +143,23 @@ pub fn connect(home: &Path) -> rusqlite::Result<Connection> {
             Some(e.to_string()),
         )
     })?;
-    let mut conn = Connection::open(home.join("agentrouter.db"))?;
+    // SQLite otherwise follows a final-component symlink while opening the
+    // database.  Keep the storage boundary fail-closed even when callers
+    // race initialization or pass an untrusted home: the VFS applies
+    // SQLITE_OPEN_NOFOLLOW to the database leaf and refuses that redirect.
+    let mut flags = OpenFlags::SQLITE_OPEN_READ_WRITE
+        | OpenFlags::SQLITE_OPEN_CREATE
+        | OpenFlags::SQLITE_OPEN_NO_MUTEX
+        | OpenFlags::SQLITE_OPEN_URI;
+    let database = home.join("agentrouter.db");
+    // SQLite's NOFOLLOW VFS flag rejects `/proc/self/fd/<dirfd>` itself on
+    // Linux, even though that proc entry is the capability path used by the
+    // CLI to pin a home directory. The directory handle already pins those
+    // parent components; retain NOFOLLOW for ordinary caller-supplied paths.
+    if !database.starts_with("/proc/self/fd/") {
+        flags |= OpenFlags::SQLITE_OPEN_NOFOLLOW;
+    }
+    let mut conn = Connection::open_with_flags(database, flags)?;
     // Best-effort, same as Python's contextlib.suppress(sqlite3.DatabaseError).
     let _ = conn.pragma_update(None, "journal_mode", "WAL");
     conn.pragma_update(None, "busy_timeout", BUSY_TIMEOUT_MS)?;
@@ -717,6 +733,21 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM decisions", [], |r| r.get(0))
             .unwrap();
         assert_eq!(count, 1);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn connect_refuses_a_symlink_database_leaf() {
+        use std::os::unix::fs::symlink;
+
+        let dir = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let victim = outside.path().join("victim.db");
+        std::fs::write(&victim, b"keep").unwrap();
+        symlink(&victim, dir.path().join("agentrouter.db")).unwrap();
+
+        assert!(connect(dir.path()).is_err());
+        assert_eq!(std::fs::read(&victim).unwrap(), b"keep");
     }
 
     #[cfg(unix)]

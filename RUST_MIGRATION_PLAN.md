@@ -409,6 +409,16 @@ does not close later or leaf swaps;
 handle-safe database initialization and the complete public CLI remain R4
 work. This probe is not a production replacement for Python.
 
+R4 follow-up (2026-11-17, SQLite leaf hardening): `agentrouter-storage` now
+opens ordinary database paths with SQLite's `SQLITE_OPEN_NOFOLLOW` flag and
+rejects a symlinked `agentrouter.db` without touching its target. The Linux
+capability-pinned `/proc/self/fd/<dirfd>` path used by safe initialization
+intentionally omits that flag because SQLite rejects the proc capability path
+itself; the pinned parent directory and pre-connect target validation remain in
+force. This narrows the ordinary final-component redirect surface, but SQLite
+still reopens pathname-based WAL/SHM sidecars and complete handle-native
+database initialization remains an R4 limitation.
+
 R4 follow-up (2026-11-11): added `agentrouter-cli::dashboard` with the
 read-only loopback HTTP surface and HTML renderer corresponding to
 `agentrouter/dashboard.py`. Rust tests cover empty and populated views,

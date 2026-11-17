@@ -22,6 +22,13 @@ workflows production-ready.
 The subsequent full Python regression rerun passes 2,740 tests with 5 skips;
 the existing adapter metadata/error contract remains byte-compatible.
 
+TASK-212 narrows the Rust SQLite path-redirect surface: ordinary database
+opens use SQLite no-follow semantics and reject a symlinked leaf without
+modifying its target. The capability-pinned Linux init path remains covered
+after a parent swap, while complete handle-native SQLite initialization and
+sidecar race closure remain unresolved. This is hardening evidence, not a
+release waiver.
+
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
 advisories across 207 locked dependencies; one unmaintained `chrono` warning
