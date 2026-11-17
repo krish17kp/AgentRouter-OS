@@ -13,6 +13,7 @@ running service without weakening the existing compatibility gate.
 - response size, JSON shape, local references, and schema surface are checked;
 - drift returns a non-zero status and JSON output includes the compatibility
   report;
+- recorded owner acceptances remain visible but do not block the report;
 - local HTTP tests cover a valid response and redirect refusal;
 - no claim is made that this replaces Python framework generation or hosted
   release approval.

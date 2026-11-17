@@ -71,9 +71,10 @@ fn contract_command(args: &[String]) -> Result<i32, String> {
             let is_canonical = canonical == baseline;
             let live_report = if let Some(url) = live_url {
                 let live = agentrouter_cli::contract::load_live_contract(&url)?;
-                Some(agentrouter_cli::contract::diff_contracts_surface(
-                    &baseline, &live,
-                )?)
+                let mut report =
+                    agentrouter_cli::contract::diff_contracts_surface(&baseline, &live)?;
+                agentrouter_cli::contract::apply_recorded_acceptances(&root, &mut report);
+                Some(report)
             } else {
                 None
             };

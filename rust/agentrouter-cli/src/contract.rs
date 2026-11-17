@@ -372,6 +372,69 @@ pub fn load_live_contract(url: &str) -> Result<Value, String> {
     Ok(canonical)
 }
 
+/// Apply owner-recorded manifest acceptances to a compatibility report.
+/// Accepted changes stay visible, but no longer count as blocking breaks.
+pub fn apply_recorded_acceptances(root: &Path, report: &mut Value) {
+    let (_, manifest_path) = contract_paths(root);
+    let Ok(text) = fs::read_to_string(manifest_path) else {
+        return;
+    };
+    let Ok(manifest) = serde_json::from_str::<Value>(&text) else {
+        return;
+    };
+    let accepted = manifest
+        .get("accepted_breaking_changes")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .flat_map(|entry| entry.get("changes").and_then(Value::as_array))
+        .flatten()
+        .filter_map(|change| {
+            Some((
+                change.get("kind")?.as_str()?.to_owned(),
+                change.get("location")?.as_str()?.to_owned(),
+            ))
+        })
+        .collect::<HashSet<_>>();
+    let Some(changes) = report.get_mut("changes").and_then(Value::as_array_mut) else {
+        return;
+    };
+    for change in changes.iter_mut() {
+        if change.get("severity").and_then(Value::as_str) == Some("breaking")
+            && change
+                .get("kind")
+                .and_then(Value::as_str)
+                .zip(change.get("location").and_then(Value::as_str))
+                .is_some_and(|pair| accepted.contains(&(pair.0.to_owned(), pair.1.to_owned())))
+        {
+            if let Some(object) = change.as_object_mut() {
+                object.insert("severity".to_owned(), Value::String("accepted".to_owned()));
+            }
+        }
+    }
+    let mut counts = BTreeMap::<String, usize>::new();
+    for change in changes.iter() {
+        if let Some(severity) = change.get("severity").and_then(Value::as_str) {
+            *counts.entry(severity.to_owned()).or_default() += 1;
+        }
+    }
+    if let Some(object) = report.as_object_mut() {
+        object.insert(
+            "compatible".to_owned(),
+            Value::Bool(counts.get("breaking").copied().unwrap_or_default() == 0),
+        );
+        object.insert(
+            "counts".to_owned(),
+            json!({
+                "breaking": counts.get("breaking").copied().unwrap_or_default(),
+                "accepted": counts.get("accepted").copied().unwrap_or_default(),
+                "risky": counts.get("risky").copied().unwrap_or_default(),
+                "additive": counts.get("additive").copied().unwrap_or_default(),
+            }),
+        );
+    }
+}
+
 /// Compare the OpenAPI document and operation surface while the complete
 /// schema, parameter, and media-type analyzer is being ported. Results use the
 /// same report shape and change ordering as Python's checker.
@@ -2523,5 +2586,26 @@ mod tests {
 
         let error = load_live_contract(&format!("http://{address}/openapi.json")).unwrap_err();
         assert!(error.contains("HTTP 302"));
+    }
+
+    #[test]
+    fn recorded_acceptances_keep_breaks_visible_without_blocking() {
+        let root = tempfile::tempdir().unwrap();
+        let (_, manifest) = contract_paths(root.path());
+        std::fs::create_dir_all(manifest.parent().unwrap()).unwrap();
+        std::fs::write(
+            manifest,
+            r#"{"accepted_breaking_changes":[{"changes":[{"kind":"endpoint_removed","location":"/v1/old"}]}]}"#,
+        )
+        .unwrap();
+        let mut report = json!({
+            "compatible": false,
+            "counts": {"breaking": 1, "accepted": 0, "risky": 0, "additive": 0},
+            "changes": [{"severity":"breaking","kind":"endpoint_removed","location":"/v1/old","detail":"removed"}]
+        });
+        apply_recorded_acceptances(root.path(), &mut report);
+        assert_eq!(report["compatible"], true);
+        assert_eq!(report["counts"]["accepted"], 1);
+        assert_eq!(report["changes"][0]["severity"], "accepted");
     }
 }

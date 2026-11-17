@@ -3314,5 +3314,7 @@ zero skips against the Rust loopback API.
 - Contract JSON now includes the live compatibility report and returns non-zero
   on drift.
 - `--baseline PATH` now supports explicit base-branch artifact comparisons.
+- Manifest-recorded owner acceptances remain visible as `accepted` without
+  falsely blocking a live report.
 - Eight Rust contract tests and a temporary HTTP-server smoke passed; Python
   framework generation and hosted release approval remain authoritative.
