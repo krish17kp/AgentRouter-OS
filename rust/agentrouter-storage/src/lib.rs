@@ -151,7 +151,19 @@ pub fn connect(home: &Path) -> rusqlite::Result<Connection> {
         | OpenFlags::SQLITE_OPEN_CREATE
         | OpenFlags::SQLITE_OPEN_NO_MUTEX
         | OpenFlags::SQLITE_OPEN_URI;
-    let database = home.join("agentrouter.db");
+    // macOS exposes its temporary directory through `/var`, a symlink to
+    // `/private/var`. SQLite's NOFOLLOW flag rejects that parent component
+    // even though the database leaf itself is not a link. Resolve existing
+    // parent components first, while retaining NOFOLLOW for the final leaf.
+    // The `/proc/self/fd` capability path is intentionally left untouched:
+    // canonicalizing it would discard the directory-handle pinning contract.
+    let storage_home = if home.starts_with("/proc/self/fd/") {
+        home.to_path_buf()
+    } else {
+        home.canonicalize()
+            .map_err(|error| rusqlite::Error::ToSqlConversionFailure(Box::new(error)))?
+    };
+    let database = storage_home.join("agentrouter.db");
     // SQLite's NOFOLLOW VFS flag rejects `/proc/self/fd/<dirfd>` itself on
     // Linux, even though that proc entry is the capability path used by the
     // CLI to pin a home directory. The directory handle already pins those

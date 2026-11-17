@@ -1,5 +1,18 @@
 # LOOP_LOG
 
+## 2026-11-18 — TASK-274 macOS SQLite path portability
+
+Hosted Rust migration CI exposed a real macOS portability defect: SQLite's
+`SQLITE_OPEN_NOFOLLOW` rejected the `/var` parent symlink used by macOS
+temporary directories, causing storage and evaluation parity tests to fail
+with `SQLITE_CANTOPEN`. `agentrouter-storage::connect` now canonicalizes
+existing parent components before opening the database while retaining
+`SQLITE_OPEN_NOFOLLOW` on the final database leaf; `/proc/self/fd/<dirfd>`
+capability paths remain untouched. The full locked Rust workspace passes, the
+storage crate passes 15 tests, and the focused Python/Rust storage/evaluation
+selection passes 69 tests. A hosted recheck is required; release, human
+evaluation, live-smoke, approval, and deployment gates remain unchanged.
+
 ## 2026-11-18 — TASK-273 current Rust/Python compatibility verification
 
 The complete `tests/test_rust_*.py` selection passes **741 tests with 1
