@@ -2,6 +2,11 @@
 
 ## Live checkpoint — 2026-11-18
 
+TASK-260 reconciles the current verification evidence across release and
+production documentation: 2,781 Python tests / 7 skips, 893 Rust/Python
+compatibility tests / 1 skip, green workspace Rust checks, and the unchanged
+98.23/100 gate held only by context-band accuracy. No deployment state changed.
+
 TASK-259 aligns Rust diagnostic-bundle JSON encoding with Python's ASCII
 escaping contract, including surrogate pairs for emoji. The focused
 diagnostics/bundle selection passes 45 tests with strict Clippy and formatting;

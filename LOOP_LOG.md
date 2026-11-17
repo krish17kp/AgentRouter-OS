@@ -3659,3 +3659,11 @@ zero skips against the Rust loopback API.
 - The focused diagnostics/bundle selection passes 45/45; strict Clippy and
   formatting remain green.
 - Redaction, allowlisting, byte limits, and release gates are unchanged.
+
+## TASK-260 — Release evidence reconciliation (2026-11-18)
+
+- Release-readiness, quality, production-readiness, project-status, and
+  known-limitations documents now carry a current verification snapshot while
+  preserving their historical checkpoint sections.
+- Runbook checks pass; no release threshold, promotion, or deployment state
+  changed.

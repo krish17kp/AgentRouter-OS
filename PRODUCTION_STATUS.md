@@ -2,13 +2,20 @@
 
 Updated: 2026-11-18
 
-## Latest continuation slice — TASK-257
+## Previous continuation slice — TASK-257
 
 The complete Rust/Python and Rust CLI compatibility selection after TASK-256
 passes 893 tests with 1 expected skip. The existing Starlette/httpx warning is
 non-failing; no compatibility regression was observed.
 
-## Latest continuation slice — TASK-258
+## Latest continuation slice — TASK-260
+
+Release-readiness, quality, production-readiness, project-status, and known-
+limitations documents now point to the current verification evidence while
+preserving historical checkpoints. Runbook checks pass; no release gate or
+deployment state changed.
+
+## Previous continuation slice — TASK-258
 
 The unified Rust top-level help now advertises the complete public prompt
 generation syntax (`[TASK]`, `--from`, `--tool`, and `--out`), matching the
@@ -18,7 +25,7 @@ full verification passes 2,781 Python tests with 7 expected skips, 893
 Rust/Python compatibility tests with 1 expected skip, and the workspace-wide
 Rust suite with strict Clippy.
 
-## Latest continuation slice — TASK-259
+## Previous continuation slice — TASK-259
 
 Rust diagnostic-bundle JSON now uses Python-compatible ASCII escaping for
 non-ASCII content, including surrogate pairs for emoji. The focused
