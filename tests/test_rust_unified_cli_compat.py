@@ -187,6 +187,55 @@ def test_read_only_execution_plan_never_enables_execution(tmp_path, unified_bina
     assert json.loads(explicitly_requested.stdout)["execution_enabled"] is False
 
 
+def test_workflow_plan_is_read_only_and_rejects_duplicate_dependencies(unified_binary):
+    workflow = {
+        "steps": [
+            {"id": "prepare", "estimated_cost": 2},
+            {
+                "id": "write",
+                "depends_on": ["prepare"],
+                "side_effect_key": "file:report",
+                "idempotency_key": "report-v1",
+                "estimated_cost": 3,
+            },
+        ]
+    }
+    planned = subprocess.run(
+        [str(unified_binary), "workflow", "plan", "--json"],
+        cwd=ROOT,
+        input=json.dumps(workflow),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=60,
+        check=False,
+    )
+    assert planned.returncode == 0, planned.stderr
+    payload = json.loads(planned.stdout)
+    assert payload["ordered_steps"] == ["prepare", "write"]
+    assert payload["estimated_cost"] == 5
+    assert payload["execution_enabled"] is False
+
+    malformed = {
+        "steps": [
+            {"id": "root", "estimated_cost": 1},
+            {"id": "child", "depends_on": ["root", "root"], "estimated_cost": 1},
+        ]
+    }
+    rejected = subprocess.run(
+        [str(unified_binary), "workflow", "plan", "--json"],
+        cwd=ROOT,
+        input=json.dumps(malformed),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=60,
+        check=False,
+    )
+    assert rejected.returncode == 2
+    assert "dependency" in rejected.stderr and "more than once" in rejected.stderr
+
+
 def test_setup_runs_onboarding_and_persists_selected_preference(
     tmp_path, unified_binary, monkeypatch
 ):
