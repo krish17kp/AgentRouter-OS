@@ -14,4 +14,6 @@ agentrouter-evaluation Rust tests          14 passed
 full locked Rust workspace tests            passed
 strict workspace Clippy / rustfmt / diff    passed
 Ruff check / format check                  passed
+optimized locked workspace build           passed
+sdist/wheel build and Twine metadata check  passed
 ```
