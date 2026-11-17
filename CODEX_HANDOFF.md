@@ -2,6 +2,11 @@
 
 ## Live checkpoint — 2026-11-18
 
+TASK-261 validates the current release artifacts: isolated wheel/sdist build,
+Twine checks, packaged-asset inspection, website lint/build, and RustSec audit
+all pass. Audit status is no vulnerabilities plus the documented unmaintained
+`chrono` warning; no deployment state changed.
+
 TASK-260 reconciles the current verification evidence across release and
 production documentation: 2,781 Python tests / 7 skips, 893 Rust/Python
 compatibility tests / 1 skip, green workspace Rust checks, and the unchanged

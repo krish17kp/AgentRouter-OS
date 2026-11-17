@@ -27,6 +27,12 @@
 
 ## Current production status
 
+TASK-261 (2026-11-18) records current release evidence: isolated Python wheel
+and sdist build plus Twine checks, website lint/build, and RustSec audit. The
+207-dependency audit has no vulnerability advisories; only the known
+unmaintained `chrono` warning remains, with no fixed upgrade. Promotion and
+deployment gates are unchanged.
+
 TASK-259 (2026-11-18) aligns Rust diagnostic-bundle JSON encoding with Python:
 non-ASCII characters are emitted as `\\uXXXX` escapes, including surrogate
 pairs for non-BMP code points. The focused diagnostics/bundle selection passes

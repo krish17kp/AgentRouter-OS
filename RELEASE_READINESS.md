@@ -10,6 +10,11 @@ false solely because `context_band_accuracy=0.6667 < 0.90`. PR #16 remains open
 against `main`; the local branch has verified commits after pushed RC head
 `71408b2`, and no push, merge, tag, publication, or deployment has occurred.
 
+TASK-261 release evidence also passes: isolated wheel/sdist build, Twine
+metadata checks, required packaged-asset inspection, website lint/build, and
+`cargo audit --no-yanked` with no vulnerability advisories. The audit's single
+unmaintained-`chrono` warning has no fixed upgrade and remains documented.
+
 Latest local verification on 2026-11-18 passes 2,743 Python tests with 7
 expected environment skips, 89/89 focused Rust contract/unified-CLI tests,
 the locked optimized Rust workspace build, strict Clippy, and cargo audit.

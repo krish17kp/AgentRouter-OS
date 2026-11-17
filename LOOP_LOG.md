@@ -3667,3 +3667,12 @@ zero skips against the Rust loopback API.
   preserving their historical checkpoint sections.
 - Runbook checks pass; no release threshold, promotion, or deployment state
   changed.
+
+## TASK-261 — Release artifact evidence (2026-11-18)
+
+- Isolated PEP 517 wheel/sdist build, Twine checks, and required packaged-asset
+  inspection pass.
+- Website lint/build pass; `cargo audit --no-yanked` finds no vulnerability
+  advisories across 207 dependencies and retains only the known unmaintained
+  `chrono` warning with no fixed upgrade.
+- Release gates and deployment state are unchanged.

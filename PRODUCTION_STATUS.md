@@ -15,6 +15,13 @@ limitations documents now point to the current verification evidence while
 preserving historical checkpoints. Runbook checks pass; no release gate or
 deployment state changed.
 
+## Latest continuation slice — TASK-261
+
+Current release artifacts are validated: isolated PEP 517 wheel/sdist build,
+Twine metadata checks, required wheel-asset inspection, website lint/build, and
+Rust dependency audit all pass. The audit reports only the known unmaintained
+`chrono` warning with no fixed upgrade; no vulnerability advisory was found.
+
 ## Previous continuation slice — TASK-258
 
 The unified Rust top-level help now advertises the complete public prompt
