@@ -45,6 +45,11 @@ classification with Python/httpx while retaining distinct timeout and generic
 read errors. Native lifecycle and complete phase-specific transport parity
 remain R5 work.
 
+TASK-226 (2026-11-18) records the owner-controlled staging, canary, rollback,
+artifact/provenance, and database-safety deployment procedure in
+`docs/DEPLOYMENT_PLAN.md`; it does not claim that staging or production has
+been exercised.
+
 TASK-216 (2026-11-18) wires the existing safe Rust contract exporter into the
 unified CLI as `agentrouter contract export`. It supports an explicit source
 file, deterministic timestamp injection, JSON output, and fail-closed refusal

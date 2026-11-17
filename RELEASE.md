@@ -9,6 +9,11 @@ Not published to PyPI yet — releases are git tags + GitHub Releases for now.
 > checklist or lower any gate; a ported module only becomes release-eligible
 > once it passes the same gates this checklist already enforces.
 
+The operational staging, canary, and rollback procedure is documented in
+[`docs/DEPLOYMENT_PLAN.md`](docs/DEPLOYMENT_PLAN.md). It is a plan only until
+the owner supplies the deployment target and approvals and the runbook is
+actually exercised.
+
 ## Before tagging
 
 ```console

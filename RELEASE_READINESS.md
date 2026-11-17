@@ -90,6 +90,12 @@ classification with HTTPX, and TASK-225 aligns the native SDK's corresponding
 classification. Focused differentials, full Rust tests, optimized build,
 strict Clippy, formatting, and audit remain green; release gates are unchanged.
 
+The staging, canary, and rollback procedure is now recorded in
+[`docs/DEPLOYMENT_PLAN.md`](docs/DEPLOYMENT_PLAN.md). It is intentionally
+marked as a plan: no staging or production deployment has been performed, and
+the owner-controlled evaluation, credential, infrastructure, and promotion
+gates remain open.
+
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
 advisories across 207 locked dependencies; one unmaintained `chrono` warning

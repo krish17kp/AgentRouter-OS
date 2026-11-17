@@ -3378,3 +3378,11 @@ zero skips against the Rust loopback API.
   distinct timeout and generic read errors.
 - The focused native regression and the 23-test Rust/Python SDK suites pass;
   broader native lifecycle/transport parity remains Partial.
+
+## TASK-226 — Deployment runbook (2026-11-18)
+
+- Added the explicit staging, canary, rollback, artifact/provenance, and
+  database-safety procedure in `docs/DEPLOYMENT_PLAN.md`.
+- Linked it from the release checklist/readiness report and recorded that no
+  staging or production deployment has occurred; owner-controlled gates remain
+  open.
