@@ -3409,3 +3409,12 @@ zero skips against the Rust loopback API.
 - Installed the freshly built wheel into an isolated temporary virtual
   environment; version, `init`, and local `route --json` all passed.
 - The smoke used only the local registry and made no provider request.
+
+## TASK-230 — Package metadata modernization (2026-11-18)
+
+- Updated the distribution metadata to use the modern SPDX license string and
+  removed the redundant license classifier.
+- Rebuilt the sdist and wheel with `uv build`; the captured build log contains
+  no license-metadata deprecation warnings.
+- `uvx twine check` passes for both artifacts, and the package-version
+  compatibility test passes 1/1.
