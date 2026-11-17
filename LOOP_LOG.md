@@ -1,5 +1,11 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-196 adapter differential regression
+
+All existing adapter/base Python/Rust differentials pass: 17 tests covering
+banking77, CLINC150, LongBench, MASSIVE, SWE-bench, and the shared adapter
+contract. Real HuggingFace loading remains explicitly external-only.
+
 ## 2026-11-17 — TASK-195 optimized binary end-to-end smoke
 
 The optimized release binary succeeds from a fresh isolated home for `init`,

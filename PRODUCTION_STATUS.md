@@ -96,6 +96,10 @@ TASK-195 exercises the optimized release binary from a fresh isolated home:
 `init`, `route --json`, `doctor --json`, version, and MCP stdio negotiation all
 pass. No credentials or deployment were used.
 
+TASK-196 re-runs the adapter/base Python/Rust differential suite: 17 tests pass
+across banking77, CLINC150, LongBench, MASSIVE, SWE-bench, and shared adapter
+behavior. Real HuggingFace loading remains explicitly external-only.
+
 TASK-175 repairs Windows diagnostics contract parity. Rust now renders the
 contract directory through the native path formatter, matching Python's
 platform-specific `Path` representation while retaining forward slashes on

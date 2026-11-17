@@ -100,6 +100,10 @@ TASK-195's optimized binary smoke passes from a fresh isolated home: init,
 route, doctor, version, and MCP initialize/tools-list. No credentials or
 deployment were used.
 
+TASK-196's adapter/base differential regression passes 17/17 tests across all
+five external adapter normalizers and the shared contract. Keep real external
+loading explicitly blocked until its runtime and credentials are available.
+
 ## Storage relocation — 2026-11-15
 
 Active release checkout: `/data/AgentRouter-production` on branch

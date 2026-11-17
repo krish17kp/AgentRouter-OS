@@ -82,6 +82,9 @@ adapter facades, matching the Python registry construction surface.
 TASK-195 confirms the optimized binary's fresh-home `init`, route, doctor,
 version, and five-tool MCP stdio smoke.
 
+TASK-196 confirms 17 offline adapter/base Python/Rust differential tests pass;
+real external dataset loading remains intentionally blocked.
+
 TASK-173 hardens diagnostic bundle writes with no-follow parent creation, a
 pinned capability directory, and exclusive creation. Serialized snapshots,
 symlink/hard-link, directory-swap, and nested-parent regressions pass; focused

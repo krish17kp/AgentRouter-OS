@@ -94,6 +94,10 @@ remain unresolved.
 MCP smoke behavior. This is local evidence only; hosted promotion and external
 release gates remain unresolved.
 
+**NOT release ready.** TASK-196 confirms 17 adapter/base differential tests
+pass. This does not provide Rust real-dataset loading or clear the frozen
+evaluation and promotion gates.
+
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
 evidence. Diagnostics remains Partial for runtime-specific and complete bundle
