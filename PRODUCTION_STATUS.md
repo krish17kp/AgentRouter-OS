@@ -2,6 +2,13 @@
 
 Updated: 2026-11-18
 
+## Latest verification slice — TASK-270
+
+The complete Rust/Python compatibility selection passes **738 tests with 1
+expected skip** in 98.27 seconds. The only warning is the existing
+non-failing Starlette/httpx deprecation. No compatibility regression was found;
+the canonical release gate remains held independently.
+
 ## Latest continuation slice — TASK-268
 
 Rust evaluation CLI numeric parsing now accepts negative integers like Python;

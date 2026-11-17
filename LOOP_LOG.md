@@ -1,5 +1,12 @@
 # LOOP_LOG
 
+## 2026-11-18 — TASK-270 full Rust/Python compatibility sweep
+
+The complete `tests/test_rust_*.py` selection passes 738 tests with 1 expected
+skip in 98.27 seconds. The only warning is the existing non-failing
+Starlette/httpx deprecation. This refresh confirms the current tree remains
+compatible; hosted release and deployment gates are unchanged.
+
 ## 2026-11-18 — TASK-268 negative numeric evaluation CLI values
 
 Rust evaluation CLI numeric options now accept negative integers, matching
