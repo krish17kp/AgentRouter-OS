@@ -2,6 +2,11 @@
 
 ## Live checkpoint — 2026-11-18
 
+TASK-262 aligns `eval prepare --limit` across Python and Rust: full real-source
+validation is followed by the shared deterministic seed-0 subset, with 8 Python
+real-mode tests passing and the locked Rust workspace/format checks green.
+No external dataset was downloaded and no release or deployment gate changed.
+
 TASK-261 validates the current release artifacts: isolated wheel/sdist build,
 Twine checks, packaged-asset inspection, website lint/build, and RustSec audit
 all pass. Audit status is no vulnerabilities plus the documented unmaintained

@@ -186,6 +186,13 @@ class DatasetAdapter:
         Never writes into the repo. Raises SkippedExternal if unavailable.
         """
         cases = self.load(source=REAL)
+        # A bounded prepare is an explicit smoke operation.  Keep the full
+        # download/normalisation validation above, then report the same
+        # deterministic subset that a bounded evaluation would consume.  This
+        # makes ``prepare --limit`` useful without changing provenance of the
+        # source dataset or introducing an order-dependent slice.
+        if limit is not None:
+            cases = deterministic_sample(cases, limit, 0, key=lambda c: c.id)
         return {
             "dataset": self.meta.name,
             "source": self.meta.source,

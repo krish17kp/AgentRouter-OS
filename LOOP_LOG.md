@@ -1,5 +1,14 @@
 # LOOP_LOG
 
+## 2026-11-18 — TASK-262 evaluation prepare-limit parity
+
+`eval prepare --limit N` now reports the same deterministic smoke subset in
+Python and Rust (SHA-256 rank, seed 0, original-order output). Full real-source
+validation still runs before sampling, and negative limits remain empty. The
+Python real-mode selection passes 8 tests; the locked Rust workspace and format
+checks pass. External dataset access and release/deployment gates remain
+unchanged.
+
 ## 2026-11-18 — TASK-251 public stored-prompt newline parity
 
 Unified Rust `prompt generate --from` now matches Python's final newline while

@@ -2,6 +2,14 @@
 
 Updated: 2026-11-18
 
+## Latest continuation slice — TASK-262
+
+Evaluation `prepare --limit` now reports a deterministic smoke subset in both
+Python and Rust. The adapter contract still validates the complete real source,
+then applies the shared seed-0 sampler; the Python real-mode regression passes
+8 cases and the locked Rust workspace plus formatting pass. No external data
+was downloaded and no release gate changed.
+
 ## Previous continuation slice — TASK-257
 
 The complete Rust/Python and Rust CLI compatibility selection after TASK-256

@@ -88,8 +88,9 @@ impl DatasetAdapter {
         )
     }
 
-    pub fn prepare(&self, project_root: &Path, _limit: Option<i64>) -> Result<Value, String> {
+    pub fn prepare(&self, project_root: &Path, limit: Option<i64>) -> Result<Value, String> {
         let cases = self.load(project_root, "real")?;
+        let cases = sample_adapter_cases(&cases, limit, 0);
         Ok(json!({
             "dataset": self.metadata().name,
             "source": self.metadata().source,

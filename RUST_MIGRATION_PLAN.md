@@ -27,6 +27,12 @@
 
 ## Current production status
 
+TASK-262 (2026-11-18) closes an evaluation prepare-limit mismatch: Python and
+Rust now validate the complete real source and then report the same deterministic
+seed-0 smoke subset for `prepare --limit`. The Python real-mode regression passes
+8 cases; the locked Rust workspace and formatting checks pass. External dataset
+access remains opt-in and no release gate changed.
+
 TASK-261 (2026-11-18) records current release evidence: isolated Python wheel
 and sdist build plus Twine checks, website lint/build, and RustSec audit. The
 207-dependency audit has no vulnerability advisories; only the known
