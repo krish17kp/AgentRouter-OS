@@ -68,6 +68,11 @@ credential, promotion, and deployment gates remain unresolved.
 artifact is ready for the release workflow but no GitHub Release, provenance
 attestation, PyPI publication, or deployment has been authorized.
 
+**NOT release ready.** TASK-190 adds the Rust registry's concrete adapter
+facade and fixture lifecycle coverage. Real HuggingFace loaders remain
+explicitly external-only, so evaluation parity and the frozen release gate
+remain unresolved.
+
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
 evidence. Diagnostics remains Partial for runtime-specific and complete bundle

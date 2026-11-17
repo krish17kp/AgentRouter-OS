@@ -47,7 +47,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/adapters/massive.py` | `agentrouter-evaluation::normalize_massive_rows` | Partial |
 | `agentrouter/evaluation/adapters/swebench.py` | `agentrouter-evaluation::normalize_swebench_rows` | Partial |
 | `agentrouter/evaluation/adapters/twinrouterbench.py` | `agentrouter-evaluation::twinrouterbench_full_run_status` plus shared adapter base | Parity |
-| `agentrouter/evaluation/base.py` | `agentrouter-evaluation::{load_adapter_fixture,adapter_availability,sample_adapter_cases,adapter_checksum,describe_adapter}` | Partial |
+| `agentrouter/evaluation/base.py` | `agentrouter-evaluation::{registry_api::DatasetAdapter,load_adapter_fixture,adapter_availability,sample_adapter_cases,adapter_checksum,describe_adapter}` | Partial |
 | `agentrouter/evaluation/cli.py` | `agentrouter-evaluation::bin::agentrouter-evaluate` | Partial |
 | `agentrouter/evaluation/comparison.py` | `agentrouter-evaluation::{compare_results,load_result,write_comparison}` | Parity |
 | `agentrouter/evaluation/context_bands.py` | `agentrouter-evaluation::context_bands` | Parity |
@@ -61,7 +61,7 @@ release authority until the full set is complete.
 | `agentrouter/evaluation/grading.py` | `agentrouter-evaluation::{grade_classification,runner::{run_default_grade,run_default_grade_with,run_all_dimensions}}` | Parity |
 | `agentrouter/evaluation/metrics.py` | `agentrouter-evaluation::classification_metrics` | Parity |
 | `agentrouter/evaluation/provenance.py` | `agentrouter-evaluation::{dataset_quality,environment_snapshot}` | Parity |
-| `agentrouter/evaluation/registry.py` | `agentrouter-evaluation::registry_api::{dataset_spec,collect,profile}` | Partial |
+| `agentrouter/evaluation/registry.py` | `agentrouter-evaluation::registry_api::{adapter,dataset_spec,collect,profile}` | Partial |
 | `agentrouter/evaluation/reports.py` | `agentrouter-evaluation::{render_markdown, write_reports}` | Parity |
 | `agentrouter/evaluation/runner.py` | `agentrouter-evaluation::runner::{run_classification,run_all_dimensions,run_registered,runtime_environment}` | Parity |
 | `agentrouter/evaluation/sampling.py` | `agentrouter-evaluation::deterministic_sample` | Parity |

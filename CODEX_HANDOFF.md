@@ -71,6 +71,13 @@ TASK-189 exercised the declared SBOM path: isolated CycloneDX generation passed
 with a valid 1.6 document containing 46 components. The artifact remains local;
 release attachment still requires the approved GitHub Release workflow.
 
+TASK-190 adds `registry_api::DatasetAdapter`, a concrete Rust facade for the
+shared adapter lifecycle (metadata, availability, load, prepare, sample,
+validate, checksum, describe). Focused facade tests and strict Rust checks pass.
+Real HuggingFace loading remains explicitly unavailable and no parity promotion
+claim is made. Continue with the next Partial module while preserving the
+untracked historical `loop/tasks/TASK-163-registry-parity-audit/` directory.
+
 ## Storage relocation — 2026-11-15
 
 Active release checkout: `/data/AgentRouter-production` on branch

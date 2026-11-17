@@ -1,5 +1,13 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-190 registry adapter facade parity
+
+Rust evaluation registry entries now expose a concrete adapter facade covering
+metadata, availability, fixture/real load, preparation, sampling, validation,
+checksum, and description. Two focused facade tests, strict Clippy, formatting,
+and diff checks pass. Real HuggingFace loading remains explicitly blocked, so
+the base and registry rows remain Partial.
+
 ## 2026-11-17 — TASK-189 release SBOM generation
 
 The declared SBOM extra successfully generated CycloneDX 1.6 JSON with 46

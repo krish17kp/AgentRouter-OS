@@ -1,12 +1,13 @@
 //! Rust-side dataset registry facade mirrored from
 //! `agentrouter.evaluation.registry`.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::{
-    adapter_checksum, adapter_descriptor, describe_adapter, load_adapter_dataset,
-    load_agentrouter_gold, profile_datasets, sample_adapter_cases, AdapterDescriptor,
-    EvaluationCase, EvaluationDatasetMetadata, ADAPTERS, DATASET_NAMES,
+    adapter_availability, adapter_checksum, adapter_descriptor, adapter_real_availability,
+    describe_adapter, load_adapter_dataset, load_agentrouter_gold, profile_datasets,
+    sample_adapter_cases, validate_adapter_cases, AdapterDescriptor, EvaluationCase,
+    EvaluationDatasetMetadata, ADAPTERS, DATASET_NAMES,
 };
 use serde_json::{json, Map, Value};
 
@@ -23,12 +24,133 @@ pub struct DatasetCollection {
     pub datasets: Value,
 }
 
+/// Concrete adapter facade matching the shared Python `DatasetAdapter`
+/// contract.  The descriptor-only registry remains available for cheap
+/// discovery; this facade supplies the metadata and lifecycle methods that a
+/// caller needs once it has selected an adapter.
+#[derive(Debug, Clone)]
+pub struct DatasetAdapter {
+    descriptor: &'static AdapterDescriptor,
+    spec: DatasetSpec,
+}
+
+impl DatasetAdapter {
+    pub fn name(&self) -> &'static str {
+        self.descriptor.name
+    }
+
+    pub fn descriptor(&self) -> &'static AdapterDescriptor {
+        self.descriptor
+    }
+
+    pub fn metadata(&self) -> &EvaluationDatasetMetadata {
+        &self.spec.metadata
+    }
+
+    fn path(&self, project_root: &Path) -> PathBuf {
+        if self.name() == "agentrouter-gold" {
+            project_root
+                .join("agentrouter")
+                .join(&self.spec.metadata.source)
+        } else {
+            project_root
+                .join("agentrouter/evaluation/fixtures")
+                .join(self.spec.fixture.expect("registered adapter has fixture"))
+        }
+    }
+
+    pub fn availability(&self, project_root: &Path) -> &'static str {
+        adapter_availability(&self.path(project_root))
+    }
+
+    pub fn real_availability(&self) -> (bool, String) {
+        adapter_real_availability(self.name(), self.spec.hf_repo)
+    }
+
+    pub fn load(&self, project_root: &Path, source: &str) -> Result<Vec<EvaluationCase>, String> {
+        if self.name() == "agentrouter-gold" {
+            return match source {
+                "fixture" => load_agentrouter_gold(&self.path(project_root)),
+                "real" => Err(format!(
+                    "{}: no real loader configured (source unverified)",
+                    self.name()
+                )),
+                _ => Err(format!("{}: unknown source '{source}'", self.name())),
+            };
+        }
+        load_adapter_dataset(
+            &self.path(project_root),
+            &self.spec.metadata,
+            self.spec.hf_repo,
+            source,
+        )
+    }
+
+    pub fn prepare(&self, project_root: &Path, _limit: Option<i64>) -> Result<Value, String> {
+        let cases = self.load(project_root, "real")?;
+        Ok(json!({
+            "dataset": self.metadata().name,
+            "source": self.metadata().source,
+            "hf_repo": self.spec.hf_repo,
+            "revision": Value::Null,
+            "license": self.metadata().license,
+            "downloaded_records": cases.len(),
+            "status": "REAL",
+        }))
+    }
+
+    pub fn sample(
+        &self,
+        project_root: &Path,
+        limit: Option<i64>,
+        seed: i64,
+        source: &str,
+    ) -> Result<Vec<EvaluationCase>, String> {
+        Ok(sample_adapter_cases(
+            &self.load(project_root, source)?,
+            limit,
+            seed,
+        ))
+    }
+
+    pub fn validate(&self, cases: &[EvaluationCase]) -> Result<(), String> {
+        validate_adapter_cases(&self.spec.metadata, cases)
+    }
+
+    pub fn checksum(&self, project_root: &Path, source: &str) -> Result<String, String> {
+        Ok(adapter_checksum(&self.load(project_root, source)?))
+    }
+
+    pub fn describe(&self, project_root: &Path) -> Value {
+        if self.name() == "agentrouter-gold" {
+            return crate::agentrouter_gold_describe(&self.path(project_root));
+        }
+        describe_adapter(
+            &self.path(project_root),
+            &self.spec.metadata,
+            self.spec.hf_repo,
+        )
+    }
+}
+
 pub fn dataset_names() -> &'static [&'static str] {
     &DATASET_NAMES
 }
 
 pub fn get_adapter(name: &str) -> Result<&'static AdapterDescriptor, String> {
     adapter_descriptor(name)
+}
+
+pub fn adapter(name: &str) -> Result<DatasetAdapter, String> {
+    let descriptor = get_adapter(name)?;
+    Ok(DatasetAdapter {
+        descriptor,
+        spec: dataset_spec(name)?,
+    })
+}
+
+pub fn try_adapter(name: &str) -> Option<DatasetAdapter> {
+    adapter(name).ok()
 }
 
 pub fn try_get_adapter(name: &str) -> Option<&'static AdapterDescriptor> {
@@ -261,4 +383,40 @@ pub fn collect(
         cases,
         datasets: Value::Object(per_dataset),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn adapter_facade_exposes_shared_contract_for_fixture() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let adapter = adapter("clinc150").expect("registered adapter");
+        assert_eq!(adapter.name(), "clinc150");
+        assert_eq!(adapter.metadata().name, "clinc150");
+        assert_eq!(adapter.availability(&root), "fixture_only");
+
+        let cases = adapter.load(&root, "fixture").expect("fixture should load");
+        assert!(!cases.is_empty());
+        adapter.validate(&cases).expect("fixture validates");
+        assert_eq!(adapter.checksum(&root, "fixture").unwrap().len(), 16);
+        assert_eq!(
+            adapter.sample(&root, Some(2), 7, "fixture").unwrap().len(),
+            2
+        );
+        assert_eq!(adapter.describe(&root)["name"], "clinc150");
+    }
+
+    #[test]
+    fn adapter_facade_keeps_real_mode_explicitly_external() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let adapter = adapter("banking77").expect("registered adapter");
+        let (available, reason) = adapter.real_availability();
+        assert!(!available);
+        assert!(reason.contains("datasets") || reason.contains("real loader"));
+        let error = adapter.load(&root, "real").unwrap_err();
+        assert!(error.contains("banking77:"));
+    }
 }

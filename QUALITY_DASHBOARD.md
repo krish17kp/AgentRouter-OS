@@ -59,6 +59,11 @@ regression: 77 isolated Python/Rust tests pass in 26.33 seconds.
 TASK-189 confirms the release SBOM path: CycloneDX 1.6 JSON generation passed
 with 46 components from the declared optional dependency set.
 
+TASK-190 adds the concrete Rust evaluation adapter facade and focused fixture
+lifecycle tests. Metadata, availability, load, prepare, sample, validate,
+checksum, and describe are covered; real HuggingFace loading remains an
+explicit external blocker and the two parity rows remain Partial.
+
 TASK-173 hardens diagnostic bundle writes with no-follow parent creation, a
 pinned capability directory, and exclusive creation. Serialized snapshots,
 symlink/hard-link, directory-swap, and nested-parent regressions pass; focused

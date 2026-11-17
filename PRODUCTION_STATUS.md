@@ -69,6 +69,12 @@ TASK-189 verifies the declared CycloneDX SBOM generation path: a valid 1.6
 document with 46 components is produced outside the repository for the release
 workflow. No release attachment or publication has occurred.
 
+TASK-190 extends the Rust evaluation registry with a concrete adapter facade:
+metadata, fixture/real availability, loading, preparation, sampling,
+validation, checksum, and description are now represented and tested. Real
+HuggingFace loading remains explicitly unavailable in Rust, so the base and
+registry rows stay Partial and no external-data claim is made.
+
 TASK-175 repairs Windows diagnostics contract parity. Rust now renders the
 contract directory through the native path formatter, matching Python's
 platform-specific `Path` representation while retaining forward slashes on
