@@ -218,9 +218,10 @@ release authority until the full set is complete.
 - Rust reliability summarizes load/soak results, drives bounded HTTP load, and
   owns a loopback API lifecycle through `serve_app`/`serve_router` and
   `RunningApp`. `agentrouter reliability soak` initializes a local home, runs
-  the Rust API, and writes the soak report. `ureq` does not retain read/write
-  direction for every generic I/O error, and Python module invocation details
-  remain Partial. See
+  the Rust API, and writes the soak report. Truncated declared-length response
+  bodies now classify as `RemoteProtocolError`, matching HTTPX. `ureq` does
+  not retain read/write direction for every generic I/O error, and Python
+  module invocation details remain Partial. See
   [`RUST_RELIABILITY.md`](RUST_RELIABILITY.md) for scope.
 - The reliability package initializer's five re-exported names now have an
   exact Python/Rust inventory check. Behavior of `run_load` and `serve_app` is

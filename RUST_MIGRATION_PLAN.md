@@ -35,6 +35,11 @@ focused contract/unified-CLI compatibility (89/89), release build, strict
 Clippy, formatting, and cargo audit. This does not alter the release gate or
 the Python shipping authority.
 
+TASK-224 (2026-11-18) aligns Rust reliability transport classification for
+truncated HTTP response bodies with HTTPX while retaining distinct timeout and
+generic read errors. This closes one reviewed differential without claiming
+complete reliability lifecycle parity.
+
 TASK-216 (2026-11-18) wires the existing safe Rust contract exporter into the
 unified CLI as `agentrouter contract export`. It supports an explicit source
 file, deterministic timestamp injection, JSON output, and fail-closed refusal

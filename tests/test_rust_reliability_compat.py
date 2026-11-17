@@ -344,7 +344,7 @@ def test_rust_transport_read_timeout_matches_httpx():
     assert rust["transport_errors"] == {"ReadTimeout": 1}
 
 
-def test_rust_truncated_response_body_is_a_read_error_like_httpx():
+def test_rust_truncated_response_body_matches_httpx_protocol_error():
     class TruncatedHandler(BaseHTTPRequestHandler):
         def do_GET(self):
             self.send_response(200)
@@ -388,7 +388,7 @@ def test_rust_truncated_response_body_is_a_read_error_like_httpx():
     assert python.statuses == {}
     assert python.transport_errors == {"RemoteProtocolError": 1}
     assert rust["statuses"] == {}
-    assert rust["transport_errors"] == {"ReadError": 1}
+    assert rust["transport_errors"] == {"RemoteProtocolError": 1}
 
 
 def test_rust_soak_runs_batches_and_reports_resource_samples(home):

@@ -350,10 +350,13 @@ fn record_ureq_response(outcome: &mut LoadOutcome, response: ureq::Response, ela
     match response.into_reader().read_to_end(&mut body) {
         Ok(_) => record_response(outcome, status, request_id.as_deref(), elapsed),
         Err(error) => {
-            let name = if error.kind() == io::ErrorKind::TimedOut {
-                "ReadTimeout"
-            } else {
-                "ReadError"
+            let name = match error.kind() {
+                io::ErrorKind::TimedOut => "ReadTimeout",
+                // HTTPX surfaces a response that ends before its declared
+                // Content-Length as RemoteProtocolError. ureq exposes the
+                // same wire defect as UnexpectedEof while draining the body.
+                io::ErrorKind::UnexpectedEof => "RemoteProtocolError",
+                _ => "ReadError",
             };
             *outcome.transport_errors.entry(name.into()).or_default() += 1;
         }

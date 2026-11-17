@@ -3362,3 +3362,11 @@ zero skips against the Rust loopback API.
   live/baseline contract checks and export acceptance workflow.
 - Added process-level assertions for `--live URL` and `export`; focused CLI
   compatibility and formatting pass.
+
+## TASK-224 — Reliability protocol-error parity (2026-11-18)
+
+- Rust now maps truncated HTTP response bodies to `RemoteProtocolError`,
+  matching HTTPX while preserving distinct timeout and generic read errors.
+- The focused truncated-body differential, reliability crate tests, strict
+  Clippy, and formatting checks pass; broader reliability lifecycle parity
+  remains Partial.
