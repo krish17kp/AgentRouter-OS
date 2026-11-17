@@ -344,6 +344,53 @@ def test_rust_transport_read_timeout_matches_httpx():
     assert rust["transport_errors"] == {"ReadTimeout": 1}
 
 
+def test_rust_truncated_response_body_is_a_read_error_like_httpx():
+    class TruncatedHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header("Content-Length", "100")
+            self.end_headers()
+            self.wfile.write(b"short")
+            self.wfile.flush()
+
+        def log_message(self, _format, *_args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), TruncatedHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    url = f"http://127.0.0.1:{server.server_port}"
+    try:
+        python = run_load(
+            url,
+            LoadSpec(
+                total=1,
+                workers=1,
+                timeout_seconds=2,
+                request=lambda _index: ("GET", "/", None),
+            ),
+        )
+        rust = _rust(
+            {
+                "operation": "run_load",
+                "url": url,
+                "total": 1,
+                "workers": 1,
+                "timeout_seconds": 2,
+                "request": {"method": "GET", "path": "/"},
+            }
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+    assert python.statuses == {}
+    assert python.transport_errors == {"RemoteProtocolError": 1}
+    assert rust["statuses"] == {}
+    assert rust["transport_errors"] == {"ReadError": 1}
+
+
 def test_rust_soak_runs_batches_and_reports_resource_samples(home):
     with serve_app(home) as app:
         result = _rust(

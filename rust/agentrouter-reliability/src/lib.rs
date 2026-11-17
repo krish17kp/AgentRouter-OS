@@ -319,18 +319,12 @@ pub fn run_load(url: &str, spec: &LoadSpec) -> LoadOutcome {
                     };
                     let mut outcome = outcome.lock().expect("load outcome mutex poisoned");
                     match response {
-                        Ok(response) => record_response(
-                            &mut outcome,
-                            response.status(),
-                            response.header("X-Request-ID"),
-                            request_started.elapsed(),
-                        ),
-                        Err(ureq::Error::Status(status, response)) => record_response(
-                            &mut outcome,
-                            status,
-                            response.header("X-Request-ID"),
-                            request_started.elapsed(),
-                        ),
+                        Ok(response) => {
+                            record_ureq_response(&mut outcome, response, request_started.elapsed())
+                        }
+                        Err(ureq::Error::Status(_, response)) => {
+                            record_ureq_response(&mut outcome, response, request_started.elapsed())
+                        }
                         Err(ureq::Error::Transport(error)) => {
                             let name = transport_error_name(&error);
                             *outcome.transport_errors.entry(name.into()).or_default() += 1;
@@ -347,6 +341,23 @@ pub fn run_load(url: &str, spec: &LoadSpec) -> LoadOutcome {
         .expect("load outcome mutex poisoned");
     outcome.elapsed_seconds = started.elapsed().as_secs_f64();
     outcome
+}
+
+fn record_ureq_response(outcome: &mut LoadOutcome, response: ureq::Response, elapsed: Duration) {
+    let status = response.status();
+    let request_id = response.header("X-Request-ID").map(str::to_owned);
+    let mut body = Vec::new();
+    match response.into_reader().read_to_end(&mut body) {
+        Ok(_) => record_response(outcome, status, request_id.as_deref(), elapsed),
+        Err(error) => {
+            let name = if error.kind() == io::ErrorKind::TimedOut {
+                "ReadTimeout"
+            } else {
+                "ReadError"
+            };
+            *outcome.transport_errors.entry(name.into()).or_default() += 1;
+        }
+    }
 }
 
 fn record_response(

@@ -33,6 +33,10 @@ but does not provide real external datasets or clear the frozen evaluation gate.
 aggregate timeout bounds. Native read/write error classification and the
 remaining external release gates remain unresolved.
 
+**NOT release ready.** TASK-182 aligns Rust reliability with Python for
+truncated response bodies by consuming the body before recording success. The
+broader reliability lifecycle and all external release gates remain unresolved.
+
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
 evidence. Diagnostics remains Partial for runtime-specific and complete bundle

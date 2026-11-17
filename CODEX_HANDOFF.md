@@ -37,6 +37,12 @@ connect, read, write, and aggregate request phases. Focused SDK tests pass
 for native read/write error classification. Do not push this commit while the
 enforcing release gate is failing without fresh owner authorization.
 
+TASK-182 is locally verified after TASK-181: Rust reliability now consumes
+response bodies before recording status, so truncated bodies become stable
+`ReadError`/`ReadTimeout` transport failures. The real loopback truncation
+probe, focused reliability tests, Clippy, and formatting pass. The reliability
+row remains Partial for broader process/runtime behavior.
+
 ## Storage relocation — 2026-11-15
 
 Active release checkout: `/data/AgentRouter-production` on branch

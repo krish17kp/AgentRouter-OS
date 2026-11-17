@@ -1,5 +1,14 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-182 reliability response consumption
+
+The Rust reliability harness now drains complete and non-successful HTTP
+responses before recording a status, matching Python/httpx behavior for
+truncated bodies. A real loopback differential with a declared 100-byte body
+that sends only 5 bytes reports no HTTP success and records Rust's stable
+`ReadError` transport category. Focused reliability tests, Clippy, formatting,
+and the workspace build pass.
+
 ## 2026-11-17 — TASK-181 SDK phase timeout bounds
 
 The default Rust SDK transport now applies the configured timeout to ureq's

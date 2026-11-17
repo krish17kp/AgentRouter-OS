@@ -25,6 +25,11 @@ configured bound independently to connect, read, write, and aggregate request
 phases. Focused SDK tests, workspace Clippy, and formatting pass; native
 read/write error classification remains Partial.
 
+TASK-182 makes reliability response handling consume bodies before counting
+statuses. A real truncated-body loopback probe now matches the Python behavior
+of reporting a transport failure instead of a false success; broader
+process/runtime parity remains Partial.
+
 TASK-173 hardens diagnostic bundle writes with no-follow parent creation, a
 pinned capability directory, and exclusive creation. Serialized snapshots,
 symlink/hard-link, directory-swap, and nested-parent regressions pass; focused
