@@ -1,5 +1,11 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-189 release SBOM generation
+
+The declared SBOM extra successfully generated CycloneDX 1.6 JSON with 46
+components in an isolated environment. The artifact was kept outside the
+repository; release attachment remains gated on an approved GitHub Release.
+
 ## 2026-11-17 — TASK-188 focused compatibility regression
 
 The isolated Python/Rust compatibility pass covering SDK, reliability, plugin,

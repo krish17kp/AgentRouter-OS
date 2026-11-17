@@ -64,6 +64,10 @@ deployment approval remain unresolved.
 with 77 isolated compatibility tests passing. The external evaluation,
 credential, promotion, and deployment gates remain unresolved.
 
+**NOT release ready.** TASK-189 verifies local CycloneDX SBOM generation. The
+artifact is ready for the release workflow but no GitHub Release, provenance
+attestation, PyPI publication, or deployment has been authorized.
+
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
 evidence. Diagnostics remains Partial for runtime-specific and complete bundle

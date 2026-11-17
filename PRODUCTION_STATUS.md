@@ -65,6 +65,10 @@ blocked on the owner-controlled trusted-publisher setup.
 TASK-188 re-runs the SDK, reliability, plugin, and diagnostics Python/Rust
 compatibility suites in isolation: 77 tests pass in 26.33 seconds.
 
+TASK-189 verifies the declared CycloneDX SBOM generation path: a valid 1.6
+document with 46 components is produced outside the repository for the release
+workflow. No release attachment or publication has occurred.
+
 TASK-175 repairs Windows diagnostics contract parity. Rust now renders the
 contract directory through the native path formatter, matching Python's
 platform-specific `Path` representation while retaining forward slashes on

@@ -56,6 +56,9 @@ publication remains gated on the PyPI trusted publisher setup.
 TASK-188 confirms the focused SDK/reliability/plugin/diagnostics compatibility
 regression: 77 isolated Python/Rust tests pass in 26.33 seconds.
 
+TASK-189 confirms the release SBOM path: CycloneDX 1.6 JSON generation passed
+with 46 components from the declared optional dependency set.
+
 TASK-173 hardens diagnostic bundle writes with no-follow parent creation, a
 pinned capability directory, and exclusive creation. Serialized snapshots,
 symlink/hard-link, directory-swap, and nested-parent regressions pass; focused

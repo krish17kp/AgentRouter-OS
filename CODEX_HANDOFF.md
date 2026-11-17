@@ -67,6 +67,10 @@ wheel, an isolated install reports `0.5.0rc1`, and installed-wheel `init` plus
 TASK-188 re-ran the affected Python/Rust compatibility surfaces in isolation:
 SDK, reliability, plugins, and diagnostics total 77 passed in 26.33 seconds.
 
+TASK-189 exercised the declared SBOM path: isolated CycloneDX generation passed
+with a valid 1.6 document containing 46 components. The artifact remains local;
+release attachment still requires the approved GitHub Release workflow.
+
 ## Storage relocation — 2026-11-15
 
 Active release checkout: `/data/AgentRouter-production` on branch
