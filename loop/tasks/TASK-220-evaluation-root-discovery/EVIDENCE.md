@@ -15,6 +15,8 @@ Date: 2026-11-18
 cargo fmt --all -- --check                                  # passed
 cargo test --locked -p agentrouter-evaluation --bin agentrouter-evaluate # passed
 cargo clippy --locked -p agentrouter-evaluation --all-targets -- -D warnings # passed
+cargo build --locked --workspace --release                      # passed
+cargo audit --no-yanked -f Cargo.lock                           # no advisories; chrono warning only
 tests/test_rust_evaluation_cli_compat.py                    # 21 passed
 git diff --check                                            # passed
 ```
