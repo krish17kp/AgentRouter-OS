@@ -94,10 +94,12 @@ release authority until the full set is complete.
 ## Release interpretation
 
 - TASK-218 adds bounded Rust `contract check --live URL` verification, explicit
-  `--baseline PATH` selection, and manifest-recorded acceptance handling. It
-  verifies a running service against the committed baseline, but the Python
-  framework remains authoritative for schema generation and hosted release
-  approval, so this module remains Partial.
+  `--baseline PATH` selection, and manifest-recorded acceptance handling. TASK-
+  219 aligns Rust export with the explicit `--accept-breaking --reason TEXT`
+  workflow and preserves acceptance history. The Rust surface verifies a
+  running service against the committed baseline, but the Python framework
+  remains authoritative for schema generation and hosted release approval, so
+  this module remains Partial.
 
 - TASK-176 adds a direct entrypoint differential: `python -m agentrouter --help`
   and the Rust unified binary both expose the public route, registry, providers,

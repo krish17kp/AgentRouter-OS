@@ -68,6 +68,11 @@ references, reports the Rust compatibility surface, and accepts
 acceptances remain visible as `accepted` without blocking. The local HTTP smoke
 matched the committed baseline; Python live generation and hosted approval
 remain authoritative.
+TASK-219 aligns Rust `contract export` with the owner-acceptance workflow:
+routine exports still refuse breaking changes, while
+`--accept-breaking --reason TEXT` records the exact current findings and
+preserves prior manifest history through the safe writer. Full workspace tests,
+strict Clippy, release build, audit, and a temporary CLI acceptance smoke pass.
 TASK-180 aligns context-band human-readable output with Python (bootstrap CI,
 Python-style containers, unquoted checksum, signed delta); JSON remains stable.
 
