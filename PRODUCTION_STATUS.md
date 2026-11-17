@@ -147,6 +147,10 @@ TASK-234 rebuilt the current sdist and wheel after that entrypoint change. Both
 pass `twine check` without metadata warnings, and an isolated wheel smoke
 verified version, package-level help, initialization, and local routing.
 
+TASK-235 re-ran the authoritative release gate after the package changes: 165
+cases, score 98.23, exit 1, and `release_ready: false`. The sole failure
+remains the unchanged context-band gate at `0.6667 < 0.90`.
+
 - [ ] PR review and hosted checks: PR #16 is the sole open PR against `main`, with no GitHub reviews or review requests. Pushed RC head `71408b2` is green across Rust Linux/Windows/macOS, Python/Rust compatibility on all three platforms, Python 3.10–3.13, Windows, macOS, Security, Website, and Critical Mutation. The enforcing release gate remains honestly held by frozen context-band accuracy `0.6667 < 0.90`; live smoke skips without credentials.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md): 60 rows meet the full-module differential bar and 17 remain Partial. TASK-159–162 close platform, evaluator-facade, grading, and runner parity; TASK-164 closes server schemas; TASK-166 closes annotation schemas; TASK-167 closes server service; TASK-168 closes observability; TASK-169 closes the HTTP application lifecycle; TASK-170 closes packaged annotation CLI resources; TASK-171 closes provider refresh; TASK-176 closes the Python module entrypoint; broader migration differences remain.

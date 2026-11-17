@@ -126,6 +126,10 @@ TASK-234 rebuilt the current sdist and wheel after the entrypoint change;
 `twine check` passes for both without metadata warnings, and an isolated wheel
 smoke covers version, package-level help, initialization, and local routing.
 
+TASK-235 re-ran the authoritative release gate after these package changes:
+165 cases, score 98.23, exit 1, with only context-band accuracy failing at
+`0.6667 < 0.90`; no holdout or threshold was changed.
+
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
 advisories across 207 locked dependencies; one unmaintained `chrono` warning

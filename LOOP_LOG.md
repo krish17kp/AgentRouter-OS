@@ -3449,3 +3449,10 @@ zero skips against the Rust loopback API.
 - An isolated wheel install reports the candidate version, exposes package-level
   reliability help, initializes a new home, and routes locally without a
   provider request.
+
+## TASK-235 — Release-gate recheck (2026-11-18)
+
+- Re-ran `eval run --all --no-artifacts --require-release-ready` after the
+  package changes: 165 cases, 98.23/100, exit 1, `release_ready: false`.
+- The sole failure remains context-band accuracy at `0.6667 < 0.90`; no
+  holdout, threshold, or evaluation input changed.
