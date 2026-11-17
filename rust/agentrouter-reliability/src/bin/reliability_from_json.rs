@@ -5,6 +5,19 @@ use std::sync::Arc;
 use agentrouter_reliability::{LoadOutcome, LoadSpec, Request, SoakResult};
 use serde_json::{json, Value};
 
+fn count_or_zero(request: &Value, key: &str) -> Result<usize, Box<dyn std::error::Error>> {
+    let value = request
+        .get(key)
+        .ok_or_else(|| format!("{key} must be an integer"))?;
+    if let Some(value) = value.as_i64() {
+        return Ok(value.max(0) as usize);
+    }
+    if let Some(value) = value.as_u64() {
+        return usize::try_from(value).map_err(|_| format!("{key} is too large").into());
+    }
+    Err(format!("{key} must be an integer").into())
+}
+
 fn run(request: &Value) -> Result<Value, Box<dyn std::error::Error>> {
     let operation = request
         .get("operation")
@@ -28,16 +41,8 @@ fn run(request: &Value) -> Result<Value, Box<dyn std::error::Error>> {
                 .get("url")
                 .and_then(Value::as_str)
                 .ok_or("url must be a string")?;
-            let total = request
-                .get("total")
-                .and_then(Value::as_u64)
-                .and_then(|value| usize::try_from(value).ok())
-                .ok_or("total must be a non-negative integer")?;
-            let workers = request
-                .get("workers")
-                .and_then(Value::as_u64)
-                .and_then(|value| usize::try_from(value).ok())
-                .ok_or("workers must be a non-negative integer")?;
+            let total = count_or_zero(request, "total")?;
+            let workers = count_or_zero(request, "workers")?;
             let timeout_seconds = request
                 .get("timeout_seconds")
                 .and_then(Value::as_f64)
@@ -76,16 +81,8 @@ fn run(request: &Value) -> Result<Value, Box<dyn std::error::Error>> {
                 .get("home")
                 .and_then(Value::as_str)
                 .ok_or("home must be a path")?;
-            let total = request
-                .get("total")
-                .and_then(Value::as_u64)
-                .and_then(|value| usize::try_from(value).ok())
-                .ok_or("total must be a non-negative integer")?;
-            let workers = request
-                .get("workers")
-                .and_then(Value::as_u64)
-                .and_then(|value| usize::try_from(value).ok())
-                .ok_or("workers must be a non-negative integer")?;
+            let total = count_or_zero(request, "total")?;
+            let workers = count_or_zero(request, "workers")?;
             let timeout_seconds = request
                 .get("timeout_seconds")
                 .and_then(Value::as_f64)

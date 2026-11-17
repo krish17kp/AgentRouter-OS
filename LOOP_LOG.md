@@ -1,5 +1,13 @@
 # LOOP_LOG
 
+## 2026-11-18 — TASK-272 negative load-count parity
+
+Rust reliability JSON load probes now clamp negative `total` and `workers`
+counts to the same empty-load behavior as Python. The focused compatibility
+selection passes 15 tests; the reliability crate passes strict Clippy,
+formatting, and its three unit tests. Release, hosted, human-evaluation, and
+deployment gates remain unchanged.
+
 ## 2026-11-18 — TASK-271 negative soak-count parity
 
 Rust `reliability soak` now preserves Python's negative `--workers` and

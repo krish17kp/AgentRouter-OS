@@ -135,6 +135,35 @@ def test_rust_reliability_harness_starts_and_stops_its_local_api(tmp_path, monke
     assert outcome["distinct_request_ids"] == 12
 
 
+@pytest.mark.parametrize(
+    ("total", "workers"),
+    [(-1, 2), (2, -1)],
+)
+def test_rust_load_runner_preserves_python_negative_counts(total, workers):
+    python = run_load(
+        "http://127.0.0.1:1",
+        LoadSpec(
+            total=total,
+            workers=workers,
+            timeout_seconds=0.1,
+            request=lambda _index: ("GET", "/health", None),
+        ),
+    )
+    rust = _rust(
+        {
+            "operation": "run_load",
+            "url": "http://127.0.0.1:1",
+            "total": total,
+            "workers": workers,
+            "timeout_seconds": 0.1,
+            "request": {"method": "GET", "path": "/health"},
+        }
+    )
+    assert python.as_dict()["requests"] == rust["requests"] == 0
+    assert python.as_dict()["statuses"] == rust["statuses"] == {}
+    assert python.as_dict()["transport_errors"] == rust["transport_errors"] == {}
+
+
 def test_rust_cli_runs_a_local_soak_and_writes_the_report(tmp_path, monkeypatch):
     monkeypatch.setenv("AGENTROUTER_API_KEY", "test-key-that-must-not-be-used")
     home = tmp_path / "soak-home"
