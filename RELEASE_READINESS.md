@@ -39,6 +39,10 @@ verifies a symlinked target is not followed. This is security hardening only;
 the remaining SQLite sidecar/handle limitation and external release gates stay
 unresolved.
 
+TASK-215 extends the no-follow boundary to diagnostic-bundle database reads.
+This closes another local redirect surface but does not clear the remaining
+SQLite sidecar limitation or external release gates.
+
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
 advisories across 207 locked dependencies; one unmaintained `chrono` warning

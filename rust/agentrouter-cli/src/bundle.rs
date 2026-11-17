@@ -125,7 +125,9 @@ fn decision_shape(home: &Path) -> Result<Value, BundleError> {
     }
     let conn = Connection::open_with_flags(
         &db,
-        OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        OpenFlags::SQLITE_OPEN_READ_ONLY
+            | OpenFlags::SQLITE_OPEN_NO_MUTEX
+            | OpenFlags::SQLITE_OPEN_NOFOLLOW,
     )
     .map_err(|_| BundleError("decision log is unreadable".into()))?;
     let counts = (|| -> rusqlite::Result<(i64, i64, String, String)> {
@@ -344,5 +346,20 @@ mod tests {
             std::fs::canonicalize(&destination).unwrap()
         );
         assert!(bundle.directory.join("README.txt").is_file());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn decision_shape_rejects_a_symlinked_database_leaf() {
+        use std::os::unix::fs::symlink;
+
+        let home = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let victim = outside.path().join("victim.db");
+        std::fs::write(&victim, b"not agentrouter").unwrap();
+        symlink(&victim, home.path().join("agentrouter.db")).unwrap();
+
+        assert!(decision_shape(home.path()).is_err());
+        assert_eq!(std::fs::read(&victim).unwrap(), b"not agentrouter");
     }
 }

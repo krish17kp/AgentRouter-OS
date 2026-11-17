@@ -432,6 +432,12 @@ reports a symlinked `agentrouter.db` as unreadable without touching the outside
 target. This aligns the diagnostic safety boundary with the storage open; full
 handle-native SQLite initialization and sidecar race closure remain open.
 
+R4 follow-up (2026-11-18, bundle database hardening): the Rust diagnostic
+bundle's data-shape reader now uses SQLite's `SQLITE_OPEN_NOFOLLOW` flag, so a
+symlinked `agentrouter.db` fails closed instead of exposing an outside file.
+Normal allowlisted bundle creation and explicit snapshot behavior remain
+unchanged; complete handle-native SQLite initialization is still open.
+
 R4 follow-up (2026-11-11): added `agentrouter-cli::dashboard` with the
 read-only loopback HTTP surface and HTML renderer corresponding to
 `agentrouter/dashboard.py`. Rust tests cover empty and populated views,

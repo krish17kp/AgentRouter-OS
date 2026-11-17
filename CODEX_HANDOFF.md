@@ -50,6 +50,9 @@ transport and broader lifecycle parity remain partial.
 TASK-214 hardens the Rust doctor read-only database check with SQLite
 no-follow semantics; a symlinked database now fails closed without touching the
 outside target. Focused diagnostics tests and formatting pass.
+TASK-215 extends SQLite no-follow protection to Rust diagnostic-bundle
+data-shape reads; the symlink regression passes and normal bundle creation is
+unchanged.
 TASK-180 aligns context-band human-readable output with Python (bootstrap CI,
 Python-style containers, unquoted checksum, signed delta); JSON remains stable.
 

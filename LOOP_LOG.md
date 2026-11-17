@@ -15,6 +15,13 @@ fails closed on a symlinked `agentrouter.db`. The outside target remains
 unchanged; focused diagnostics tests and formatting pass. Complete SQLite
 handle/sidecar parity remains an R4 limitation.
 
+## 2026-11-18 — TASK-215 bundle database no-follow hardening
+
+Rust diagnostic-bundle data-shape collection now rejects a symlinked database
+leaf with SQLite no-follow semantics. The outside target remains unchanged and
+normal bundle creation stays covered; complete SQLite handle/sidecar parity is
+still an R4 limitation.
+
 ## 2026-11-17 — TASK-212 SQLite leaf no-follow hardening
 
 Rust storage now opens ordinary `agentrouter.db` paths with SQLite's
