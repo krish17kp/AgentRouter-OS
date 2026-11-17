@@ -2,9 +2,11 @@
 
 ## Current checkpoint — 2026-11-17
 
-TASK-173 hardens diagnostic bundle artifact and snapshot writes with a pinned
-capability directory and exclusive creation. The symlink escape regression and
-focused bundle/diagnostics checks pass; full bundle parity remains Partial.
+TASK-173 hardens diagnostic bundle writes with no-follow parent creation, a
+pinned capability directory, and exclusive creation. Serialized snapshots,
+symlink/hard-link, directory-swap, and nested-parent regressions pass; focused
+bundle/diagnostics checks and strict Clippy pass. Full bundle parity remains
+Partial.
 
 TASK-172 aligns Rust doctor stable summaries with Python and adds a direct
 cross-language check. Diagnostics compatibility passes 41 focused checks and
@@ -16,7 +18,7 @@ header-only transport, Python-compatible OpenRouter/OpenAI mapping, provenance,
 deprecation warnings, dry-run, and atomic generated-file replacement. A
 feature-gated fixture transport supports deterministic process differentials
 without exposing a production URL override. Full Rust workspace/strict Clippy
-and Python regression (2,732 passed, 7 skipped) pass. Inventory: 59/77 Parity,
+and Python regression (2,733 passed, 7 skipped) pass. Inventory: 59/77 Parity,
 18 Partial.
 
 TASK-170 closes packaged annotation CLI parity after independent review. The

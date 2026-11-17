@@ -2,10 +2,10 @@
 
 ## Current checkpoint — 2026-11-17
 
-**NOT release ready.** TASK-173 hardens bundle writes against final-component
-symlink/reparse redirection and preserves opt-in database snapshot behavior.
-Bundle parity remains Partial for complete metadata and Windows edge evidence;
-external release gates remain unresolved.
+**NOT release ready.** TASK-173 hardens bundle writes against parent and
+final-component symlink/reparse redirection and preserves opt-in database
+snapshot behavior. Bundle parity remains Partial for complete metadata and
+Windows edge evidence; external release gates remain unresolved.
 
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
@@ -17,7 +17,7 @@ independent review. Fixed HTTPS retrieval, bounded transport, key-only headers,
 OpenRouter/OpenAI mapping, warnings/deprecations, dry-run, provenance, atomic
 replacement, manual-registry preservation, and no-follow registry writes are
 covered by Rust and process-level Python/Rust evidence. Full Rust workspace/
-Clippy and Python 2,732/7 pass. Inventory: 59/77 Parity, 18 Partial. Frozen
+Clippy and Python 2,733/7 pass. Inventory: 59/77 Parity, 18 Partial. Frozen
 evaluation, human/live validation, hosted promotion, main merge, tag, and
 deployment gates remain unresolved.
 

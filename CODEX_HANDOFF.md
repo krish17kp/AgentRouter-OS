@@ -40,8 +40,8 @@ single opened destination handle. Symlink, hard-link, and directory-swap escape
 regressions pass.
 Focused bundle/diagnostics checks, Rust bundle tests, and strict Clippy pass.
 Bundle remains Partial for complete environment metadata and Windows-specific
-differential coverage. Commit/push this slice, inspect hosted checks, then
-continue the next Partial module.
+differential coverage. Commit `75ac6c7`, inspect hosted checks, then continue
+the next Partial module.
 
 TASK-172 tightens diagnostics stable-contract parity. Rust now reports the same
 package version, server-extra wording, and contract path summary as Python;
