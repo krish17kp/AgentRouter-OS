@@ -3176,3 +3176,13 @@ service/server boundary. Corrected an audit false lead by reproducing Python's
 unconditional registry load in dry-run. Focused 102, full Rust workspace/Clippy,
 and Ruff pass; full Python regression passes 2,728/7. Inventory: 55/77 Parity,
 22 Partial.
+
+## TASK-203 shared execution-planner preflight — 2026-11-17
+
+The fail-closed Rust planner now accepts explicit API/CLI adapter readiness and
+the guarded unified CLI execution path invokes it after persisted safety and
+route-integrity checks. Dry-run remains read-only and can preview unavailable
+routes; manual routes remain operator handoffs. Authorized API plans still
+report `execution_enabled: false`. Planner tests (5), locked workspace check,
+and formatting pass. Actual provider/process adapters remain separately gated;
+no execution or production deployment is claimed.

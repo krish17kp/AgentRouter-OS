@@ -7,7 +7,7 @@
 use std::{path::Path, process::Command};
 
 use agentrouter_core::Classification;
-use agentrouter_registry::{load_all_models, load_providers, ModelEntry};
+use agentrouter_registry::{load_all_models, load_providers, ExecutionMode, ModelEntry};
 use serde_json::Value;
 
 fn text<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
@@ -193,6 +193,18 @@ pub fn run(home: &Path, args: &[String]) -> Result<i32, String> {
             || text(recorded_route, "vendor") != Some(model.vendor()))
     {
         return fail("Execution target changed since this decision was recorded; route again.");
+    }
+    if target.execution_mode != ExecutionMode::Manual {
+        let planner = agentrouter_execution::ExecutionPolicy {
+            remote_enabled: target.execution_mode == ExecutionMode::Api,
+            approval_granted: true,
+            include_unavailable: dry_run,
+            cli_adapter_enabled: dry_run || target.command_template.is_some(),
+            api_adapter_enabled: dry_run || provider.is_some_and(|item| item.supports_execution),
+        };
+        if let Err(error) = agentrouter_execution::plan(model, &classification, planner) {
+            return fail(format!("Execution blocked by planner: {error}"));
+        }
     }
     print_host_route(model, target, &status);
     if dry_run {

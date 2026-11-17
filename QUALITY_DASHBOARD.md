@@ -328,3 +328,10 @@ Ruff, and independent review pass. Overall release readiness remains held.
 Process-level installed-CLI discovery failures and bounded manifest consistency
 now complement exact injected scoring differentials. Independent re-audit,
 focused 12, and full Python 2,630/7 pass. Inventory: 49 Parity / 28 Partial.
+
+## TASK-203 execution preflight — 2026-11-17
+
+Execution planner: 5/5 tests pass. Locked workspace check and formatting pass.
+The planner is read-only and fail-closed; guarded CLI execution now uses it as
+preflight with explicit adapter readiness. No live provider request or local
+command was run.

@@ -24,6 +24,8 @@ pub struct ExecutionPolicy {
     pub remote_enabled: bool,
     pub approval_granted: bool,
     pub include_unavailable: bool,
+    pub cli_adapter_enabled: bool,
+    pub api_adapter_enabled: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -82,7 +84,20 @@ pub fn plan(
         if !policy.remote_enabled {
             return Err(PlanError::RemoteDisabled);
         }
-        return Err(PlanError::AdapterUnavailable(target.host.clone()));
+        if !policy.api_adapter_enabled {
+            return Err(PlanError::AdapterUnavailable(target.host.clone()));
+        }
+        return Ok(ExecutionPlan {
+            status: ExecutionStatus::Planned,
+            execution_enabled: false,
+            model: model.key(),
+            host: Some(target.host.clone()),
+            mode: Some(target.execution_mode),
+            command_preview: None,
+            reason: "plan created; caller-provided API adapter remains separately gated"
+                .to_string(),
+            requires_approval,
+        });
     }
     if target.execution_mode == ExecutionMode::Manual {
         return Ok(ExecutionPlan {
@@ -97,6 +112,9 @@ pub fn plan(
         });
     }
     if !target.supports_noninteractive {
+        return Err(PlanError::AdapterUnavailable(target.host.clone()));
+    }
+    if !policy.cli_adapter_enabled {
         return Err(PlanError::AdapterUnavailable(target.host.clone()));
     }
     Ok(ExecutionPlan {
@@ -149,6 +167,8 @@ mod tests {
         assert!(!policy.remote_enabled);
         assert!(!policy.approval_granted);
         assert!(!policy.include_unavailable);
+        assert!(!policy.cli_adapter_enabled);
+        assert!(!policy.api_adapter_enabled);
     }
 
     #[test]
@@ -193,5 +213,22 @@ mod tests {
         assert_eq!(planned.status, ExecutionStatus::Blocked);
         assert!(!planned.execution_enabled);
         assert!(planned.reason.contains("operator handoff"));
+    }
+
+    #[test]
+    fn authorized_api_adapter_is_still_only_planned() {
+        let planned = plan(
+            &model("api"),
+            &classification(Level::Low, ApprovalLevel::Auto),
+            ExecutionPolicy {
+                remote_enabled: true,
+                api_adapter_enabled: true,
+                include_unavailable: true,
+                ..ExecutionPolicy::default()
+            },
+        )
+        .expect("adapter readiness should make an API plan representable");
+        assert_eq!(planned.status, ExecutionStatus::Planned);
+        assert!(!planned.execution_enabled);
     }
 }

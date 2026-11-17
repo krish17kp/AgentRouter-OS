@@ -1266,6 +1266,11 @@ fn plan_decision(home: &Path, args: &[String]) -> Result<i32, String> {
         .ok_or_else(|| {
             format!("Execution plan blocked: model '{model_key}' is not in the registry.")
         })?;
+    // `plan` is a read-only capability preview. Mark the planner's adapter
+    // readiness as representable here without enabling execution or probing a
+    // provider; the guarded `execute` path supplies real adapter readiness.
+    policy.cli_adapter_enabled = true;
+    policy.api_adapter_enabled = policy.remote_enabled;
     match agentrouter_execution::plan(model, &classification, policy) {
         Ok(plan) => {
             if json_output {

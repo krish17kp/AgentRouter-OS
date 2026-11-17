@@ -572,3 +572,14 @@ service differential covers list/classify/route/persistence/feedback/dry-run and
 malformed/error paths. Focused 102, full Rust workspace/Clippy, and Ruff pass;
 full Python regression passes 2,728/7. Inventory: 55/77 Parity, 22 Partial.
 
+## TASK-203 checkpoint — 2026-11-17
+
+The fail-closed Rust execution planner is now the shared preflight for the
+guarded CLI execution path after persisted safety and recorded-route checks.
+API/CLI adapter readiness is explicit; dry-run remains read-only and manual
+routes remain operator handoffs. `cargo test --locked -p agentrouter-execution`
+(5), workspace check, and formatting pass. Continue with separate adapter
+hardening and orchestration runtime work; do not claim execution or production
+readiness while the hosted context-band gate, human labels, live validation,
+and deployment approvals remain open.
+

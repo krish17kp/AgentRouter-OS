@@ -338,3 +338,12 @@ No release threshold or frozen data changed; readiness remains held.
 The platform evaluator meets the full-module differential bar after rejected
 evidence was repaired with real process failures and manifest consistency.
 Inventory is 49/77 Parity; production readiness remains held.
+
+## TASK-203 execution preflight — 2026-11-17
+
+The guarded Rust CLI execution lifecycle now calls the fail-closed execution
+planner after persisted safety and route-integrity checks. Planner readiness
+flags distinguish API and CLI adapters; dry-run stays preview-only, and the
+planner cannot execute. This improves release safety but does not satisfy the
+remaining live credential, human-evaluation, hosted-gate, or deployment
+requirements.
