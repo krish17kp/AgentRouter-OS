@@ -58,6 +58,9 @@ TASK-248 adds named `--tool` forwarding and safe `--out PATH` prompt output;
 the focused decision/unified selection is now 42 tests. The fresh full sweep
 passes 886 tests with 1 expected skip; the existing Starlette/httpx warning
 remains non-failing.
+TASK-249 adds task-based `prompt generate TASK` with Python-compatible output;
+the focused decision/unified selection is now 43 tests. A fresh full sweep is
+pending this slice.
 TASK-223 synchronizes the unified Rust CLI help with the implemented contract
 check/diff/export surface and adds a process-level regression. The fresh full
 Python suite passes 2,743 tests with 7 expected skips; the full locked Rust

@@ -535,6 +535,78 @@ fn load_catalog(home: &Path) -> Result<Vec<ModelEntry>, String> {
     Ok(models)
 }
 
+fn write_prompt_output(path: &Path, prompt: &str) -> Result<(), String> {
+    let parent_path = path.parent().unwrap_or_else(|| Path::new("."));
+    let leaf = path
+        .file_name()
+        .ok_or_else(|| "prompt output path must name a file".to_owned())?;
+    let parent = cap_std::fs::Dir::open_ambient_dir(parent_path, cap_std::ambient_authority())
+        .map_err(|error| format!("could not open prompt output directory: {error}"))?;
+    let parent_file = parent
+        .try_clone()
+        .map_err(|error| format!("could not inspect prompt output directory: {error}"))?
+        .into_std_file();
+    let mut options = fs_at::OpenOptions::default();
+    options
+        .read(true)
+        .write(fs_at::OpenOptionsWriteMode::Write)
+        .create(true)
+        .truncate(true)
+        .follow(false);
+    let mut file = options
+        .open_at(&parent_file, Path::new(leaf))
+        .map_err(|error| format!("could not open prompt output safely: {error}"))?;
+    let metadata = file
+        .metadata()
+        .map_err(|error| format!("could not inspect prompt output: {error}"))?;
+    if !metadata.is_file() || metadata.file_type().is_symlink() {
+        return Err("prompt output must be a regular, unlinked file".to_owned());
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        if metadata.nlink() > 1 {
+            return Err(
+                "prompt output has multiple hard links; refusing to overwrite it".to_owned(),
+            );
+        }
+    }
+    file.write_all(prompt.as_bytes())
+        .map_err(|error| format!("could not write prompt output: {error}"))
+}
+
+fn prompt_from_task(
+    home: &Path,
+    task: &str,
+    tool: Option<&str>,
+    output: Option<&Path>,
+) -> Result<i32, String> {
+    let mut models = load_catalog(home)?;
+    let (weights, _learning, max_tier) = agentrouter_cli::load_route_config(home)
+        .map_err(|error| format!("Config error: {error}"))?;
+    models = agentrouter_cli::apply_policy(models, max_tier.as_deref())?;
+    let classification =
+        agentrouter_classifier::classify(task, &agentrouter_classifier::ClassifyOptions::default());
+    let route = agentrouter_cli::route_payload(task, &models, &classification, weights, None, None);
+    let target = tool
+        .map(str::to_owned)
+        .or_else(|| route["recommendation"]["model"].as_str().map(str::to_owned))
+        .or_else(|| route["manual_suggestion"].as_str().map(str::to_owned))
+        .unwrap_or_else(|| "manual/human-operator".to_owned());
+    let gates = agentrouter_cli::gates_for(&classification);
+    let checklist = gates["checklist"]
+        .as_array()
+        .ok_or_else(|| "generated prompt has no safety checklist".to_owned())?;
+    let prompt = agentrouter_cli::generate_prompt(task, &target, &classification, checklist);
+    if let Some(path) = output {
+        write_prompt_output(path, &prompt)?;
+        println!("Wrote execution prompt for {target} -> {}", path.display());
+    } else {
+        println!("{prompt}");
+    }
+    Ok(0)
+}
+
 fn option_text(value: Option<&str>) -> &str {
     value.unwrap_or("None")
 }
@@ -1830,25 +1902,39 @@ fn run() -> Result<i32, String> {
             let mut id = None;
             let mut tool = None;
             let mut output = None;
+            let mut task = None;
             let mut rest = tail.into_iter().skip(1);
             while let Some(arg) = rest.next() {
                 match arg.as_str() {
                     "--from" => id = rest.next(),
                     "--tool" => tool = rest.next(),
                     "--out" => output = rest.next(),
-                    option => return Err(format!("unknown prompt option '{option}'")),
+                    option if option.starts_with('-') => {
+                        return Err(format!("unknown prompt option '{option}'"))
+                    }
+                    value if task.is_none() => task = Some(value.to_owned()),
+                    _ => return Err("prompt task must be a single argument".to_owned()),
                 }
             }
-            let id =
-                id.ok_or_else(|| "prompt generate requires --from <decision-id>".to_owned())?;
-            let mut forwarded = vec!["prompt".to_owned(), id];
-            if let Some(tool) = tool {
-                forwarded.extend(["--tool".to_owned(), tool]);
+            if let Some(id) = id {
+                let mut forwarded = vec!["prompt".to_owned(), id];
+                if let Some(tool) = tool {
+                    forwarded.extend(["--tool".to_owned(), tool]);
+                }
+                if let Some(output) = output {
+                    forwarded.extend(["--out".to_owned(), output]);
+                }
+                run_sibling("decision_cli", with_home(&home, forwarded))
+            } else if let Some(task) = task {
+                prompt_from_task(
+                    &home,
+                    &task,
+                    tool.as_deref(),
+                    output.as_deref().map(Path::new),
+                )
+            } else {
+                Err("Provide a task or --from <decision_id>.".to_owned())
             }
-            if let Some(output) = output {
-                forwarded.extend(["--out".to_owned(), output]);
-            }
-            run_sibling("decision_cli", with_home(&home, forwarded))
         }
         "registry" => {
             if tail

@@ -260,6 +260,29 @@ def test_unified_prompt_can_write_an_execution_file(tmp_path, unified_binary):
     assert generated.stdout.endswith(f" -> {output}\n")
 
 
+def test_unified_prompt_accepts_task_text_like_python(tmp_path, unified_binary):
+    home = tmp_path / "agentrouter-home"
+    initialized = _run(unified_binary, "init", home=home)
+    assert initialized.returncode == 0, initialized.stderr
+    task = "Summarize this report"
+    rust = _run(unified_binary, "prompt", "generate", task, home=home)
+    python_env = os.environ.copy()
+    python_env["AGENTROUTER_HOME"] = str(home)
+    python = subprocess.run(
+        [sys.executable, "-m", "agentrouter", "prompt", "generate", task],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env=python_env,
+        timeout=60,
+        check=False,
+    )
+    assert rust.returncode == python.returncode == 0
+    assert rust.stdout == python.stdout
+    assert rust.stderr == python.stderr
+
+
 def test_read_only_execution_plan_never_enables_execution(tmp_path, unified_binary):
     home = tmp_path / "agentrouter-home"
     initialized = _run(unified_binary, "init", home=home)

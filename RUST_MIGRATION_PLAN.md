@@ -27,6 +27,11 @@
 
 ## Current production status
 
+TASK-249 (2026-11-18) adds unified task-based prompt generation using the Rust
+classifier, routing, safety gates, and prompt pipeline. The focused
+decision/unified selection passes 43 tests; execution remains disabled and the
+release gate is unchanged.
+
 TASK-248 (2026-11-18) completes the stored prompt output slice: unified and
 direct Rust prompt generation now support named tool overrides and safe file
 output with no-follow semantics. The focused decision/unified CLI selection

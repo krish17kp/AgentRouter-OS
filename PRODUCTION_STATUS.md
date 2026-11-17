@@ -2,7 +2,7 @@
 
 Updated: 2026-11-18
 
-## Latest continuation slice — TASK-248
+## Latest continuation slice — TASK-249
 
 Rust unified command help now matches Python's successful `--help` behavior for
 the leaf commands `init`, `explain`, `feedback`, `stats`, `prompt`, `doctor`,
@@ -21,6 +21,11 @@ TASK-248 adds named `--tool` forwarding and Python-compatible `--out PATH`
 prompt generation through the unified command and direct decision probe. The
 focused decision/unified selection is 42 tests; output files use no-follow
 opening and reject hard-linked destinations.
+
+TASK-249 adds unified task-based `prompt generate TASK`, using the existing Rust
+classifier/routing/prompt pipeline and matching Python's output/newline
+contract. The focused decision/unified selection is 43 tests; execution stays
+disabled.
 
 The complete Rust/Python and Rust CLI compatibility selection after TASK-248
 passes 886 tests with 1 expected skip; the existing Starlette/httpx warning
