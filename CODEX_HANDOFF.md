@@ -86,6 +86,12 @@ TASK-192 re-ran the complete isolated Python suite from this checkout: 2,735
 passed, 7 skipped, one existing Starlette/httpx deprecation warning, in 449.37
 seconds. No frozen evaluation data or threshold changed.
 
+TASK-193 re-ran the optimized locked Rust build and audit. The release binary
+reports `0.5.0rc1`, help succeeds, and 205 locked dependencies have no
+vulnerability advisories; RustSec's one unmaintained `chrono` warning has no
+fixed upgrade. Hosted PR #16 is still held by the frozen 0.6667 < 0.90 gate and
+owner-controlled review/credential/promotion/deployment gates.
+
 ## Storage relocation — 2026-11-15
 
 Active release checkout: `/data/AgentRouter-production` on branch

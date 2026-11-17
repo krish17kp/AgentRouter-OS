@@ -83,6 +83,11 @@ TASK-192 re-runs the complete isolated Python release suite: 2,735 passed,
 7 skipped, and one existing Starlette/httpx deprecation warning in 449.37
 seconds. No frozen evaluation data or release threshold changed.
 
+TASK-193 re-runs the optimized locked Rust workspace build and dependency audit
+after the final local slices. The release binary reports `0.5.0rc1`; the audit
+finds no vulnerability advisories across 205 dependencies and repeats the
+documented unmaintained-`chrono` warning with no fixed upgrade.
+
 TASK-175 repairs Windows diagnostics contract parity. Rust now renders the
 contract directory through the native path formatter, matching Python's
 platform-specific `Path` representation while retaining forward slashes on

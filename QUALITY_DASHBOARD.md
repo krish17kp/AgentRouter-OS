@@ -72,6 +72,10 @@ TASK-192 confirms the complete isolated Python suite is green at 2,735 passed,
 7 skipped, and one existing Starlette/httpx deprecation warning in 449.37
 seconds.
 
+TASK-193 confirms the optimized locked Rust workspace build and binary
+version/help smoke. The 205-dependency audit has no vulnerability advisories;
+the known unmaintained-`chrono` warning has no fixed upgrade.
+
 TASK-173 hardens diagnostic bundle writes with no-follow parent creation, a
 pinned capability directory, and exclusive creation. Serialized snapshots,
 symlink/hard-link, directory-swap, and nested-parent regressions pass; focused
