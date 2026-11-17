@@ -316,9 +316,11 @@ fn check_api_key() -> Check {
 
 fn check_observability() -> Check {
     let logging = truthy(std::env::var("AGENTROUTER_LOG").ok());
+    let otel = agentrouter_observability::otel_enabled();
     let detail = format!(
-        "structured logging {}, OTel off",
-        if logging { "on" } else { "off" }
+        "structured logging {}, OTel {}",
+        if logging { "on" } else { "off" },
+        if otel { "on" } else { "off" }
     );
     Check::new(
         "observability.logging",

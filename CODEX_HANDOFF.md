@@ -2,6 +2,13 @@
 
 ## Live checkpoint — 2026-11-18
 
+TASK-252 aligns Rust `doctor --json` observability reporting with the shared
+Rust observability crate: truthy `AGENTROUTER_OTEL` now yields `OTel on`.
+Diagnostics compatibility passes 16/16; the `agentrouter-cli` crate passes
+89/89 with strict Clippy and formatting. Full observability lifecycle parity,
+the frozen context-band gate, human evaluation, live credentials, and deploy
+approval remain open.
+
 Active release checkout: `/data/AgentRouter-production`, branch
 `release/agentrouter-v0.5-rc1`, pushed head `71408b2`. TASK-175 repaired the
 hosted Windows diagnostics path-format mismatch and its full matrix is green.

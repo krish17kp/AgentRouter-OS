@@ -2,7 +2,15 @@
 
 Updated: 2026-11-18
 
-## Latest continuation slice — TASK-251
+## Latest continuation slice — TASK-252
+
+Rust `doctor --json` now reports the actual OpenTelemetry opt-in state through
+the shared observability crate. The focused diagnostics compatibility suite
+passes 16 tests, while the Rust CLI crate remains green at 89 tests with strict
+Clippy and formatting. This is a diagnostics parity increment only; it does
+not claim full observability lifecycle or release readiness.
+
+## Previous continuation slice — TASK-251
 
 Rust unified command help now matches Python's successful `--help` behavior for
 the leaf commands `init`, `explain`, `feedback`, `stats`, `prompt`, `doctor`,

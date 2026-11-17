@@ -27,6 +27,13 @@
 
 ## Current production status
 
+TASK-252 (2026-11-18) aligns the Rust unified doctor's observability summary
+with the shared Rust implementation: a truthy `AGENTROUTER_OTEL` now reports
+`OTel on` instead of a hard-coded `OTel off`. The focused diagnostics
+compatibility suite passes 16 tests and the `agentrouter-cli` crate passes 89
+tests with strict Clippy and formatting. Broader observability lifecycle and
+runtime metadata differences remain R4/R5 partial work.
+
 TASK-251 (2026-11-18) aligns the unified stored-prompt output newline with
 Python while preserving the direct probe's historical output. The focused
 decision/unified selection passes 45 tests; the release gate remains unchanged.

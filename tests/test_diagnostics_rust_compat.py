@@ -221,6 +221,20 @@ def test_api_secrets_are_never_printed_and_usage_is_opt_in(tmp_path):
     assert "unsupported" in usage["summary"]
 
 
+def test_observability_report_reflects_explicit_otel_opt_in(tmp_path):
+    home = tmp_path / "agentrouter"
+    home.mkdir()
+    result = _doctor(
+        home,
+        "--json",
+        env={"AGENTROUTER_OTEL": "yes", "AGENTROUTER_PLUGIN_ROOT": str(tmp_path / "plugins")},
+    )
+    payload = json.loads(result.stdout)
+    check = next(item for item in payload["checks"] if item["id"] == "observability.logging")
+    assert check["status"] == "ok"
+    assert check["summary"].endswith("OTel on")
+
+
 def test_missing_home_is_a_failure_but_report_is_complete(tmp_path):
     result = _doctor(tmp_path / "missing", "--json")
     payload = json.loads(result.stdout)

@@ -3592,3 +3592,13 @@ zero skips against the Rust loopback API.
   provider refresh/rollback/restore.
 - The route/unified compatibility selection passes 65/65; formatting and diff
   checks pass.
+## TASK-252 — Rust doctor OpenTelemetry status parity (2026-11-18)
+
+- Rust diagnostics now calls the shared observability implementation for the
+  `AGENTROUTER_OTEL` state, so `doctor --json` reports `OTel on` when explicitly
+  enabled instead of always claiming `OTel off`.
+- The focused diagnostics compatibility suite passes 16/16; the Rust CLI crate
+  passes 89/89 with strict Clippy and formatting.
+- This does not alter the release gate or claim full observability lifecycle
+  parity; the frozen context-band gate and owner-controlled release inputs are
+  unchanged.
