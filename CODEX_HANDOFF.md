@@ -43,6 +43,10 @@ TASK-212 hardens ordinary Rust SQLite opens with `SQLITE_OPEN_NOFOLLOW` and
 adds a symlink-leaf regression without changing the capability-pinned Linux
 init path. Complete handle-native SQLite initialization and sidecar race
 closure remain R4 limitations; focused storage/CLI tests pass.
+TASK-213 enforces the Rust MCP legacy initialize lifecycle (`-32002` before
+initialize) while retaining stateless modern discovery. Eight Rust MCP tests,
+strict Clippy, and the full Python/Rust MCP compatibility test pass; non-stdio
+transport and broader lifecycle parity remain partial.
 TASK-180 aligns context-band human-readable output with Python (bootstrap CI,
 Python-style containers, unquoted checksum, signed delta); JSON remains stable.
 

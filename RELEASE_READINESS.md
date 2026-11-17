@@ -29,6 +29,11 @@ after a parent swap, while complete handle-native SQLite initialization and
 sidecar race closure remain unresolved. This is hardening evidence, not a
 release waiver.
 
+TASK-213 adds the missing legacy MCP initialization gate and verifies the modern
+stateless path remains compatible. The safe five-tool surface and bounded stdio
+transport remain green, but broader MCP lifecycle/transport parity is still
+unresolved; this does not clear release readiness.
+
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
 advisories across 207 locked dependencies; one unmaintained `chrono` warning

@@ -6,6 +6,10 @@
 use std::{
     io::{self, BufRead, Write},
     path::PathBuf,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
 };
 
 use agentrouter_api::{
@@ -24,11 +28,15 @@ const MAX_LINE_BYTES: usize = 4 * 1024 * 1024;
 #[derive(Debug, Clone)]
 pub struct Server {
     home: PathBuf,
+    legacy_initialized: Arc<AtomicBool>,
 }
 
 impl Server {
     pub fn new(home: PathBuf) -> Self {
-        Self { home }
+        Self {
+            home,
+            legacy_initialized: Arc::new(AtomicBool::new(false)),
+        }
     }
 
     /// Handle one decoded JSON-RPC message. Notifications return `None`.
@@ -74,6 +82,14 @@ impl Server {
                 }
             },
         };
+
+        // Legacy MCP sessions are stateful: the client must complete the
+        // initialize request before using tools or other server methods. The
+        // modern protocol is intentionally stateless and is authenticated by
+        // its per-request protocol metadata above.
+        if !modern && method != "initialize" && !self.legacy_initialized.load(Ordering::Acquire) {
+            return Some(rpc_error(id, -32002, "Server not initialized"));
+        }
 
         match method {
             "initialize" if modern => Some(rpc_error(
@@ -135,6 +151,7 @@ impl Server {
         } else {
             DEFAULT_LEGACY_PROTOCOL_VERSION
         };
+        self.legacy_initialized.store(true, Ordering::Release);
         rpc_result(
             id,
             json!({
@@ -505,6 +522,12 @@ mod tests {
         assert!(server
             .handle(&json!({"jsonrpc":"2.0", "method":"notifications/initialized"}))
             .is_none());
+        server
+            .handle(&json!({
+                "jsonrpc":"2.0", "id":2, "method":"initialize",
+                "params":{"protocolVersion":"2025-11-25"}
+            }))
+            .unwrap();
         let response = server
             .handle(&json!({
                 "jsonrpc":"2.0", "id":3, "method":"tools/call",
@@ -519,8 +542,38 @@ mod tests {
     }
 
     #[test]
+    fn legacy_requests_fail_closed_before_initialize() {
+        let server = Server::new(PathBuf::from("/tmp/agentrouter-mcp-test"));
+        let response = server
+            .handle(&json!({
+                "jsonrpc":"2.0", "id":1, "method":"tools/list"
+            }))
+            .unwrap();
+        assert_eq!(response["error"]["code"], -32002);
+        assert_eq!(response["error"]["message"], "Server not initialized");
+
+        let initialized = server
+            .handle(&json!({
+                "jsonrpc":"2.0", "id":2, "method":"initialize",
+                "params":{"protocolVersion":"2025-11-25"}
+            }))
+            .unwrap();
+        assert_eq!(initialized["result"]["protocolVersion"], "2025-11-25");
+        assert!(server
+            .handle(&json!({"jsonrpc":"2.0", "id":3, "method":"tools/list"}))
+            .unwrap()["result"]["tools"]
+            .is_array());
+    }
+
+    #[test]
     fn malformed_tool_arguments_fail_closed_without_panicking_or_leaking() {
         let server = Server::new(PathBuf::from("/tmp/agentrouter-mcp-test"));
+        server
+            .handle(&json!({
+                "jsonrpc":"2.0", "id":1, "method":"initialize",
+                "params":{"protocolVersion":"2025-11-25"}
+            }))
+            .unwrap();
         let missing_task = server
             .handle(&json!({
                 "jsonrpc":"2.0", "id":4, "method":"tools/call",

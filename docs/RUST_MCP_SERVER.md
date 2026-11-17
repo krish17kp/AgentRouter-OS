@@ -18,6 +18,11 @@ older hosts. The Python MCP SDK 2.x requires Python 3.11 or later, so the
 optional `mcp` extra selects SDK 1.x for Python 3.10 and SDK 2.x for Python
 3.11+. Python 3.10 therefore remains supported with the legacy MCP protocol.
 
+Legacy Rust sessions are lifecycle-gated: requests made before a successful
+`initialize` return JSON-RPC `-32002` (`Server not initialized`). Modern
+metadata-bearing requests remain stateless after `server/discover`, matching the
+current Python SDK 2.x mode.
+
 The Rust unified CLI dispatches `agentrouter mcp` to the Rust stdio server. The
 Python `agentrouter mcp` command continues to run the official Python SDK as
 the release reference while the rest of the Rust migration remains incomplete.

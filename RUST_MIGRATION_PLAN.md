@@ -419,6 +419,13 @@ force. This narrows the ordinary final-component redirect surface, but SQLite
 still reopens pathname-based WAL/SHM sidecars and complete handle-native
 database initialization remains an R4 limitation.
 
+R5 follow-up (2026-11-17, MCP lifecycle): the Rust stdio server now enforces
+legacy-session initialization, returning JSON-RPC `-32002` for pre-initialize
+requests while preserving negotiated versions, notifications, bounded frames,
+and the five safe planning tools. Modern `server/discover` and metadata-bearing
+requests remain stateless. This closes one lifecycle gap; non-stdio transport,
+broader MCP lifecycle, and complete error behavior remain R5 work.
+
 R4 follow-up (2026-11-11): added `agentrouter-cli::dashboard` with the
 read-only loopback HTTP surface and HTML renderer corresponding to
 `agentrouter/dashboard.py`. Rust tests cover empty and populated views,

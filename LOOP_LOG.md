@@ -1,5 +1,13 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-213 MCP legacy lifecycle hardening
+
+Rust MCP now rejects legacy tools/resources/ping requests before a successful
+`initialize` with JSON-RPC `-32002` and then permits the negotiated session.
+Modern discovery and metadata-bearing calls remain stateless. Eight Rust MCP
+tests, strict Clippy, and the full Python/Rust MCP compatibility test pass.
+Non-stdio transport and broader lifecycle/error parity remain partial.
+
 ## 2026-11-17 — TASK-212 SQLite leaf no-follow hardening
 
 Rust storage now opens ordinary `agentrouter.db` paths with SQLite's
