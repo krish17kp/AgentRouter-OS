@@ -6,7 +6,7 @@
   "status": "IN_PROGRESS",
   "branch_topology": {
     "main": "Main remains unchanged. PR #16 is the sole open PR and has no submitted reviews or review requests. Current enforcing CI fails because frozen context-band accuracy is 0.6667 < 0.90. No promotion, tag, release, or gate bypass.",
-    "release/agentrouter-v0.5-rc1": "Latest pushed RC head is ea4dbbd; hosted Rust, Python/Rust compatibility, Python 3.10-3.13, Windows, Security, Website, and mutation checks are green. The only hosted failure is the unchanged enforcing context-band gate at 0.6667 < 0.90; live smoke skips without credentials. Bundle-hardening head 75ac6c7 passed the local full Python suite (2,733 passed, 7 skipped), focused bundle/storage tests, and strict Clippy.",
+    "release/agentrouter-v0.5-rc1": "Latest pushed RC head is d98caa2; hosted Rust, Python/Rust compatibility, Python 3.10-3.13, Windows, Security, Website, and mutation checks are green. The only hosted failure is the unchanged enforcing context-band gate at 0.6667 < 0.90; live smoke skips without credentials. Bundle-hardening head 75ac6c7 passed the local full Python suite (2,733 passed, 7 skipped), focused bundle/storage tests, and strict Clippy.",
     "task/rust-r1-workspace": "PR #25 open against RC; 6ee8d3e passed complete GitHub CI; 32eee6f forced-init push failed Windows compile, file-handle repair awaits remote recheck; SQLite path-race blocker remains; Rust R4 partial and OpenAI execution hardening",
     "task/repo-cleanup-architecture-ponytail": "MERGED to RC (PR #14, merge commit 1ae3155); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
     "task/dynamic-skill-discovery": "MERGED to RC (PR #15, merge commit 62d5289); deleted local, remote deletion blocked by pre_tool_guard (owner action)",
@@ -29,7 +29,7 @@
   "repo_sha_at_takeover": "602321af91ff298c0d5b59d6d36c24f845557fc1",
   "canonical_release_ready": false,
   "in_progress": [
-    "Reconcile the TASK-175 hosted evidence checkpoint to pushed head ea4dbbd and continue the remaining Partial parity modules.",
+    "Reconcile the TASK-175 hosted evidence checkpoint to pushed head d98caa2 and continue the remaining Partial parity modules.",
     "Keep PR #16 held on the honest context-band, human-evaluation, live-validation, and deployment gates; do not bypass them.",
     "Continue the remaining 18 Partial Rust modules while PR #16 is held for human evaluation, live validation, and release inputs."
   ],

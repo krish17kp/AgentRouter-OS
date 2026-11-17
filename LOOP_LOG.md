@@ -8,7 +8,8 @@ doctor now builds the contract directory with `Path::join(...).display()`, so it
 matches native separators without changing the stable POSIX output. The failure
 reproduces in the existing diagnostics differential; Rust CLI tests and the
 Linux differential pass locally. Commit and push this repair, then re-run the
-hosted matrix. The repair was pushed as `ea4dbbd`; the complete hosted Rust,
+hosted matrix. The repair was pushed as `ea4dbbd`; the final evidence checkpoint
+is `d98caa2`; the complete hosted Rust,
 Python, Security, Website, and mutation matrix is green, with only the expected
 frozen context-band release gate failing honestly.
 

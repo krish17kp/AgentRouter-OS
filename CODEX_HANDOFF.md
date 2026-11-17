@@ -3,7 +3,7 @@
 ## Live checkpoint — 2026-11-17
 
 Active release checkout: `/data/AgentRouter-production`, branch
-`release/agentrouter-v0.5-rc1`, pushed head `ea4dbbd`. TASK-175 repaired the
+`release/agentrouter-v0.5-rc1`, pushed head `d98caa2`. TASK-175 repaired the
 hosted Windows diagnostics path-format mismatch and its full matrix is green.
 PR #16 is
 the only open PR; no reviews or review requests are present. The macOS-only
