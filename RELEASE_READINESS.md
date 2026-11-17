@@ -2,6 +2,11 @@
 
 ## Current checkpoint — 2026-11-17
 
+At pushed head `824a98a`, hosted validation is queued after the final bundle
+evidence checkpoint. Local release checks are green, but the frozen context-band
+gate, human evaluation, live OpenAI validation, and promotion/deployment inputs
+remain unresolved.
+
 **NOT release ready.** TASK-173 hardens bundle writes against parent and
 final-component symlink/reparse redirection and preserves opt-in database
 snapshot behavior. Bundle parity remains Partial for complete metadata and

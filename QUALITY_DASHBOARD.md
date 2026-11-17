@@ -2,6 +2,11 @@
 
 ## Current checkpoint — 2026-11-17
 
+At pushed head `824a98a`, the bundle hardening evidence is recorded and the
+hosted matrix is queued. Local Python/Rust release checks remain green; the
+frozen context-band gate and owner-supplied validation/deployment inputs remain
+open.
+
 TASK-173 hardens diagnostic bundle writes with no-follow parent creation, a
 pinned capability directory, and exclusive creation. Serialized snapshots,
 symlink/hard-link, directory-swap, and nested-parent regressions pass; focused

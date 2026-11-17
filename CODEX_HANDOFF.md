@@ -1,5 +1,19 @@
 # Codex Handoff - AgentRouter OS
 
+## Live checkpoint — 2026-11-17
+
+Active release checkout: `/data/AgentRouter-production`, branch
+`release/agentrouter-v0.5-rc1`, pushed head `824a98a`. PR #16 is the only open
+PR; no reviews or review requests are present. Hosted CI for this head is queued
+across CI, Rust migration, Security, Website, and Critical Mutation workflows.
+The local full Python suite remains 2,733 passed / 7 skipped; Rust workspace,
+strict Clippy, formatting, Ruff, Bandit, dependency audits, wheel/sdist build,
+and clean-wheel smoke are green. The frozen context-band gate remains 0.6667
+against 0.90, so the branch is not release-ready. Continue by polling hosted
+checks and repairing only reproducible failures; do not merge, tag, publish, or
+deploy without fresh owner authorization. Preserve the untracked historical
+directory `loop/tasks/TASK-163-registry-parity-audit/`.
+
 ## Storage relocation — 2026-11-15
 
 Active release checkout: `/data/AgentRouter-production` on branch
