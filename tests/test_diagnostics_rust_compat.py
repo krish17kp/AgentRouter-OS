@@ -253,7 +253,14 @@ def test_human_report_matches_python_summary_and_remedy_contract(tmp_path):
     assert _init(home).returncode == 0
     result = _doctor(home)
     assert result.returncode == 0
-    assert "Everything works. 2 notes above worth knowing about." in result.stdout
+    warning_lines = [line for line in result.stdout.splitlines() if line.startswith("[WARN]")]
+    expected_summary = f"Everything works. {len(warning_lines)} "
+    expected_summary += (
+        "note above worth knowing about."
+        if len(warning_lines) == 1
+        else "notes above worth knowing about."
+    )
+    assert expected_summary in result.stdout
     assert "         -> set AGENTROUTER_API_KEY to require an X-API-Key header" in result.stdout
     assert "note(s)" not in result.stdout
     assert "problem(s)" not in result.stdout

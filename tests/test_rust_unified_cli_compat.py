@@ -380,7 +380,14 @@ def test_read_only_execution_plan_never_enables_execution(tmp_path, unified_bina
     assert saved.returncode == 0, saved.stderr
     decision_id = json.loads(saved.stdout)["decision_id"]
 
-    planned = _run(unified_binary, "plan", decision_id, "--json", home=home)
+    planned = _run(
+        unified_binary,
+        "plan",
+        decision_id,
+        "--include-unavailable",
+        "--json",
+        home=home,
+    )
     assert planned.returncode == 0, planned.stderr
     payload = json.loads(planned.stdout)
     assert payload["status"] == "planned"
@@ -391,6 +398,7 @@ def test_read_only_execution_plan_never_enables_execution(tmp_path, unified_bina
         unified_binary,
         "plan",
         decision_id,
+        "--include-unavailable",
         "--json",
         "--allow-remote",
         "--approve",
