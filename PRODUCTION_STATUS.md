@@ -25,6 +25,8 @@ TASK-211 adds a bounded, explicitly opt-in Hugging Face rows-API loader for
 CLINC150, Banking77, MASSIVE, LongBench v2, and SWE-bench metadata. The live
 public Banking77 endpoint was verified locally with 3,079 normalized records.
 Offline defaults still report the opt-in blocker; no fixture is substituted.
+After preserving the existing Python-facing metadata/error surface, the full
+Python regression suite passes 2,740 tests with 5 documented skips.
 
 - [ ] PR review and hosted checks: PR #16 is the sole open PR against `main`, with no GitHub reviews or review requests. Pushed RC head `71408b2` is green across Rust Linux/Windows/macOS, Python/Rust compatibility on all three platforms, Python 3.10–3.13, Windows, macOS, Security, Website, and Critical Mutation. The enforcing release gate remains honestly held by frozen context-band accuracy `0.6667 < 0.90`; live smoke skips without credentials.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.

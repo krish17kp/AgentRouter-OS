@@ -188,6 +188,10 @@ timeouts are 20 seconds, responses are capped at 16 MiB, and datasets at
 Banking77 preparation produced 3,079 normalized records without fixture
 fallback; CLINC150 was rate-limited on a later probe and remains external.
 Offline defaults still report an explicit opt-in blocker.
+The first full regression attempt exposed 19 public-surface differences in
+blocker wording and dataset aliases; preserving the existing Python-facing
+surface fixed them, and the authoritative rerun passed 2,740 tests with 5
+documented skips.
 
 ## 2026-11-17 — TASK-180 evaluation text report parity
 

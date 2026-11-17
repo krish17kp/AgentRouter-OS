@@ -21,6 +21,7 @@ Date: 2026-11-18
 cargo fmt --all -- --check  # passed
 cargo clippy --locked -p agentrouter-evaluation --all-targets -- -D warnings  # passed
 20 passed in 5.14s  # tests/test_rust_evaluation_cli_compat.py
+2740 passed, 5 skipped  # full Python regression suite
 ```
 
 Live public endpoint probe:
@@ -32,3 +33,8 @@ REAL, 3079 normalized records, no fixture fallback
 
 CLINC150 was rate-limited on a subsequent public probe; that remains an
 honest external result rather than a fabricated success.
+
+The first full regression attempt exposed 19 public-surface differences in
+blocker wording and Hugging Face aliases. Those were repaired without changing
+the Python contract; the authoritative rerun then passed 2,740 tests with 5
+skips.

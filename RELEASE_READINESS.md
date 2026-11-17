@@ -19,6 +19,8 @@ five evaluation adapters. Banking77 was exercised against the live public
 endpoint and produced 3,079 normalized records; no fixture fallback occurred.
 This does not clear the human holdout gate or make Docker/model/annotation
 workflows production-ready.
+The subsequent full Python regression rerun passes 2,740 tests with 5 skips;
+the existing adapter metadata/error contract remains byte-compatible.
 
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
