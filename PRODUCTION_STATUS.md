@@ -14,8 +14,9 @@ Updated: 2026-11-17
 
 ## Current recovery checkpoint
 
-TASK-173 hardens Rust diagnostic bundle writes with a pinned capability directory
-and exclusive creation for artifacts and opt-in database snapshots. The storage
+TASK-173 hardens Rust diagnostic bundle writes with no-follow parent creation, a
+pinned capability directory, and exclusive creation for artifacts and opt-in
+database snapshots. The storage
 layer serializes the committed SQLite image, creates the destination exactly
 once, and writes/syncs through the opened handle; artifact and snapshot
 symlink/hard-link and directory-swap escape regressions, Rust bundle/storage tests, strict Clippy,

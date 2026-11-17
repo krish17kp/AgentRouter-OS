@@ -32,8 +32,9 @@ Coverage is 92.021% statement, 87.833% branch, and 91.058% combined.
 
 ## Current checkpoint — 2026-11-17
 
-TASK-173 hardens Rust diagnostic bundle writes. Artifacts and opt-in database
-snapshots now use a pinned capability directory with exclusive creation; the
+TASK-173 hardens Rust diagnostic bundle writes. Bundle parents are created with
+no-follow component walking, while artifacts and opt-in database snapshots use
+a pinned capability directory with exclusive creation; the
 storage layer serializes the committed SQLite image and writes/syncs through a
 single opened destination handle. Symlink, hard-link, and directory-swap escape
 regressions pass.

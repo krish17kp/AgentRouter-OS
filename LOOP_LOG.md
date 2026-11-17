@@ -9,7 +9,9 @@ serializes the committed SQLite image, creates the destination exactly once,
 and writes/syncs through the opened handle, closing the pathname replacement
 race found by independent review. Added Unix regressions for symlinked and
 hard-linked artifact/snapshot paths plus a directory-swap test against the
-pinned capability. Rust bundle/storage tests, strict Clippy,
+pinned capability. Bundle parents are now created component-by-component with
+the same no-follow walker, with coverage for nested absent parents and linked
+intermediates. Rust bundle/storage tests, strict Clippy,
 and focused Python bundle/diagnostics checks pass; bundle parity remains
 Partial for environment metadata and remaining Windows-specific differential
 cases.

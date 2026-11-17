@@ -7,9 +7,10 @@ layer, and keeps database inclusion opt-in.
 
 ## Increment
 
-- Replace path-based final artifact and database-snapshot creation with a pinned
-  capability directory and `create_new`, preventing concurrent symlink/reparse
-  redirection on the final component.
+- Replace path-based bundle-parent, final artifact, and database-snapshot
+  creation with no-follow component walking, a pinned capability directory, and
+  `create_new`, preventing concurrent symlink/reparse redirection on any
+  destination component while preserving nested-parent creation.
 - Serialize the committed SQLite main database in memory, create the final
   snapshot with `create_new`, and write/sync through that one opened handle;
   this avoids reopening a pathname after safe creation and closes the

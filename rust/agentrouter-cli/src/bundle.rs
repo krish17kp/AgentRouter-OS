@@ -171,11 +171,16 @@ pub fn create(
             destination.display()
         )));
     }
-    if let Some(parent) = destination.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|_| BundleError("bundle parent directory could not be created".into()))?;
-    }
-    fs::create_dir(destination)
+    let parent_path = destination.parent().unwrap_or_else(|| Path::new("."));
+    let parent =
+        cap_std::fs::Dir::from_std_file(crate::open_safe_home(parent_path).map_err(|_| {
+            BundleError("bundle parent directory could not be created safely".into())
+        })?);
+    let leaf = destination
+        .file_name()
+        .ok_or_else(|| BundleError("bundle destination must name a directory".into()))?;
+    parent
+        .create_dir(leaf)
         .map_err(|_| BundleError("bundle destination could not be created safely".into()))?;
     restrict_directory(destination)?;
     let directory = fs::canonicalize(destination)
@@ -309,5 +314,33 @@ mod tests {
 
         assert!(write_text(directory.path(), "README.txt", "replace").is_err());
         assert_eq!(std::fs::read_to_string(target).unwrap(), "keep");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn bundle_creation_refuses_a_symlinked_parent_directory() {
+        use std::os::unix::fs::symlink;
+
+        let root = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let linked = root.path().join("linked");
+        symlink(outside.path(), &linked).unwrap();
+        let destination = linked.join("bundle");
+
+        assert!(create(root.path(), &destination, false).is_err());
+        assert!(!outside.path().join("bundle").exists());
+    }
+
+    #[test]
+    fn bundle_creation_builds_missing_parent_directories_safely() {
+        let root = tempfile::tempdir().unwrap();
+        let destination = root.path().join("nested").join("child").join("bundle");
+
+        let bundle = create(root.path(), &destination, false).unwrap();
+        assert_eq!(
+            bundle.directory,
+            std::fs::canonicalize(&destination).unwrap()
+        );
+        assert!(bundle.directory.join("README.txt").is_file());
     }
 }

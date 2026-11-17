@@ -1,7 +1,7 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-17",
-  "current_phase": "TASK-173 hardens Rust diagnostic bundle writes with pinned capability-directory exclusive creation and serialized, handle-based SQLite snapshots after TASK-172 diagnostics stable-summary alignment. Focused bundle/diagnostics checks, Rust bundle tests, strict Clippy, and directory-swap regression pass; bundle parity remains Partial. Inventory is 59/77 Parity and 18 Partial.",
+  "current_phase": "TASK-173 hardens Rust diagnostic bundle writes with no-follow parent creation, pinned capability-directory exclusive creation, and serialized, handle-based SQLite snapshots after TASK-172 diagnostics stable-summary alignment. Focused bundle/diagnostics checks, Rust bundle tests, strict Clippy, nested-parent, and directory-swap regressions pass; bundle parity remains Partial. Inventory is 59/77 Parity and 18 Partial.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
