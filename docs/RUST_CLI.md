@@ -38,6 +38,7 @@ cargo run --locked -p agentrouter-cli --bin agentrouter -- dataset --help
 `$HOME/.agentrouter` (or `%USERPROFILE%\.agentrouter` on Windows). `eval`
 forwards to an installed `agentrouter-evaluate` executable. Provider refresh
 supports `openrouter` and `openai` with `--limit`, `--match`, and
-`--dry-run`; OpenAI refresh requires `OPENAI_API_KEY`. The remaining Python
-commands—including plugins and contract tools—are still migration gaps and are
-not claimed as Rust-compatible by this dispatcher.
+`--dry-run`; OpenAI refresh requires `OPENAI_API_KEY`. Contract export/check
+and the remaining broader Python CLI semantics are still migration gaps; the
+Rust plugin commands are present but remain partial until their full lifecycle
+parity is independently closed.
