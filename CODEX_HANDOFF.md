@@ -59,8 +59,8 @@ pass. TASK-227 re-runs the current release gate: 165 cases, score 98.23, exit
 1, `release_ready: false`, and only the unchanged context-band gate fails at
 0.6667 < 0.90. No staging or production deployment has occurred.
 TASK-228 rebuilt the current sdist and wheel with `uv build`; `uvx twine check`
-passes both artifacts. Existing setuptools license metadata deprecation
-warnings remain visible and unchanged.
+passes both artifacts. TASK-230 modernized the license metadata; the rebuilt
+artifacts now pass without the prior setuptools deprecation warnings.
 TASK-229 installed that wheel into an isolated temporary environment; version,
 `init`, and local `route --json` passed without a provider request.
 TASK-213 enforces the Rust MCP legacy initialize lifecycle (`-32002` before

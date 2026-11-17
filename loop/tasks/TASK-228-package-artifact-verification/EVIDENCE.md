@@ -12,6 +12,6 @@ dist/agentrouter_os-0.5.0rc1.tar.gz       PASSED
 dist/agentrouter_os-0.5.0rc1-py3-none-any.whl  PASSED
 ```
 
-The build emitted setuptools deprecation warnings for the existing license
-table/classifiers; these are non-failing packaging warnings and were not
-silenced or changed in this task.
+The initial build emitted setuptools deprecation warnings for the existing
+license table/classifiers. TASK-230 records the follow-up metadata
+modernization and a clean rebuild without those warnings.

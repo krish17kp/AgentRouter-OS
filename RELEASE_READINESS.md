@@ -102,8 +102,9 @@ context-band gate is the only failed gate at `0.6667 < 0.90`; the preserved
 historical untracked task directory accounts for the reported dirty worktree.
 
 TASK-228 rebuilt the current sdist and wheel and passed `twine check` for both.
-The existing setuptools license metadata deprecation warnings remain visible;
-they do not change the evaluation or promotion gates.
+TASK-230 modernized the license metadata; a fresh build and `twine check` pass
+without the prior setuptools deprecation warnings. This does not change the
+evaluation or promotion gates.
 
 TASK-229 validated the freshly built wheel outside the source checkout: version,
 initialization, and local JSON routing pass without provider execution.

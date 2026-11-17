@@ -125,8 +125,9 @@ untracked historical task directory is the only local dirty-state source; no
 evaluation or release inputs were modified.
 
 TASK-228 rebuilds the current sdist and wheel with `uv build` and validates both
-with `uvx twine check`; both artifacts pass. Existing setuptools license-table
-and classifier deprecation warnings remain documented and unchanged.
+with `uvx twine check`; both artifacts pass. TASK-230 then modernizes the
+license metadata, and the rebuilt artifacts no longer emit the prior
+setuptools deprecation warnings.
 
 TASK-229 installs the freshly built wheel into an isolated temporary
 environment; the installed version, `init`, and local `route --json` smoke all
