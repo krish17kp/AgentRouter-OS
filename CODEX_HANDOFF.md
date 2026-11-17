@@ -2,6 +2,11 @@
 
 ## Live checkpoint — 2026-11-18
 
+TASK-264 re-reads GitHub PR #16: remote head remains `71408b2`, ordinary hosted
+checks are green, `live-smoke` is skipped without credentials, and the only
+required failure is the honest context-band release gate. The PR has no reviews
+or review requests and no remote mutation was performed.
+
 TASK-263 refreshes the full Python evidence after the latest regression test:
 2,782 passed / 7 skipped in 233.09 seconds, with only the existing
 non-failing Starlette/httpx deprecation warning.

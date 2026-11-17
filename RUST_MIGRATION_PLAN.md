@@ -27,6 +27,12 @@
 
 ## Current production status
 
+TASK-264 (2026-11-18) reconciles the live PR state: PR #16 remains mergeable but
+unstable at remote head `71408b2`; ordinary hosted checks are green, live smoke
+is skipped without credentials, and the enforcing gate still fails only on the
+frozen context-band threshold. No review, merge, publication, or deployment
+state changed.
+
 TASK-263 (2026-11-18) refreshes the full Python verification after the latest
 evaluation regression coverage: 2,782 tests pass with 7 expected skips in
 233.09 seconds. The only warning is the existing non-failing Starlette/httpx
