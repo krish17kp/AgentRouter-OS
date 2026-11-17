@@ -1,6 +1,6 @@
 # Codex Handoff - AgentRouter OS
 
-## Live checkpoint — 2026-11-17
+## Live checkpoint — 2026-11-18
 
 Active release checkout: `/data/AgentRouter-production`, branch
 `release/agentrouter-v0.5-rc1`, pushed head `71408b2`. TASK-175 repaired the
@@ -16,7 +16,11 @@ MSRV, API compatibility, build smoke, release-readiness report, Website, and
 Security checks are green. The only hosted failure is the expected frozen
 context-band release gate at 0.6667 < 0.90. Continue the remaining Partial
 parity work without changing thresholds or holdout data.
-TASK-178 repairs the Rust evaluation CLI status real-availability column. TASK-177 aligns stable diagnostic-bundle environment metadata while preserving
+TASK-223 synchronizes the unified Rust CLI help with the implemented contract
+check/diff/export surface and adds a process-level regression. The fresh full
+Python suite passes 2,742 tests with 7 expected skips; the full locked Rust
+workspace tests, focused 89/89 contract/unified-CLI differential, release
+build, strict Clippy, formatting, and cargo audit are green. TASK-178 repairs the Rust evaluation CLI status real-availability column. TASK-177 aligns stable diagnostic-bundle environment metadata while preserving
 the secret-safe allowlist. TASK-176 adds a direct `python -m agentrouter` versus Rust unified help/version
 differential and advances the inventory to 60/77 Parity, 17 Partial. The local
 full Python suite remains 2,733 passed / 7 skipped; Rust workspace,
