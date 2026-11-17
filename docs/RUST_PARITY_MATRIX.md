@@ -1,6 +1,6 @@
 # Python-to-Rust parity inventory
 
-Updated: 2026-11-17 (TASK-082–176). This inventory covers every Python source module under
+Updated: 2026-11-18 (TASK-082–218). This inventory covers every Python source module under
 `agentrouter/` at the current release-candidate head. “Parity” means a
 contract-level Python/Rust differential suite exists for the module’s public
 behavior; it does not mean the Rust crate has replaced the Python package.
@@ -31,7 +31,7 @@ release authority until the full set is complete.
 | `agentrouter/classifier.py` | `agentrouter-classifier` | Parity |
 | `agentrouter/cli.py` | `agentrouter-cli::bin::agentrouter` plus command modules | Partial |
 | `agentrouter/context_model.py` | `agentrouter-classifier::context_model` | Parity |
-| `agentrouter/contract.py` | `agentrouter-cli::contract::{canonicalize,dumps,validate_refs,load_baseline,diff_contracts_surface}` | Partial |
+| `agentrouter/contract.py` | `agentrouter-cli::contract::{canonicalize,dumps,validate_refs,load_baseline,load_live_contract,diff_contracts_surface,apply_recorded_acceptances}` | Partial |
 | `agentrouter/controls.py` | `agentrouter-policy::controls` | Parity |
 | `agentrouter/dashboard.py` | `agentrouter-cli::dashboard` | Parity |
 | `agentrouter/diagnostics.py` | `agentrouter-cli::diagnostics` | Partial |
@@ -92,6 +92,12 @@ release authority until the full set is complete.
 | `agentrouter/usage.py` | `agentrouter-usage::{check_usage,apply_live_verification}` | Parity |
 
 ## Release interpretation
+
+- TASK-218 adds bounded Rust `contract check --live URL` verification, explicit
+  `--baseline PATH` selection, and manifest-recorded acceptance handling. It
+  verifies a running service against the committed baseline, but the Python
+  framework remains authoritative for schema generation and hosted release
+  approval, so this module remains Partial.
 
 - TASK-176 adds a direct entrypoint differential: `python -m agentrouter --help`
   and the Rust unified binary both expose the public route, registry, providers,
