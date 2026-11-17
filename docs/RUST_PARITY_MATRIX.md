@@ -179,7 +179,7 @@ release authority until the full set is complete.
   Python extra keeps SDK 1.x on Python 3.10 and uses SDK 2.x on Python 3.11+.
   The unified CLI dispatches `mcp` to the Rust stdio server. The module remains
   Partial while broader MCP lifecycle, transport, and error behavior is audited.
-- The unified CLI now exposes safety-gated `execute` for configured provider
+- The unified CLI now exposes read-only `plan` plus safety-gated `execute` for configured provider
   argv, available local host commands, and OpenAI text requests. It recomputes
   the recorded classification gate, refuses high-risk and tampered decisions,
   and runs commands without a shell. The OpenAI adapter request and response

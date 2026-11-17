@@ -9,7 +9,7 @@ cargo run --locked -p agentrouter-cli --bin agentrouter -- --help
 ```
 
 `agentrouter` currently dispatches `init`, `route`, `explain`, `feedback`,
-`execute`, `stats`, `prompt`, `registry list`, provider status/doctor/refresh/rollback/restore,
+read-only `plan`, `execute`, `stats`, `prompt`, `registry list`, provider status/doctor/refresh/rollback/restore,
 `hosts`, `models`, `doctor`, the local HTTP API (`server`), stdio MCP
 (`mcp`), and `dashboard` to their Rust implementations. The server defaults
 to `127.0.0.1:8000`; set `AGENTROUTER_API_KEY` to require API authentication.
@@ -19,6 +19,10 @@ Both services run inside the unified executable and use its selected
 `execute <decision-id>` revalidates the stored safety gate. Execution is
 provider-opt-in and requires `--yes`; `--dry-run` always runs nothing. OpenAI
 Responses requests require `OPENAI_API_KEY` and are sent once without retries.
+`plan <decision-id>` is always read-only: it resolves the saved route through
+the fail-closed execution planner and reports `execution_enabled: false` even
+when `--allow-remote` or `--approve` is supplied. `--include-unavailable` only
+allows an unavailable host to be described; it does not enable an adapter.
 The human annotation flow is linked directly:
 
 ```sh
