@@ -68,6 +68,10 @@ TASK-191 adds focused MCP input-hardening tests for malformed JSON-RPC and
 invalid tool arguments. The safe five-tool surface is unchanged; broader
 transport/lifecycle parity remains Partial.
 
+TASK-192 confirms the complete isolated Python suite is green at 2,735 passed,
+7 skipped, and one existing Starlette/httpx deprecation warning in 449.37
+seconds.
+
 TASK-173 hardens diagnostic bundle writes with no-follow parent creation, a
 pinned capability directory, and exclusive creation. Serialized snapshots,
 symlink/hard-link, directory-swap, and nested-parent regressions pass; focused

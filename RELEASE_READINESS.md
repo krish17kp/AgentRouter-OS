@@ -77,6 +77,10 @@ remain unresolved.
 fail-closed request and argument tests. The MCP row remains Partial for full
 transport/lifecycle parity and all external release gates remain unresolved.
 
+**NOT release ready.** TASK-192's complete isolated Python regression is green
+at 2,735 passed and 7 skipped. The frozen evaluation gate, human/live
+validation, promotion, and deployment approvals remain unresolved.
+
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
 evidence. Diagnostics remains Partial for runtime-specific and complete bundle

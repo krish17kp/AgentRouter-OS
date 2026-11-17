@@ -82,6 +82,10 @@ TASK-191 adds fail-closed MCP regressions for malformed JSON-RPC requests and
 invalid tool arguments. The five safe tools remain unchanged; broader MCP
 transport/lifecycle parity remains Partial.
 
+TASK-192 re-ran the complete isolated Python suite from this checkout: 2,735
+passed, 7 skipped, one existing Starlette/httpx deprecation warning, in 449.37
+seconds. No frozen evaluation data or threshold changed.
+
 ## Storage relocation — 2026-11-15
 
 Active release checkout: `/data/AgentRouter-production` on branch

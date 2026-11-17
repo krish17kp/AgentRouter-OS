@@ -79,6 +79,10 @@ TASK-191 adds fail-closed MCP coverage for malformed JSON-RPC requests and
 invalid tool arguments. The five safe read/route/explain tools remain the only
 advertised surface; broader MCP lifecycle/transport parity remains Partial.
 
+TASK-192 re-runs the complete isolated Python release suite: 2,735 passed,
+7 skipped, and one existing Starlette/httpx deprecation warning in 449.37
+seconds. No frozen evaluation data or release threshold changed.
+
 TASK-175 repairs Windows diagnostics contract parity. Rust now renders the
 contract directory through the native path formatter, matching Python's
 platform-specific `Path` representation while retaining forward slashes on

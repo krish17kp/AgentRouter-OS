@@ -1,5 +1,11 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-192 full Python release regression
+
+The current release checkout passes the complete isolated Python suite: 2,735
+passed, 7 skipped, and one existing Starlette/httpx deprecation warning in
+449.37 seconds (7m29s). No frozen evaluation data or release threshold changed.
+
 ## 2026-11-17 — TASK-191 MCP malformed-input hardening
 
 Rust MCP now has focused fail-closed coverage for missing tool arguments,
