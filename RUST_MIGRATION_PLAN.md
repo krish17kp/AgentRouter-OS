@@ -27,6 +27,14 @@
 
 ## Current production status
 
+TASK-216 (2026-11-18) wires the existing safe Rust contract exporter into the
+unified CLI as `agentrouter contract export`. It supports an explicit source
+file, deterministic timestamp injection, JSON output, and fail-closed refusal
+when the existing baseline has breaking surface changes. The default source is
+the committed Rust OpenAPI artifact; live framework schema generation and the
+complete compatibility classifier remain Python-owned and are still tracked as
+R4 limitations.
+
 The Python CLI now has a default-off OpenAI Responses API text adapter. It is
 gated by provider opt-in, host readiness, the recorded safety decision, and
 `execute --yes`; hermetic tests do not use credentials or paid calls. The

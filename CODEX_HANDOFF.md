@@ -53,6 +53,11 @@ outside target. Focused diagnostics tests and formatting pass.
 TASK-215 extends SQLite no-follow protection to Rust diagnostic-bundle
 data-shape reads; the symlink regression passes and normal bundle creation is
 unchanged.
+TASK-216 adds `agentrouter contract export` to the unified Rust CLI. It accepts
+`--source`, `--generated-at`, and `--json`, refuses detected breaking surface
+changes, and writes through the existing safe exporter. The default source is
+the committed Rust OpenAPI artifact; live framework schema parity remains
+partial.
 TASK-180 aligns context-band human-readable output with Python (bootstrap CI,
 Python-style containers, unquoted checksum, signed delta); JSON remains stable.
 

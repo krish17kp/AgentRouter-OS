@@ -43,6 +43,12 @@ TASK-215 extends the no-follow boundary to diagnostic-bundle database reads.
 This closes another local redirect surface but does not clear the remaining
 SQLite sidecar limitation or external release gates.
 
+TASK-216 adds the public Rust `contract export` workflow with source selection,
+deterministic evidence, and fail-closed breaking-change refusal. The command
+uses the committed Rust OpenAPI artifact by default; live schema generation and
+complete compatibility classification remain unresolved. Release readiness is
+unchanged.
+
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
 advisories across 207 locked dependencies; one unmaintained `chrono` warning

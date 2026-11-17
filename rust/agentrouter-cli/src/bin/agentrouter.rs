@@ -22,27 +22,26 @@ fn contract_command(args: &[String]) -> Result<i32, String> {
         .iter()
         .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
     {
-        println!("Usage: agentrouter contract <check [--json]|diff [PATH|-] [--json]>");
-        println!("Checks the committed OpenAPI artifact or compares a candidate surface.");
+        println!("Usage: agentrouter contract <check [--json]|diff [PATH|-] [--json]|export [--source PATH] [--json]>");
+        println!("Checks, exports, or compares the committed OpenAPI artifact.");
         println!("The diff command is a compatibility surface probe; the Python gate remains authoritative for full live-schema checks.");
         return Ok(0);
     }
     let subcommand = args
         .first()
         .map(String::as_str)
-        .ok_or_else(|| "usage: agentrouter contract <check|diff> [PATH|-] [--json]".to_owned())?;
+        .ok_or_else(|| "usage: agentrouter contract <check|diff|export> [options]".to_owned())?;
     let json_output = args.iter().any(|argument| argument == "--json");
     let root = env::current_dir()
         .map_err(|error| format!("could not resolve repository root: {error}"))?;
-    let baseline = agentrouter_cli::contract::load_baseline(&root).map_err(|error| {
-        format!(
-            "contract baseline invalid ({}): {error}",
-            error.kind.as_str()
-        )
-    })?;
-
     match subcommand {
         "check" => {
+            let baseline = agentrouter_cli::contract::load_baseline(&root).map_err(|error| {
+                format!(
+                    "contract baseline invalid ({}): {error}",
+                    error.kind.as_str()
+                )
+            })?;
             if args.iter().skip(1).any(|argument| argument != "--json") {
                 return Err("usage: agentrouter contract check [--json]".to_owned());
             }
@@ -69,6 +68,12 @@ fn contract_command(args: &[String]) -> Result<i32, String> {
             Ok(if is_canonical { 0 } else { 1 })
         }
         "diff" => {
+            let baseline = agentrouter_cli::contract::load_baseline(&root).map_err(|error| {
+                format!(
+                    "contract baseline invalid ({}): {error}",
+                    error.kind.as_str()
+                )
+            })?;
             let candidate = args
                 .iter()
                 .skip(1)
@@ -123,7 +128,104 @@ fn contract_command(args: &[String]) -> Result<i32, String> {
                 1
             })
         }
-        _ => Err("usage: agentrouter contract <check|diff> [PATH|-] [--json]".to_owned()),
+        "export" => {
+            let mut source = None;
+            let mut generated_at = None;
+            let mut arguments = args.iter().skip(1);
+            while let Some(argument) = arguments.next() {
+                match argument.as_str() {
+                    "--json" => {}
+                    "--source" => {
+                        source = Some(arguments.next().ok_or("--source needs a path")?.clone());
+                    }
+                    "--generated-at" => {
+                        generated_at = Some(
+                            arguments
+                                .next()
+                                .ok_or("--generated-at needs an RFC3339 value")?
+                                .clone(),
+                        );
+                    }
+                    option => return Err(format!("unknown contract export option '{option}'")),
+                }
+            }
+            let document = if let Some(source) = source {
+                let text = std::fs::read_to_string(&source)
+                    .map_err(|error| format!("could not read contract source {source}: {error}"))?;
+                serde_json::from_str(&text)
+                    .map_err(|error| format!("contract source is invalid JSON: {error}"))?
+            } else {
+                let text = include_str!("../../../../contracts/http/v1/openapi.json");
+                serde_json::from_str(text)
+                    .map_err(|error| format!("embedded contract is invalid JSON: {error}"))?
+            };
+            let baseline = match agentrouter_cli::contract::load_baseline(&root) {
+                Ok(value) => Some(value),
+                Err(error)
+                    if error.kind == agentrouter_cli::contract::BaselineErrorKind::Missing =>
+                {
+                    None
+                }
+                Err(error) => {
+                    return Err(format!(
+                        "refusing to overwrite an unreadable baseline ({}): {error}",
+                        error.kind.as_str()
+                    ));
+                }
+            };
+            let canonical = agentrouter_cli::contract::canonical_openapi_document(&document)?;
+            if !canonical.is_object() || canonical.get("paths").is_none() {
+                return Err("contract source is not an OpenAPI document (no 'paths')".to_owned());
+            }
+            let invalid = agentrouter_cli::contract::validate_refs(&canonical)?;
+            if !invalid.is_empty() {
+                return Err(format!(
+                    "contract source contains unusable $ref(s): {}",
+                    invalid
+                        .iter()
+                        .take(5)
+                        .cloned()
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ));
+            }
+            if let Some(baseline) = baseline {
+                let report =
+                    agentrouter_cli::contract::diff_contracts_surface(&baseline, &canonical)?;
+                let breaking = report["changes"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter(|change| change["severity"] == "breaking")
+                    .count();
+                if breaking > 0 {
+                    return Err(format!(
+                        "refusing to update the baseline: {breaking} breaking change(s); use `contract diff` for details"
+                    ));
+                }
+            }
+            let (path, exported) = agentrouter_cli::contract::export_contract(
+                &root,
+                &canonical,
+                generated_at.as_deref(),
+            )?;
+            let payload = serde_json::json!({
+                "status": "exported",
+                "path": path,
+                "canonical": true,
+                "document": exported,
+            });
+            if json_output {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&payload).map_err(|error| error.to_string())?
+                );
+            } else {
+                println!("Contract exported: {}", path.display());
+            }
+            Ok(0)
+        }
+        _ => Err("usage: agentrouter contract <check|diff|export> [options]".to_owned()),
     }
 }
 

@@ -3290,3 +3290,12 @@ remains authoritative.
 The TypeScript Rust parity helper no longer initializes through Python/Typer.
 It uses the Rust init binary, and the required live suite passes 18/18 with
 zero skips against the Rust loopback API.
+## TASK-216 — Rust public contract export (2026-11-18)
+
+- Added `agentrouter contract export` with optional `--source`, deterministic
+  `--generated-at`, and `--json` output.
+- Existing baselines are validated and breaking surface changes are refused
+  before replacement; unreadable baselines fail closed.
+- `cargo fmt`, CLI check/build, and an isolated temporary-root export passed.
+- Live framework schema generation and complete compatibility classification
+  remain Python-owned; release readiness is unchanged.
