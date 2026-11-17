@@ -17,10 +17,27 @@ use crate::annotation_schema::{
 };
 use crate::{AnnotationAdjudication, AnnotationInputItem};
 
-const DEFAULT_CANDIDATES_YAML: &str =
-    include_str!("../../../agentrouter/benchmarks/context_band/candidates_v1.yaml");
-const FROZEN_HOLDOUT_YAML: &str =
-    include_str!("../../../agentrouter/benchmarks/context_band_holdout_v1.yaml");
+const DEFAULT_CANDIDATES_BYTES: &[u8] =
+    include_bytes!("../../../agentrouter/benchmarks/context_band/candidates_v1.yaml");
+const FROZEN_HOLDOUT_BYTES: &[u8] =
+    include_bytes!("../../../agentrouter/benchmarks/context_band_holdout_v1.yaml");
+
+fn embedded_text(bytes: &[u8]) -> String {
+    // Git may check repository resources out with CRLF on Windows. Python's
+    // text readers expose universal-newline content, so normalize at the
+    // embedding boundary to keep installed binaries byte-stable everywhere.
+    String::from_utf8_lossy(bytes)
+        .replace("\r\n", "\n")
+        .replace('\r', "\n")
+}
+
+fn default_candidates_yaml() -> String {
+    embedded_text(DEFAULT_CANDIDATES_BYTES)
+}
+
+fn frozen_holdout_yaml() -> String {
+    embedded_text(FROZEN_HOLDOUT_BYTES)
+}
 
 fn project_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -51,7 +68,8 @@ fn read_labels(path: &Path) -> Result<Vec<ItemLabels>, String> {
 
 fn load_pack_candidates(path: &Path, default_path: &Path) -> Result<Vec<Candidate>, String> {
     if path == default_path && !path.exists() {
-        crate::annotation_store::load_candidates_text(DEFAULT_CANDIDATES_YAML)
+        let embedded = default_candidates_yaml();
+        crate::annotation_store::load_candidates_text(&embedded)
     } else {
         read_candidates(path)
     }
@@ -59,9 +77,10 @@ fn load_pack_candidates(path: &Path, default_path: &Path) -> Result<Vec<Candidat
 
 fn read_frozen_prompts(root: &Path) -> Vec<String> {
     let path = root.join("agentrouter/benchmarks/context_band_holdout_v1.yaml");
-    let text = std::fs::read_to_string(path).unwrap_or_else(|_| FROZEN_HOLDOUT_YAML.to_owned());
-    let value = serde_yaml::from_str::<Value>(&text)
-        .or_else(|_| serde_yaml::from_str::<Value>(FROZEN_HOLDOUT_YAML));
+    let embedded = frozen_holdout_yaml();
+    let text = std::fs::read_to_string(path).unwrap_or_else(|_| embedded.clone());
+    let value =
+        serde_yaml::from_str::<Value>(&text).or_else(|_| serde_yaml::from_str::<Value>(&embedded));
     let Ok(value) = value else { return Vec::new() };
     value["cases"]
         .as_array()
@@ -688,19 +707,21 @@ mod tests {
     fn packaged_annotation_resources_are_embedded_and_parseable() {
         use sha2::{Digest, Sha256};
 
-        let candidates = crate::annotation_store::load_candidates_text(DEFAULT_CANDIDATES_YAML)
+        let candidates_yaml = default_candidates_yaml();
+        let holdout_yaml = frozen_holdout_yaml();
+        let candidates = crate::annotation_store::load_candidates_text(&candidates_yaml)
             .expect("embedded candidate pool");
         assert_eq!(candidates.len(), 63);
-        assert_eq!(DEFAULT_CANDIDATES_YAML.len(), 10_568);
+        assert_eq!(candidates_yaml.len(), 10_568);
         assert_eq!(
-            format!("{:x}", Sha256::digest(DEFAULT_CANDIDATES_YAML.as_bytes())),
+            format!("{:x}", Sha256::digest(candidates_yaml.as_bytes())),
             "8205b492e6d41dc86846fedecf448ce0406cb4af305c4b4f6e6c4dfa6e48f150"
         );
         let prompts = read_frozen_prompts(Path::new("/path/that/does/not/exist"));
         assert_eq!(prompts.len(), 45);
-        assert_eq!(FROZEN_HOLDOUT_YAML.len(), 6_068);
+        assert_eq!(holdout_yaml.len(), 6_068);
         assert_eq!(
-            format!("{:x}", Sha256::digest(FROZEN_HOLDOUT_YAML.as_bytes())),
+            format!("{:x}", Sha256::digest(holdout_yaml.as_bytes())),
             "ca07dfa09f08cd877d383067b8e1163c0f196a5a1f0c4e641adefed12b17508f"
         );
         let fallback = load_pack_candidates(

@@ -32,6 +32,16 @@ Coverage is 92.021% statement, 87.833% branch, and 91.058% combined.
 
 ## Current checkpoint — 2026-11-17
 
+TASK-171 provider refresh parity is independently clear. Rust refresh uses
+no-follow registry traversal, fixed bounded HTTPS transport, Python-compatible
+OpenRouter/OpenAI mapping, provenance, deprecation warnings, dry-run, and atomic
+generated-file replacement. A feature-gated local fixture seam provides
+process-level success/error evidence without exposing a production URL option;
+OpenAI key gating and credential redaction are covered. Full Rust workspace/
+strict Clippy (including the fixture feature) and Python 2,732/7 pass. Inventory
+is 59/77 Parity and 18 Partial. Commit this slice, push the authorized RC
+branch, inspect hosted checks, then continue with the next Partial module.
+
 TASK-170 packaged annotation CLI parity is independently clear. Rust embeds the
 candidate pool and frozen holdout, prefers checked-out files for development,
 and falls back to deterministic embedded bytes for installed binaries. Exact

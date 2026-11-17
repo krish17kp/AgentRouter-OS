@@ -2,6 +2,15 @@
 
 ## Current checkpoint — 2026-11-17
 
+TASK-171 closes provider refresh parity after independent security review. Rust
+refresh now uses no-follow registry traversal, fixed HTTPS endpoints, bounded
+header-only transport, Python-compatible OpenRouter/OpenAI mapping, provenance,
+deprecation warnings, dry-run, and atomic generated-file replacement. A
+feature-gated fixture transport supports deterministic process differentials
+without exposing a production URL override. Full Rust workspace/strict Clippy
+and Python regression (2,732 passed, 7 skipped) pass. Inventory: 59/77 Parity,
+18 Partial.
+
 TASK-170 closes packaged annotation CLI parity after independent review. The
 Rust evaluator embeds the candidate pool and frozen holdout, prefers checked-out
 files for source-tree development, and falls back to embedded bytes elsewhere.

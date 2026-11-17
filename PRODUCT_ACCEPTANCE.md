@@ -2,6 +2,12 @@
 
 ## Current checkpoint — 2026-11-17
 
+Product acceptance remains **not granted**. TASK-171 provider refresh parity is
+independently clear: deterministic process evidence covers OpenRouter/OpenAI
+success and failure semantics, dry-run and malformed-fetch no-write behavior,
+provenance, deprecations, manual-registry preservation, OpenAI key gating, and
+credential redaction. Inventory: 59 Parity / 18 Partial.
+
 Product acceptance remains **not granted**. TASK-170 packaged annotation CLI
 parity is independently clear: embedded candidate/holdout resources, exact
 resource evidence, source-independent fallback, and 88 annotation CLI/schema

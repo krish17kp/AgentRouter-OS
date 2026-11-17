@@ -2,6 +2,11 @@
 
 ## Current migration and release limits (2026-11-17)
 
+- Rust migration remains incomplete at 59/77 full-module parity. TASK-171 closes
+  provider refresh; CLI entrypoints, contract, diagnostics, MCP lifecycle,
+  plugins, reliability, SDK transport, and external real-data adapters remain
+  Partial.
+
 - Rust migration remains incomplete at 56/77 full-module parity. TASK-168 closes
   observability; CLI/annotation, MCP lifecycle, plugin, reliability, registry
   refresh, SDK transport, and external real-data adapter surfaces remain Partial.

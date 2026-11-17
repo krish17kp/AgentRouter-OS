@@ -775,6 +775,32 @@ fn providers_doctor(home: &Path) -> Result<i32, String> {
     }
 }
 
+#[cfg(feature = "test-fixtures")]
+fn fetch_refresh_catalog(
+    provider: &str,
+    limit: usize,
+    match_id: Option<&str>,
+) -> Result<agentrouter_cli::providers::RefreshResult, String> {
+    if let Some(fixture) = env::var_os("AGENTROUTER_TEST_REFRESH_PAYLOAD") {
+        return agentrouter_cli::providers::fetch_catalog_from_fixture(
+            provider,
+            Path::new(&fixture),
+            limit,
+            match_id,
+        );
+    }
+    agentrouter_cli::providers::fetch_catalog(provider, limit, match_id)
+}
+
+#[cfg(not(feature = "test-fixtures"))]
+fn fetch_refresh_catalog(
+    provider: &str,
+    limit: usize,
+    match_id: Option<&str>,
+) -> Result<agentrouter_cli::providers::RefreshResult, String> {
+    agentrouter_cli::providers::fetch_catalog(provider, limit, match_id)
+}
+
 fn providers_refresh(home: &Path, args: &[String]) -> Result<i32, String> {
     let mut provider = None;
     let mut limit = 25_usize;
@@ -840,11 +866,7 @@ fn providers_refresh(home: &Path, args: &[String]) -> Result<i32, String> {
     } else {
         println!("auth: no {key_env} set");
     }
-    let result = match agentrouter_cli::providers::fetch_catalog(
-        &provider,
-        limit,
-        match_id.as_deref(),
-    ) {
+    let result = match fetch_refresh_catalog(&provider, limit, match_id.as_deref()) {
         Ok(result) => result,
         Err(error) => {
             eprintln!("Refresh failed: {error}");

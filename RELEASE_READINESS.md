@@ -2,6 +2,15 @@
 
 ## Current checkpoint — 2026-11-17
 
+**NOT release ready.** TASK-171 closes the provider refresh row after
+independent review. Fixed HTTPS retrieval, bounded transport, key-only headers,
+OpenRouter/OpenAI mapping, warnings/deprecations, dry-run, provenance, atomic
+replacement, manual-registry preservation, and no-follow registry writes are
+covered by Rust and process-level Python/Rust evidence. Full Rust workspace/
+Clippy and Python 2,732/7 pass. Inventory: 59/77 Parity, 18 Partial. Frozen
+evaluation, human/live validation, hosted promotion, main merge, tag, and
+deployment gates remain unresolved.
+
 **NOT release ready.** TASK-170 closes packaged annotation CLI parity after
 independent review. Candidate and frozen-holdout resources are embedded with
 checked-out-file precedence and deterministic fallback; exact hashes/counts and

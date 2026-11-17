@@ -130,11 +130,27 @@ pub fn fetch_catalog(
         );
     }
     let payload = fetch_json_at(source_url, api_key.as_deref(), &http_agent())?;
+    map_catalog_payload(provider, source_url, &payload, limit, match_id)
+}
+
+fn map_catalog_payload(
+    provider: &str,
+    source_url: &'static str,
+    payload: &Value,
+    limit: usize,
+    match_id: Option<&str>,
+) -> Result<RefreshResult, String> {
+    let Some((_, _)) = provider_config(provider) else {
+        return Err(format!("unsupported refresh provider '{provider}'"));
+    };
+    if limit == 0 {
+        return Err("limit must be at least 1".to_owned());
+    }
     let today = Local::now().date_naive();
     let (entries, warnings) = if provider == "openrouter" {
-        agentrouter_registry::refresh::openrouter_from_payload(&payload, limit, match_id, today)
+        agentrouter_registry::refresh::openrouter_from_payload(payload, limit, match_id, today)
     } else {
-        agentrouter_registry::refresh::openai_from_payload(&payload, limit, match_id, today)
+        agentrouter_registry::refresh::openai_from_payload(payload, limit, match_id, today)
     }
     .map_err(|error| error.to_string())?;
     Ok(RefreshResult {
@@ -142,6 +158,37 @@ pub fn fetch_catalog(
         entries,
         warnings,
     })
+}
+
+/// Test-only, file-backed transport seam. It is feature-gated and accepts a
+/// fixture path rather than a user-controlled URL, so production builds keep
+/// the fixed provider endpoints and real bounded transport unchanged.
+#[cfg(feature = "test-fixtures")]
+pub fn fetch_catalog_from_fixture(
+    provider: &str,
+    fixture: &Path,
+    limit: usize,
+    match_id: Option<&str>,
+) -> Result<RefreshResult, String> {
+    let Some((source_url, key_env)) = provider_config(provider) else {
+        return Err(format!("unsupported refresh provider '{provider}'"));
+    };
+    if provider == "openai"
+        && std::env::var(key_env)
+            .ok()
+            .filter(|key| !key.is_empty())
+            .is_none()
+    {
+        return Err(
+            "OpenAI refresh requires OPENAI_API_KEY (a read-only key is enough); set it in your environment and retry"
+                .to_owned(),
+        );
+    }
+    let text = std::fs::read_to_string(fixture)
+        .map_err(|error| format!("cannot read refresh fixture: {error}"))?;
+    let payload = serde_json::from_str::<Value>(&text)
+        .map_err(|_| "refresh fixture is not valid JSON".to_owned())?;
+    map_catalog_payload(provider, source_url, &payload, limit, match_id)
 }
 
 /// Read prior generated model IDs for report-only deprecation candidates.
@@ -214,8 +261,14 @@ pub fn write_generated_catalog(
     );
     let contents = format!("{header}{yaml}");
     let file_name = format!("models.{provider}{GENERATED_SUFFIX}");
-    let parent = cap_std::fs::Dir::open_ambient_dir(registry, cap_std::ambient_authority())
-        .map_err(|error| format!("cannot open registry directory: {error}"))?;
+    // Traverse every component with the same no-follow/reparse-point checks as
+    // home initialization. An ambient directory open would follow a symlinked
+    // `$AGENTROUTER_HOME/registry` and redirect the generated catalog outside
+    // the configured home.
+    let parent = cap_std::fs::Dir::from_std_file(
+        super::open_safe_home(registry)
+            .map_err(|error| format!("cannot open registry directory safely: {error}"))?,
+    );
     let mut cursor = Cursor::new(contents.into_bytes());
     super::atomic_replace(&parent, Path::new(&file_name), &mut cursor, None)?;
     Ok(registry.join(file_name))
@@ -354,5 +407,29 @@ mod tests {
             .as_f64()
             .is_some());
         assert!(!generated_text.contains("$serde_json::private::Number"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn generated_write_refuses_a_linked_registry_directory() {
+        use std::os::unix::fs::symlink;
+
+        let home = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let registry = home.path().join("registry");
+        symlink(outside.path(), &registry).unwrap();
+        let result = write_generated_catalog(
+            &registry,
+            "openrouter",
+            OPENROUTER_MODELS_URL,
+            &[],
+            25,
+            None,
+        );
+        assert!(result.is_err());
+        assert!(!outside
+            .path()
+            .join("models.openrouter.generated.yaml")
+            .exists());
     }
 }

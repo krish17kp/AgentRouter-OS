@@ -17,6 +17,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from agentrouter import refresh
 from agentrouter.annotation import candidates as candidate_mod
 from agentrouter.annotation import store
 from agentrouter.controls import PREFERENCE_WEIGHTS
@@ -280,6 +281,171 @@ def test_provider_refresh_preflight_is_offline_and_hides_provider_credentials(
         unified_binary, "providers", "refresh", "openrouter", "--limit", "0", home=home
     )
     assert invalid_limit.returncode == 2
+
+
+@pytest.fixture(scope="session")
+def refresh_fixture_binary():
+    built = subprocess.run(
+        [
+            "cargo",
+            "build",
+            "-p",
+            "agentrouter-cli",
+            "--features",
+            "test-fixtures",
+            "--bin",
+            "agentrouter",
+            "--locked",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=240,
+        check=False,
+    )
+    assert built.returncode == 0, built.stderr
+    target = Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target"))
+    binary = target / "debug" / "agentrouter"
+    if os.name == "nt":
+        binary = binary.with_suffix(".exe")
+    assert binary.exists()
+    return binary
+
+
+def test_provider_refresh_fixture_process_matches_python_and_never_writes_on_dry_run_or_error(
+    tmp_path, refresh_fixture_binary
+):
+    home = tmp_path / "agentrouter-home"
+    initialized = _run(refresh_fixture_binary, "init", home=home)
+    assert initialized.returncode == 0, initialized.stderr
+    registry = home / "registry"
+    manual = (registry / "models.yaml").read_bytes()
+    previous = registry / "models.openrouter.generated.yaml"
+    previous.write_text(
+        "models:\n  - model_id: retired/model\n    context_window: 1\n",
+        encoding="utf-8",
+    )
+    fixture = tmp_path / "openrouter.json"
+    payload = {
+        "data": [
+            {
+                "id": "vendor/frontier-x",
+                "context_length": 200000,
+                "pricing": {"prompt": "0.00002", "completion": "0.0001"},
+                "supported_parameters": ["tools"],
+                "architecture": {"input_modalities": ["text"]},
+            },
+            {
+                "id": "vendor/cheap-y",
+                "context_length": 32000,
+                "pricing": {"prompt": "0"},
+            },
+        ]
+    }
+    fixture.write_text(json.dumps(payload), encoding="utf-8")
+    env = os.environ.copy()
+    env["AGENTROUTER_HOME"] = str(home)
+    env["AGENTROUTER_TEST_REFRESH_PAYLOAD"] = str(fixture)
+
+    dry_run = subprocess.run(
+        [str(refresh_fixture_binary), "providers", "refresh", "openrouter", "--dry-run"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env=env,
+        timeout=60,
+        check=False,
+    )
+    assert dry_run.returncode == 0, dry_run.stderr
+    assert "candidate deprecation" in dry_run.stdout
+    assert "Dry run - nothing written." in dry_run.stdout
+    assert previous.read_text(encoding="utf-8").startswith("models:")
+    assert not (registry / "models.openrouter.generated.yaml.tmp").exists()
+
+    applied = subprocess.run(
+        [str(refresh_fixture_binary), "providers", "refresh", "openrouter", "--limit", "2"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env=env,
+        timeout=60,
+        check=False,
+    )
+    assert applied.returncode == 0, applied.stderr
+    assert (registry / "models.yaml").read_bytes() == manual
+    generated = yaml.safe_load(previous.read_text(encoding="utf-8"))
+    assert generated["provenance"]["provider"] == "openrouter"
+    assert generated["provenance"]["source_url"] == "https://openrouter.ai/api/v1/models"
+    assert generated["provenance"]["count"] == 2
+    for model in generated["models"]:
+        if hasattr(model.get("last_updated"), "isoformat"):
+            model["last_updated"] = model["last_updated"].isoformat()
+    expected = [
+        refresh.map_openrouter_model(row).model_dump(mode="json", exclude_none=True)
+        for row in payload["data"]
+    ]
+    assert generated["models"] == expected
+
+    before_failure = previous.read_bytes()
+    fixture.write_text("{not-json", encoding="utf-8")
+    failed = subprocess.run(
+        [str(refresh_fixture_binary), "providers", "refresh", "openrouter"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env=env,
+        timeout=60,
+        check=False,
+    )
+    assert failed.returncode == 1
+    assert "registry was NOT modified" in failed.stderr
+    assert previous.read_bytes() == before_failure
+
+    openai_fixture = tmp_path / "openai.json"
+    openai_fixture.write_text(
+        json.dumps({"data": [{"id": "gpt-4.1-mini-2026-01-01"}]}), encoding="utf-8"
+    )
+    env["AGENTROUTER_TEST_REFRESH_PAYLOAD"] = str(openai_fixture)
+    env["OPENAI_API_KEY"] = "sk-fixture-only"
+    openai = subprocess.run(
+        [str(refresh_fixture_binary), "providers", "refresh", "openai"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env=env,
+        timeout=60,
+        check=False,
+    )
+    assert openai.returncode == 0, openai.stderr
+    assert "sk-fixture-only" not in openai.stdout + openai.stderr
+    openai_catalog = yaml.safe_load(
+        (registry / "models.openai.generated.yaml").read_text(encoding="utf-8")
+    )
+    assert openai_catalog["provenance"]["source_url"] == "https://api.openai.com/v1/models"
+    assert openai_catalog["models"][0]["model_id"] == "gpt-4.1-mini-2026-01-01"
+    openai_generated = registry / "models.openai.generated.yaml"
+    openai_before_missing_key = openai_generated.read_bytes()
+
+    env.pop("OPENAI_API_KEY")
+    missing_key = subprocess.run(
+        [str(refresh_fixture_binary), "providers", "refresh", "openai"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env=env,
+        timeout=60,
+        check=False,
+    )
+    assert missing_key.returncode == 1
+    assert "OPENAI_API_KEY" in missing_key.stdout + missing_key.stderr
+    assert "registry was NOT modified" in missing_key.stderr
+    assert "sk-fixture-only" not in missing_key.stdout + missing_key.stderr
+    assert openai_generated.read_bytes() == openai_before_missing_key
 
 
 def test_server_and_mcp_are_available_from_unified_entrypoint(tmp_path, unified_binary):

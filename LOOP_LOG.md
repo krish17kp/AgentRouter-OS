@@ -1,5 +1,21 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-171 provider refresh parity audit
+
+Completed the provider-refresh audit and repaired a registry write escape:
+generated catalogs now open the configured registry through no-follow/reparse
+point checks, so a linked registry directory cannot redirect writes outside the
+AgentRouter home. Rust embeds annotation resources with platform-stable newline
+normalization after hosted Windows exposed CRLF-dependent hash evidence.
+
+Added a feature-gated local-fixture transport seam (never a production URL
+override) and a process-level Python/Rust differential for OpenRouter and
+OpenAI success, fixed provenance, warning/deprecation reporting, dry-run and
+malformed-fetch no-write behavior, manual-registry preservation, OpenAI key
+preconditions, and credential redaction. Full Rust workspace/strict Clippy
+(including the fixture feature) and Python 2,732/7 pass. Independent review
+cleared the task. Inventory advances to 59/77 Parity and 18 Partial.
+
 ## 2026-11-17 — TASK-170 packaged annotation CLI parity
 
 Completed the annotation CLI packaged-resource audit. Rust now embeds the

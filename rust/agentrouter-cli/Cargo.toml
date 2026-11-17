@@ -5,6 +5,9 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+[features]
+test-fixtures = []
+
 [dependencies]
 agentrouter-core = { path = "../agentrouter-core" }
 agentrouter-api = { path = "../agentrouter-api" }
