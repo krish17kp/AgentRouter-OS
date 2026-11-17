@@ -68,11 +68,12 @@ routine exports still refuse breaking changes, while
 manifest history. Full Rust workspace tests, strict Clippy, optimized build,
 audit, and the acceptance smoke pass; release readiness is unchanged.
 
-TASK-220 removes the Rust evaluation and annotation CLIs' reliance on their
+TASK-220 removes the Rust evaluation and annotation CLIs' and diagnostics'
+reliance on their
 build-time checkout by adding explicit project-root override and
 working-directory discovery. Relocated-fixture smokes plus the 21-test
-evaluation and 5-test annotation compatibility suites pass; this does not
-provide the external datasets or clear release gates.
+evaluation, 5-test annotation, and 15-test diagnostics compatibility suites
+pass; this does not provide the external datasets or clear release gates.
 
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability

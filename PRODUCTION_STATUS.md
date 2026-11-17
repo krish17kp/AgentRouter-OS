@@ -81,12 +81,12 @@ routine exports still refuse breaking changes, while
 erasing prior manifest history. Focused Rust contract tests, strict Clippy, and
 a temporary CLI acceptance smoke pass.
 
-TASK-220 makes the Rust evaluation and annotation CLIs relocatable: they honor
+TASK-220 makes the Rust evaluation and annotation CLIs plus diagnostics relocatable: they honor
 `AGENTROUTER_PROJECT_ROOT`, discover repository ancestors from the working
 directory, and only then fall back to the build-time manifest path. The
-21-test evaluation and 5-test annotation compatibility suites plus strict
-crate Clippy pass; real external dataset availability remains explicitly
-gated.
+21-test evaluation, 5-test annotation, and 15-test diagnostics compatibility
+suites plus strict crate Clippy pass; real external dataset availability
+remains explicitly gated.
 
 - [ ] PR review and hosted checks: PR #16 is the sole open PR against `main`, with no GitHub reviews or review requests. Pushed RC head `71408b2` is green across Rust Linux/Windows/macOS, Python/Rust compatibility on all three platforms, Python 3.10–3.13, Windows, macOS, Security, Website, and Critical Mutation. The enforcing release gate remains honestly held by frozen context-band accuracy `0.6667 < 0.90`; live smoke skips without credentials.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.

@@ -73,11 +73,12 @@ routine exports still refuse breaking changes, while
 `--accept-breaking --reason TEXT` records the exact current findings and
 preserves prior manifest history through the safe writer. Full workspace tests,
 strict Clippy, release build, audit, and a temporary CLI acceptance smoke pass.
-TASK-220 makes `agentrouter-evaluate` and its `dataset` annotation commands
-relocatable with `AGENTROUTER_PROJECT_ROOT` and current-working-directory root
-discovery before the build-time fallback. The evaluation suite passes 21/21
-and annotation suite 5/5; real external dataset availability remains an
-explicit blocker when its requirements are absent.
+TASK-220 makes `agentrouter-evaluate`, its `dataset` annotation commands, and
+the Rust diagnostics contract path relocatable with `AGENTROUTER_PROJECT_ROOT`
+and current-working-directory root discovery before the build-time fallback.
+The evaluation suite passes 21/21, annotation 5/5, and diagnostics 15/15;
+real external dataset availability remains an explicit blocker when its
+requirements are absent.
 TASK-180 aligns context-band human-readable output with Python (bootstrap CI,
 Python-style containers, unquoted checksum, signed delta); JSON remains stable.
 

@@ -3332,11 +3332,12 @@ zero skips against the Rust loopback API.
 
 ## TASK-220 — Relocatable Rust evaluation root discovery (2026-11-18)
 
-- `agentrouter-evaluate` and its `dataset` annotation commands now honor
+- `agentrouter-evaluate`, its `dataset` annotation commands, and the Rust
+  diagnostics contract path now honor
   `AGENTROUTER_PROJECT_ROOT` and discover a repository ancestor from the
   current working directory before using the build-time fallback.
 - Relocated fixture trees list all registered datasets and build annotation
   packs successfully.
-- Rust evaluation compatibility passes 21/21 and annotation compatibility 5/5;
-  formatting and strict Clippy pass, and external dataset blockers remain
-  honestly reported.
+- Rust evaluation compatibility passes 21/21, annotation compatibility 5/5,
+  and diagnostics compatibility 15/15; formatting and strict Clippy pass, and
+  external dataset blockers remain honestly reported.

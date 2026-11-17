@@ -463,6 +463,14 @@ fn check_usage(host: &str) -> Check {
     )
 }
 
+fn contract_directory() -> PathBuf {
+    std::env::var_os("AGENTROUTER_PROJECT_ROOT")
+        .filter(|root| !root.is_empty())
+        .map(PathBuf::from)
+        .map(|root| root.join("contracts").join("http").join("v1"))
+        .unwrap_or_else(|| PathBuf::from("contracts").join("http").join("v1"))
+}
+
 pub fn run_all(home: &Path) -> Vec<Check> {
     let harness = crate::harness::detect_harness();
     vec![
@@ -503,7 +511,7 @@ pub fn run_all(home: &Path) -> Vec<Check> {
         safe("server.extra", check_server_extra),
         safe("server.auth", check_api_key),
         safe("contract.version", || {
-            let contract_dir = Path::new("contracts").join("http").join("v1");
+            let contract_dir = contract_directory();
             Check::new(
                 "contract.version",
                 OK,

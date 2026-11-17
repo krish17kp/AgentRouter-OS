@@ -97,6 +97,22 @@ def test_stable_product_contract_checks_match_python(tmp_path):
     assert rust_checks == python_checks
 
 
+def test_contract_diagnostic_honors_relocated_project_root(tmp_path):
+    home = tmp_path / "agentrouter"
+    home.mkdir()
+    relocated = tmp_path / "relocated"
+    relocated.mkdir()
+    result = _doctor(
+        home,
+        "--json",
+        env={"AGENTROUTER_PROJECT_ROOT": str(relocated)},
+    )
+    assert result.returncode == 1
+    checks = json.loads(result.stdout)["checks"]
+    contract = next(check for check in checks if check["id"] == "contract.version")
+    assert contract["summary"] == f"HTTP contract v1 ({relocated / 'contracts/http/v1'})"
+
+
 def test_plugin_health_rollup_matches_python_for_missing_destinations(tmp_path, monkeypatch):
     from agentrouter import diagnostics
 
