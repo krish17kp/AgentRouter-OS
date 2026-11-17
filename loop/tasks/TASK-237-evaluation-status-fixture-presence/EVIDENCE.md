@@ -14,4 +14,5 @@ contract.
 tests/test_rust_evaluation_cli_compat.py   22 passed
 agentrouter-evaluation Rust tests          14 passed
 strict Clippy / rustfmt / diff checks      passed
+full locked Rust workspace tests            passed
 ```
