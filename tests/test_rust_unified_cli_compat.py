@@ -201,6 +201,23 @@ def test_init_and_route_dispatch_to_rust_implementations(tmp_path, unified_binar
     assert "Feedback: 1 rating(s), avg 4" in stats_text.stdout
 
 
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ("hosts", "list"),
+        ("hosts", "show", "codex-cli"),
+        ("models", "list"),
+        ("models", "show", "openai/gpt-5.6-sol"),
+    ],
+)
+def test_registry_backed_inspection_commands_preserve_registry_exit_code(
+    tmp_path, unified_binary, arguments
+):
+    result = _run(unified_binary, *arguments, home=tmp_path / "missing-home")
+    assert result.returncode == 3
+    assert "Registry error:" in result.stderr
+
+
 def test_explain_supports_python_text_and_json_surfaces(tmp_path, unified_binary):
     home = tmp_path / "agentrouter-home"
     initialized = _run(unified_binary, "init", home=home)

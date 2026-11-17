@@ -628,7 +628,13 @@ fn grouped(value: &serde_json::Number) -> String {
 }
 
 fn hosts_list(home: &Path) -> Result<i32, String> {
-    let models = load_catalog(home)?;
+    let models = match load_catalog(home) {
+        Ok(models) => models,
+        Err(error) => {
+            eprintln!("{error}");
+            return Ok(3);
+        }
+    };
     let mut seen = BTreeMap::new();
     for model in &models {
         for target in &model.execution_targets {
@@ -694,7 +700,13 @@ fn hosts_show(home: &Path, host: &str) -> Result<i32, String> {
     if let Some(remedy) = &status.remedy {
         println!("Next: {remedy}");
     }
-    let models = load_catalog(home)?;
+    let models = match load_catalog(home) {
+        Ok(models) => models,
+        Err(error) => {
+            eprintln!("{error}");
+            return Ok(3);
+        }
+    };
     let targeting = models
         .iter()
         .filter(|model| {
@@ -717,7 +729,13 @@ fn hosts_show(home: &Path, host: &str) -> Result<i32, String> {
 }
 
 fn models_list(home: &Path, available_only: bool) -> Result<i32, String> {
-    let mut models = load_catalog(home)?;
+    let mut models = match load_catalog(home) {
+        Ok(models) => models,
+        Err(error) => {
+            eprintln!("{error}");
+            return Ok(3);
+        }
+    };
     models.sort_by(|left, right| {
         left.vendor()
             .cmp(right.vendor())
@@ -747,7 +765,13 @@ fn models_list(home: &Path, available_only: bool) -> Result<i32, String> {
 }
 
 fn models_show(home: &Path, key: &str) -> Result<i32, String> {
-    let models = load_catalog(home)?;
+    let models = match load_catalog(home) {
+        Ok(models) => models,
+        Err(error) => {
+            eprintln!("{error}");
+            return Ok(3);
+        }
+    };
     let model = models
         .iter()
         .find(|model| model.vendor_key() == key || model.key() == key)

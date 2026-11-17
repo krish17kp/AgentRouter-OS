@@ -3626,3 +3626,10 @@ zero skips against the Rust loopback API.
 - Diagnostics and bundle compatibility pass 45 focused tests; the Rust CLI
   crate passes 89 tests with strict Clippy and formatting.
 - Release readiness and all owner-controlled production gates remain unchanged.
+## TASK-256 — Registry-backed CLI exit parity (2026-11-18)
+
+- Unified Rust `hosts list/show` and `models list/show` now preserve Python's
+  registry failure exit code (3) for missing or unreadable homes.
+- Four process-level regressions pass; the focused selection passes 5/5 and
+  strict Clippy remains green.
+- The release gate and owner-controlled production requirements are unchanged.

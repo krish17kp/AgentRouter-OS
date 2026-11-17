@@ -2,7 +2,14 @@
 
 Updated: 2026-11-18
 
-## Latest continuation slice — TASK-255
+## Latest continuation slice — TASK-256
+
+Unified Rust `hosts` and `models` inspection commands now preserve Python's
+registry failure exit code (3) when the home is uninitialized, with four
+process-level regressions. The focused selection passes 5 cases and strict
+Clippy remains green.
+
+## Previous continuation slice — TASK-255
 
 Rust `doctor --bundle` now preserves Python's actionable
 `Could not write the bundle:` error prefix while retaining exit code 2 for

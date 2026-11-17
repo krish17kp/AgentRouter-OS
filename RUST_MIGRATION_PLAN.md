@@ -27,6 +27,11 @@
 
 ## Current production status
 
+TASK-256 (2026-11-18) aligns unified Rust registry-backed inspection errors:
+`hosts list/show` and `models list/show` now return exit 3 for unreadable or
+missing registries, matching Python instead of the generic exit 2. Four
+process-level regressions and strict Clippy pass.
+
 TASK-255 (2026-11-18) aligns Rust `doctor --bundle` failures with Python's
 public error contract by preserving the `Could not write the bundle:` prefix
 and exit code 2. Diagnostics and bundle compatibility pass 45 focused tests;

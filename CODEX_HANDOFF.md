@@ -2,6 +2,10 @@
 
 ## Live checkpoint — 2026-11-18
 
+TASK-256 aligns unified Rust registry-backed inspection errors: `hosts` and
+`models` list/show now return exit 3 for missing or unreadable registries,
+matching Python. Four process regressions pass and strict Clippy is green.
+
 TASK-255 aligns Rust `doctor --bundle` failure messages with Python's public
 `Could not write the bundle:` prefix and exit code 2. Diagnostics/bundle
 compatibility is green at 45 focused tests; the Rust CLI crate remains 89/89
