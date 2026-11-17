@@ -27,6 +27,11 @@
 
 ## Current production status
 
+TASK-255 (2026-11-18) aligns Rust `doctor --bundle` failures with Python's
+public error contract by preserving the `Could not write the bundle:` prefix
+and exit code 2. Diagnostics and bundle compatibility pass 45 focused tests;
+the Rust CLI crate passes 89 tests with strict Clippy and formatting.
+
 TASK-254 (2026-11-18) aligns the Rust doctor's human-readable output with
 Python: remedies use the same indentation, failures include the first remedy,
 warnings pluralize correctly, and an all-clear report includes the route next

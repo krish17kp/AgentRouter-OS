@@ -41,7 +41,7 @@ fn run() -> Result<i32, String> {
     let bundle = bundle_to
         .map(|destination| agentrouter_cli::bundle::create(&home, &destination, include_database))
         .transpose()
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| format!("Could not write the bundle: {error}"))?;
     if as_json {
         println!(
             "{}",

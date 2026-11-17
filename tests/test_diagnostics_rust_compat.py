@@ -373,6 +373,7 @@ def test_bundle_refuses_existing_destination_without_overwriting(tmp_path):
     keep.write_text("keep this", encoding="utf-8")
     result = _doctor(home, "--bundle", str(destination))
     assert result.returncode == 2
+    assert result.stderr.startswith("Could not write the bundle: ")
     assert keep.read_text(encoding="utf-8") == "keep this"
 
 

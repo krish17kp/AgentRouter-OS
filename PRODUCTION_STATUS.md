@@ -2,7 +2,15 @@
 
 Updated: 2026-11-18
 
-## Latest continuation slice — TASK-254
+## Latest continuation slice — TASK-255
+
+Rust `doctor --bundle` now preserves Python's actionable
+`Could not write the bundle:` error prefix while retaining exit code 2 for
+unsafe or existing destinations. The diagnostics and bundle compatibility
+selection passes 45 tests; the Rust CLI crate passes 89 tests with strict
+Clippy and formatting.
+
+## Previous continuation slice — TASK-254
 
 Rust `doctor` human-readable output now matches Python's remedy indentation,
 failure guidance, warning pluralization, and clear next-step wording. JSON

@@ -2,6 +2,11 @@
 
 ## Live checkpoint — 2026-11-18
 
+TASK-255 aligns Rust `doctor --bundle` failure messages with Python's public
+`Could not write the bundle:` prefix and exit code 2. Diagnostics/bundle
+compatibility is green at 45 focused tests; the Rust CLI crate remains 89/89
+with strict Clippy and formatting.
+
 TASK-254 aligns Rust `doctor` human-readable output with Python's public text
 contract (remedy indentation, failure guidance, warning pluralization, and the
 all-clear next step); JSON output is unchanged. Diagnostics compatibility is

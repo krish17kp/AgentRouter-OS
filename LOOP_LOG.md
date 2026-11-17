@@ -3619,3 +3619,10 @@ zero skips against the Rust loopback API.
   crate passes 89/89 with strict Clippy and formatting.
 - Release readiness remains unchanged and the frozen context-band gate is still
   the sole canonical evaluation failure.
+## TASK-255 — Doctor bundle error parity (2026-11-18)
+
+- Rust `doctor --bundle` now preserves Python's `Could not write the bundle:`
+  prefix and exit code 2 for existing or unsafe destinations.
+- Diagnostics and bundle compatibility pass 45 focused tests; the Rust CLI
+  crate passes 89 tests with strict Clippy and formatting.
+- Release readiness and all owner-controlled production gates remain unchanged.
