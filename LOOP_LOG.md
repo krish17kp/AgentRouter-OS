@@ -3639,3 +3639,12 @@ zero skips against the Rust loopback API.
   tests with 1 expected skip.
 - The existing Starlette/httpx deprecation warning remains non-failing; the
   canonical release gate still fails only frozen context-band accuracy.
+
+## TASK-258 — Top-level prompt help parity (2026-11-18)
+
+- Unified Rust top-level help now advertises the complete prompt generation
+  syntax: optional task text, `--from`, `--tool`, and `--out`.
+- The focused help/version compatibility test passes and `cargo fmt --all --
+  --check` remains green.
+- No runtime behavior, evaluation inputs, release threshold, or deployment
+  state changed.

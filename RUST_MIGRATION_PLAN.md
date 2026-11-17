@@ -27,6 +27,11 @@
 
 ## Current production status
 
+TASK-258 (2026-11-18) corrects the unified Rust top-level help to advertise
+the complete prompt-generation syntax, including task input and safe output
+options. The focused unified CLI help test and formatting pass; no runtime,
+evaluation, or release-gate behavior changed.
+
 TASK-257 (2026-11-18) re-runs the complete Rust/Python and Rust CLI
 compatibility selection after the registry-backed exit-code fixes: 893 tests
 pass with 1 expected skip and only the existing non-failing Starlette/httpx

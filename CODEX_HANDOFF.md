@@ -2,6 +2,11 @@
 
 ## Live checkpoint — 2026-11-18
 
+TASK-258 corrects the unified Rust top-level help so prompt generation shows
+the implemented `[TASK]`, `--from`, `--tool`, and `--out` options. The focused
+help/version compatibility test and formatting pass; this is a help-contract
+increment only.
+
 TASK-257's complete Rust/Python and Rust CLI compatibility selection passes
 893 tests with 1 expected skip; the only warning is the existing non-failing
 Starlette/httpx deprecation. The release gate remains held solely by the

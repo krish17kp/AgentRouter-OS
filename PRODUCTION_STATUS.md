@@ -8,6 +8,13 @@ The complete Rust/Python and Rust CLI compatibility selection after TASK-256
 passes 893 tests with 1 expected skip. The existing Starlette/httpx warning is
 non-failing; no compatibility regression was observed.
 
+## Latest continuation slice — TASK-258
+
+The unified Rust top-level help now advertises the complete public prompt
+generation syntax (`[TASK]`, `--from`, `--tool`, and `--out`), matching the
+implemented leaf command. The focused help/version compatibility test and
+format check pass; behavior and release gates are unchanged.
+
 ## Previous continuation slice — TASK-256
 
 Unified Rust `hosts` and `models` inspection commands now preserve Python's

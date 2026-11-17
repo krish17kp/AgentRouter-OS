@@ -69,6 +69,7 @@ def test_help_and_version_are_available(unified_binary):
     assert "contract" in help_result.stdout
     assert "--live URL" in help_result.stdout
     assert "export" in help_result.stdout
+    assert "prompt generate [TASK] [--from <decision-id>] [--tool <host>] [--out PATH]" in help_result.stdout
 
     python_help = subprocess.run(
         [sys.executable, "-m", "agentrouter", "--help"],
