@@ -14,4 +14,6 @@ Date: 2026-11-18
 
 ```text
 git diff --check                 # passed
+npm run lint                     # passed
+npm run build                    # passed
 ```
