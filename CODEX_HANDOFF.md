@@ -53,6 +53,11 @@ TASK-225 aligns the native SDK's corresponding classification. Their focused
 differentials, crate/client tests, strict Clippy, formatting, optimized build,
 and cargo audit pass. The SDK and reliability rows remain Partial for broader
 native lifecycle and phase-specific transport parity.
+TASK-226 adds the owner-controlled staging, canary, rollback, provenance, and
+database-safety runbook in `docs/DEPLOYMENT_PLAN.md`; website lint/build also
+pass. TASK-227 re-runs the current release gate: 165 cases, score 98.23, exit
+1, `release_ready: false`, and only the unchanged context-band gate fails at
+0.6667 < 0.90. No staging or production deployment has occurred.
 TASK-213 enforces the Rust MCP legacy initialize lifecycle (`-32002` before
 initialize) while retaining stateless modern discovery. Eight Rust MCP tests,
 strict Clippy, and the full Python/Rust MCP compatibility test pass; non-stdio
