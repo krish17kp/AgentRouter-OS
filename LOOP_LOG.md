@@ -1,5 +1,12 @@
 # LOOP_LOG
 
+## 2026-11-18 — TASK-273 current Rust/Python compatibility verification
+
+The complete `tests/test_rust_*.py` selection passes **741 tests with 1
+expected skip** in 78.20 seconds after TASK-272. The only warning remains the
+existing non-failing Starlette/httpx deprecation. Release, hosted,
+human-evaluation, and deployment gates remain unchanged.
+
 ## 2026-11-18 — TASK-272 negative load-count parity
 
 Rust reliability JSON load probes now clamp negative `total` and `workers`
