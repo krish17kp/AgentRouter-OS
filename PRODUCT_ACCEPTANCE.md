@@ -2,6 +2,10 @@
 
 ## Current checkpoint — 2026-11-17
 
+Product acceptance remains **not granted**. TASK-173 hardens diagnostic bundle
+artifact and snapshot creation with capability-directory exclusive writes; the
+remaining bundle metadata and Windows differential work keeps the row Partial.
+
 Product acceptance remains **not granted**. TASK-172 aligns stable diagnostics
 summaries and adds a direct cross-language check; runtime-specific and complete
 bundle parity remain Partial.

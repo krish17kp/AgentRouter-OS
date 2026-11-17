@@ -2,6 +2,9 @@
 
 ## Current migration and release limits (2026-11-17)
 
+- TASK-173 hardens bundle writes but bundle parity remains Partial for complete
+  Python/Rust environment metadata and Windows-specific edge cases.
+
 - TASK-172 aligns stable doctor summaries but diagnostics remains Partial for
   Rust-vs-Python runtime reporting, OTel capability discovery, and complete
   bundle field parity.

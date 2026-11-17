@@ -2,6 +2,10 @@
 
 ## Current checkpoint — 2026-11-17
 
+TASK-173 hardens diagnostic bundle artifact and snapshot writes with a pinned
+capability directory and exclusive creation. The symlink escape regression and
+focused bundle/diagnostics checks pass; full bundle parity remains Partial.
+
 TASK-172 aligns Rust doctor stable summaries with Python and adds a direct
 cross-language check. Diagnostics compatibility passes 41 focused checks and
 strict Clippy; runtime-specific and full bundle parity remain Partial.

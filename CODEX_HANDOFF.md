@@ -32,6 +32,13 @@ Coverage is 92.021% statement, 87.833% branch, and 91.058% combined.
 
 ## Current checkpoint — 2026-11-17
 
+TASK-173 hardens Rust diagnostic bundle writes. Artifacts and opt-in database
+snapshots now use a pinned capability directory with exclusive creation, and a
+symlink escape regression passes. Focused bundle/diagnostics checks, Rust bundle
+tests, and strict Clippy pass. Bundle remains Partial for complete environment
+metadata and Windows-specific differential coverage. Commit/push this slice,
+inspect hosted checks, then continue the next Partial module.
+
 TASK-172 tightens diagnostics stable-contract parity. Rust now reports the same
 package version, server-extra wording, and contract path summary as Python;
 the direct stable-check differential and 41-test diagnostics suite pass with

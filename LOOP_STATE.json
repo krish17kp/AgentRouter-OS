@@ -1,7 +1,7 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-17",
-  "current_phase": "TASK-172 aligns Rust doctor stable summaries with Python after TASK-171 provider refresh parity. Diagnostics compatibility passes 41 focused checks, Rust diagnostics tests, and strict Clippy; the diagnostics row remains Partial for runtime-specific and complete bundle parity. Inventory is 59/77 Parity and 18 Partial.",
+  "current_phase": "TASK-173 hardens Rust diagnostic bundle writes with pinned capability-directory exclusive creation after TASK-172 diagnostics stable-summary alignment. Focused bundle/diagnostics checks, Rust bundle tests, and strict Clippy pass; bundle parity remains Partial. Inventory is 59/77 Parity and 18 Partial.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
@@ -29,7 +29,7 @@
   "repo_sha_at_takeover": "602321af91ff298c0d5b59d6d36c24f845557fc1",
   "canonical_release_ready": false,
   "in_progress": [
-    "Commit and push TASK-172 to the authorized release candidate branch, then inspect hosted checks.",
+    "Commit and push TASK-173 to the authorized release candidate branch, then inspect hosted checks.",
     "Confirm the latest hosted Windows/Rust migration checks pass after the cross-platform embedded-resource repair.",
     "Continue the remaining 18 Partial Rust modules while PR #16 is held for human evaluation, live validation, and release inputs."
   ],

@@ -2,6 +2,11 @@
 
 ## Current checkpoint — 2026-11-17
 
+**NOT release ready.** TASK-173 hardens bundle writes against final-component
+symlink/reparse redirection and preserves opt-in database snapshot behavior.
+Bundle parity remains Partial for complete metadata and Windows edge evidence;
+external release gates remain unresolved.
+
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
 evidence. Diagnostics remains Partial for runtime-specific and complete bundle

@@ -4,7 +4,7 @@
 //! Task text, credentials, and arbitrary files are never collected. Including
 //! the SQLite decision log is an explicit opt-in.
 
-use std::fs::{self, OpenOptions};
+use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -49,7 +49,6 @@ fn bounded(text: &str) -> String {
 }
 
 fn write_text(directory: &Path, name: &str, text: &str) -> Result<(), BundleError> {
-    let path = directory.join(name);
     let content = if name.ends_with(".json") {
         let value: Value = serde_json::from_str(text)
             .map_err(|_| BundleError("bundle JSON artifact is malformed".into()))?;
@@ -65,15 +64,20 @@ fn write_text(directory: &Path, name: &str, text: &str) -> Result<(), BundleErro
     } else {
         bounded(text)
     };
-    let mut file = OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&path)
-        .map_err(|_| {
-            BundleError(format!(
-                "refusing to overwrite or follow a bundle path: {name}"
-            ))
-        })?;
+    // Pin the already-canonicalized destination directory and create the final
+    // component through cap-std. This refuses a concurrently planted symlink or
+    // Windows reparse point instead of relying on a path-based std open.
+    let parent = cap_std::fs::Dir::from_std_file(
+        crate::open_safe_home(directory)
+            .map_err(|_| BundleError(format!("refusing to open bundle directory: {name}")))?,
+    );
+    let mut options = cap_std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    let mut file = parent.open_with(name, &options).map_err(|_| {
+        BundleError(format!(
+            "refusing to overwrite or follow a bundle path: {name}"
+        ))
+    })?;
     file.write_all(content.as_bytes())
         .map_err(|_| BundleError(format!("could not write bundle artifact: {name}")))
 }
@@ -227,11 +231,16 @@ pub fn create(
     ];
     if include_database {
         let snapshot = directory.join("decisions.db");
-        OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&snapshot)
+        let parent = cap_std::fs::Dir::from_std_file(
+            crate::open_safe_home(&directory)
+                .map_err(|_| BundleError("bundle directory could not be opened safely".into()))?,
+        );
+        let mut options = cap_std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        let snapshot_file = parent
+            .open_with("decisions.db", &options)
             .map_err(|_| BundleError("decision snapshot destination already exists".into()))?;
+        drop(snapshot_file);
         restrict_file(&snapshot)?;
         agentrouter_storage::snapshot(home, &snapshot)
             .map_err(|_| BundleError("decision log snapshot could not be created".into()))?;
@@ -305,5 +314,20 @@ mod tests {
             assert!(write_text(directory.path(), "doctor.json", &text).is_err());
             assert!(!directory.path().join("doctor.json").exists());
         }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn artifact_write_refuses_a_symlinked_final_path() {
+        use std::os::unix::fs::symlink;
+
+        let directory = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let target = outside.path().join("victim.txt");
+        std::fs::write(&target, "keep").unwrap();
+        symlink(&target, directory.path().join("README.txt")).unwrap();
+
+        assert!(write_text(directory.path(), "README.txt", "replace").is_err());
+        assert_eq!(std::fs::read_to_string(target).unwrap(), "keep");
     }
 }

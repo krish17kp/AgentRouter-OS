@@ -14,6 +14,12 @@ Updated: 2026-11-17
 
 ## Current recovery checkpoint
 
+TASK-173 hardens Rust diagnostic bundle writes with a pinned capability directory
+and exclusive creation for artifacts and opt-in database snapshots. The symlink
+escape regression, Rust bundle tests, strict Clippy, and focused Python
+bundle/diagnostics suite pass. Bundle parity remains Partial for full metadata
+and Windows-specific differential coverage.
+
 TASK-172 aligns the Rust doctor’s stable package, server-extra, and contract
 summaries with Python. The direct stable-check differential, diagnostics suite
 (41 focused checks), Rust diagnostics tests, and strict Clippy pass. The row
