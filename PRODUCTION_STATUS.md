@@ -2,6 +2,13 @@
 
 Updated: 2026-11-18
 
+## Latest continuation slice — TASK-266
+
+The Rust registry facade now reports the committed `agentrouter-gold` benchmark
+as `ready`, matching Python while keeping real mode explicitly external. The
+evaluation crate passes 16 unit tests and the focused Python/Rust selection
+passes 13 tests. Release and deployment gates are unchanged.
+
 ## Latest continuation slice — TASK-265
 
 Rust real-mode MASSIVE collection now passes the requested language list into

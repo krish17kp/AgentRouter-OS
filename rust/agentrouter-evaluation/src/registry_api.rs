@@ -62,6 +62,9 @@ impl DatasetAdapter {
     }
 
     pub fn availability(&self, project_root: &Path) -> &'static str {
+        if self.name() == "agentrouter-gold" {
+            return crate::agentrouter_gold_availability(&self.path(project_root));
+        }
         adapter_availability(&self.path(project_root))
     }
 
@@ -445,6 +448,16 @@ mod tests {
         assert!(reason.contains("datasets") || reason.contains("real loader"));
         let error = adapter.load(&root, "real").unwrap_err();
         assert!(error.contains("banking77:"));
+    }
+
+    #[test]
+    fn gold_adapter_reports_ready_when_the_committed_benchmark_exists() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let adapter = adapter("agentrouter-gold").expect("registered gold adapter");
+        assert_eq!(adapter.availability(&root), "ready");
+        let cases = adapter.load(&root, "fixture").expect("gold fixture loads");
+        assert_eq!(cases.len(), 165);
+        assert_eq!(adapter.describe(&root)["availability"], "ready");
     }
 
     #[test]

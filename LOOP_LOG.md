@@ -1,5 +1,13 @@
 # LOOP_LOG
 
+## 2026-11-18 — TASK-266 gold adapter availability parity
+
+Rust `DatasetAdapter::availability()` now uses the committed gold benchmark's
+`ready` semantics instead of reporting `fixture_only`. A regression loads all
+165 gold cases and checks the public description; the evaluation crate passes
+16 unit tests and the focused Python/Rust selection passes 13 tests. External
+loaders, human evaluation, hosted approval, and deployment remain unchanged.
+
 ## 2026-11-18 — TASK-265 MASSIVE locale-fetch parity
 
 Rust real-mode MASSIVE collection now applies the requested language filter at
