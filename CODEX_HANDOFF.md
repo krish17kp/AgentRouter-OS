@@ -63,6 +63,9 @@ passes both artifacts. TASK-230 modernized the license metadata; the rebuilt
 artifacts now pass without the prior setuptools deprecation warnings.
 TASK-229 installed that wheel into an isolated temporary environment; version,
 `init`, and local `route --json` passed without a provider request.
+TASK-231 exercised CycloneDX generation locally: the 1.6 SBOM contains 59
+components including `agentrouter-os==0.5.0rc1`; release attachment and SLSA
+attestation remain owner-controlled workflow steps.
 TASK-213 enforces the Rust MCP legacy initialize lifecycle (`-32002` before
 initialize) while retaining stateless modern discovery. Eight Rust MCP tests,
 strict Clippy, and the full Python/Rust MCP compatibility test pass; non-stdio

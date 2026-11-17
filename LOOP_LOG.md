@@ -3418,3 +3418,11 @@ zero skips against the Rust loopback API.
   no license-metadata deprecation warnings.
 - `uvx twine check` passes for both artifacts, and the package-version
   compatibility test passes 1/1.
+
+## TASK-231 — Local SBOM verification (2026-11-18)
+
+- Ran the release workflow's CycloneDX environment command locally against the
+  isolated candidate environment.
+- The CycloneDX 1.6 document contains 59 components, including
+  `agentrouter-os==0.5.0rc1` with its declared MIT license.
+- Release asset attachment and SLSA provenance remain owner-controlled.

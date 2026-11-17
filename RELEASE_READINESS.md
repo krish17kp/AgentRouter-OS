@@ -109,6 +109,10 @@ evaluation or promotion gates.
 TASK-229 validated the freshly built wheel outside the source checkout: version,
 initialization, and local JSON routing pass without provider execution.
 
+TASK-231 generated a local CycloneDX 1.6 SBOM with the candidate distribution
+present in the 59-component inventory. GitHub release attachment and SLSA
+provenance still require the owner-controlled release workflow.
+
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
 advisories across 207 locked dependencies; one unmaintained `chrono` warning
