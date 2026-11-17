@@ -504,6 +504,35 @@ fn open_safe_home(home: &Path) -> Result<std::fs::File, String> {
             .map_err(|e| e.to_string())?
             .join(home)
     };
+    // macOS exposes `/var`, `/tmp`, and `/etc` as stable OS-owned symlinks to
+    // `/private/*`. The no-follow walker must still reject user-controlled
+    // links, but refusing these aliases makes every tempfile path unsafe on
+    // macOS (the hosted runner's temp directories live under `/var/folders`).
+    // Normalize only these documented root aliases before opening components;
+    // all components below the OS-owned prefix continue through no-follow
+    // checks and cannot redirect outside the requested tree.
+    #[cfg(target_os = "macos")]
+    let absolute = {
+        let original = absolute.clone();
+        let mut components = absolute.components();
+        let root = components.next();
+        let first = components.next();
+        if matches!(root, Some(Component::RootDir))
+            && matches!(
+                first.and_then(|component| component.as_os_str().to_str()),
+                Some("var" | "tmp" | "etc")
+            )
+        {
+            let mut normalized = PathBuf::from("/private");
+            normalized.push(first.expect("matched root alias").as_os_str());
+            for component in components {
+                normalized.push(component.as_os_str());
+            }
+            normalized
+        } else {
+            original
+        }
+    };
     let mut root = PathBuf::new();
     let mut names = Vec::new();
     for component in absolute.components() {
@@ -784,6 +813,14 @@ fn dirs_home() -> std::path::PathBuf {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn safe_home_accepts_macos_private_root_aliases() {
+        assert!(super::open_safe_home(std::path::Path::new("/var")).is_ok());
+        assert!(super::open_safe_home(std::path::Path::new("/tmp")).is_ok());
+        assert!(super::open_safe_home(std::path::Path::new("/etc")).is_ok());
+    }
+
     #[cfg(target_os = "linux")]
     #[test]
     fn sqlite_init_uses_pinned_home_after_path_swap() {
