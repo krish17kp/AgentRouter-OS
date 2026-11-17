@@ -6,7 +6,9 @@ Unified Rust `prompt generate` now accepts a task argument without requiring a
 stored decision. It classifies and routes through the existing Rust pipeline,
 matches Python's prompt and newline output, and retains named `--tool` and
 `--out` handling. The focused decision/unified CLI selection passes 43 tests;
-execution remains disabled.
+execution remains disabled. The complete Rust/Python and Rust CLI compatibility
+selection passes 887 tests with 1 expected skip; the existing Starlette/httpx
+warning remains non-failing.
 
 ## 2026-11-18 — TASK-248 prompt output parity
 

@@ -27,6 +27,10 @@ classifier/routing/prompt pipeline and matching Python's output/newline
 contract. The focused decision/unified selection is 43 tests; execution stays
 disabled.
 
+The complete Rust/Python and Rust CLI compatibility selection after TASK-249
+passes 887 tests with 1 expected skip; the existing Starlette/httpx warning
+remains non-failing.
+
 The complete Rust/Python and Rust CLI compatibility selection after TASK-248
 passes 886 tests with 1 expected skip; the existing Starlette/httpx warning
 remains non-failing.
