@@ -5,6 +5,9 @@
 Active release checkout: `/data/AgentRouter-production`, branch
 `release/agentrouter-v0.5-rc1`, pushed head `71408b2`. TASK-175 repaired the
 hosted Windows diagnostics path-format mismatch and its full matrix is green.
+The local branch is seven commits ahead with the verified SDK, reliability,
+release-evidence, plugin-safety, website, and packaging slices; those commits
+remain unpushed pending authorization while the enforcing gate is failing.
 PR #16 is
 the only open PR; no reviews or review requests are present. The macOS-only
 no-follow path regression is repaired and pushed; the Windows mismatch is
