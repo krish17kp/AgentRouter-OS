@@ -3499,3 +3499,10 @@ zero skips against the Rust loopback API.
   `--no-log`, and preview/availability compatibility flags.
 - The focused route and unified CLI compatibility suites pass 51/51; the
   locked Rust workspace, strict Clippy, formatting, and diff checks pass.
+
+## TASK-242 — Release gate recheck (2026-11-18)
+
+- Full Python regression passes 2,747 tests with 7 expected skips and one
+  existing dependency deprecation warning.
+- The canonical release gate remains honestly blocked at 98.23/100: 165 cases,
+  with only `context_band_accuracy` failing at `0.6667 < 0.90`.

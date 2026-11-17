@@ -23,6 +23,11 @@ match Python. Fifty-one focused route/unified compatibility tests plus the
 locked Rust workspace, strict Clippy, formatting, and diff checks pass. Full R4
 CLI parity remains open, as do the honest context-band, human evaluation, live
 provider, and deployment gates.
+
+TASK-242 re-ran the full Python regression (2,747 passed, 7 skips) and the
+canonical release gate. The gate remains `release_ready=false` at 98.23/100
+because context-band accuracy is 0.6667 < 0.90; no holdout, threshold, or
+evaluation input changed.
 TASK-223 synchronizes the unified Rust CLI help with the implemented contract
 check/diff/export surface and adds a process-level regression. The fresh full
 Python suite passes 2,743 tests with 7 expected skips; the full locked Rust

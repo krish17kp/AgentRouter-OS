@@ -16,11 +16,16 @@ human-gate, or deployment work.
 ## Current continuation checkpoint — 2026-11-18
 
 Current local verification on 2026-11-18 passes the full Python suite at
-2,743 passed / 7 expected skips, the focused contract/unified-CLI differential
+2,747 passed / 7 expected skips, the focused contract/unified-CLI differential
 at 89/89, the optimized locked Rust workspace build, strict Clippy, and the
 RustSec audit. The historical 2,740/5 figure below remains the earlier
 TASK-211 evidence; the two additional skips are environment-dependent and do
 not represent failures.
+
+TASK-242 rechecked the canonical gate after the route CLI slice: 165 cases,
+98.23/100, and the sole failure remains context-band accuracy at 0.6667 versus
+the unchanged 0.90 threshold. No holdout, threshold, or evaluation input was
+changed.
 
 The local RC branch contains additional local commits after pushed head `71408b2`. TASK-208 adds
 read-only Rust contract baseline/surface tooling, and TASK-209 makes the
