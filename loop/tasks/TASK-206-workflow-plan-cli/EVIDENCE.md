@@ -16,5 +16,9 @@ printf '%s\n' '{"steps":[{"id":"a","estimated_cost":1},{"id":"b","depends_on":["
 # exit 2: duplicate dependency is rejected
 ```
 
+The unified compatibility regression `test_workflow_plan_is_read_only_and_rejects_duplicate_dependencies`
+passes together with the existing read-only execution-plan regression (2
+passed, 15 deselected).
+
 The planner remains read-only; no agent, provider, tool, or workspace was
 started or changed.
