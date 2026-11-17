@@ -4,7 +4,7 @@ Updated: 2026-11-17
 
 ## Definition of done
 
-- [ ] PR review and hosted checks: PR #16 is the sole open PR against `main`, with no GitHub reviews or review requests. At code head `824a98a`, the newest hosted matrix is queued after the bundle parent hardening and evidence checkpoint; the prior head passed Security, Website, and Critical Mutation. The enforcing release gate remains honestly held by frozen context-band accuracy `0.6667 < 0.90`; live smoke skips without credentials.
+- [ ] PR review and hosted checks: PR #16 is the sole open PR against `main`, with no GitHub reviews or review requests. At code head `25e783d`, the current-head PR matrix is running after stale duplicate runs were cancelled; build smoke, API compatibility, release-readiness report, and Website are green. The enforcing release gate remains honestly held by frozen context-band accuracy `0.6667 < 0.90`; live smoke skips without credentials.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md): 59 rows meet the full-module differential bar and 18 remain Partial. TASK-159–162 close platform, evaluator-facade, grading, and runner parity; TASK-164 closes server schemas; TASK-166 closes annotation schemas; TASK-167 closes server service; TASK-168 closes observability; TASK-169 closes the HTTP application lifecycle; TASK-170 closes packaged annotation CLI resources; TASK-171 closes provider refresh; broader migration differences remain.
 - [x] Full Python suite: Linux/Python 3.12 passes 2,733 tests and skips 7 (latest run after TASK-173). The TASK-152 coverage refresh measures 92.052% statement, 87.756% branch, and 91.064% combined; both required thresholds pass. Evidence is in [`docs/COVERAGE_REPORT_2026-11-15-TASK-152.md`](docs/COVERAGE_REPORT_2026-11-15-TASK-152.md).
@@ -289,7 +289,7 @@ The run includes the API large-integer response differential, nested JSON
 redaction, route-envelope cases, and earlier regressions. Rust workspace tests
 pass locally, as do API crate tests, strict API Clippy, the full API schema
 differential selection (57 tests), Rust formatting, Ruff, and `git diff --check`.
-The last pushed code head `824a98a` is queued for fresh hosted validation after
+The last pushed code head `25e783d` is running fresh hosted validation after
 the bundle-parent hardening and evidence checkpoint; prior Rust workspace OS jobs and Linux
 and macOS Python/Rust compatibility; Windows compatibility and most Python jobs
 were running at the time of this update. PR #16's enforcing gate continues to

@@ -1,5 +1,14 @@
 # LOOP_LOG
 
+## 2026-11-17 — Hosted queue repair and evidence checkpoint
+
+The current release-candidate head is `25e783d`. Stale queued duplicate push and
+older-head PR runs were cancelled so the current-head PR matrix can obtain
+runners. Current build smoke, API compatibility, release-readiness report, and
+Website checks are green; Rust, Python, Security, and mutation jobs are still
+running. The enforcing release gate remains the expected frozen context-band
+failure at 0.6667 < 0.90.
+
 ## 2026-11-17 — TASK-173 evidence checkpoint
 
 Reconciled the production status, loop state, handoff, quality dashboard, and

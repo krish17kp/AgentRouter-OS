@@ -2,8 +2,8 @@
 
 ## Current checkpoint — 2026-11-17
 
-At pushed head `824a98a`, the bundle hardening evidence is recorded and the
-hosted matrix is queued. Local Python/Rust release checks remain green; the
+At pushed head `25e783d`, the bundle hardening evidence is recorded and the
+current-head hosted matrix is running. Local Python/Rust release checks remain green; the
 frozen context-band gate and owner-supplied validation/deployment inputs remain
 open.
 

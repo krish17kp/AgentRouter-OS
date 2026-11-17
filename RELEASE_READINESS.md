@@ -2,7 +2,7 @@
 
 ## Current checkpoint — 2026-11-17
 
-At pushed head `824a98a`, hosted validation is queued after the final bundle
+At pushed head `25e783d`, hosted validation is running after the final bundle
 evidence checkpoint. Local release checks are green, but the frozen context-band
 gate, human evaluation, live OpenAI validation, and promotion/deployment inputs
 remain unresolved.

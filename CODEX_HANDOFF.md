@@ -3,9 +3,10 @@
 ## Live checkpoint — 2026-11-17
 
 Active release checkout: `/data/AgentRouter-production`, branch
-`release/agentrouter-v0.5-rc1`, pushed head `824a98a`. PR #16 is the only open
-PR; no reviews or review requests are present. Hosted CI for this head is queued
-across CI, Rust migration, Security, Website, and Critical Mutation workflows.
+`release/agentrouter-v0.5-rc1`, pushed head `25e783d`. PR #16 is the only open
+PR; no reviews or review requests are present. Hosted CI for this head is running
+across CI, Rust migration, Security, Website, and Critical Mutation workflows;
+build smoke, API compatibility, release-readiness report, and Website are green.
 The local full Python suite remains 2,733 passed / 7 skipped; Rust workspace,
 strict Clippy, formatting, Ruff, Bandit, dependency audits, wheel/sdist build,
 and clean-wheel smoke are green. The frozen context-band gate remains 0.6667
