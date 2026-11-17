@@ -1863,8 +1863,7 @@ pub fn adapter_real_availability(name: &str, hf_repo: Option<&str>) -> (bool, St
     if !hf_real_enabled() {
         return (
             false,
-            "set AGENTROUTER_ENABLE_HF_REAL=1 to opt into the bounded Hugging Face datasets rows API loader"
-                .to_string(),
+            "the `datasets` library is not installed (pip install -e '.[eval]')".to_string(),
         );
     }
     (
@@ -1877,9 +1876,14 @@ fn load_real_rows(
     metadata: &EvaluationDatasetMetadata,
     hf_repo: &str,
 ) -> Result<Vec<EvaluationCase>, String> {
+    let api_repo = match hf_repo {
+        "clinc_oos" => "clinc/clinc_oos",
+        "THUDM/LongBench-v2" => "zai-org/LongBench-v2",
+        other => other,
+    };
     match metadata.name.as_str() {
         "clinc150" => {
-            let response = load_hf_rows(hf_repo, Some("plus"), "test")?;
+            let response = load_hf_rows(api_repo, Some("plus"), "test")?;
             let labels = feature_names(&response.features, "intent")?;
             let rows = response
                 .rows
@@ -1894,7 +1898,7 @@ fn load_real_rows(
             normalize_clinc150_rows(&labels, &rows)
         }
         "banking77" => {
-            let response = load_hf_rows(hf_repo, Some("default"), "test")?;
+            let response = load_hf_rows(api_repo, Some("default"), "test")?;
             let labels = feature_names(&response.features, "label")?;
             let rows = response
                 .rows
@@ -1911,7 +1915,7 @@ fn load_real_rows(
         "massive" => {
             let mut batches = BTreeMap::new();
             for (_language, locale) in [("en", "en-US"), ("hi", "hi-IN"), ("fr", "fr-FR")] {
-                let response = load_hf_rows(hf_repo, Some(locale), "test")?;
+                let response = load_hf_rows(api_repo, Some(locale), "test")?;
                 let rows = response
                     .rows
                     .into_iter()
@@ -1925,7 +1929,7 @@ fn load_real_rows(
             normalize_massive_rows(None, &batches)
         }
         "longbench-v2" => {
-            let response = load_hf_rows(hf_repo, Some("default"), "train")?;
+            let response = load_hf_rows(api_repo, Some("default"), "train")?;
             let rows = response
                 .rows
                 .into_iter()
@@ -1937,7 +1941,7 @@ fn load_real_rows(
             Ok(normalize_longbench_rows(&rows))
         }
         "swebench" => {
-            let response = load_hf_rows(hf_repo, Some("default"), "test")?;
+            let response = load_hf_rows(api_repo, Some("default"), "test")?;
             let rows = response
                 .rows
                 .into_iter()
