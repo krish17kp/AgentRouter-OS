@@ -2,7 +2,7 @@
 
 ## Current checkpoint — 2026-11-17
 
-At pushed RC head `d98caa2`, the macOS root-alias repair and TASK-175 Windows
+At pushed RC head `544e520`, the macOS root-alias repair and TASK-175 Windows
 diagnostics path-format repair passed the complete hosted Rust/Python matrix.
 Local release checks are green, but the frozen context-band
 gate, human evaluation, live OpenAI validation, and promotion/deployment inputs
