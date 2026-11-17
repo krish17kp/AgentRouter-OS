@@ -367,3 +367,9 @@ evidence, not production deployment or release promotion.
 The unified CLI exposes bounded workflow planning with execution disabled.
 This adds auditable orchestration planning but does not satisfy live adapter,
 cancellation, deployment, or release-gate requirements.
+
+## TASK-207 orchestration lifecycle state — 2026-11-17
+
+Workflow lifecycle transitions, retry budgets, cancellation, and aggregation
+are now testable without dispatch. This improves safety evidence but does not
+constitute live execution, deployment, or release readiness.

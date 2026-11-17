@@ -3211,3 +3211,11 @@ from stdin and emitting a bounded deterministic schedule. Valid input reports
 `execution_enabled=false`; duplicate dependencies fail with exit 2. The
 command never dispatches agents, grants tools, calls providers, or mutates a
 workspace.
+
+## TASK-207 bounded orchestration runtime state — 2026-11-17
+
+The orchestration crate now includes a cancellation-aware lifecycle state
+machine with dependency readiness, bounded retries, terminal failures, and
+result aggregation. Seven focused tests and strict crate Clippy pass. It stays
+adapter-neutral and execution-disabled; no process, provider, tool, or
+workspace mutation is performed.

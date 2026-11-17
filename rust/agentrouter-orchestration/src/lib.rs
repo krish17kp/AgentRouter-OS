@@ -39,6 +39,197 @@ pub struct WorkflowPlan {
     pub execution_enabled: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StepState {
+    Pending,
+    Running,
+    Succeeded,
+    Failed,
+    Cancelled,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkflowRunState {
+    Pending,
+    Running,
+    Succeeded,
+    Failed,
+    Cancelled,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WorkflowResult {
+    pub state: WorkflowRunState,
+    pub steps: BTreeMap<String, StepState>,
+    pub attempts: BTreeMap<String, u32>,
+    pub outputs: BTreeMap<String, String>,
+    pub errors: BTreeMap<String, String>,
+    pub execution_enabled: bool,
+}
+
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
+pub enum RuntimeError {
+    #[error("unknown workflow step '{0}'")]
+    UnknownStep(String),
+    #[error("workflow step '{0}' is not ready")]
+    NotReady(String),
+    #[error("workflow step '{0}' is not running")]
+    NotRunning(String),
+    #[error("workflow step '{0}' is already terminal")]
+    Terminal(String),
+    #[error("workflow has been cancelled")]
+    Cancelled,
+}
+
+/// A bounded workflow lifecycle state machine. It records readiness, retries,
+/// cancellation, and result aggregation but deliberately does not dispatch an
+/// agent, call a tool/provider, or mutate a workspace.
+#[derive(Debug, Clone)]
+pub struct WorkflowRuntime {
+    steps: BTreeMap<String, WorkflowStep>,
+    states: BTreeMap<String, StepState>,
+    attempts: BTreeMap<String, u32>,
+    outputs: BTreeMap<String, String>,
+    errors: BTreeMap<String, String>,
+    cancelled: bool,
+}
+
+impl WorkflowRuntime {
+    pub fn new(steps: &[WorkflowStep], policy: WorkflowPolicy) -> Result<Self, WorkflowError> {
+        plan_with_policy(steps, policy)?;
+        let steps = steps
+            .iter()
+            .map(|step| (step.id.clone(), step.clone()))
+            .collect::<BTreeMap<_, _>>();
+        let states = steps
+            .keys()
+            .map(|id| (id.clone(), StepState::Pending))
+            .collect();
+        let attempts = steps.keys().map(|id| (id.clone(), 0)).collect();
+        Ok(Self {
+            steps,
+            states,
+            attempts,
+            outputs: BTreeMap::new(),
+            errors: BTreeMap::new(),
+            cancelled: false,
+        })
+    }
+
+    pub fn ready_steps(&self) -> Vec<String> {
+        if self.cancelled {
+            return Vec::new();
+        }
+        self.steps
+            .values()
+            .filter(|step| self.states[&step.id] == StepState::Pending)
+            .filter(|step| {
+                step.depends_on
+                    .iter()
+                    .all(|dependency| self.states[dependency] == StepState::Succeeded)
+            })
+            .map(|step| step.id.clone())
+            .collect()
+    }
+
+    pub fn start(&mut self, id: &str) -> Result<(), RuntimeError> {
+        if self.cancelled {
+            return Err(RuntimeError::Cancelled);
+        }
+        let state = self
+            .states
+            .get(id)
+            .ok_or_else(|| RuntimeError::UnknownStep(id.to_owned()))?;
+        if *state != StepState::Pending || !self.ready_steps().iter().any(|ready| ready == id) {
+            return Err(RuntimeError::NotReady(id.to_owned()));
+        }
+        self.states.insert(id.to_owned(), StepState::Running);
+        let attempts = self.attempts.entry(id.to_owned()).or_default();
+        *attempts = attempts.saturating_add(1);
+        Ok(())
+    }
+
+    pub fn succeed(&mut self, id: &str, output: impl Into<String>) -> Result<(), RuntimeError> {
+        self.require_running(id)?;
+        self.states.insert(id.to_owned(), StepState::Succeeded);
+        self.outputs.insert(id.to_owned(), output.into());
+        self.errors.remove(id);
+        Ok(())
+    }
+
+    pub fn fail(&mut self, id: &str, error: impl Into<String>) -> Result<bool, RuntimeError> {
+        self.require_running(id)?;
+        let step = self
+            .steps
+            .get(id)
+            .ok_or_else(|| RuntimeError::UnknownStep(id.to_owned()))?;
+        let message = error.into();
+        self.errors.insert(id.to_owned(), message);
+        if self.attempts[id] < step.max_attempts && !self.cancelled {
+            self.states.insert(id.to_owned(), StepState::Pending);
+            return Ok(true);
+        }
+        self.states.insert(id.to_owned(), StepState::Failed);
+        Ok(false)
+    }
+
+    pub fn cancel(&mut self) {
+        self.cancelled = true;
+        for state in self.states.values_mut() {
+            if matches!(*state, StepState::Pending | StepState::Running) {
+                *state = StepState::Cancelled;
+            }
+        }
+    }
+
+    pub fn result(&self) -> WorkflowResult {
+        let state = if self.cancelled {
+            WorkflowRunState::Cancelled
+        } else if self
+            .states
+            .values()
+            .any(|state| *state == StepState::Failed)
+        {
+            WorkflowRunState::Failed
+        } else if self
+            .states
+            .values()
+            .all(|state| *state == StepState::Succeeded)
+        {
+            WorkflowRunState::Succeeded
+        } else if self
+            .states
+            .values()
+            .any(|state| *state == StepState::Running)
+        {
+            WorkflowRunState::Running
+        } else {
+            WorkflowRunState::Pending
+        };
+        WorkflowResult {
+            state,
+            steps: self.states.clone(),
+            attempts: self.attempts.clone(),
+            outputs: self.outputs.clone(),
+            errors: self.errors.clone(),
+            execution_enabled: false,
+        }
+    }
+
+    fn require_running(&self, id: &str) -> Result<(), RuntimeError> {
+        match self.states.get(id) {
+            None => Err(RuntimeError::UnknownStep(id.to_owned())),
+            Some(StepState::Running) => Ok(()),
+            Some(StepState::Succeeded | StepState::Failed | StepState::Cancelled) => {
+                Err(RuntimeError::Terminal(id.to_owned()))
+            }
+            Some(StepState::Pending) => Err(RuntimeError::NotRunning(id.to_owned())),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorkflowPolicy {
     pub max_steps: usize,
@@ -380,5 +571,52 @@ mod tests {
             plan(&[empty_key], 1, 1),
             Err(WorkflowError::EmptySideEffectKey("write".into()))
         );
+    }
+
+    #[test]
+    fn runtime_unlocks_dependents_and_aggregates_results_without_execution() {
+        let steps = vec![
+            single_step("prepare", 1),
+            WorkflowStep {
+                id: "write".into(),
+                depends_on: vec!["prepare".into()],
+                max_attempts: 1,
+                ..single_step("unused", 2)
+            },
+        ];
+        let mut runtime = WorkflowRuntime::new(&steps, WorkflowPolicy::new(2, 3)).unwrap();
+        assert_eq!(runtime.ready_steps(), vec!["prepare"]);
+        runtime.start("prepare").unwrap();
+        runtime.succeed("prepare", "prepared").unwrap();
+        assert_eq!(runtime.ready_steps(), vec!["write"]);
+        runtime.start("write").unwrap();
+        runtime.succeed("write", "written").unwrap();
+        let result = runtime.result();
+        assert_eq!(result.state, WorkflowRunState::Succeeded);
+        assert_eq!(result.outputs["write"], "written");
+        assert!(!result.execution_enabled);
+    }
+
+    #[test]
+    fn runtime_retries_then_fails_and_cancels_pending_work() {
+        let steps = vec![
+            WorkflowStep {
+                id: "flaky".into(),
+                max_attempts: 2,
+                ..single_step("unused", 1)
+            },
+            single_step("later", 1),
+        ];
+        let mut runtime = WorkflowRuntime::new(&steps, WorkflowPolicy::new(2, 2)).unwrap();
+        runtime.start("flaky").unwrap();
+        assert!(runtime.fail("flaky", "first").unwrap());
+        assert_eq!(runtime.ready_steps(), vec!["flaky", "later"]);
+        runtime.start("flaky").unwrap();
+        assert!(!runtime.fail("flaky", "second").unwrap());
+        assert_eq!(runtime.result().state, WorkflowRunState::Failed);
+
+        runtime.cancel();
+        assert_eq!(runtime.result().state, WorkflowRunState::Cancelled);
+        assert!(runtime.start("later").is_err());
     }
 }

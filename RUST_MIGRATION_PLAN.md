@@ -376,6 +376,13 @@ R7 follow-up (2026-11-17, input hardening): duplicate dependency entries and
 empty side-effect keys now fail closed before DAG scheduling. The planner still
 does not dispatch agents, grant tools, cancel work, or mutate workspaces.
 
+R7 follow-up (2026-11-17, lifecycle state): `WorkflowRuntime` now models
+pending/running/succeeded/failed/cancelled states, dependency readiness,
+bounded retries, cancellation, and result aggregation. It remains
+adapter-neutral and always reports `execution_enabled: false`; process/tool
+dispatch and workspace mutation still require a later owner-authorized
+milestone.
+
 R4 follow-up (2026-11-10): Rust `registry list` now has JSON/table and filter
 parity probes. Independent review found primitive serde deserialization
 accepted malformed numeric model facts that Python's Pydantic schema rejects.

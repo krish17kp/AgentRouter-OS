@@ -605,3 +605,10 @@ It accepts JSON workflows, enforces explicit step/cost/tool policy, and rejects
 malformed dependency declarations. Process smoke and locked CLI checks pass;
 dispatch and workspace mutation remain disabled.
 
+## TASK-207 checkpoint — 2026-11-17
+
+`WorkflowRuntime` now covers pending/running/succeeded/failed/cancelled state,
+dependency unlocks, retry budgets, cancellation, and aggregated outputs/errors.
+Seven focused tests and strict Clippy pass. Keep actual adapter lifecycle and
+workspace mutation behind the owner-authorized execution milestone.
+

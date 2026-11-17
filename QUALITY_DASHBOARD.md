@@ -353,3 +353,9 @@ pass; default unavailable-host planning blocks, explicit preview remains
 Valid workflow JSON produces a deterministic planning-only schedule; malformed
 duplicate dependencies exit nonzero. Locked CLI check, orchestration tests, and
 process smoke pass. No workflow was dispatched.
+
+## TASK-207 orchestration lifecycle state — 2026-11-17
+
+Seven orchestration tests pass for readiness, retries, failure, cancellation,
+and result aggregation. Runtime output remains execution-disabled; no external
+work was started.
