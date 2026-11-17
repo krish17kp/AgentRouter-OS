@@ -42,6 +42,11 @@ remaining external release gates remain unresolved.
 truncated response bodies by consuming the body before recording success. The
 broader reliability lifecycle and all external release gates remain unresolved.
 
+**NOT release ready.** TASK-184 adds the native SDK's matching loopback
+regression for truncated response bodies. It prevents partial payloads from
+being parsed as API results; native read/write phase taxonomy and all external
+release gates remain unresolved.
+
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
 evidence. Diagnostics remains Partial for runtime-specific and complete bundle

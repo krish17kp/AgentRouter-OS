@@ -43,6 +43,11 @@ response bodies before recording status, so truncated bodies become stable
 probe, focused reliability tests, Clippy, and formatting pass. The reliability
 row remains Partial for broader process/runtime behavior.
 
+TASK-184 adds the matching native SDK loopback regression: a declared-length
+truncated response is reported as `ReadError` rather than parsed as an API
+result. Focused SDK verification, strict Clippy, formatting, and diff checks
+pass. The SDK remains Partial for native read/write phase taxonomy.
+
 ## Storage relocation — 2026-11-15
 
 Active release checkout: `/data/AgentRouter-production` on branch

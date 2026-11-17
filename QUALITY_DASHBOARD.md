@@ -36,6 +36,11 @@ statuses. A real truncated-body loopback probe now matches the Python behavior
 of reporting a transport failure instead of a false success; broader
 process/runtime parity remains Partial.
 
+TASK-184 adds the same real-socket regression to the SDK client itself: a
+declared-length truncated response is classified as `ReadError`, never as an
+API result. Focused SDK verification, strict Clippy, formatting, and diff
+checks pass; native read/write phase taxonomy remains Partial.
+
 TASK-173 hardens diagnostic bundle writes with no-follow parent creation, a
 pinned capability directory, and exclusive creation. Serialized snapshots,
 symlink/hard-link, directory-swap, and nested-parent regressions pass; focused

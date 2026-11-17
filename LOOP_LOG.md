@@ -1,5 +1,13 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-184 SDK truncated-response regression
+
+Added a real loopback SDK regression for a peer that declares a 100-byte JSON
+body but sends only a short payload. The native client now has focused evidence
+that this path remains a `ReadError`, never a parsed API result. The focused
+SDK test, strict Clippy, formatting, and diff checks pass; native phase
+classification remains Partial by design.
+
 ## 2026-11-17 — TASK-183 release build and dependency audit
 
 The optimized locked Rust workspace build completed successfully. The release

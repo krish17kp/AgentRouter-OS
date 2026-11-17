@@ -1018,6 +1018,37 @@ mod tests {
     }
 
     #[test]
+    fn truncated_response_body_is_a_read_error_not_an_api_result() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = [0; 2048];
+            let _ = stream.read(&mut request);
+            write!(
+                stream,
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 100\r\nConnection: close\r\n\r\n{{\"ok\":true}}"
+            )
+            .unwrap();
+        });
+
+        let client = AgentRouterClient::new(
+            Some(&format!("http://{address}")),
+            None,
+            Some(Duration::from_secs(2)),
+        );
+        let result = client.health();
+        assert!(matches!(
+            result,
+            Err(ClientError::Transport(SdkTransportError {
+                kind: SdkTransportErrorKind::ReadError,
+                ..
+            }))
+        ));
+        server.join().unwrap();
+    }
+
+    #[test]
     fn client_does_not_forward_api_keys_through_redirects() {
         let target = TcpListener::bind("127.0.0.1:0").unwrap();
         let target_address = target.local_addr().unwrap();

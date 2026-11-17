@@ -1,7 +1,7 @@
 {
   "loop_version": 2,
   "last_updated": "2026-11-17",
-  "current_phase": "TASK-183 release build and dependency audit are complete; TASK-182 Rust reliability response consumption remains locally verified. Reliability remains Partial for broader process/runtime behavior; inventory remains 60/77 Parity and 17 Partial.",
+  "current_phase": "TASK-184 SDK truncated-response regression is complete; TASK-183 release build and dependency audit are recorded. Reliability and SDK remain Partial for broader runtime behavior; inventory remains 60/77 Parity and 17 Partial.",
   "current_objective": "Complete AgentRouter OS end to end without weakening evaluation or safety gates. Continue after each merge/check; keep Python shipping until Rust parity and release evidence are complete. Preserve inherited untracked .codex/ and loop/reports/open-pr-review-2026-11-10.md.",
   "status": "IN_PROGRESS",
   "branch_topology": {
@@ -32,7 +32,7 @@
     "Continue the remaining 17 Partial Rust modules while PR #16 remains held by the honest evaluation and external release gates.",
     "Keep PR #16 held on the honest context-band, human-evaluation, live-validation, and deployment gates; do not bypass them.",
     "Continue the remaining 17 Partial Rust modules while PR #16 is held for human evaluation, live validation, and release inputs.",
-    "Continue the next Partial Rust parity slice after TASK-183; do not claim reliability parity until broader process/runtime behavior is differentially covered."
+    "Continue the next Partial Rust parity slice after TASK-184; do not claim reliability or SDK parity until broader process/runtime behavior is differentially covered."
   ],
   "completed_iter26": [
     "TASK-179 aligns Rust evaluation `prepare` exit semantics with Python: one unavailable dataset exits 1, while `prepare --all` exits 0 after reporting every `SKIPPED_EXTERNAL` blocker. No fixture fallback is introduced. The evaluation crate passes 9 tests, formatting passes, direct `prepare --all` reports all 8 datasets, and the Python compatibility suite adds the regression assertion. Evaluation CLI remains Partial for real external loaders and runtime orchestration."
