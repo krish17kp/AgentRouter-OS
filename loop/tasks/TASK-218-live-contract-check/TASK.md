@@ -9,6 +9,7 @@ running service without weakening the existing compatibility gate.
 
 - `agentrouter contract check --live URL` fetches the document with bounded,
   redirect-free, credential-free transport;
+- an explicit `--baseline PATH` can be used for CI/base-branch comparisons;
 - response size, JSON shape, local references, and schema surface are checked;
 - drift returns a non-zero status and JSON output includes the compatibility
   report;

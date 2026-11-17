@@ -22,7 +22,7 @@ fn contract_command(args: &[String]) -> Result<i32, String> {
         .iter()
         .any(|argument| matches!(argument.as_str(), "--help" | "-h"))
     {
-        println!("Usage: agentrouter contract <check [--json] [--live URL]|diff [PATH|-] [--json]|export [--source PATH] [--generated-at RFC3339] [--json]>");
+        println!("Usage: agentrouter contract <check [--json] [--live URL] [--baseline PATH]|diff [PATH|-] [--json]|export [--source PATH] [--generated-at RFC3339] [--json]>");
         println!("Checks, exports, or compares the committed OpenAPI artifact.");
         println!("The diff command is a compatibility surface probe; the Python gate remains authoritative for full live-schema checks.");
         return Ok(0);
@@ -36,13 +36,8 @@ fn contract_command(args: &[String]) -> Result<i32, String> {
         .map_err(|error| format!("could not resolve repository root: {error}"))?;
     match subcommand {
         "check" => {
-            let baseline = agentrouter_cli::contract::load_baseline(&root).map_err(|error| {
-                format!(
-                    "contract baseline invalid ({}): {error}",
-                    error.kind.as_str()
-                )
-            })?;
             let mut live_url = None;
+            let mut baseline_override = None;
             let mut arguments = args.iter().skip(1);
             while let Some(argument) = arguments.next() {
                 match argument.as_str() {
@@ -50,10 +45,28 @@ fn contract_command(args: &[String]) -> Result<i32, String> {
                     "--live" => {
                         live_url = Some(arguments.next().ok_or("--live needs a URL")?.clone());
                     }
+                    "--baseline" => {
+                        baseline_override =
+                            Some(arguments.next().ok_or("--baseline needs a path")?.clone());
+                    }
                     option => return Err(format!("unknown contract check option '{option}'")),
                 }
             }
-            let (openapi_path, _) = agentrouter_cli::contract::contract_paths(&root);
+            let baseline = if let Some(path) = baseline_override.as_deref() {
+                agentrouter_cli::contract::load_baseline_file(std::path::Path::new(path))
+            } else {
+                agentrouter_cli::contract::load_baseline(&root)
+            }
+            .map_err(|error| {
+                format!(
+                    "contract baseline invalid ({}): {error}",
+                    error.kind.as_str()
+                )
+            })?;
+            let openapi_path = baseline_override
+                .as_deref()
+                .map(std::path::PathBuf::from)
+                .unwrap_or_else(|| agentrouter_cli::contract::contract_paths(&root).0);
             let canonical = agentrouter_cli::contract::canonical_openapi_document(&baseline)?;
             let is_canonical = canonical == baseline;
             let live_report = if let Some(url) = live_url {

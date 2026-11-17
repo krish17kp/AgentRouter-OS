@@ -63,9 +63,10 @@ closing the remaining path-following read in that collector. Full SQLite
 handle/sidecar parity remains an R4 limitation.
 TASK-218 adds `agentrouter contract check --live URL`. It fetches a running
 OpenAPI document with a 4 MiB cap, no redirects, no credentials, validates
-references, and reports the Rust compatibility surface. The local HTTP smoke
-matched the committed baseline; Python live generation and hosted approval
-remain authoritative.
+references, reports the Rust compatibility surface, and accepts
+`--baseline PATH` for base-branch comparisons. The local HTTP smoke matched the
+committed baseline; Python live generation and hosted approval remain
+authoritative.
 TASK-180 aligns context-band human-readable output with Python (bootstrap CI,
 Python-style containers, unquoted checksum, signed delta); JSON remains stable.
 
