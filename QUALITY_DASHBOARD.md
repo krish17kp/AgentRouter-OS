@@ -1,6 +1,13 @@
 # Quality Dashboard — AgentRouter OS
 
-## Current checkpoint — 2026-11-17
+## Current checkpoint — 2026-11-18
+
+Current local evidence: 2,781 Python tests passed with 7 expected skips, 893
+Rust/Python compatibility tests passed with 1 expected skip, and the locked
+workspace Rust suite, strict Clippy, formatting, and diff checks pass. The
+canonical evaluator is 98.23/100 over 165 cases; the only failed gate remains
+frozen context-band accuracy at 0.6667 < 0.90. PR #16 is still open, and no
+promotion, tag, publication, or deployment has occurred.
 
 At pushed RC head `71408b2`, the macOS root-alias repair is recorded with the bundle
 hardening evidence and the hosted Rust/Python matrix is green; TASK-175 repaired

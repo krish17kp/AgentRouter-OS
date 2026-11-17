@@ -2,6 +2,14 @@
 
 ## Current checkpoint — 2026-11-18
 
+Current checkout verification is 2,781 Python tests passed with 7 expected
+skips, 893 Rust/Python compatibility tests passed with 1 expected skip, and a
+green locked Rust workspace, strict Clippy, formatting, and diff check. The
+canonical evaluator remains 98.23/100 over 165 cases; `release_ready` is still
+false solely because `context_band_accuracy=0.6667 < 0.90`. PR #16 remains open
+against `main`; the local branch has verified commits after pushed RC head
+`71408b2`, and no push, merge, tag, publication, or deployment has occurred.
+
 Latest local verification on 2026-11-18 passes 2,743 Python tests with 7
 expected environment skips, 89/89 focused Rust contract/unified-CLI tests,
 the locked optimized Rust workspace build, strict Clippy, and cargo audit.

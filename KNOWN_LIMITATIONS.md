@@ -1,6 +1,10 @@
 # Known Limitations
 
-## Current migration and release limits (2026-11-17)
+## Current migration and release limits (2026-11-18)
+
+TASK-259 aligns Rust diagnostic-bundle JSON escaping with Python, including
+non-BMP surrogate pairs. Bundle metadata/runtime parity and the external
+release gates below remain open.
 
 - TASK-179 fixes `prepare` reporting semantics, but Rust still cannot download
   external benchmark data. `prepare --all` therefore reports eight

@@ -2,8 +2,18 @@
 
 **Status:** IN_PROGRESS
 **Branch:** `release/agentrouter-v0.5-rc1`
-**Updated:** 2026-08-09
+**Updated:** 2026-11-18
 **Canonical release ready:** NO
+
+## Current checkpoint
+
+The local RC checkout contains verified commits after pushed head `71408b2`.
+Full Python verification passes 2,781 tests with 7 expected skips;
+the complete Rust/Python compatibility selection passes 893 with 1 expected
+skip; and workspace Rust tests, strict Clippy, formatting, and diff checks pass.
+PR #16 remains open. The canonical release gate is still 98.23/100 and fails
+only frozen context-band accuracy (0.6667 < 0.90). No push, merge, tag,
+publication, or deployment has occurred.
 
 ## Branch topology
 
