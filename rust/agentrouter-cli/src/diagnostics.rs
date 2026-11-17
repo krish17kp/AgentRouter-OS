@@ -99,7 +99,9 @@ fn check_database(home: &Path) -> Check {
     let result = (|| -> rusqlite::Result<(i64, String, String)> {
         let conn = Connection::open_with_flags(
             db,
-            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+            OpenFlags::SQLITE_OPEN_READ_ONLY
+                | OpenFlags::SQLITE_OPEN_NO_MUTEX
+                | OpenFlags::SQLITE_OPEN_NOFOLLOW,
         )?;
         let decisions = conn.query_row("SELECT COUNT(*) FROM decisions", [], |row| row.get(0))?;
         let mode = conn.query_row("PRAGMA journal_mode", [], |row| row.get(0))?;
@@ -559,5 +561,23 @@ mod tests {
         std::fs::remove_dir_all(path).unwrap();
         assert_eq!(check.status, WARN);
         assert!(check.remedy.is_some());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn database_check_rejects_a_symlinked_database_leaf() {
+        use std::os::unix::fs::symlink;
+
+        let dir = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let victim = outside.path().join("victim.db");
+        std::fs::write(&victim, b"not agentrouter").unwrap();
+        symlink(&victim, dir.path().join("agentrouter.db")).unwrap();
+
+        let check = check_database(dir.path());
+        assert_eq!(check.id, "data.database");
+        assert_eq!(check.status, FAIL);
+        assert!(check.summary.contains("unreadable"));
+        assert_eq!(std::fs::read(&victim).unwrap(), b"not agentrouter");
     }
 }

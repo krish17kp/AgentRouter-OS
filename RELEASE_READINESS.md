@@ -34,6 +34,11 @@ stateless path remains compatible. The safe five-tool surface and bounded stdio
 transport remain green, but broader MCP lifecycle/transport parity is still
 unresolved; this does not clear release readiness.
 
+TASK-214 adds no-follow semantics to the Rust diagnostic database check and
+verifies a symlinked target is not followed. This is security hardening only;
+the remaining SQLite sidecar/handle limitation and external release gates stay
+unresolved.
+
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
 advisories across 207 locked dependencies; one unmaintained `chrono` warning

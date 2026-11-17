@@ -47,6 +47,9 @@ TASK-213 enforces the Rust MCP legacy initialize lifecycle (`-32002` before
 initialize) while retaining stateless modern discovery. Eight Rust MCP tests,
 strict Clippy, and the full Python/Rust MCP compatibility test pass; non-stdio
 transport and broader lifecycle parity remain partial.
+TASK-214 hardens the Rust doctor read-only database check with SQLite
+no-follow semantics; a symlinked database now fails closed without touching the
+outside target. Focused diagnostics tests and formatting pass.
 TASK-180 aligns context-band human-readable output with Python (bootstrap CI,
 Python-style containers, unquoted checksum, signed delta); JSON remains stable.
 

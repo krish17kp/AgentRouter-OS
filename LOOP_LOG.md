@@ -8,6 +8,13 @@ Modern discovery and metadata-bearing calls remain stateless. Eight Rust MCP
 tests, strict Clippy, and the full Python/Rust MCP compatibility test pass.
 Non-stdio transport and broader lifecycle/error parity remain partial.
 
+## 2026-11-18 — TASK-214 doctor database no-follow hardening
+
+The Rust `doctor` database check now opens with SQLite no-follow semantics and
+fails closed on a symlinked `agentrouter.db`. The outside target remains
+unchanged; focused diagnostics tests and formatting pass. Complete SQLite
+handle/sidecar parity remains an R4 limitation.
+
 ## 2026-11-17 — TASK-212 SQLite leaf no-follow hardening
 
 Rust storage now opens ordinary `agentrouter.db` paths with SQLite's

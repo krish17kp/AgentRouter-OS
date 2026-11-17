@@ -426,6 +426,12 @@ and the five safe planning tools. Modern `server/discover` and metadata-bearing
 requests remain stateless. This closes one lifecycle gap; non-stdio transport,
 broader MCP lifecycle, and complete error behavior remain R5 work.
 
+R4 follow-up (2026-11-18, doctor database hardening): the Rust diagnostic
+read-only database check now uses SQLite's `SQLITE_OPEN_NOFOLLOW` flag and
+reports a symlinked `agentrouter.db` as unreadable without touching the outside
+target. This aligns the diagnostic safety boundary with the storage open; full
+handle-native SQLite initialization and sidecar race closure remain open.
+
 R4 follow-up (2026-11-11): added `agentrouter-cli::dashboard` with the
 read-only loopback HTTP surface and HTML renderer corresponding to
 `agentrouter/dashboard.py`. Rust tests cover empty and populated views,
