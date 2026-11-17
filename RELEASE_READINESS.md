@@ -2,7 +2,7 @@
 
 ## Current checkpoint — 2026-11-18
 
-Latest local verification on 2026-11-18 passes 2,738 Python tests with 7
+Latest local verification on 2026-11-18 passes 2,742 Python tests with 7
 expected environment skips, 89/89 focused Rust contract/unified-CLI tests,
 the locked optimized Rust workspace build, strict Clippy, and cargo audit.
 
@@ -83,6 +83,12 @@ remain unresolved.
 TASK-222 aligns Rust bundle timestamp formatting with Python's UTC ISO-8601
 contract. This is additional local parity evidence and does not clear the
 remaining metadata/runtime or external release gates.
+
+TASK-223 synchronizes the unified Rust CLI help with the implemented contract
+check/diff/export surface. TASK-224 aligns reliability truncated-response
+classification with HTTPX, and TASK-225 aligns the native SDK's corresponding
+classification. Focused differentials, full Rust tests, optimized build,
+strict Clippy, formatting, and audit remain green; release gates are unchanged.
 
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
