@@ -2,6 +2,11 @@
 
 ## Current migration and release limits (2026-11-17)
 
+- TASK-179 fixes `prepare` reporting semantics, but Rust still cannot download
+  external benchmark data. `prepare --all` therefore reports eight
+  `SKIPPED_EXTERNAL` rows and exits successfully as a completed report; this is
+  not evidence that real evaluation data is available.
+
 - TASK-173 hardens bundle writes but bundle parity remains Partial for complete
   Python/Rust environment metadata and Windows-specific edge cases.
 

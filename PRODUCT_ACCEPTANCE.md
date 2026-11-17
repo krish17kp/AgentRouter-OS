@@ -6,6 +6,11 @@ Product acceptance remains **not granted**. TASK-173 hardens diagnostic bundle
 artifact and snapshot creation with capability-directory exclusive writes; the
 remaining bundle metadata and Windows differential work keeps the row Partial.
 
+Product acceptance remains **not granted**. TASK-179 aligns the Rust evaluation
+`prepare` command's single-dataset and `--all` exit semantics while preserving
+explicit external blockers. Real-data loaders, human evaluation, and release
+promotion evidence remain outstanding.
+
 Product acceptance remains **not granted**. TASK-172 aligns stable diagnostics
 summaries and adds a direct cross-language check; runtime-specific and complete
 bundle parity remain Partial.

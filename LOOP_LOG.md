@@ -1,5 +1,14 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-179 evaluation prepare exit parity
+
+The Rust `agentrouter-evaluate prepare` command now matches Python's distinction
+between one requested external dataset (exit 1 when unavailable) and `--all`
+(successful report even when every source is externally blocked). The command
+still prints explicit `SKIPPED_EXTERNAL` blockers and never substitutes fixtures.
+The Rust evaluation crate and formatting checks pass; direct `prepare --all`
+execution reports all eight registered datasets and exits 0.
+
 ## 2026-11-17 — TASK-178 evaluation CLI status parity
 
 The Rust `agentrouter-evaluate status` command now reports the actual

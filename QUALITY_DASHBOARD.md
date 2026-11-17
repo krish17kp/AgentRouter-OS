@@ -8,6 +8,13 @@ the Windows diagnostics path-format mismatch. Local Python/Rust release checks r
 frozen context-band gate and owner-supplied validation/deployment inputs remain
 open.
 
+TASK-179 closes a concrete evaluation CLI contract gap: Rust `prepare --all`
+now returns success after a complete external-blocker report, while a single
+unavailable dataset remains a nonzero readiness result. All eight blockers are
+reported explicitly and no fixture fallback is introduced. The evaluation
+crate and direct command verification pass; the evaluation module remains
+Partial for real-data loaders and orchestration.
+
 TASK-173 hardens diagnostic bundle writes with no-follow parent creation, a
 pinned capability directory, and exclusive creation. Serialized snapshots,
 symlink/hard-link, directory-swap, and nested-parent regressions pass; focused

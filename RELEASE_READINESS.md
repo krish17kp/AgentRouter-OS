@@ -20,6 +20,11 @@ the external release gates remain unresolved.
 **NOT release ready.** TASK-178 repairs evaluation CLI status reporting; the
 remaining evaluation-loader and external release gates remain unresolved.
 
+**NOT release ready.** TASK-179 aligns the Rust `prepare` exit contract with
+Python: one unavailable dataset fails honestly, while `--all` completes its
+blocker report successfully. Real dataset loading and the frozen evaluation
+gate remain unresolved.
+
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
 evidence. Diagnostics remains Partial for runtime-specific and complete bundle

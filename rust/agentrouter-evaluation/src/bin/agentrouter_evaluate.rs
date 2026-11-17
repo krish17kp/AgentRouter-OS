@@ -457,6 +457,7 @@ fn run() -> Result<i32, String> {
                 names.push(dataset);
             }
             if command == "prepare" {
+                let mut any_ok = false;
                 for name in &names {
                     let collection = agentrouter_evaluation::registry_api::collect(
                         &[name],
@@ -467,14 +468,31 @@ fn run() -> Result<i32, String> {
                         None,
                     )?;
                     let info = &collection.datasets[name];
-                    println!(
-                        "{name:<16} SKIPPED_EXTERNAL  {}",
-                        info["blocker"]
-                            .as_str()
-                            .unwrap_or("real preparation is unavailable")
-                    );
+                    if info["status"]
+                        .as_str()
+                        .is_some_and(|status| status.starts_with("real:"))
+                    {
+                        any_ok = true;
+                        println!(
+                            "{name:<16} REAL   records={} repo={} license={}",
+                            info["n"].as_u64().unwrap_or_default(),
+                            info["hf_repo"].as_str().unwrap_or("none"),
+                            info["license"].as_str().unwrap_or("unknown")
+                        );
+                    } else {
+                        println!(
+                            "{name:<16} SKIPPED_EXTERNAL  {}",
+                            info["blocker"]
+                                .as_str()
+                                .unwrap_or("real preparation is unavailable")
+                        );
+                    }
                 }
-                return Ok(1);
+                // Python's `prepare --all` is a report over every dataset and
+                // succeeds when all external sources are honestly unavailable.
+                // A single requested dataset remains a useful readiness probe
+                // and fails when it could not be prepared.
+                return Ok(if any_ok || all { 0 } else { 1 });
             }
             println!(
                 "{:16} {:9} {:6} blocker/notes",

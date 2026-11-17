@@ -149,6 +149,10 @@ def test_rust_evaluation_cli_status_and_prepare_contracts():
     assert unavailable.returncode == 1
     assert "SKIPPED_EXTERNAL" in unavailable.stdout
 
+    all_unavailable = _cli("prepare", "--all")
+    assert all_unavailable.returncode == 0, all_unavailable.stderr
+    assert all_unavailable.stdout.count("SKIPPED_EXTERNAL") == 8
+
 
 def test_rust_evaluation_cli_report_and_compare_artifacts(tmp_path):
     baseline_dir = tmp_path / "baseline"

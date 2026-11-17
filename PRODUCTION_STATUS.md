@@ -26,6 +26,12 @@ actual real-dataset availability flag and suppresses blocker text when a real
 loader is available, matching the Python command's contract. Evaluation CLI
 focused compatibility (19 tests) and the full evaluation crate pass locally.
 
+TASK-179 repairs the Rust evaluation CLI `prepare` exit contract. A single
+unavailable dataset still exits 1 with an explicit `SKIPPED_EXTERNAL` blocker,
+while `prepare --all` now exits 0 after reporting every unavailable source,
+matching Python without falling back to fixtures. The evaluation crate passes
+and the direct `--all` command reports all eight datasets honestly.
+
 TASK-175 repairs Windows diagnostics contract parity. Rust now renders the
 contract directory through the native path formatter, matching Python's
 platform-specific `Path` representation while retaining forward slashes on

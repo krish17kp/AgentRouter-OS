@@ -23,6 +23,10 @@ against 0.90, so the branch is not release-ready. Continue by polling hosted
 checks and repairing only reproducible failures; do not merge, tag, publish, or
 deploy without fresh owner authorization. Preserve the untracked historical
 directory `loop/tasks/TASK-163-registry-parity-audit/`.
+TASK-179 repairs the Rust evaluation `prepare` exit contract: one unavailable
+dataset returns 1, while `prepare --all` completes the full blocker report with
+exit 0, matching Python and never substituting fixtures. The evaluation crate
+passes and the direct all-dataset command reports eight external blockers.
 
 ## Storage relocation — 2026-11-15
 
