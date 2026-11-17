@@ -221,6 +221,46 @@ def test_rust_cli_reports_a_home_initialization_failure(tmp_path, monkeypatch):
     assert invalid_home.read_text(encoding="utf-8") == "preserve this file"
 
 
+def test_rust_cli_preserves_python_negative_soak_counts(tmp_path, monkeypatch):
+    monkeypatch.delenv("AGENTROUTER_API_KEY", raising=False)
+    home = tmp_path / "negative-soak-home"
+    process = subprocess.run(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--locked",
+            "-p",
+            "agentrouter-cli",
+            "--bin",
+            "agentrouter",
+            "--",
+            "reliability",
+            "soak",
+            "--seconds",
+            "0",
+            "--workers",
+            "-1",
+            "--batch",
+            "-1",
+            "--home",
+            str(home),
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=ROOT,
+        timeout=120,
+        check=False,
+    )
+    assert process.returncode == 0, process.stderr
+    result = json.loads(process.stdout)
+    assert result["cycles"] == 0
+    assert result["total_ok"] == 0
+    assert result["transport_errors"] == {}
+    assert "SOAK OK: 0 requests over 0 cycles" in process.stderr
+
+
 def test_rust_load_runner_does_not_follow_redirects():
     redirect_target_hit = threading.Event()
 

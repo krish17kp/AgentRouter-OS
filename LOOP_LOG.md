@@ -1,5 +1,12 @@
 # LOOP_LOG
 
+## 2026-11-18 — TASK-271 negative soak-count parity
+
+Rust `reliability soak` now preserves Python's negative `--workers` and
+`--batch` behavior, producing an empty successful run. The focused reliability
+compatibility suite passes 13 tests; strict Clippy and formatting pass.
+Hosted release, human-evaluation, and deployment gates remain unchanged.
+
 ## 2026-11-18 — TASK-270 full Rust/Python compatibility sweep
 
 The complete `tests/test_rust_*.py` selection passes 738 tests with 1 expected

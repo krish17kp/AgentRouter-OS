@@ -412,18 +412,25 @@ fn reliability_soak(args: &[String]) -> Result<i32, String> {
                     .map_err(|_| "--seconds must be a number")?;
             }
             "--workers" => {
-                workers = args
+                let value = args
                     .next()
                     .ok_or("--workers needs a value")?
-                    .parse()
-                    .map_err(|_| "--workers must be a non-negative integer")?;
+                    .parse::<i64>()
+                    .map_err(|_| "--workers must be an integer")?;
+                // Python's argparse accepts negative worker counts; its
+                // range() then produces no workers. Preserve that observable
+                // compatibility while keeping the Rust loader's usize API.
+                workers = value.max(0) as usize;
             }
             "--batch" => {
-                batch = args
+                let value = args
                     .next()
                     .ok_or("--batch needs a value")?
-                    .parse()
-                    .map_err(|_| "--batch must be a non-negative integer")?;
+                    .parse::<i64>()
+                    .map_err(|_| "--batch must be an integer")?;
+                // Python's range(negative) is empty, so a negative batch is
+                // equivalent to zero requests rather than a parse failure.
+                batch = value.max(0) as usize;
             }
             "--home" => {
                 home = PathBuf::from(args.next().ok_or("--home needs a path")?);

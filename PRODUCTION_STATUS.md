@@ -2,6 +2,13 @@
 
 Updated: 2026-11-18
 
+## Latest continuation slice — TASK-271
+
+Rust reliability soak now matches Python for negative worker and batch counts,
+reporting zero cycles/requests instead of rejecting the options. The focused
+reliability compatibility suite passes 13 tests, with strict Clippy and
+formatting green. Release and deployment gates are unchanged.
+
 ## Latest verification slice — TASK-270
 
 The complete Rust/Python compatibility selection passes **738 tests with 1
