@@ -200,7 +200,9 @@ pub fn create(
         "checks": checks,
     });
     let environment = json!({
+        "agentrouter_version": agentrouter_core::package_version(),
         "rust_probe_version": env!("CARGO_PKG_VERSION"),
+        "runtime": "rust",
         "platform": std::env::consts::OS,
         "settings": environment_summary(),
     });

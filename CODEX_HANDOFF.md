@@ -13,7 +13,8 @@ MSRV, API compatibility, build smoke, release-readiness report, Website, and
 Security checks are green. The only hosted failure is the expected frozen
 context-band release gate at 0.6667 < 0.90. Continue the remaining Partial
 parity work without changing thresholds or holdout data.
-TASK-176 adds a direct `python -m agentrouter` versus Rust unified help/version
+TASK-177 aligns stable diagnostic-bundle environment metadata while preserving
+the secret-safe allowlist. TASK-176 adds a direct `python -m agentrouter` versus Rust unified help/version
 differential and advances the inventory to 60/77 Parity, 17 Partial. The local
 full Python suite remains 2,733 passed / 7 skipped; Rust workspace,
 strict Clippy, formatting, Ruff, Bandit, dependency audits, wheel/sdist build,

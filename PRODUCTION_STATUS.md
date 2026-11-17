@@ -14,6 +14,13 @@ Updated: 2026-11-17
 
 ## Current recovery checkpoint
 
+TASK-177 aligns stable diagnostic-bundle environment metadata. Rust bundles now
+include the shared `agentrouter_version` alongside the Rust probe version and
+explicit runtime marker, while preserving the existing secret-safe settings
+allowlist. Focused bundle differential and Rust CLI tests cover the fields;
+full runtime metadata parity remains Partial because Python and Rust report
+different interpreter details.
+
 TASK-175 repairs Windows diagnostics contract parity. Rust now renders the
 contract directory through the native path formatter, matching Python's
 platform-specific `Path` representation while retaining forward slashes on

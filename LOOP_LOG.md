@@ -1,5 +1,12 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-177 diagnostic-bundle environment metadata
+
+Rust diagnostic bundles now emit the shared `agentrouter_version` field plus a
+`runtime: rust` marker while retaining the legacy Rust probe version and the
+secret-safe settings summary. Focused bundle differential and Rust tests cover
+the stable fields; interpreter-specific metadata remains intentionally partial.
+
 ## 2026-11-17 — TASK-176 Python module entrypoint parity
 
 Added a direct differential for `python -m agentrouter --help` versus the Rust

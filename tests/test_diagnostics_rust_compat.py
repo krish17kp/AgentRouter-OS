@@ -265,6 +265,11 @@ def test_bundle_is_allowlisted_and_withholds_secret_and_task_text(tmp_path):
     assert task not in contents
     assert "PRIVATE-PROMPT-718" not in contents
     environment = json.loads((destination / "environment.json").read_text(encoding="utf-8"))
+    from agentrouter import __version__
+
+    assert environment["agentrouter_version"] == __version__
+    assert isinstance(environment["rust_probe_version"], str)
+    assert environment["runtime"] == "rust"
     assert environment["settings"]["AGENTROUTER_API_KEY"] == "set (value withheld)"
     assert environment["settings"]["AGENTROUTER_USER"] == "set (value withheld)"
     assert environment["settings"]["AGENTROUTER_LOG"] == "set (value withheld)"
