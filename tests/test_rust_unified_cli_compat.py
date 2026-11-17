@@ -66,6 +66,9 @@ def test_help_and_version_are_available(unified_binary):
     assert help_result.returncode == 0
     assert "dataset" in help_result.stdout
     assert "route" in help_result.stdout
+    assert "contract" in help_result.stdout
+    assert "--live URL" in help_result.stdout
+    assert "export" in help_result.stdout
 
     python_help = subprocess.run(
         [sys.executable, "-m", "agentrouter", "--help"],

@@ -3355,3 +3355,10 @@ zero skips against the Rust loopback API.
   `+00:00` UTC offset, matching Python's ISO-8601 output shape.
 - Nine focused Rust bundle tests, four Python/Rust bundle checks, and strict
   Clippy pass.
+
+## TASK-223 — Unified contract help parity (2026-11-18)
+
+- Updated the unified Rust CLI top-level help to advertise the implemented
+  live/baseline contract checks and export acceptance workflow.
+- Added process-level assertions for `--live URL` and `export`; focused CLI
+  compatibility and formatting pass.
