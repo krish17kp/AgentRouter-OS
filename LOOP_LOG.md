@@ -3329,3 +3329,12 @@ zero skips against the Rust loopback API.
 - Eleven focused Rust contract tests, strict Clippy, and a temporary CLI
   fixture removing `/health` passed; release readiness remains held by the
   external evaluation, credential, review, and deployment gates.
+
+## TASK-220 — Relocatable Rust evaluation root discovery (2026-11-18)
+
+- `agentrouter-evaluate` now honors `AGENTROUTER_PROJECT_ROOT` and discovers a
+  repository ancestor from the current working directory before using the
+  build-time fallback.
+- A relocated fixture tree lists all registered datasets successfully.
+- Rust evaluation CLI compatibility passes 21/21, formatting and strict Clippy
+  pass, and external dataset blockers remain honestly reported.

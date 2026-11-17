@@ -81,6 +81,12 @@ routine exports still refuse breaking changes, while
 erasing prior manifest history. Focused Rust contract tests, strict Clippy, and
 a temporary CLI acceptance smoke pass.
 
+TASK-220 makes the Rust evaluation CLI relocatable: it honors
+`AGENTROUTER_PROJECT_ROOT`, discovers repository ancestors from the working
+directory, and only then falls back to the build-time manifest path. The
+21-test Rust evaluation CLI compatibility suite and strict crate Clippy pass;
+real external dataset availability remains explicitly gated.
+
 - [ ] PR review and hosted checks: PR #16 is the sole open PR against `main`, with no GitHub reviews or review requests. Pushed RC head `71408b2` is green across Rust Linux/Windows/macOS, Python/Rust compatibility on all three platforms, Python 3.10–3.13, Windows, macOS, Security, Website, and Critical Mutation. The enforcing release gate remains honestly held by frozen context-band accuracy `0.6667 < 0.90`; live smoke skips without credentials.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md): 60 rows meet the full-module differential bar and 17 remain Partial. TASK-159–162 close platform, evaluator-facade, grading, and runner parity; TASK-164 closes server schemas; TASK-166 closes annotation schemas; TASK-167 closes server service; TASK-168 closes observability; TASK-169 closes the HTTP application lifecycle; TASK-170 closes packaged annotation CLI resources; TASK-171 closes provider refresh; TASK-176 closes the Python module entrypoint; broader migration differences remain.

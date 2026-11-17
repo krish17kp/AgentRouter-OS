@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -15,7 +16,10 @@ pytestmark = pytest.mark.skipif(shutil.which("cargo") is None, reason="cargo not
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _cli(*args: str) -> subprocess.CompletedProcess[str]:
+def _cli(*args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    process_env = os.environ.copy()
+    if env:
+        process_env.update(env)
     return subprocess.run(
         [
             "cargo",
@@ -35,6 +39,7 @@ def _cli(*args: str) -> subprocess.CompletedProcess[str]:
         cwd=ROOT,
         timeout=120,
         check=False,
+        env=process_env,
     )
 
 
@@ -52,6 +57,22 @@ def test_rust_evaluation_cli_lists_registered_datasets():
         "llmrouterbench",
         "twinrouterbench",
     ]
+    assert all(row["availability"] in {"ready", "fixture_only", "skipped_external"} for row in rows)
+
+
+def test_rust_evaluation_cli_honors_relocated_project_root(tmp_path):
+    relocated = tmp_path / "relocated"
+    shutil.copytree(ROOT / "agentrouter" / "evaluation" / "fixtures", relocated / "agentrouter/evaluation/fixtures")
+    benchmarks = relocated / "agentrouter/benchmarks"
+    benchmarks.mkdir(parents=True)
+    shutil.copy2(
+        ROOT / "agentrouter" / "benchmarks" / "classifier_gold_v1.yaml",
+        benchmarks / "classifier_gold_v1.yaml",
+    )
+    process = _cli("list-datasets", "--json", env={"AGENTROUTER_PROJECT_ROOT": str(relocated)})
+    assert process.returncode == 0, process.stderr
+    rows = json.loads(process.stdout)
+    assert len(rows) == 8
     assert all(row["availability"] in {"ready", "fixture_only", "skipped_external"} for row in rows)
 
 

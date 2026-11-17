@@ -128,6 +128,10 @@ release authority until the full set is complete.
   binary's actual command/group manifest. A missing sibling binary is an error
   for `run --all`; the report no longer substitutes a hardcoded two-entry
   surface. Other evaluator defaults and runtime orchestration remain Partial.
+- TASK-220 makes the Rust evaluation CLI relocatable with
+  `AGENTROUTER_PROJECT_ROOT` and current-working-directory repository discovery
+  before the build-time fallback. External dataset loading and full evaluator
+  orchestration remain Partial.
 - TASK-144 tightens the existing OpenAI adapter parity: both implementations
   reject all non-2xx responses regardless of whether the concrete transport or
   an injected fixture produced the status. Redirects remain disabled.
