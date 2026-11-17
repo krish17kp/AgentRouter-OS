@@ -198,6 +198,7 @@ dependencies = [
 name = "agentrouter-storage"
 version = "0.1.0"
 dependencies = [
+ "cap-std",
  "chrono",
  "libc",
  "rusqlite",

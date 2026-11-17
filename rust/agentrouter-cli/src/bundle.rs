@@ -160,18 +160,6 @@ fn restrict_directory(_directory: &Path) -> Result<(), BundleError> {
     Ok(())
 }
 
-#[cfg(unix)]
-fn restrict_file(path: &Path) -> Result<(), BundleError> {
-    use std::os::unix::fs::PermissionsExt;
-    fs::set_permissions(path, fs::Permissions::from_mode(0o600))
-        .map_err(|_| BundleError("decision snapshot permissions could not be restricted".into()))
-}
-
-#[cfg(not(unix))]
-fn restrict_file(_path: &Path) -> Result<(), BundleError> {
-    Ok(())
-}
-
 pub fn create(
     home: &Path,
     destination: &Path,
@@ -192,6 +180,10 @@ pub fn create(
     restrict_directory(destination)?;
     let directory = fs::canonicalize(destination)
         .map_err(|_| BundleError("bundle destination could not be resolved".into()))?;
+    let pinned_directory = cap_std::fs::Dir::from_std_file(
+        crate::open_safe_home(&directory)
+            .map_err(|_| BundleError("bundle directory could not be opened safely".into()))?,
+    );
     if existing_path(&directory.join("doctor.json")) {
         return Err(BundleError("refusing to write through a symlink".into()));
     }
@@ -230,19 +222,7 @@ pub fn create(
         "environment.json".to_owned(),
     ];
     if include_database {
-        let snapshot = directory.join("decisions.db");
-        let parent = cap_std::fs::Dir::from_std_file(
-            crate::open_safe_home(&directory)
-                .map_err(|_| BundleError("bundle directory could not be opened safely".into()))?,
-        );
-        let mut options = cap_std::fs::OpenOptions::new();
-        options.write(true).create_new(true);
-        let snapshot_file = parent
-            .open_with("decisions.db", &options)
-            .map_err(|_| BundleError("decision snapshot destination already exists".into()))?;
-        drop(snapshot_file);
-        restrict_file(&snapshot)?;
-        agentrouter_storage::snapshot(home, &snapshot)
+        agentrouter_storage::snapshot_into_dir(home, &pinned_directory, "decisions.db")
             .map_err(|_| BundleError("decision log snapshot could not be created".into()))?;
         files.push("decisions.db".into());
     }

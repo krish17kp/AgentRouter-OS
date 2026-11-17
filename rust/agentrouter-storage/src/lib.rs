@@ -3,10 +3,11 @@
 //! schema, same `d_NNNNN` id format, same WAL + busy_timeout tuning, same
 //! in-process write serialization. See `tests/test_store_rust_compat.py`.
 
+use std::io::Write;
 use std::path::Path;
 use std::sync::Mutex;
 
-use rusqlite::{params, types::Type, Connection, OpenFlags, OptionalExtension};
+use rusqlite::{params, types::Type, Connection, OptionalExtension};
 use serde_json::Value;
 
 const SCHEMA: &str = "
@@ -151,21 +152,62 @@ pub fn connect(home: &Path) -> rusqlite::Result<Connection> {
 }
 
 /// Writes a complete, self-contained copy of the decision log to
-/// `destination` via SQLite's online backup API (safe under WAL; a plain
-/// filesystem copy is not — see the Python module's docstring).
+/// `destination` via SQLite's serialized main-database image. The destination
+/// is created exactly once and written through that opened handle, so a
+/// concurrent symlink or hard-link replacement cannot redirect the snapshot.
 pub fn snapshot(home: &Path, destination: &Path) -> rusqlite::Result<()> {
-    let source = connect(home)?;
+    let mut source = connect(home)?;
+    let serialized = source.serialize(rusqlite::MAIN_DB)?;
     if let Some(parent) = destination.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
-    let mut target = Connection::open_with_flags(
-        destination,
-        OpenFlags::SQLITE_OPEN_READ_WRITE
-            | OpenFlags::SQLITE_OPEN_CREATE
-            | OpenFlags::SQLITE_OPEN_NOFOLLOW,
-    )?;
-    let backup = rusqlite::backup::Backup::new(&source, &mut target)?;
-    backup.run_to_completion(5, std::time::Duration::from_millis(250), None)?;
+    let mut target = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(destination)
+        .map_err(|error| rusqlite::Error::ToSqlConversionFailure(Box::new(error)))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        target
+            .set_permissions(std::fs::Permissions::from_mode(0o600))
+            .map_err(|error| rusqlite::Error::ToSqlConversionFailure(Box::new(error)))?;
+    }
+    target
+        .write_all(&serialized)
+        .and_then(|()| target.sync_all())
+        .map_err(|error| rusqlite::Error::ToSqlConversionFailure(Box::new(error)))?;
+    Ok(())
+}
+
+/// Writes a complete decision-log snapshot beneath an already pinned
+/// capability directory. The directory handle, rather than a pathname, owns
+/// the final-component creation, so a concurrent rename or symlink/reparse
+/// replacement of the original directory cannot redirect the write.
+pub fn snapshot_into_dir(
+    home: &Path,
+    destination: &cap_std::fs::Dir,
+    filename: &str,
+) -> rusqlite::Result<()> {
+    let mut source = connect(home)?;
+    let serialized = source.serialize(rusqlite::MAIN_DB)?;
+    let mut options = cap_std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    let target = destination
+        .open_with(filename, &options)
+        .map_err(|error| rusqlite::Error::ToSqlConversionFailure(Box::new(error)))?;
+    let mut target = target.into_std();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        target
+            .set_permissions(std::fs::Permissions::from_mode(0o600))
+            .map_err(|error| rusqlite::Error::ToSqlConversionFailure(Box::new(error)))?;
+    }
+    target
+        .write_all(&serialized)
+        .and_then(|()| target.sync_all())
+        .map_err(|error| rusqlite::Error::ToSqlConversionFailure(Box::new(error)))?;
     Ok(())
 }
 
@@ -693,5 +735,45 @@ mod tests {
 
         assert!(snapshot(dir.path(), &dest).is_err());
         assert_eq!(std::fs::read(&victim).unwrap(), b"keep");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn snapshot_refuses_a_hardlink_destination() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = connect(dir.path()).unwrap();
+        save_decision(&conn, "task", &json!({})).unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let victim = outside.path().join("victim.db");
+        std::fs::write(&victim, b"keep").unwrap();
+        let dest = dir.path().join("backup.db");
+        std::fs::hard_link(&victim, &dest).unwrap();
+
+        assert!(snapshot(dir.path(), &dest).is_err());
+        assert_eq!(std::fs::read(&victim).unwrap(), b"keep");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn snapshot_into_pinned_dir_survives_directory_swap() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = dir.path().join("home");
+        let bundle = dir.path().join("bundle");
+        let moved = dir.path().join("bundle-moved");
+        let victim = dir.path().join("victim");
+        std::fs::create_dir_all(&home).unwrap();
+        std::fs::create_dir(&bundle).unwrap();
+        std::fs::create_dir(&victim).unwrap();
+        let conn = connect(&home).unwrap();
+        save_decision(&conn, "task", &json!({})).unwrap();
+
+        let pinned =
+            cap_std::fs::Dir::open_ambient_dir(&bundle, cap_std::ambient_authority()).unwrap();
+        std::fs::rename(&bundle, &moved).unwrap();
+        std::os::unix::fs::symlink(&victim, &bundle).unwrap();
+
+        snapshot_into_dir(&home, &pinned, "backup.db").unwrap();
+        assert!(moved.join("backup.db").is_file());
+        assert!(!victim.join("backup.db").exists());
     }
 }

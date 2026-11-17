@@ -10,15 +10,18 @@ layer, and keeps database inclusion opt-in.
 - Replace path-based final artifact and database-snapshot creation with a pinned
   capability directory and `create_new`, preventing concurrent symlink/reparse
   redirection on the final component.
-- Open the SQLite snapshot target with `SQLITE_OPEN_NOFOLLOW` as well; the
-  pathname is no longer reopened without a no-follow policy after safe creation.
-- Add regressions proving symlinked bundle artifacts and snapshot destinations
-  cannot overwrite files outside the bundle.
+- Serialize the committed SQLite main database in memory, create the final
+  snapshot with `create_new`, and write/sync through that one opened handle;
+  this avoids reopening a pathname after safe creation and closes the
+  concurrent symlink/hard-link replacement race.
+- Add regressions proving symlinked bundle artifacts, hard-linked snapshot
+  destinations, and a swapped bundle directory cannot overwrite files outside
+  the pinned bundle.
 - Keep the row Partial: complete Python/Rust environment metadata and all
   Windows-specific bundle edge cases still need differential evidence.
 
 ## Evidence
 
 Rust bundle/storage tests, strict Clippy, and the focused Python
-bundle/diagnostics suite pass after the capability-directory and SQLite
-no-follow changes.
+bundle/diagnostics suite pass after the capability-directory and one-shot
+serialized snapshot changes.

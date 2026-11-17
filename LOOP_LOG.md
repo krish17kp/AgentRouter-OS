@@ -3,13 +3,16 @@
 ## 2026-11-17 — TASK-173 diagnostic bundle safety audit
 
 Hardened Rust diagnostic bundle artifact creation by pinning the canonical
-bundle directory with a capability handle and using exclusive creation for both
-allowlisted artifacts and opt-in database snapshots. SQLite snapshot reopen now
-uses `SQLITE_OPEN_NOFOLLOW`, closing the post-create pathname race found by
-independent review. Added Unix regressions for symlinked artifact and snapshot
-paths. Rust bundle/storage tests, strict Clippy, and focused Python
-bundle/diagnostics checks pass; bundle parity remains Partial for environment
-metadata and remaining Windows-specific differential cases.
+bundle directory with a capability handle and using exclusive creation for
+allowlisted artifacts and opt-in database snapshots. The storage layer now
+serializes the committed SQLite image, creates the destination exactly once,
+and writes/syncs through the opened handle, closing the pathname replacement
+race found by independent review. Added Unix regressions for symlinked and
+hard-linked artifact/snapshot paths plus a directory-swap test against the
+pinned capability. Rust bundle/storage tests, strict Clippy,
+and focused Python bundle/diagnostics checks pass; bundle parity remains
+Partial for environment metadata and remaining Windows-specific differential
+cases.
 
 ## 2026-11-17 — TASK-172 diagnostics stable-contract alignment
 
