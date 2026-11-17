@@ -3386,3 +3386,13 @@ zero skips against the Rust loopback API.
 - Linked it from the release checklist/readiness report and recorded that no
   staging or production deployment has occurred; owner-controlled gates remain
   open.
+
+## TASK-227 — Release-gate revalidation (2026-11-18)
+
+- Re-ran `agentrouter eval run --all --no-artifacts --require-release-ready`
+  from the current checkout: 165 cases, score 98.23, exit 1, and
+  `release_ready: false`.
+- All gates pass except `context_band_accuracy>=0.90`; current holdout accuracy
+  remains `0.6667`. The only local dirty-state source is the preserved
+  untracked historical task directory; no holdout, threshold, or release data
+  was changed.

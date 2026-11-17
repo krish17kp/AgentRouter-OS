@@ -96,6 +96,11 @@ marked as a plan: no staging or production deployment has been performed, and
 the owner-controlled evaluation, credential, infrastructure, and promotion
 gates remain open.
 
+The authoritative local gate was re-run from the current checkout for TASK-227:
+165 cases, score 98.23, exit 1, and `release_ready: false`. The unchanged
+context-band gate is the only failed gate at `0.6667 < 0.90`; the preserved
+historical untracked task directory accounts for the reported dirty worktree.
+
 TASK-183 confirms the optimized locked Rust workspace build and release binary
 help/version smoke locally. `cargo audit --no-yanked` reports no vulnerability
 advisories across 207 locked dependencies; one unmaintained `chrono` warning
