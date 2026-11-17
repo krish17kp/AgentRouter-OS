@@ -271,8 +271,9 @@ accuracy in the current report. It is not evidence of held-out generalization.
 
 - Execution planner: 4 Rust unit tests passed; remote/API execution and all
   adapters remain disabled.
-- Orchestration planner: 3 Rust unit tests passed; bounded DAG validation and
-  deterministic groups are present, but no dispatch or mutation is enabled.
+- Orchestration planner: 4 Rust unit tests passed; bounded DAG validation,
+  deterministic groups, tool allowlists, and idempotency guards are present,
+  but no dispatch or mutation is enabled.
 - CLI plan integration: fresh-home init/route/save/plan optimized smoke passes;
   the JSON plan reports `execution_enabled: false`.
 - Routing benchmark parity: matched local pure-routing runs show Rust p50 at

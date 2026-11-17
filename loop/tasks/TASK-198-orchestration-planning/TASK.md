@@ -11,4 +11,5 @@ without dispatch, tool grants, workspace mutation, or execution.
 - enforce step and estimated-cost budgets before planning;
 - produce deterministic dependency levels;
 - reject conflicting side-effect keys in one parallel level;
+- enforce an explicit tool allowlist and unique idempotency keys;
 - keep `execution_enabled: false` in the returned plan.

@@ -366,6 +366,12 @@ CLI credentials are looked up in the user's home, as in Python, not under
 `AGENTROUTER_HOME`. This remains a probe; complete CLI flags, errors, and
 deployment surfaces still need parity work.
 
+R7 follow-up (2026-11-17): `agentrouter-orchestration` now provides a
+planning-only bounded DAG with cycle, duplicate, cost, retry, parallel
+side-effect, tool-allowlist, and idempotency-key guards. It always returns
+`execution_enabled: false`; agent dispatch, tool grants, cancellation, and
+workspace mutation remain a later owner-authorized runtime milestone.
+
 R4 follow-up (2026-11-10): Rust `registry list` now has JSON/table and filter
 parity probes. Independent review found primitive serde deserialization
 accepted malformed numeric model facts that Python's Pydantic schema rejects.

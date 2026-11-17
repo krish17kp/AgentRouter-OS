@@ -105,8 +105,9 @@ TASK-197/198 add planning-only Rust boundaries for the previously missing
 execution and multi-agent orchestration surfaces. Execution planning is
 approval-gated, availability-aware, remote-disabled by default, and always
 returns `execution_enabled: false`; orchestration planning validates bounded
-DAGs, deterministic parallel groups, budgets, cycles, and conflicting side
-effects while never dispatching or mutating. Focused tests (4 + 3), strict
+DAGs, deterministic parallel groups, budgets, cycles, conflicting side
+effects, tool allowlists, and idempotency keys while never dispatching or
+mutating. Focused tests (4 + 4), strict
 Clippy, and formatting pass. No execution adapter or orchestration runtime is
 claimed.
 

@@ -4,13 +4,14 @@ Date: 2026-11-17
 
 The new `agentrouter-orchestration` workspace crate validates bounded DAGs and
 returns deterministic parallel groups. It does not dispatch agents, execute
-commands, grant tools, or mutate workspaces. Three unit tests cover dependency
-levels, cycle/conflict rejection, and step/cost budgets.
+commands, grant tools, or mutate workspaces. Four unit tests cover dependency
+levels, cycle/conflict rejection, step/cost budgets, and tool/idempotency
+guards.
 
 ```console
 cargo fmt --all -- --check
 cargo test --locked -p agentrouter-orchestration
-# 3 passed
+# 4 passed
 cargo clippy --locked -p agentrouter-orchestration --all-targets -- -D warnings
 # finished successfully
 ```

@@ -107,8 +107,9 @@ loading explicitly blocked until its runtime and credentials are available.
 TASK-197/198 add planning-only Rust boundaries for execution and orchestration.
 The execution planner is fail-closed around host availability, approval,
 remote policy, and manual handoff; the orchestration planner validates bounded
-dependency graphs and deterministic parallel groups with conflict and budget
-checks. Seven focused tests plus strict Clippy and formatting pass. Neither
+dependency graphs and deterministic parallel groups with conflict, budget,
+tool-allowlist, and idempotency checks. Eight focused tests plus strict Clippy
+and formatting pass. Neither
 crate executes, dispatches, grants tools, reads credentials, or mutates
 workspaces. Continue with separately authorized adapters and runtime
 integration; do not promote these planning crates as execution parity.

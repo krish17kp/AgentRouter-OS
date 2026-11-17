@@ -17,6 +17,10 @@ pub struct WorkflowStep {
     pub depends_on: Vec<String>,
     #[serde(default)]
     pub side_effect_key: Option<String>,
+    #[serde(default)]
+    pub idempotency_key: Option<String>,
+    #[serde(default)]
+    pub required_tools: Vec<String>,
     #[serde(default = "default_attempts")]
     pub max_attempts: u32,
     pub estimated_cost: u64,
@@ -33,6 +37,24 @@ pub struct WorkflowPlan {
     pub estimated_cost: u64,
     pub max_steps: usize,
     pub execution_enabled: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WorkflowPolicy {
+    pub max_steps: usize,
+    pub max_cost: u64,
+    #[serde(default)]
+    pub allowed_tools: BTreeSet<String>,
+}
+
+impl WorkflowPolicy {
+    pub fn new(max_steps: usize, max_cost: u64) -> Self {
+        Self {
+            max_steps,
+            max_cost,
+            allowed_tools: BTreeSet::new(),
+        }
+    }
 }
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
@@ -53,6 +75,10 @@ pub enum WorkflowError {
     CostBudget { actual: u64, limit: u64 },
     #[error("parallel steps conflict on side-effect key '{0}'")]
     ParallelConflict(String),
+    #[error("step '{step}' requires tool '{tool}', which is not allowed")]
+    ToolNotAllowed { step: String, tool: String },
+    #[error("duplicate workflow idempotency key '{0}'")]
+    DuplicateIdempotencyKey(String),
     #[error("step '{0}' must allow at least one attempt")]
     InvalidAttempts(String),
 }
@@ -63,22 +89,44 @@ pub fn plan(
     max_steps: usize,
     max_cost: u64,
 ) -> Result<WorkflowPlan, WorkflowError> {
+    plan_with_policy(steps, WorkflowPolicy::new(max_steps, max_cost))
+}
+
+/// Validate and schedule a workflow with an explicit tool allowlist.
+pub fn plan_with_policy(
+    steps: &[WorkflowStep],
+    policy: WorkflowPolicy,
+) -> Result<WorkflowPlan, WorkflowError> {
     if steps.is_empty() {
         return Err(WorkflowError::Empty);
     }
-    if steps.len() > max_steps {
+    if steps.len() > policy.max_steps {
         return Err(WorkflowError::StepBudget {
             actual: steps.len(),
-            limit: max_steps,
+            limit: policy.max_steps,
         });
     }
     let mut by_id = BTreeMap::new();
+    let mut idempotency_keys = BTreeSet::new();
     for step in steps {
         if step.id.is_empty() {
             return Err(WorkflowError::EmptyId);
         }
         if step.max_attempts == 0 {
             return Err(WorkflowError::InvalidAttempts(step.id.clone()));
+        }
+        for tool in &step.required_tools {
+            if tool.is_empty() || !policy.allowed_tools.contains(tool) {
+                return Err(WorkflowError::ToolNotAllowed {
+                    step: step.id.clone(),
+                    tool: tool.clone(),
+                });
+            }
+        }
+        if let Some(key) = &step.idempotency_key {
+            if key.is_empty() || !idempotency_keys.insert(key.clone()) {
+                return Err(WorkflowError::DuplicateIdempotencyKey(key.clone()));
+            }
         }
         if by_id.insert(step.id.clone(), step).is_some() {
             return Err(WorkflowError::DuplicateId(step.id.clone()));
@@ -89,13 +137,13 @@ pub fn plan(
             .checked_add(step.estimated_cost)
             .ok_or(WorkflowError::CostBudget {
                 actual: u64::MAX,
-                limit: max_cost,
+                limit: policy.max_cost,
             })
     })?;
-    if estimated_cost > max_cost {
+    if estimated_cost > policy.max_cost {
         return Err(WorkflowError::CostBudget {
             actual: estimated_cost,
-            limit: max_cost,
+            limit: policy.max_cost,
         });
     }
 
@@ -158,7 +206,7 @@ pub fn plan(
         ordered_steps,
         parallel_groups,
         estimated_cost,
-        max_steps,
+        max_steps: policy.max_steps,
         execution_enabled: false,
     })
 }
@@ -169,6 +217,8 @@ pub fn single_step(id: impl Into<String>, estimated_cost: u64) -> WorkflowStep {
         id: id.into(),
         depends_on: Vec::new(),
         side_effect_key: None,
+        idempotency_key: None,
+        required_tools: Vec::new(),
         max_attempts: 1,
         estimated_cost,
     }
@@ -186,6 +236,8 @@ mod tests {
                 id: "b".into(),
                 depends_on: vec!["a".into()],
                 side_effect_key: Some("file:b".into()),
+                idempotency_key: None,
+                required_tools: Vec::new(),
                 max_attempts: 2,
                 estimated_cost: 3,
             },
@@ -193,6 +245,8 @@ mod tests {
                 id: "c".into(),
                 depends_on: vec!["a".into()],
                 side_effect_key: Some("file:c".into()),
+                idempotency_key: None,
+                required_tools: Vec::new(),
                 max_attempts: 1,
                 estimated_cost: 4,
             },
@@ -255,5 +309,35 @@ mod tests {
             plan(&steps, 2, 7),
             Err(WorkflowError::CostBudget { .. })
         ));
+    }
+
+    #[test]
+    fn enforces_tool_allowlist_and_unique_idempotency_keys() {
+        let tool_step = WorkflowStep {
+            id: "tool".into(),
+            required_tools: vec!["shell".into()],
+            ..single_step("unused", 1)
+        };
+        let denied = plan(std::slice::from_ref(&tool_step), 1, 1).expect_err("tool must be denied");
+        assert_eq!(
+            denied,
+            WorkflowError::ToolNotAllowed {
+                step: "tool".into(),
+                tool: "shell".into()
+            }
+        );
+
+        let mut policy = WorkflowPolicy::new(2, 2);
+        policy.allowed_tools.insert("shell".into());
+        let mut first = tool_step;
+        first.idempotency_key = Some("same-request".into());
+        let mut second = single_step("second", 1);
+        second.idempotency_key = Some("same-request".into());
+        assert_eq!(
+            plan_with_policy(&[first, second], policy),
+            Err(WorkflowError::DuplicateIdempotencyKey(
+                "same-request".into()
+            ))
+        );
     }
 }

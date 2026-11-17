@@ -99,7 +99,7 @@ pass. This does not provide Rust real-dataset loading or clear the frozen
 evaluation and promotion gates.
 
 **NOT release ready.** TASK-197/198 add planning-only execution and
-orchestration crates with 7 focused unit tests and strict Clippy/format checks.
+orchestration crates with 8 focused unit tests and strict Clippy/format checks.
 They intentionally keep remote execution, provider/CLI adapters, agent
 dispatch, tool grants, and workspace mutation disabled. The remaining runtime
 implementation and external release gates are unresolved.

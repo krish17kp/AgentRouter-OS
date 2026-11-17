@@ -12,8 +12,9 @@ Added Rust-native, fail-closed planning crates for the next missing migration
 surface: `agentrouter-execution` resolves a routed host and records approval,
 availability, remote-policy, and manual-handoff decisions without executing;
 `agentrouter-orchestration` validates bounded dependency graphs, deterministic
-parallel levels, budgets, cycles, and conflicting side effects without
-dispatching agents or mutating workspaces. Focused tests are 4 and 3 passed;
+parallel levels, budgets, cycles, conflicting side effects, tool allowlists, and
+idempotency keys without dispatching agents or mutating workspaces. Focused
+tests are 4 and 4 passed;
 strict Clippy and formatting pass. These crates advance the architecture but do
 not claim execution or multi-agent parity.
 
