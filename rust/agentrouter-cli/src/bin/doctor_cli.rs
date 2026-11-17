@@ -56,7 +56,7 @@ fn run() -> Result<i32, String> {
                 check.summary
             );
             if let Some(remedy) = &check.remedy {
-                println!("      -> {remedy}");
+                println!("         -> {remedy}");
             }
         }
         let failures = checks
@@ -68,11 +68,18 @@ fn run() -> Result<i32, String> {
             .filter(|check| check.status == agentrouter_cli::diagnostics::WARN)
             .count();
         if failures > 0 {
-            println!("\n{failures} problem(s) to fix.");
+            let first_remedy = checks
+                .iter()
+                .find(|check| check.status == agentrouter_cli::diagnostics::FAIL)
+                .and_then(|check| check.remedy.as_deref())
+                .unwrap_or("run: agentrouter doctor --json");
+            let noun = if failures == 1 { "problem" } else { "problems" };
+            println!("\n{failures} {noun} to fix. Start with: {first_remedy}");
         } else if warnings > 0 {
-            println!("\nEverything works. {warnings} note(s) above worth knowing about.");
+            let noun = if warnings == 1 { "note" } else { "notes" };
+            println!("\nEverything works. {warnings} {noun} above worth knowing about.");
         } else {
-            println!("\nAll clear.");
+            println!("\nAll clear. Next: agentrouter route \"your task here\"");
         }
         if let Some(bundle) = &bundle {
             println!("\nBundle written to {}", bundle.directory.display());

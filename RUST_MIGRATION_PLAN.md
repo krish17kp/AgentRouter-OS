@@ -27,6 +27,13 @@
 
 ## Current production status
 
+TASK-254 (2026-11-18) aligns the Rust doctor's human-readable output with
+Python: remedies use the same indentation, failures include the first remedy,
+warnings pluralize correctly, and an all-clear report includes the route next
+step. JSON output is unchanged. The focused diagnostics compatibility suite
+passes 18 tests and the Rust CLI crate passes 89 tests with strict Clippy and
+formatting.
+
 TASK-253 (2026-11-18) fixes a shipping Python diagnostic bug exposed by the
 Rust differential: `diagnostics.check_registry` now unpacks `load_models()`
 and reports the actual initialized model count instead of the tuple length.

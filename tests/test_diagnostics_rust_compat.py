@@ -248,6 +248,21 @@ def test_observability_report_reflects_explicit_otel_opt_in(tmp_path):
     assert check["summary"].endswith("OTel on")
 
 
+def test_human_report_matches_python_summary_and_remedy_contract(tmp_path):
+    home = tmp_path / "agentrouter"
+    assert _init(home).returncode == 0
+    result = _doctor(home)
+    assert result.returncode == 0
+    assert "Everything works. 2 notes above worth knowing about." in result.stdout
+    assert "         -> set AGENTROUTER_API_KEY to require an X-API-Key header" in result.stdout
+    assert "note(s)" not in result.stdout
+    assert "problem(s)" not in result.stdout
+
+    missing = _doctor(tmp_path / "missing")
+    assert missing.returncode == 1
+    assert "2 problems to fix. Start with: run: agentrouter init" in missing.stdout
+
+
 def test_missing_home_is_a_failure_but_report_is_complete(tmp_path):
     result = _doctor(tmp_path / "missing", "--json")
     payload = json.loads(result.stdout)

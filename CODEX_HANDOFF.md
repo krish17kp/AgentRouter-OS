@@ -2,6 +2,11 @@
 
 ## Live checkpoint — 2026-11-18
 
+TASK-254 aligns Rust `doctor` human-readable output with Python's public text
+contract (remedy indentation, failure guidance, warning pluralization, and the
+all-clear next step); JSON output is unchanged. Diagnostics compatibility is
+18/18 and the Rust CLI crate is 89/89 with strict Clippy and formatting.
+
 TASK-253 fixes a shipping diagnostics bug found by the Rust comparison: Python
 now unpacks `load_models()` and reports the actual eight initialized seed models,
 matching Rust instead of reporting tuple length `2`. The focused diagnostics

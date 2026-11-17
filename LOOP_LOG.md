@@ -3610,3 +3610,12 @@ zero skips against the Rust loopback API.
   the focused diagnostics selection now passes 17/17.
 - TASK-252's OTel status parity remains covered. The release gate, holdout data,
   and owner-controlled production approvals are unchanged.
+## TASK-254 — Doctor human-readable output parity (2026-11-18)
+
+- Rust `doctor` text output now matches Python's remedy indentation, failure
+  guidance, warning pluralization, and all-clear next step; JSON output is
+  unchanged.
+- The focused diagnostics compatibility selection passes 18/18; the Rust CLI
+  crate passes 89/89 with strict Clippy and formatting.
+- Release readiness remains unchanged and the frozen context-band gate is still
+  the sole canonical evaluation failure.

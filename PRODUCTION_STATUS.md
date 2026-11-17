@@ -2,7 +2,15 @@
 
 Updated: 2026-11-18
 
-## Latest continuation slice — TASK-253
+## Latest continuation slice — TASK-254
+
+Rust `doctor` human-readable output now matches Python's remedy indentation,
+failure guidance, warning pluralization, and clear next-step wording. JSON
+output remains unchanged. The focused diagnostics compatibility suite passes
+18 tests and the Rust CLI crate passes 89 tests with strict Clippy and
+formatting.
+
+## Previous continuation slice — TASK-253
 
 The unified Python and Rust doctors now agree on initialized registry counts.
 Python diagnostics previously reported the loader tuple length (`2`) instead
