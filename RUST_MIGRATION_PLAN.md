@@ -27,6 +27,14 @@
 
 ## Current production status
 
+TASK-223 (2026-11-18) synchronizes the unified Rust CLI top-level help with
+the implemented contract check/diff/export surface and adds a process-level
+regression for live and explicit-baseline checks. Fresh local verification
+passes 2,742 Python tests with 7 expected skips, the locked Rust workspace,
+focused contract/unified-CLI compatibility (89/89), release build, strict
+Clippy, formatting, and cargo audit. This does not alter the release gate or
+the Python shipping authority.
+
 TASK-216 (2026-11-18) wires the existing safe Rust contract exporter into the
 unified CLI as `agentrouter contract export`. It supports an explicit source
 file, deterministic timestamp injection, JSON output, and fail-closed refusal
