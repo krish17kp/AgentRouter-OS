@@ -2,8 +2,9 @@
 
 ## Current checkpoint — 2026-11-17
 
-At local head `34d6366`, the macOS root-alias repair is ready for hosted
-validation after the final bundle evidence checkpoint. Local release checks are green, but the frozen context-band
+At pushed RC head `853eca3`, the macOS root-alias repair passed the hosted Rust
+matrix; the Windows Python suite found a diagnostics path-format mismatch now
+repaired locally as TASK-175. Local release checks are green, but the frozen context-band
 gate, human evaluation, live OpenAI validation, and promotion/deployment inputs
 remain unresolved.
 

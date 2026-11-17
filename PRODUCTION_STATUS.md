@@ -4,7 +4,7 @@ Updated: 2026-11-17
 
 ## Definition of done
 
-- [ ] PR review and hosted checks: PR #16 is the sole open PR against `main`, with no GitHub reviews or review requests. At local code head `34d6366`, the macOS-only no-follow path regression is repaired and awaits hosted revalidation. The prior head’s Linux Rust, MSRV, API compatibility, build smoke, release-readiness report, Website, and Security checks are green. The enforcing release gate remains honestly held by frozen context-band accuracy `0.6667 < 0.90`; live smoke skips without credentials.
+- [ ] PR review and hosted checks: PR #16 is the sole open PR against `main`, with no GitHub reviews or review requests. Pushed RC head `853eca3` passed the Rust Linux/Windows/macOS and Python/Rust compatibility matrix; the hosted Windows Python suite exposed one real path-format parity failure, now repaired locally for the next RC push. The enforcing release gate remains honestly held by frozen context-band accuracy `0.6667 < 0.90`; live smoke skips without credentials.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md): 59 rows meet the full-module differential bar and 18 remain Partial. TASK-159–162 close platform, evaluator-facade, grading, and runner parity; TASK-164 closes server schemas; TASK-166 closes annotation schemas; TASK-167 closes server service; TASK-168 closes observability; TASK-169 closes the HTTP application lifecycle; TASK-170 closes packaged annotation CLI resources; TASK-171 closes provider refresh; broader migration differences remain.
 - [x] Full Python suite: Linux/Python 3.12 passes 2,733 tests and skips 7 (latest run after TASK-173). The TASK-152 coverage refresh measures 92.052% statement, 87.756% branch, and 91.064% combined; both required thresholds pass. Evidence is in [`docs/COVERAGE_REPORT_2026-11-15-TASK-152.md`](docs/COVERAGE_REPORT_2026-11-15-TASK-152.md).
@@ -13,6 +13,13 @@ Updated: 2026-11-17
 - [ ] Release candidate promoted to `main` with a tagged release.
 
 ## Current recovery checkpoint
+
+TASK-175 repairs Windows diagnostics contract parity. Rust now renders the
+contract directory through the native path formatter, matching Python's
+platform-specific `Path` representation while retaining forward slashes on
+POSIX. The hosted Windows failure is reproduced by the existing 14-test
+diagnostics differential; the focused Rust CLI tests and Linux differential pass
+with the repair. The next RC push must re-run the full Windows suite.
 
 TASK-173 hardens Rust diagnostic bundle writes with no-follow parent creation, a
 pinned capability directory, and exclusive creation for artifacts and opt-in
@@ -289,7 +296,7 @@ The run includes the API large-integer response differential, nested JSON
 redaction, route-envelope cases, and earlier regressions. Rust workspace tests
 pass locally, as do API crate tests, strict API Clippy, the full API schema
 differential selection (57 tests), Rust formatting, Ruff, and `git diff --check`.
-The next pushed code head `34d6366` will run fresh hosted validation after
+The pushed code head `853eca3` is running fresh hosted validation after
 the macOS root-alias repair, bundle-parent hardening, and evidence checkpoint; prior Rust workspace OS jobs and Linux
 and macOS Python/Rust compatibility; Windows compatibility and most Python jobs
 were running at the time of this update. PR #16's enforcing gate continues to

@@ -3,12 +3,14 @@
 ## Live checkpoint — 2026-11-17
 
 Active release checkout: `/data/AgentRouter-production`, branch
-`release/agentrouter-v0.5-rc1`, local head `34d6366` (not yet pushed). PR #16 is
+`release/agentrouter-v0.5-rc1`, pushed head `853eca3`, with TASK-175 locally
+repairing the hosted Windows diagnostics path-format mismatch. PR #16 is
 the only open PR; no reviews or review requests are present. The macOS-only
-no-follow path regression is repaired locally; the prior head’s Linux Rust,
+no-follow path regression is repaired and pushed; the current Windows mismatch is
+repaired locally; the prior head’s Linux Rust,
 MSRV, API compatibility, build smoke, release-readiness report, Website, and
-Security checks are green. Push this repair to the authorized RC branch, then
-inspect the new cross-platform matrix.
+Security checks are green. Commit and push TASK-175, then inspect the new
+cross-platform matrix and repair any real platform failures.
 The local full Python suite remains 2,733 passed / 7 skipped; Rust workspace,
 strict Clippy, formatting, Ruff, Bandit, dependency audits, wheel/sdist build,
 and clean-wheel smoke are green. The frozen context-band gate remains 0.6667

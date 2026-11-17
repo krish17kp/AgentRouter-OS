@@ -501,10 +501,11 @@ pub fn run_all(home: &Path) -> Vec<Check> {
         safe("server.extra", check_server_extra),
         safe("server.auth", check_api_key),
         safe("contract.version", || {
+            let contract_dir = Path::new("contracts").join("http").join("v1");
             Check::new(
                 "contract.version",
                 OK,
-                "HTTP contract v1 (contracts/http/v1)",
+                format!("HTTP contract v1 ({})", contract_dir.display()),
                 None,
             )
         }),

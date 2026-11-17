@@ -1,5 +1,15 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-175 Windows diagnostics path parity
+
+Hosted Windows exposed one contract differential: Python rendered
+`contracts\\http\\v1` through `Path`, while Rust emitted POSIX slashes. The Rust
+doctor now builds the contract directory with `Path::join(...).display()`, so it
+matches native separators without changing the stable POSIX output. The failure
+reproduces in the existing diagnostics differential; Rust CLI tests and the
+Linux differential pass locally. Commit and push this repair, then re-run the
+hosted matrix.
+
 ## 2026-11-17 — TASK-174 macOS root-alias repair
 
 Hosted Rust workspace exposed three macOS-only failures: the no-follow walker
@@ -8,8 +18,8 @@ provider generated-catalog fixture. The walker now normalizes only `/var`,
 `/tmp`, and `/etc` to `/private/*` before applying the existing no-follow
 component checks; user-controlled links remain rejected. A macOS regression
 test covers all three aliases. Rust CLI unit tests (79), strict Clippy, and
-format checks pass locally; the repair is committed locally as `34d6366` and is
-ready for hosted revalidation on the authorized RC branch.
+format checks pass locally; the repair is pushed as `853eca3` and is undergoing
+hosted revalidation on the authorized RC branch.
 
 ## 2026-11-17 — Hosted queue repair and evidence checkpoint
 
