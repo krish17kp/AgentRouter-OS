@@ -1,5 +1,12 @@
 # LOOP_LOG
 
+## 2026-11-17 — TASK-186 website release smoke
+
+The website passes ESLint with zero warnings, TypeScript/Vite production build,
+and `npm audit --omit=dev --audit-level=high` with zero production
+vulnerabilities. The bundle was generated locally; publication/deployment still
+requires the owner-controlled hosting gate.
+
 ## 2026-11-17 — TASK-185 plugin doctor symlink-root diagnosis
 
 The Rust plugin doctor now reports linked/reparse-point roots as actionable

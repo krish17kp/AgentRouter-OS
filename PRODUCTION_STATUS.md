@@ -54,6 +54,10 @@ an actionable blocked-destination finding instead of an internal diagnostic
 error, matching Python's fail-closed safety contract; focused regression and
 local symlinked-root smoke pass.
 
+TASK-186 verifies the website with clean lint, a successful TypeScript/Vite
+production build, and zero production npm-audit vulnerabilities. The bundle is
+local-only until the owner supplies hosting publication and deployment approval.
+
 TASK-175 repairs Windows diagnostics contract parity. Rust now renders the
 contract directory through the native path formatter, matching Python's
 platform-specific `Path` representation while retaining forward slashes on

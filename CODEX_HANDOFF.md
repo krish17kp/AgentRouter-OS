@@ -53,6 +53,10 @@ now reports an actionable blocked destination instead of claiming the
 diagnostic itself is broken. The focused Unix regression and local symlinked
 `~/.claude` smoke pass; no linked target is followed.
 
+TASK-186 refreshes website release evidence: ESLint, the TypeScript/Vite
+production build, and the production-only npm audit pass. The bundle is built
+locally; hosting publication and deployment remain owner-controlled.
+
 ## Storage relocation — 2026-11-15
 
 Active release checkout: `/data/AgentRouter-production` on branch

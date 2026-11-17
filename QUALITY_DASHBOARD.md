@@ -45,6 +45,10 @@ TASK-185 hardens plugin diagnosis for symlinked roots. The Rust doctor now
 returns a path-specific blocked finding rather than an internal-error message,
 matching the Python safety contract; focused regression and local smoke pass.
 
+TASK-186 confirms the website's lint, production build, and production-only
+dependency audit. The generated bundle is locally valid with zero production
+vulnerabilities; deployment remains gated on hosting credentials/approval.
+
 TASK-173 hardens diagnostic bundle writes with no-follow parent creation, a
 pinned capability directory, and exclusive creation. Serialized snapshots,
 symlink/hard-link, directory-swap, and nested-parent regressions pass; focused

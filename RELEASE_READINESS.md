@@ -52,6 +52,10 @@ diagnosis so linked host directories fail closed with an actionable blocked
 finding. Plugin lifecycle parity and all external release gates remain
 unresolved.
 
+**NOT release ready.** TASK-186 verifies website lint, production build, and
+zero production dependency vulnerabilities. Hosting publication/deployment
+credentials and approval remain unresolved.
+
 **NOT release ready.** TASK-172 aligns the Rust doctor’s stable package,
 server-extra, and contract summaries with Python and adds direct differential
 evidence. Diagnostics remains Partial for runtime-specific and complete bundle
