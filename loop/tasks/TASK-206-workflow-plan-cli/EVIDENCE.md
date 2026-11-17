@@ -16,9 +16,14 @@ printf '%s\n' '{"steps":[{"id":"a","estimated_cost":1},{"id":"b","depends_on":["
 # exit 2: duplicate dependency is rejected
 ```
 
-The unified compatibility regression `test_workflow_plan_is_read_only_and_rejects_duplicate_dependencies`
-passes together with the existing read-only execution-plan regression (2
-passed, 15 deselected).
+The complete unified CLI compatibility file passes, including the workflow
+planning/tool-policy regression and the existing read-only execution-plan
+regression:
+
+```console
+uv run --with '.[dev,server,security]' pytest -q tests/test_rust_unified_cli_compat.py
+# 17 passed in 5.87s
+```
 
 The planner remains read-only; no agent, provider, tool, or workspace was
 started or changed.
