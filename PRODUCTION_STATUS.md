@@ -47,9 +47,9 @@ hosted-approval, or deployment state.
 
 ## Latest hosted-state slice — TASK-264
 
-Live PR state confirms PR #16 is still mergeable but unstable: remote head
-`71408b2` has green ordinary Python/Rust/API/security/website/mutation checks,
-with `live-smoke` skipped and `enforce-release-gate` failing only on the frozen
+Live PR state confirms PR #16 is still mergeable but unstable: the current RC
+head has green ordinary Python/Rust/API/security/website/mutation checks, with
+`live-smoke` skipped and `enforce-release-gate` failing only on the frozen
 context-band threshold. There are still no reviews or review requests. No
 remote mutation occurred.
 
@@ -245,8 +245,8 @@ paths (`init`, `explain`, `feedback`, `stats`, `prompt`, `doctor`, and
 tests. The canonical gate remains unchanged and release readiness is still
 false.
 
-The local RC branch contains additional local commits after pushed head `71408b2`. TASK-208 adds
-read-only Rust contract baseline/surface tooling, and TASK-209 makes the
+The local RC branch contains the latest documented parity and storage fixes.
+TASK-208 adds read-only Rust contract baseline/surface tooling, and TASK-209 makes the
 Rust-backed TypeScript live suite independent of Python initialization. The
 required SDK run is green at 18/18 with zero skips, and the Rust workspace,
 strict Clippy, optimized build, and cargo audit remain green. This is not a
@@ -406,7 +406,7 @@ TASK-240 aligns invalid Rust evaluation `validate-dataset` errors with Python's
 `Invalid dataset:` prefix and exit code 3; the focused evaluation CLI suite now
 passes 23 cases.
 
-- [ ] PR review and hosted checks: PR #16 is the sole open PR against `main`, with no GitHub reviews or review requests. Pushed RC head `71408b2` is green across Rust Linux/Windows/macOS, Python/Rust compatibility on all three platforms, Python 3.10–3.13, Windows, macOS, Security, Website, and Critical Mutation. The enforcing release gate remains honestly held by frozen context-band accuracy `0.6667 < 0.90`; live smoke skips without credentials.
+- [ ] PR review and hosted checks: PR #16 is the sole open PR against `main`, with no GitHub reviews or review requests. The current RC head is green across Rust Linux/Windows/macOS, Python/Rust compatibility on all three platforms, Python 3.10–3.13, Windows, macOS, Security, Website, and Critical Mutation. The enforcing release gate remains honestly held by frozen context-band accuracy `0.6667 < 0.90`; live smoke skips without credentials.
 - [ ] Python-to-Rust migration covers every public Python module with contract parity; no shipped TODO or `unimplemented!()` remains.
 - [ ] The full 77-module inventory is tracked in [`docs/RUST_PARITY_MATRIX.md`](docs/RUST_PARITY_MATRIX.md): 60 rows meet the full-module differential bar and 17 remain Partial. TASK-159–162 close platform, evaluator-facade, grading, and runner parity; TASK-164 closes server schemas; TASK-166 closes annotation schemas; TASK-167 closes server service; TASK-168 closes observability; TASK-169 closes the HTTP application lifecycle; TASK-170 closes packaged annotation CLI resources; TASK-171 closes provider refresh; TASK-176 closes the Python module entrypoint; broader migration differences remain.
 - [x] Full Python suite: TASK-233's latest local Linux/Python 3.12 rerun passes 2,743 tests and skips 7 environment-dependent cases; the existing Starlette/httpx TestClient deprecation warning is non-failing. The TASK-152 coverage refresh measures 92.052% statement, 87.756% branch, and 91.064% combined; both required thresholds pass. Evidence is in [`docs/COVERAGE_REPORT_2026-11-15-TASK-152.md`](docs/COVERAGE_REPORT_2026-11-15-TASK-152.md).

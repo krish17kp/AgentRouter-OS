@@ -2,13 +2,14 @@
 
 ## Current checkpoint — 2026-11-18
 
-Current checkout verification is 2,781 Python tests passed with 7 expected
-skips, 893 Rust/Python compatibility tests passed with 1 expected skip, and a
+Current checkout verification is 2,782 Python tests passed with 7 expected
+skips, the complete Rust/Python compatibility selection passed with 1 expected
+skip, and a
 green locked Rust workspace, strict Clippy, formatting, and diff check. The
 canonical evaluator remains 98.23/100 over 165 cases; `release_ready` is still
 false solely because `context_band_accuracy=0.6667 < 0.90`. PR #16 remains open
-against `main`; the local branch has verified commits after pushed RC head
-`71408b2`, and no push, merge, tag, publication, or deployment has occurred.
+against `main`; the current RC head has green ordinary hosted checks, and no
+merge, tag, publication, or deployment has occurred.
 
 TASK-261 release evidence also passes: isolated wheel/sdist build, Twine
 metadata checks, required packaged-asset inspection, website lint/build, and
@@ -19,9 +20,9 @@ Latest local verification on 2026-11-18 passes 2,743 Python tests with 7
 expected environment skips, 89/89 focused Rust contract/unified-CLI tests,
 the locked optimized Rust workspace build, strict Clippy, and cargo audit.
 
-At pushed RC head `71408b2`, the macOS root-alias repair and TASK-175 Windows
-diagnostics path-format repair passed the complete hosted Rust/Python matrix.
-Local release checks are green, but the frozen context-band
+The macOS root-alias repair and TASK-175 Windows diagnostics path-format repair
+pass the hosted Rust/Python matrix, including the final macOS jobs. Local and
+hosted release checks are green apart from the frozen context-band
 gate, human evaluation, live OpenAI validation, and promotion/deployment inputs
 remain unresolved.
 

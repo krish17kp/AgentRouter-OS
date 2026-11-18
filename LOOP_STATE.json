@@ -111,7 +111,7 @@
     "task261_artifacts": "Isolated PEP 517 wheel/sdist build and Twine checks pass; required wheel assets present; website lint/build pass; cargo audit scans 207 dependencies with no vulnerability advisories and one documented unmaintained chrono warning.",
     "task262_prepare_limit": "Python real-mode prepare-limit regression: 8 passed; Rust registry adapter applies the same deterministic seed-0 subset; locked workspace tests and cargo fmt check pass.",
     "task263_python_full": "Full .venv pytest: 2,782 passed, 7 skipped in 233.09s; one existing non-failing Starlette/httpx deprecation warning.",
-    "task264_hosted": "GitHub PR #16 live state: remote head 71408b2; ordinary hosted checks green, live-smoke skipped, enforce-release-gate fails only on context-band 0.6667 < 0.90, no reviews or review requests.",
+    "task264_hosted": "GitHub PR #16 live state: current RC head; ordinary hosted checks green across Python/Rust/Linux/Windows/macOS, Security, Website, and Critical Mutation, live-smoke skipped, enforce-release-gate fails only on context-band 0.6667 < 0.90, no reviews or review requests.",
     "task265_massive_locale_fetch": "Rust real-mode MASSIVE collection passes requested languages into the loader, preserving Python empty-list and unknown-language semantics; focused compatibility selection 58 passed, cargo workspace tests/strict Clippy/formatting pass.",
     "task266_gold_availability": "Rust DatasetAdapter availability now reports committed agentrouter-gold as ready, matching Python; evaluation crate 16 unit tests and focused Python/Rust selection 13 passed.",
     "task267_empty_languages": "Rust evaluation CLI treats --languages \"\" as omitted, matching Python; focused CLI/registered-runner selection 44 passed.",
