@@ -1,0 +1,27 @@
+id: TASK-143
+title: Runtime Rust CLI surface in evaluation
+source: incorrect placeholder platform inputs in agentrouter-evaluate run --all
+priority: 2
+status: verify
+risk: low
+customer_impact: Full evaluation reports measure the real Rust CLI surface rather than a fixed placeholder list.
+affected_surfaces:
+  - rust/agentrouter-cli/src/bin/agentrouter.rs
+  - rust/agentrouter-evaluation/src/bin/agentrouter_evaluate.rs
+  - tests/test_rust_evaluation_platform_runtime.py
+acceptance_criteria:
+  - Evaluation CLI reads command/group names from the sibling agentrouter binary.
+  - Discovery failure does not silently emit a misleading scorecard.
+  - The report detail and score reflect the discovered runtime manifest.
+verification_commands:
+  - ./.venv/bin/python -m pytest -q tests/test_rust_evaluation_platform_runtime.py
+  - cargo fmt --all -- --check
+  - cargo clippy --locked -p agentrouter-cli -p agentrouter-evaluation --all-targets --all-features -- -D warnings
+  - git diff --check
+required_reviewers:
+  - compatibility-contract
+repair_iteration: 0
+external_blockers: []
+owner_blockers: []
+created_at: "2026-11-14"
+updated_at: "2026-11-14"

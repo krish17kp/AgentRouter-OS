@@ -10,14 +10,10 @@ Multi-agent workflow routing. Two tracks:
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from ..base import Availability, DatasetAdapter, DatasetMetadata
+from ..base import Availability, DatasetAdapter, DatasetMetadata, fixture_path
 from ..schema import EvaluationCase
 
-_FIXTURE = (
-    Path(__file__).resolve().parents[3] / "evaluation" / "fixtures" / "twinrouterbench_sample.jsonl"
-)
+_FIXTURE = fixture_path("twinrouterbench_sample.jsonl")
 
 
 class TwinRouterBenchAdapter(DatasetAdapter):

@@ -64,6 +64,16 @@ def test_prepare_reports_record_count(monkeypatch):
     assert rep["hf_repo"] == "PolyAI/banking77"
 
 
+def test_prepare_limit_reports_a_deterministic_smoke_subset(monkeypatch):
+    a = Banking77Adapter()
+    monkeypatch.setattr(a, "real_availability", lambda: (True, "ready"))
+    monkeypatch.setattr(a, "_load_real", lambda: _fake_cases(3))
+    first = a.prepare(limit=2)
+    second = a.prepare(limit=2)
+    assert first["downloaded_records"] == 2
+    assert second["downloaded_records"] == 2
+
+
 def test_hf_load_failure_becomes_skipped_external(monkeypatch):
     """A network/SSL/loader error inside datasets surfaces as SkippedExternal."""
     monkeypatch.setattr(base, "datasets_available", lambda: True)

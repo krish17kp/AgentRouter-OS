@@ -1,0 +1,226 @@
+[
+  {
+    "name": "route",
+    "description": "Classify a task and recommend the best model/tool, with rationale.\n\n    Dry-run only: returns the plan and a decision id; never executes anything.\n    ",
+    "inputSchema": {
+      "properties": {
+        "task": {
+          "title": "Task",
+          "type": "string"
+        },
+        "prefer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Prefer"
+        },
+        "context_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Context Tokens"
+        },
+        "risk": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Risk"
+        },
+        "tools": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tools"
+        }
+      },
+      "required": [
+        "task"
+      ],
+      "title": "routeArguments",
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "title": "routeDictOutput",
+      "type": "object"
+    }
+  },
+  {
+    "name": "classify",
+    "description": "Classify a task across the 7 dimensions (type/complexity/risk/context/...).",
+    "inputSchema": {
+      "properties": {
+        "task": {
+          "title": "Task",
+          "type": "string"
+        },
+        "context_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Context Tokens"
+        },
+        "risk": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Risk"
+        },
+        "tools": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tools"
+        }
+      },
+      "required": [
+        "task"
+      ],
+      "title": "classifyArguments",
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "title": "classifyDictOutput",
+      "type": "object"
+    }
+  },
+  {
+    "name": "explain",
+    "description": "Return a previously logged routing decision by id, or null if unknown.",
+    "inputSchema": {
+      "properties": {
+        "decision_id": {
+          "title": "Decision Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "decision_id"
+      ],
+      "title": "explainArguments",
+      "type": "object"
+    },
+    "outputSchema": {
+      "properties": {
+        "result": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Result"
+        }
+      },
+      "required": [
+        "result"
+      ],
+      "title": "explainOutput",
+      "type": "object"
+    }
+  },
+  {
+    "name": "list_models",
+    "description": "List the model catalog (vendor, id, release channel, context, host availability).",
+    "inputSchema": {
+      "properties": {},
+      "title": "list_modelsArguments",
+      "type": "object"
+    },
+    "outputSchema": {
+      "properties": {
+        "result": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Result",
+          "type": "array"
+        }
+      },
+      "required": [
+        "result"
+      ],
+      "title": "list_modelsOutput",
+      "type": "object"
+    }
+  },
+  {
+    "name": "list_hosts",
+    "description": "List known execution hosts and their availability (read-only; runs nothing).",
+    "inputSchema": {
+      "properties": {},
+      "title": "list_hostsArguments",
+      "type": "object"
+    },
+    "outputSchema": {
+      "properties": {
+        "result": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Result",
+          "type": "array"
+        }
+      },
+      "required": [
+        "result"
+      ],
+      "title": "list_hostsOutput",
+      "type": "object"
+    }
+  }
+]

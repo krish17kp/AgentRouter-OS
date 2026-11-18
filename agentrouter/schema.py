@@ -143,13 +143,13 @@ class ModelEntry(BaseModel):
     pricing_tier: PricingTier
     latency_tier: LatencyTier
     # optional real pricing metadata (curated/official); pricing_tier stays the routing knob
-    input_price_per_million: float | None = Field(default=None, ge=0)
-    output_price_per_million: float | None = Field(default=None, ge=0)
+    input_price_per_million: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    output_price_per_million: float | None = Field(default=None, ge=0, allow_inf_nan=False)
     pricing_basis: str | None = None  # api_list | subscription | openrouter | unknown
     pricing_effective_date: date | None = None
     ability: Ability
     ability_source: AbilitySource = AbilitySource.heuristic
-    ability_confidence: float | None = Field(default=None, ge=0, le=1)
+    ability_confidence: float | None = Field(default=None, ge=0, le=1, allow_inf_nan=False)
     tool_support: list[str]
     vision_support: bool
     audio_support: bool = False

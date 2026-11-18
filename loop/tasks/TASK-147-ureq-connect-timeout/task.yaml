@@ -1,0 +1,35 @@
+id: TASK-147
+title: Bound Rust SDK native TCP connect timeout
+source: Rust SDK Partial row / TASK-141 native transport gap
+priority: 1
+status: verify
+risk: low
+customer_impact: The Rust SDK no longer inherits ureq's unrelated 30-second TCP connection default when a shorter client timeout is configured.
+affected_surfaces:
+  - rust/agentrouter-cli/src/sdk.rs
+  - docs/RUST_PARITY_MATRIX.md
+  - loop/tasks/TASK-147-ureq-connect-timeout
+dependencies:
+  - TASK-141
+acceptance_criteria:
+  - The native adapter sets TCP connect and whole-request deadlines from the SDK timeout.
+  - A deterministic regression test proves explicit connect timeout precedence over ureq's 30-second default.
+  - Existing Python/Rust injected SDK timeout differential remains unchanged.
+  - The Rust SDK row remains Partial for unresolved HTTPX versus ureq behavior and generic I/O categorization.
+verification_commands:
+  - cargo test -p agentrouter-cli --lib sdk:: --locked
+  - ./.venv/bin/python -m pytest -q tests/test_rust_sdk_compat.py tests/test_sdk.py tests/test_sdk_parity.py
+  - cargo test --workspace --locked
+  - cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+  - cargo fmt --all -- --check
+  - ./.venv/bin/ruff check tests/test_rust_sdk_compat.py
+  - ./.venv/bin/ruff format --check tests/test_rust_sdk_compat.py
+  - git diff --check
+required_reviewers:
+  - rust-sdk-timeout-contract
+  - transport-error-classification
+repair_iteration: 0
+external_blockers: []
+owner_blockers: []
+created_at: "2026-11-14"
+updated_at: "2026-11-14"

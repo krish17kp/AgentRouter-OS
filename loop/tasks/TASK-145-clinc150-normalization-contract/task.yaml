@@ -1,0 +1,30 @@
+id: TASK-145
+title: CLINC150 real-row normalization contract differential
+source: missing direct Python/Rust differential coverage for the Rust CLINC150 normalizer
+priority: 2
+status: verify
+risk: low
+customer_impact: Confirms every normalized CLINC150 row field matches Python on offline real-row fixtures.
+affected_surfaces:
+  - agentrouter/evaluation/adapters/clinc150.py
+  - rust/agentrouter-evaluation/src/lib.rs
+  - tests/test_rust_clinc150_compat.py
+dependencies:
+  - TASK-082
+acceptance_criteria:
+  - All curated intent hints, unknown intents, and the oos class compare as complete serialized EvaluationCase values.
+  - Ordered substring matching, Unicode text, same-lowercase deduplication, and normalized-hash deduplication are exercised.
+  - Tests run offline and leave the module Partial while the external Python datasets loader remains unmatched.
+verification_commands:
+  - ./.venv/bin/python -m pytest -q tests/test_rust_clinc150_compat.py
+  - ./.venv/bin/ruff check tests/test_rust_clinc150_compat.py
+  - ./.venv/bin/ruff format --check tests/test_rust_clinc150_compat.py
+  - cargo fmt --all -- --check
+  - git diff --check
+required_reviewers:
+  - compatibility-contract
+repair_iteration: 0
+external_blockers: []
+owner_blockers: []
+created_at: "2026-11-14"
+updated_at: "2026-11-14"

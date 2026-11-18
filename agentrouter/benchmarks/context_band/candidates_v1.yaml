@@ -1,0 +1,319 @@
+schema: context-band-candidates
+candidates:
+- id: cand-0001
+  prompt: Write API docs describing what the shipped serializer actually outputs today.
+  category: documentation
+  source: generated_candidate
+  template: documentation/existing
+- id: cand-0002
+  prompt: Name one smell that suggests splitting a function.
+  category: refactor
+  source: generated_candidate
+  template: refactor/small
+- id: cand-0003
+  prompt: Repair the parameter checks on the existing document-lookup tool.
+  category: tool-use
+  source: generated_candidate
+  template: tool-use/existing
+- id: cand-0004
+  prompt: Reorganize a checked-out tree of roughly twelve hundred modules for clarity.
+  category: refactor
+  source: generated_candidate
+  template: refactor/large
+- id: cand-0005
+  prompt: Comb 140k tokens of gateway access logs for anomalous session behavior.
+  category: analysis
+  source: generated_candidate
+  template: analysis/large
+- id: cand-0006
+  prompt: Sort this.
+  category: ambiguous
+  source: generated_candidate
+  template: ambiguous/small
+- id: cand-0007
+  prompt: Go over the open merge request and note anything that hurts long-term upkeep.
+  category: review
+  source: generated_candidate
+  template: review/existing
+- id: cand-0008
+  prompt: Vet every schema change in the project for steps that cannot be rolled back.
+  category: review
+  source: generated_candidate
+  template: review/large
+- id: cand-0009
+  prompt: Rework the alerts module so its outward behavior stays identical.
+  category: refactor
+  source: generated_candidate
+  template: refactor/existing
+- id: cand-0010
+  prompt: Track down why rows vanish between the two current ingestion hops.
+  category: data-pipeline
+  source: generated_candidate
+  template: data-pipeline/existing
+- id: cand-0011
+  prompt: Sketch the argument schema for a single currency-quote tool.
+  category: tool-use
+  source: generated_candidate
+  template: tool-use/small
+- id: cand-0012
+  prompt: What is one downside of eager cache warming?
+  category: analysis
+  source: generated_candidate
+  template: analysis/small
+- id: cand-0013
+  prompt: Introduce soft-delete semantics on every entity across the billing platform.
+  category: coding
+  source: generated_candidate
+  template: coding/large
+- id: cand-0014
+  prompt: Produce a helper that rounds a timestamp down to the nearest minute.
+  category: coding
+  source: generated_candidate
+  template: coding/small
+- id: cand-0015
+  prompt: In a sentence, what does a feature store provide?
+  category: data-pipeline
+  source: generated_candidate
+  template: data-pipeline/small
+- id: cand-0016
+  prompt: Reconstruct the whole transformation DAG behind the analytics dashboards.
+  category: data-pipeline
+  source: generated_candidate
+  template: data-pipeline/large
+- id: cand-0017
+  prompt: Give a one-sentence gist of a cron job's purpose.
+  category: summarization
+  source: generated_candidate
+  template: summarization/small
+- id: cand-0018
+  prompt: Author a full runbook covering every stage of our multi-region rollout.
+  category: documentation
+  source: generated_candidate
+  template: documentation/large
+- id: cand-0019
+  prompt: Draft a small class representing an RGB color.
+  category: coding
+  source: generated_candidate
+  template: coding/small
+- id: cand-0020
+  prompt: List two reasons small diffs get reviewed faster.
+  category: review
+  source: generated_candidate
+  template: review/small
+- id: cand-0021
+  prompt: Trace the full checkout path end to end and rank where time is lost.
+  category: analysis
+  source: generated_candidate
+  template: analysis/large
+- id: cand-0022
+  prompt: Break the tangled import cycles spanning our entire multi-package workspace.
+  category: refactor
+  source: generated_candidate
+  template: refactor/large
+- id: cand-0023
+  prompt: Pull the key rulings out of the meeting minutes I pasted.
+  category: summarization
+  source: generated_candidate
+  template: summarization/existing
+- id: cand-0024
+  prompt: Collapse the current on-call playbook into a single printable page.
+  category: summarization
+  source: generated_candidate
+  template: summarization/existing
+- id: cand-0025
+  prompt: Correct the timezone bug in the scheduling module currently in production.
+  category: coding
+  source: generated_candidate
+  template: coding/existing
+- id: cand-0026
+  prompt: Lift retrieval precision on the document index our assistant already queries.
+  category: rag
+  source: generated_candidate
+  template: rag/existing
+- id: cand-0027
+  prompt: Boil down a decade of release notes into recurring themes.
+  category: summarization
+  source: generated_candidate
+  template: summarization/large
+- id: cand-0028
+  prompt: Explain, briefly, what a dead-letter queue is for.
+  category: data-pipeline
+  source: generated_candidate
+  template: data-pipeline/small
+- id: cand-0029
+  prompt: Register one more capability into the agent toolbox we currently expose.
+  category: tool-use
+  source: generated_candidate
+  template: tool-use/existing
+- id: cand-0030
+  prompt: Certify an entire year-partition of the lakehouse for downstream reporting.
+  category: data-pipeline
+  source: generated_candidate
+  template: data-pipeline/large
+- id: cand-0031
+  prompt: Have a look.
+  category: ambiguous
+  source: generated_candidate
+  template: ambiguous/small
+- id: cand-0032
+  prompt: Why is this behaving oddly?
+  category: ambiguous
+  source: generated_candidate
+  template: ambiguous/existing
+- id: cand-0033
+  prompt: Draft a tagline for a small logging utility.
+  category: documentation
+  source: generated_candidate
+  template: documentation/small
+- id: cand-0034
+  prompt: Walk the complete billing engine and surface any newly introduced auth weaknesses.
+  category: review
+  source: generated_candidate
+  template: review/large
+- id: cand-0035
+  prompt: Draft complete developer guides for all public routes in the product surface.
+  category: documentation
+  source: generated_candidate
+  template: documentation/large
+- id: cand-0036
+  prompt: Assess the queued fix for edge cases the author probably missed.
+  category: review
+  source: generated_candidate
+  template: review/existing
+- id: cand-0037
+  prompt: Take care of the whole migration.
+  category: ambiguous
+  source: generated_candidate
+  template: ambiguous/large
+- id: cand-0038
+  prompt: Coordinate a large fleet of tools across an end-to-end incident response.
+  category: tool-use
+  source: generated_candidate
+  template: tool-use/large
+- id: cand-0039
+  prompt: Anchor every answer in a sprawling internal wiki with traceable citations.
+  category: rag
+  source: generated_candidate
+  template: rag/large
+- id: cand-0040
+  prompt: In one line, what signals a risky pull request?
+  category: review
+  source: generated_candidate
+  template: review/small
+- id: cand-0041
+  prompt: Bring the legacy billing widget up to date without changing its public contract.
+  category: refactor
+  source: generated_candidate
+  template: refactor/existing
+- id: cand-0042
+  prompt: Outline a tiny prompt that cites a single passage.
+  category: rag
+  source: generated_candidate
+  template: rag/small
+- id: cand-0043
+  prompt: Clean up.
+  category: ambiguous
+  source: generated_candidate
+  template: ambiguous/small
+- id: cand-0044
+  prompt: In brief, when is it safe to rename a public symbol?
+  category: refactor
+  source: generated_candidate
+  template: refactor/small
+- id: cand-0045
+  prompt: At a high level, contrast polling with webhooks.
+  category: analysis
+  source: generated_candidate
+  template: analysis/small
+- id: cand-0046
+  prompt: Attach source offsets to responses from the retrieval chain we run today.
+  category: rag
+  source: generated_candidate
+  template: rag/existing
+- id: cand-0047
+  prompt: Architect search across an eight-million-record archive with staleness bounds.
+  category: rag
+  source: generated_candidate
+  template: rag/large
+- id: cand-0048
+  prompt: Judge whether the present backoff strategy risks synchronized retries.
+  category: analysis
+  source: generated_candidate
+  template: analysis/existing
+- id: cand-0049
+  prompt: Thread a correlation id through the order-processing service that exists
+    today.
+  category: coding
+  source: generated_candidate
+  template: coding/existing
+- id: cand-0050
+  prompt: Make this nicer.
+  category: ambiguous
+  source: generated_candidate
+  template: ambiguous/existing
+- id: cand-0051
+  prompt: Deal with all of it before launch.
+  category: ambiguous
+  source: generated_candidate
+  template: ambiguous/large
+- id: cand-0052
+  prompt: Digest a 90k-token bundle of vendor contracts into a risk list.
+  category: summarization
+  source: generated_candidate
+  template: summarization/large
+- id: cand-0053
+  prompt: Weigh coupling between the current parser and its grammar fixtures.
+  category: analysis
+  source: generated_candidate
+  template: analysis/existing
+- id: cand-0054
+  prompt: Attach a circuit breaker to the payment gateway wrapper we already ship.
+  category: coding
+  source: generated_candidate
+  template: coding/existing
+- id: cand-0055
+  prompt: Trim this heading to five words.
+  category: summarization
+  source: generated_candidate
+  template: summarization/small
+- id: cand-0056
+  prompt: Explain, for operators, the path a job takes through the queue we run now.
+  category: documentation
+  source: generated_candidate
+  template: documentation/existing
+- id: cand-0057
+  prompt: Propose a heading for the quick-start section.
+  category: documentation
+  source: generated_candidate
+  template: documentation/small
+- id: cand-0058
+  prompt: Sequence a many-tool automation covering our full deployment lifecycle.
+  category: tool-use
+  source: generated_candidate
+  template: tool-use/large
+- id: cand-0059
+  prompt: Align mismatched column types between the live feed and the mart we maintain.
+  category: data-pipeline
+  source: generated_candidate
+  template: data-pipeline/existing
+- id: cand-0060
+  prompt: What problem does query expansion solve in retrieval?
+  category: rag
+  source: generated_candidate
+  template: rag/small
+- id: cand-0061
+  prompt: Roll optimistic concurrency into all mutating endpoints of our storefront
+    backend.
+  category: coding
+  source: generated_candidate
+  template: coding/large
+- id: cand-0062
+  prompt: When is a unit-conversion tool the right call for an agent?
+  category: tool-use
+  source: generated_candidate
+  template: tool-use/small
+- id: cand-0063
+  prompt: Give me a one-liner that flattens a list of lists.
+  category: coding
+  source: generated_candidate
+  template: coding/small

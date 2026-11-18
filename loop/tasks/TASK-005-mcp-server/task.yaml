@@ -1,0 +1,25 @@
+id: TASK-005
+title: MCP server exposing safe read/route/explain tools (backlog L2)
+source: loop/BACKLOG.yaml#L2
+priority: 7
+status: done
+risk: medium
+customer_impact: agents/IDEs can call AgentRouter routing over MCP without shelling out
+affected_surfaces: [server, integrations, plugins]
+dependencies: []
+acceptance_criteria:
+  - MCP server exposes read-only tools (route/classify/explain/list_models/list_hosts)
+  - NO execution tool; routing is dry-run only (never spawns a process)
+  - mcp is an OPTIONAL extra; core import unaffected when mcp absent
+  - tools reuse existing server/service.py logic (no duplicate routing impl)
+  - focused tests for each tool; full suite stays green
+verification_commands:
+  - python -m pytest -q
+  - ruff check agentrouter
+  - bandit -c pyproject.toml -r agentrouter
+required_reviewers: [verification-engineer, security-reviewer-arros]
+repair_iteration: 0
+created_at: "2026-07-18"
+updated_at: "2026-07-18"
+
+result: "PASS — MCP server (read/route/explain, no execute); [mcp] extra made truly standalone after fixing eager fastapi import; 426 tests; security PASS"

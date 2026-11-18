@@ -1,0 +1,99 @@
+{
+  "_comment": [
+    "Versioned SDK capability manifest (TASK-018A).",
+    "Every operation listed here must be (a) present in contracts/http/v1/openapi.json,",
+    "(b) implemented by the named Python and TypeScript SDK methods, and (c) actually",
+    "EXERCISED against the real AgentRouter ASGI app by the parity tests.",
+    "Listing an operation without exercising it is a failure, not a claim of support.",
+    "Python: tests/test_sdk_parity.py drives an in-process uvicorn server on loopback.",
+    "TypeScript: sdk/typescript/test/live.test.ts drives the same app started by",
+    "scripts/serve_for_parity.py, so a request the server would reject cannot pass."
+  ],
+  "contract_version": "v1",
+  "operations": [
+    {
+      "id": "health",
+      "method": "get",
+      "path": "/health",
+      "authenticated": false,
+      "python": "health",
+      "typescript": "health"
+    },
+    {
+      "id": "ready",
+      "method": "get",
+      "path": "/ready",
+      "authenticated": false,
+      "python": "ready",
+      "typescript": "ready"
+    },
+    {
+      "id": "models",
+      "method": "get",
+      "path": "/v1/models",
+      "authenticated": true,
+      "python": "models",
+      "typescript": "models"
+    },
+    {
+      "id": "hosts",
+      "method": "get",
+      "path": "/v1/hosts",
+      "authenticated": true,
+      "python": "hosts",
+      "typescript": "hosts"
+    },
+    {
+      "id": "classify",
+      "method": "post",
+      "path": "/v1/classify",
+      "authenticated": true,
+      "python": "classify",
+      "typescript": "classify"
+    },
+    {
+      "id": "route",
+      "method": "post",
+      "path": "/v1/route",
+      "authenticated": true,
+      "python": "route",
+      "typescript": "route"
+    },
+    {
+      "id": "get_decision",
+      "method": "get",
+      "path": "/v1/decisions/{decision_id}",
+      "authenticated": true,
+      "python": "get_decision",
+      "typescript": "getDecision"
+    },
+    {
+      "id": "feedback",
+      "method": "post",
+      "path": "/v1/feedback",
+      "authenticated": true,
+      "python": "feedback",
+      "typescript": "feedback"
+    },
+    {
+      "id": "execute_dry_run",
+      "method": "post",
+      "path": "/v1/execute/dry-run",
+      "authenticated": true,
+      "python": "execute_dry_run",
+      "typescript": "executeDryRun"
+    }
+  ],
+  "behaviours": {
+    "error_envelope": "non-2xx bodies are {\"error\": {\"code\", \"message\"}}; both SDKs raise a typed error carrying status + code",
+    "non_json_error_body": "a non-JSON error body must still raise the typed error, never a parse error",
+    "auth_header": "X-API-Key when an api key is configured",
+    "request_id": "server returns X-Request-ID on every response, including errors",
+    "idempotency_key": "Idempotency-Key on authenticated POSTs; replay marked by Idempotency-Replay",
+    "rate_limit": "429 with code rate_limited and a Retry-After header",
+    "timeouts": "client-side timeout is configurable (Python: timeout, TypeScript: timeoutMs)",
+    "body_cleaning": "None/undefined fields are dropped so server defaults apply; explicit false/0 are kept",
+    "additive_host_fields": "hosts entries expose state and remedy alongside availability/reason",
+    "catalog_diagnostics": "host entries carry the diagnostic fields the CLI doctor surfaces"
+  }
+}

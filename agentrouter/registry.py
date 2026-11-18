@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+import stat
+from collections.abc import Hashable
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -18,13 +21,74 @@ class RegistryError(Exception):
     """Raised on malformed registry data — CLI maps this to exit code 3."""
 
 
+class _UniqueKeyLoader(yaml.SafeLoader):
+    def construct_mapping(self, node, deep=False):
+        self.flatten_mapping(node)
+        mapping = {}
+        for key_node, value_node in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            if not isinstance(key, Hashable):
+                raise yaml.constructor.ConstructorError(
+                    "while constructing a mapping",
+                    node.start_mark,
+                    "unhashable key",
+                    key_node.start_mark,
+                )
+            if key in mapping:
+                raise yaml.constructor.ConstructorError(
+                    "while constructing a mapping",
+                    node.start_mark,
+                    "duplicate key",
+                    key_node.start_mark,
+                )
+            mapping[key] = self.construct_object(value_node, deep=deep)
+        return mapping
+
+
+def _safe_load_yaml(text: str):
+    # B506 flags yaml.load regardless of the explicit SafeLoader subclass.
+    return yaml.load(text, Loader=_UniqueKeyLoader)  # nosec B506
+
+
+def _read_text_nofollow(path: Path) -> str:
+    """Read a regular registry file without following a final symlink."""
+    if not stat.S_ISREG(path.lstat().st_mode):
+        raise OSError("registry path is not a regular file")
+    fd = os.open(
+        path,
+        os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0),
+    )
+    with os.fdopen(fd, "r", encoding="utf-8") as file:
+        if not stat.S_ISREG(os.fstat(file.fileno()).st_mode):
+            raise OSError("registry path is not a regular file")
+        return file.read()
+
+
+def _read_bytes_nofollow(path: Path) -> bytes:
+    """Read a regular registry file as bytes without following a final symlink."""
+    if not stat.S_ISREG(path.lstat().st_mode):
+        raise OSError("registry path is not a regular file")
+    fd = os.open(
+        path,
+        os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0),
+    )
+    with os.fdopen(fd, "rb") as file:
+        if not stat.S_ISREG(os.fstat(file.fileno()).st_mode):
+            raise OSError("registry path is not a regular file")
+        return file.read()
+
+
 def _load_yaml(path: Path) -> dict:
     if not path.exists():
         raise RegistryError(f"Registry file not found: {path} (run: agentrouter init)")
     try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        data = _safe_load_yaml(_read_text_nofollow(path))
     except yaml.YAMLError as e:
         raise RegistryError(f"Invalid YAML in {path}: {e}") from e
+    except UnicodeDecodeError as e:
+        raise RegistryError(f"{path}: not valid UTF-8: {e}") from e
+    except OSError as e:
+        raise RegistryError(f"{path}: cannot read registry file: {e}") from e
     if not isinstance(data, dict):
         raise RegistryError(f"{path}: expected a mapping at top level")
     return data

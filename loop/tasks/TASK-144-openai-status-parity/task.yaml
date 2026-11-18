@@ -1,0 +1,31 @@
+id: TASK-144
+title: OpenAI non-2xx status parity
+source: OpenAI adapter review; injected Rust transport could accept 3xx
+priority: 2
+status: verify
+risk: low
+customer_impact: Injected and native OpenAI transports cannot report redirects as successful responses.
+affected_surfaces:
+  - agentrouter/openai_adapter.py
+  - rust/agentrouter-cli/src/openai.rs
+  - tests/test_openai_adapter_rust_compat.py
+dependencies:
+  - TASK-082
+acceptance_criteria:
+  - Python and Rust reject status codes outside 200 through 299.
+  - Offline differential cases cover 300, 302, and 399.
+  - Existing no-redirect credential protections remain intact.
+verification_commands:
+  - ./.venv/bin/python -m pytest -q tests/test_openai_adapter.py tests/test_openai_adapter_rust_compat.py
+  - cargo test -p agentrouter-cli --lib openai::tests --locked
+  - cargo clippy -p agentrouter-cli --all-targets --all-features --locked -- -D warnings
+  - ./.venv/bin/ruff check agentrouter/openai_adapter.py tests/test_openai_adapter_rust_compat.py
+  - ./.venv/bin/ruff format --check agentrouter/openai_adapter.py tests/test_openai_adapter_rust_compat.py
+  - git diff --check
+required_reviewers:
+  - compatibility-contract
+repair_iteration: 0
+external_blockers: []
+owner_blockers: []
+created_at: "2026-11-14"
+updated_at: "2026-11-14"

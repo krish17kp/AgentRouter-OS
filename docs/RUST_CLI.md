@@ -1,0 +1,56 @@
+# Rust command entry point
+
+The Rust workspace provides a single `agentrouter` command for the migrated
+surfaces. Build all sibling command executables before running the dispatcher:
+
+```sh
+cargo build --workspace --locked
+cargo run --locked -p agentrouter-cli --bin agentrouter -- --help
+```
+
+`agentrouter` currently dispatches `init`, `route`, `explain`, `feedback`,
+read-only `plan`, `execute`, planning-only `workflow plan`, `stats`, `prompt`, `registry list`, provider status/doctor/refresh/rollback/restore,
+`hosts`, `models`, `doctor`, the local HTTP API (`server`), stdio MCP
+(`mcp`), and `dashboard` to their Rust implementations. The server defaults
+to `127.0.0.1:8000`; set `AGENTROUTER_API_KEY` to require API authentication.
+Both services run inside the unified executable and use its selected
+`AGENTROUTER_HOME` directory.
+
+`execute <decision-id>` revalidates the stored safety gate. Execution is
+provider-opt-in and requires `--yes`; `--dry-run` always runs nothing. OpenAI
+Responses requests require `OPENAI_API_KEY` and are sent once without retries.
+`plan <decision-id>` is always read-only: it resolves the saved route through
+the fail-closed execution planner and reports `execution_enabled: false` even
+when `--allow-remote` or `--approve` is supplied. `--include-unavailable` only
+allows an unavailable host to be described; it does not enable an adapter.
+`workflow plan` reads a JSON step array (or `{ "steps": [...] }`) from stdin,
+validates dependency, budget, tool, idempotency, and side-effect guards, and
+emits a planning-only schedule. It never dispatches agents or mutates a
+workspace; use `--max-steps`, `--max-cost`, and repeated `--allow-tool` to set
+the explicit planning policy.
+`contract check --json` validates the committed OpenAPI baseline and
+`contract diff PATH --json` reports the bounded Rust surface comparison. These
+commands are read-only compatibility tooling; `contract check` reports
+`live_schema_check: false`, and the Python live-schema gate remains
+authoritative.
+The human annotation flow is linked directly:
+
+```sh
+cargo run --locked -p agentrouter-cli --bin agentrouter -- dataset --help
+```
+
+`AGENTROUTER_HOME` selects the data directory; otherwise the command uses
+`$HOME/.agentrouter` (or `%USERPROFILE%\.agentrouter` on Windows). `eval`
+forwards to an installed `agentrouter-evaluate` executable. Provider refresh
+supports `openrouter` and `openai` with `--limit`, `--match`, and
+`--dry-run`; OpenAI refresh requires `OPENAI_API_KEY`. Full contract export and
+live-schema parity, plus the remaining broader Python CLI semantics, are still
+migration gaps; the Rust plugin commands are present but remain partial until
+their full lifecycle parity is independently closed.
+
+The TypeScript SDK live suite can target the Rust API without Python:
+
+```sh
+cargo build --workspace --locked
+AGENTROUTER_PARITY_SERVER=rust AGENTROUTER_REQUIRE_LIVE=1 npm test --prefix sdk/typescript
+```

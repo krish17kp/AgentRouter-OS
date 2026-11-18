@@ -1,0 +1,26 @@
+[package]
+name = "agentrouter-usage"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+agentrouter-core = { path = "../agentrouter-core" }
+agentrouter-registry = { path = "../agentrouter-registry" }
+agentrouter-routing = { path = "../agentrouter-routing" }
+agentrouter-policy = { path = "../agentrouter-policy" }
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = "1.0.128"
+unicode-general-category = "=0.6.0"
+
+[dev-dependencies]
+serde_yaml = { package = "noyalib-serde-yaml", version = "=0.0.60" }
+
+[[bin]]
+name = "usage_cli"
+path = "src/bin/usage_cli.rs"
+
+[[bin]]
+name = "usage_route_from_json"
+path = "src/bin/usage_route_from_json.rs"

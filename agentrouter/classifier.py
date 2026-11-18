@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import re
 
+from . import context_model
 from .schema import (
     ApprovalLevel,
     Classification,
@@ -416,6 +417,11 @@ _SHELL_WB = re.compile(
 _TEST_RE = re.compile(r"\btests?\b", re.IGNORECASE)
 _TOKEN_RE = re.compile(r"(\d+)\s*k[\s-]*token", re.IGNORECASE)
 _TOKEN_PLAIN_RE = re.compile(r"(\d{4,})[\s-]*token", re.IGNORECASE)
+_QUANTIFIED_CONTEXT_RE = re.compile(
+    r"\b(\d[\d,]*)[\s-]*(pages?|source\s+files?|files?|documents?|records?|artifacts?|"
+    r"entries|rows?|partitions?)\b",
+    re.IGNORECASE,
+)
 
 
 def _hit(rx: re.Pattern, text: str) -> bool:
@@ -536,16 +542,163 @@ M_EXISTING_CODE = _matcher(
 )
 
 
-def _context_tokens(text: str) -> int:
+# Acting ON an existing artifact (review/audit/investigate/refactor/migrate a thing that
+# already exists) implies loaded context -> medium, independent of task type.
+M_REVIEW_EXISTING = _matcher(
+    (
+        "review",
+        "audit",
+        "investigate",
+        "refactor",
+        "migrate",
+    )
+)
+
+# Multi-stage data systems carry substantial context (sources, schema, stages) -> medium.
+M_DATA_PIPELINE = _matcher(
+    (
+        "pipeline",
+        "etl",
+        "ingestion",
+        "warehouse",
+        "retrieval",
+        "vector database",
+        "vector db",
+        "data validation",
+    )
+)
+
+M_EXISTING_CONTEXT = _matcher(
+    (
+        "existing",
+        "current",
+        "already",
+        "in use",
+        "used by",
+        "without changing",
+        "intermittent failures",
+        "cause of",
+        "handbook",
+        "subsystem",
+        "application",
+        "data flow",
+    )
+)
+
+M_CONCEPTUAL_CONTEXT = _matcher(
+    (
+        "explain",
+        "what makes",
+        "describe",
+        "outline",
+        "purpose of",
+        "workflow",
+        "define",
+    )
+)
+
+M_LARGE_CONTEXT = _matcher(
+    (
+        "entire corpus",
+        "full corpus",
+        "monorepo snapshot",
+        "repository snapshot",
+        "across the entire",
+    )
+)
+
+
+# Paraphrase-robust synonyms for "act on an existing artifact" (generalize the
+# narrow review/audit list to unseen wording). Deciding these from the dev set +
+# general English, not the frozen holdout.
+M_ACT_ON_EXISTING = _matcher(
+    (
+        "inspect",
+        "examine",
+        "diagnose",
+        "trace",
+        "track down",
+        "profile",
+        "harden",
+        "modernize",
+        "port",
+        "untangle",
+        "reconcile",
+        "evaluate",
+        "assess",
+        "characterize",
+        "walk through",
+        "step through",
+        "reconstruct",
+        "debug",
+        "optimize",
+        "look into",
+        "figure out",
+        "find the cause",
+        "root cause",
+        "map out",
+    )
+)
+
+# A concrete, already-existing software/document artifact. "the/its/this <artifact>"
+# (definite/possessive) implies an EXISTING referent that must be loaded -> medium;
+# "a/an <artifact>" (indefinite = new) does NOT match, keeping new-build tasks small.
+_ARTIFACT_NOUN = (
+    r"(?:codebase|repo|repository|module|files?|project|system|subsystem|"
+    r"endpoints?|package|service|microservice|middleware|controller|handler|"
+    r"webhook|worker|parser|pipeline|scheduler|runner|library|client|lifecycle|"
+    r"flow|sequence|implementation|integration|migration|schema|configuration|"
+    r"deployment|dashboard|handbook|specification|document|codepath|tests?|suite)"
+)
+_DEFINITE_EXISTING_RE = re.compile(
+    r"\b(?:the|its|this|these|those|our|their)\s+(?:\w+\s+){0,3}" + _ARTIFACT_NOUN + r"\b",
+    re.IGNORECASE,
+)
+
+
+def _context_tokens(text: str, task_type: TaskType | None = None) -> int:
     m = _TOKEN_RE.search(text)
     if m:
         return int(m.group(1)) * 1000
     m = _TOKEN_PLAIN_RE.search(text)
     if m:
         return int(m.group(1))
+    quantified = _QUANTIFIED_CONTEXT_RE.search(text)
+    if quantified:
+        amount = int(quantified.group(1).replace(",", ""))
+        unit = quantified.group(2).lower()
+        if ("page" in unit or "file" in unit or "document" in unit) and amount >= 250:
+            return 100_000
+        if amount >= 50_000:
+            return 100_000
+    if _hit(M_LARGE_CONTEXT, text):
+        return 100_000
     if _hit(_matcher(("document", "report", "filing", "book", "transcript", "pdf")), text):
         return 30000
-    if _hit(M_EXISTING_CODE, text):
+    existing_context = _hit(M_EXISTING_CONTEXT, text)
+    if _hit(M_CONCEPTUAL_CONTEXT, text) and not existing_context:
+        return 2000
+    # Operating on an existing artifact or a data pipeline -> medium regardless of type.
+    if (
+        existing_context
+        or _hit(M_REVIEW_EXISTING, text)
+        or _hit(M_ACT_ON_EXISTING, text)
+        or _hit(M_DATA_PIPELINE, text)
+    ):
+        return 12000
+    # Definite/possessive reference to a concrete existing artifact ("the parser",
+    # "its schema") implies loaded context -> medium, unless the ask is conceptual.
+    if _DEFINITE_EXISTING_RE.search(text) and not _hit(M_CONCEPTUAL_CONTEXT, text):
+        return 12000
+    # A named existing software component -> medium, but only for tasks that actually load
+    # it: coding/analysis (act on the code) or summarization (summarize existing material).
+    # A reasoning/writing/general prompt that merely mentions "api"/"system"/"project" is a
+    # short instruction, not a large-context job.
+    if _hit(M_EXISTING_CODE, text) and task_type in (
+        TaskType.coding,
+        TaskType.analysis,
+        TaskType.summarization,
+    ):
         return 12000
     return 2000
 
@@ -556,6 +709,42 @@ def _band(tokens: int) -> ContextBand:
     if tokens < 64_000:
         return ContextBand.medium
     return ContextBand.large
+
+
+# Learned context-band model (TASK-009 / decision A).
+#
+# A small multinomial-LR model was trained ONLY on the 24-case development split and
+# evaluated once on the frozen 45-case holdout. Result (see loop/tasks/TASK-009-.../):
+# rules-only 0.667, learned-only 0.689, hybrid 0.644 holdout accuracy — none reach the
+# 0.90 gate, and learned is NOT significantly better than rules (overlapping 95% CIs)
+# while it collapses medium-band recall (0.60 -> 0.33), i.e. it would under-route
+# medium-context tasks. This is a proven technical ceiling for dev-only data.
+#
+# So the rule estimator stays the ACTIVE, safe predictor. The learned model is retained,
+# packaged, and tested as documented evidence and a reproducible study; flip
+# `_USE_LEARNED_BAND` to True (or raise the confidence bar) only when a larger, properly
+# held-out labeled set is available to justify it. Explicit --context-tokens always wins.
+_USE_LEARNED_BAND = False
+_BAND_CONF_THRESHOLD = 0.45
+_LABEL_TO_BAND = {b.value: b for b in ContextBand}
+_BAND_TOKENS = {ContextBand.small: 2000, ContextBand.medium: 12000, ContextBand.large: 100_000}
+
+
+def _resolve_context(
+    task: str, text: str, task_type: TaskType, context_tokens: int | None
+) -> tuple[int, ContextBand]:
+    """Return (context_tokens, context_band). Explicit --context-tokens always wins."""
+    if context_tokens is not None:
+        return context_tokens, _band(context_tokens)
+    rules_tokens = _context_tokens(text, task_type)
+    model = context_model.load_model() if _USE_LEARNED_BAND else None
+    if model is None:
+        return rules_tokens, _band(rules_tokens)
+    label, confidence = model.predict(task)
+    band = _LABEL_TO_BAND.get(label)
+    if band is None or confidence < _BAND_CONF_THRESHOLD:
+        return rules_tokens, _band(rules_tokens)
+    return _BAND_TOKENS[band], band
 
 
 def _output_type(text: str, task_type: TaskType) -> OutputType:
@@ -667,14 +856,14 @@ def classify(
     is_build = _is_software_build(text)
     task_type = _task_type(text, is_build)
     resolved_risk = risk or _risk(text)
-    tokens = context_tokens if context_tokens is not None else _context_tokens(text)
+    tokens, band = _resolve_context(task, text, task_type, context_tokens)
     confidence, alternative, ambiguity = _confidence(text, task_type, is_build)
     return Classification(
         task_type=task_type,
         complexity=_complexity(text, task_type, is_build),
         risk=resolved_risk,
         context_tokens=tokens,
-        context_band=_band(tokens),
+        context_band=band,
         output_type=_output_type(text, task_type),
         tool_needs=tools if tools is not None else _tool_needs(text, task_type, is_build),
         approval_level=_APPROVAL[resolved_risk],

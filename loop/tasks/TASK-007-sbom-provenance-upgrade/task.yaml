@@ -1,0 +1,25 @@
+id: TASK-007
+title: SBOM + release provenance + upgrade/migration guide (backlog L7)
+source: loop/BACKLOG.yaml#L7
+priority: 4
+status: done
+risk: low
+customer_impact: supply-chain transparency (SBOM), verifiable builds (provenance), safe upgrades
+affected_surfaces: [packaging, docs, ci]
+dependencies: []
+acceptance_criteria:
+  - release workflow generates a CycloneDX SBOM and attaches it to the GitHub Release
+  - release workflow attests build provenance (SLSA, OIDC — no stored secret)
+  - SBOM generation command proven to work locally; [sbom] extra declared
+  - UPGRADING.md documents versioning, upgrade steps, and config/registry migration
+  - no change to Python package behavior; full suite stays green
+verification_commands:
+  - python -m cyclonedx_py environment .venv --output-format JSON -o sbom.cdx.json
+  - python -c "import yaml; yaml.safe_load(open('.github/workflows/release.yml'))"
+  - python -m pytest -q
+required_reviewers: [verification-engineer]
+repair_iteration: 0
+created_at: "2026-07-18"
+updated_at: "2026-07-18"
+
+result: "PASS — release workflow emits CycloneDX SBOM + SLSA provenance; UPGRADING.md; [sbom] extra; verification PASS; 426 tests"

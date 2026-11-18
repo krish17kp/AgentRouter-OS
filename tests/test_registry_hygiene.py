@@ -1,11 +1,13 @@
 """M3 — staleness warnings and curated ability overrides."""
 
+import sys
 from datetime import date, timedelta
 
 import pytest
 import yaml
 from typer.testing import CliRunner
 
+from agentrouter import registry as registry_module
 from agentrouter.refresh import write_generated_registry
 from agentrouter.registry import (
     STALE_AFTER_DAYS,
@@ -17,10 +19,25 @@ from agentrouter.schema import Ability, LatencyTier, ModelEntry, PricingTier
 
 runner = CliRunner()
 
+# The bundled seed registry's curated last_updated dates are a real calendar
+# date (not relative), so this file's own notion of "today" is frozen to match
+# it. Without this, these staleness tests pass or fail depending on how much
+# real wall-clock time has elapsed since the catalog was last curated -- which
+# these tests are not exercising and must not depend on.
+_FROZEN_TODAY = date(2026, 7, 14)
+
+
+class _FrozenDate(date):
+    @classmethod
+    def today(cls):
+        return _FROZEN_TODAY
+
 
 @pytest.fixture()
 def home(tmp_path, monkeypatch):
     monkeypatch.setenv("AGENTROUTER_HOME", str(tmp_path))
+    monkeypatch.setattr(registry_module, "date", _FrozenDate)
+    monkeypatch.setattr(sys.modules[__name__], "date", _FrozenDate)
     from agentrouter.cli import app
 
     result = runner.invoke(app, ["init"])
@@ -113,3 +130,11 @@ def test_override_survives_refresh_overwrite(home):
         models, _ = _load(home)
         m = next(m for m in models if m.model_id == "test/stale-model")
         assert m.ability.coding == 10
+
+
+def test_non_utf8_generated_file_fails_loud_not_crash(home):
+    """A corrupt (non-UTF-8) generated catalog must raise RegistryError, not crash."""
+    reg_dir = home / "registry"
+    (reg_dir / "models.openrouter.generated.yaml").write_bytes(b"\xff\xfe\x00bad")
+    with pytest.raises(RegistryError, match="not valid UTF-8"):
+        _load(home)

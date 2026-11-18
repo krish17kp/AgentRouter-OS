@@ -10,9 +10,15 @@ Construct with `MassiveAdapter(languages=["en", "hi"])` to restrict languages.
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from ..base import FIXTURE, REAL, Availability, DatasetAdapter, DatasetMetadata, SkippedExternal
+from ..base import (
+    FIXTURE,
+    REAL,
+    Availability,
+    DatasetAdapter,
+    DatasetMetadata,
+    SkippedExternal,
+    fixture_path,
+)
 from ..schema import (
     AnnotationMethod,
     EvaluationCase,
@@ -21,7 +27,7 @@ from ..schema import (
     ReviewStatus,
 )
 
-_FIXTURE = Path(__file__).resolve().parents[3] / "evaluation" / "fixtures" / "massive_sample.jsonl"
+_FIXTURE = fixture_path("massive_sample.jsonl")
 
 # short language code -> MASSIVE HF locale config
 _LOCALE = {"en": "en-US", "hi": "hi-IN", "fr": "fr-FR"}

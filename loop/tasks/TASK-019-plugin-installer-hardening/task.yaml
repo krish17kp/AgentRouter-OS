@@ -1,0 +1,116 @@
+id: TASK-019
+title: Plugin installer hardening — adversarial proof of the destructive path
+source: owner directive 2026-08-20; loop/BACKLOG.yaml local_open TASK-019; selected by graph-driven gap analysis of RC d81ad94
+priority: 1
+status: in_progress
+risk: high
+owner: unassigned
+created: 2026-08-20
+customer_impact: >
+  The plugin subsystem is the only part of AgentRouter that writes into
+  directories OUTSIDE the project — the user's ~/.claude and ~/.codex agent
+  configuration — and then deletes files from them. A mistake there does not
+  produce a bad route; it removes somebody's configuration. It was the largest
+  under-tested module in the RC (818 statements at 67.7% branch coverage) and
+  four of its symbols sit in the graph's top-14 hubs, yet none of its safety
+  claims had ever been attacked.
+
+discovery_findings:
+  - "CORRECTION TO THE BACKLOG PREMISE. The backlog said plugins.py claims safety
+    properties that had 'never been adversarially tested'. Half of that was
+    wrong. Every claim was attacked — symlinked destination, symlinked parent,
+    dangling link, hardlinked destination, path traversal in a plugin name,
+    uninstall after a user edit, uninstall of an unmanaged file, uninstall with
+    the ownership record deleted, a directory populated during cleanup, a
+    colliding backup, concurrent installs, concurrent install+uninstall, and both
+    package-upgrade paths — and EVERY ONE HELD. The module is well built. What
+    was missing was proof, not protection: nothing in CI would have noticed a
+    refactor that removed a defence."
+  - "The Linux coverage ceiling for this module is about 91.4%, not 100%: roughly
+    70 of the 818 statements are the Windows ctypes/CreateFileW branch of
+    _remove_directory_by_handle and are unreachable on a Linux runner."
+  - "Graph limitation found while scoping: `graphify affected safe_echo` omits the
+    three call sites in agentrouter/server/app.py, because they reach it through
+    the module-level alias `_echo = observability.safe_echo`. AST-only extraction
+    cannot follow a rebinding, so a blast-radius query on that symbol silently
+    excludes the entire HTTP API surface. Verified by reading the source."
+
+defects_found:
+  - "REAL, user-facing: a full disk during `plugin install` produced exit 1, EMPTY
+    output and a raw traceback. Every other failure in the module raises a typed
+    PluginError with a remedy; a write failure escaped as a bare OSError.
+    Reproduced through the CLI, fixed in _temp_file, regression-tested."
+  - "REAL, security: an unknown plugin name was echoed back unbounded and
+    unsanitised — a 5 KB argument produced a 5 KB error, and embedded CR/LF
+    forged extra lines in anything capturing CLI output. Same class as the API's
+    decision_id, so the sanitiser was moved to observability.safe_echo and both
+    call sites now share one definition rather than two that could drift."
+  - "REAL, user-facing: `plugin list` and `plugin doctor` (the human path) died
+    with a raw traceback when any destination path contained a symlink -- the
+    precise condition they exist to report. Both print a headline from
+    plugins.status(), which used _safe_dest and let its refusal escape.
+    `doctor --json` was correct throughout, so the diagnosis existed and only
+    the display was broken. status() now returns 'blocked' and never raises.
+    Found by running every CLI surface against a hostile HOME rather than only
+    the library functions."
+  - "REAL, and mine: the safe_echo fix above was incomplete on its first pass.
+    U+2028 and U+2029 are not control characters, so the hand-written ranges
+    missed them, but str.splitlines() treats both as line boundaries -- the
+    forged-line attack still worked through either. Found by probing my own fix
+    rather than assuming it was done. The regression test now derives the
+    boundary set from Python itself instead of restating the range list."
+  - "REAL, documentation: USER_GUIDE.md documented a `plugin status` subcommand
+    and `--apply` flags on install and uninstall. None exist. Found by executing
+    every documented command instead of trusting the prose."
+  - "MINE, and the worst of them: a test I wrote for the CLI crash above took
+    (plugin, tmp_path) but NOT the `root` fixture, so AGENTROUTER_PLUGIN_ROOT was
+    never set, dest_root() fell back to Path.home(), and the test created a
+    symlink inside the developer's REAL ~/.claude/skills/. It passed in
+    isolation and kept passing; what it broke was an unrelated test in another
+    file, and it also aborted the mutation run by failing mutmut's baseline. The
+    stray symlink and directory were removed (the user's 37 other skills were
+    verified untouched). tests/conftest.py now asserts after EVERY test that the
+    real plugin destinations are unchanged, removes anything a leaky test left
+    so one mistake cannot cascade, and fails naming the missing fixture. Verified
+    to have teeth by reintroducing the exact signature."
+  - "MINE, caught by my own new test: an early _safe_write fix used O_TRUNC,
+    which emptied the victim file BEFORE the hardlink check ran. Replaced with
+    os.ftruncate after the check."
+
+scope:
+  - "adversarial suite attacking every safety invariant the module claims"
+  - "fault injection across the error branches that make up most of the uncovered code"
+  - "an honest platform boundary: POSIX tests must not be presented as proof about
+    the Windows reparse-point path"
+  - "extend the bounded mutation gate to the four functions that decide whether a
+    path is safe to write through and whether something is ours to delete"
+  - "plugin doctor: diagnose per destination with the exact safe fix"
+  - "documentation that states the non-guarantees as plainly as the guarantees"
+
+acceptance_criteria:
+  - "every claimed invariant has a test that fails when the defence is removed"
+  - "mutation gate passes with zero unreviewed survivors and no lowered threshold"
+  - "every allowlisted survivor carries a written proof of equivalence naming the
+    specific clause that makes it unobservable"
+  - "every command shown in user-facing docs is executed, not merely written"
+  - "no threshold lowered, no test weakened, no mutant blanket-allowlisted"
+
+results:
+  coverage: "plugins.py 67.7% -> see battery; module ceiling ~91.4% on Linux"
+  mutation: "PASS at 0.9679 overall, safety_policy_execution 0.9633 (>=0.95),
+    0 unreviewed survivors, 1277 selected mutants, 5m20s wall clock on a clean
+    checkout — comfortably inside the runner's 2100s internal cap and the job's
+    45-minute timeout"
+  survivors_killed: "73 -> 47 -> 41 -> 32 -> 4 -> 0 by real tests; 26 remaining
+    were proven equivalent and allowlisted individually with reasons"
+
+dependencies:
+  - agentrouter/plugins.py, agentrouter/observability.py, agentrouter/server/app.py, agentrouter/cli.py
+
+non_goals:
+  - a Windows CI runner (the reparse-point branch stays explicitly unverified)
+  - rewriting the installer's design; the design was found to be sound
+  - the Rust migration, which remains deferred
+
+external_blockers:
+  - "none: everything is local, offline, credential-free and no-cost"

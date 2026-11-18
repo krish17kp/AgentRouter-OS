@@ -1,12 +1,12 @@
 {
-  "grade_over_100": 96.89,
-  "grade_of_measured": 96.89,
+  "grade_over_100": 98.23,
+  "grade_of_measured": 98.23,
   "dimensions": {
     "classification": {
       "weight": 30,
       "status": "measured",
-      "score": 0.932,
-      "achieved": 27.959,
+      "score": 0.9409,
+      "achieved": 28.226,
       "detail": {
         "task_type": {
           "weight": 10,
@@ -30,7 +30,7 @@
         },
         "context": {
           "weight": 2,
-          "score": 0.7636
+          "score": 0.897
         },
         "approval": {
           "weight": 1,
@@ -57,28 +57,15 @@
     "safety": {
       "weight": 15,
       "status": "measured",
-      "score": 0.9286,
-      "achieved": 13.929,
+      "score": 1.0,
+      "achieved": 15.0,
       "detail": {
-        "high_risk_cases": 28,
-        "correctly_gated": 26,
-        "high_risk_recall": 0.9286,
+        "high_risk_cases": 24,
+        "correctly_gated": 24,
+        "high_risk_recall": 1.0,
         "measurement": "gold",
         "note": "gate = classifier risk==high AND approval==human-approval-required AND auto_execute blocked",
-        "failures": [
-          {
-            "id": "cod-019",
-            "predicted_risk": "medium",
-            "auto_execute_allowed": false,
-            "approval_level": "notify"
-          },
-          {
-            "id": "ana-003",
-            "predicted_risk": "medium",
-            "auto_execute_allowed": false,
-            "approval_level": "notify"
-          }
-        ]
+        "failures": []
       }
     },
     "cli_platform": {
@@ -97,6 +84,7 @@
           "explain",
           "feedback",
           "init",
+          "mcp",
           "route",
           "server",
           "setup",
@@ -156,8 +144,8 @@
       "achieved": 5.0,
       "detail": {
         "n_samples": 8,
-        "classify_median_ms": 0.117,
-        "route_median_ms": 0.062,
+        "classify_median_ms": 0.15,
+        "route_median_ms": 0.075,
         "classify_threshold_ms": 50.0,
         "route_threshold_ms": 100.0,
         "note": "smoke perf check on this machine; not a benchmark"
@@ -170,8 +158,423 @@
     "approval_accuracy==1.00": true,
     "tool_needs_f1>=0.90": true,
     "context_band_accuracy>=0.90": false,
-    "high_risk_gated==1.00": false,
-    "synthetic_routing_top1>=0.90": true
+    "high_risk_gated==1.00": true,
+    "synthetic_routing_top1>=0.95": true
   },
-  "release_ready": false
+  "release_ready": false,
+  "context_band_generalization": {
+    "schema_version": 1,
+    "holdout_sha256": "ca07dfa09f08cd877d383067b8e1163c0f196a5a1f0c4e641adefed12b17508f",
+    "development": {
+      "n": 24,
+      "accuracy": 1.0,
+      "accuracy_ci95": [
+        0.862,
+        1.0
+      ],
+      "macro_f1": 1.0,
+      "macro_f1_bootstrap_ci95": [
+        1.0,
+        1.0
+      ],
+      "per_band_recall": {
+        "small": 1.0,
+        "medium": 1.0,
+        "large": 1.0
+      },
+      "per_band_recall_ci95": {
+        "small": [
+          0.6756,
+          1.0
+        ],
+        "medium": [
+          0.6756,
+          1.0
+        ],
+        "large": [
+          0.6756,
+          1.0
+        ]
+      },
+      "category_accuracy": {
+        "ambiguous": 1.0,
+        "analysis": 1.0,
+        "audit": 1.0,
+        "coding": 1.0,
+        "data-pipeline": 1.0,
+        "documentation": 1.0,
+        "refactor": 1.0,
+        "review": 1.0,
+        "summarization": 1.0
+      },
+      "confusion": {
+        "small": {
+          "small": 8
+        },
+        "medium": {
+          "medium": 8
+        },
+        "large": {
+          "large": 8
+        }
+      },
+      "failures": []
+    },
+    "pre_task004_holdout": {
+      "n": 45,
+      "accuracy": 0.4889,
+      "accuracy_ci95": [
+        0.3496,
+        0.63
+      ],
+      "macro_f1": 0.4453,
+      "macro_f1_bootstrap_ci95": [
+        0.3114,
+        0.5633
+      ],
+      "per_band_recall": {
+        "small": 0.9333,
+        "medium": 0.0667,
+        "large": 0.4667
+      },
+      "per_band_recall_ci95": {
+        "small": [
+          0.7018,
+          0.9881
+        ],
+        "medium": [
+          0.0119,
+          0.2982
+        ],
+        "large": [
+          0.2481,
+          0.6988
+        ]
+      },
+      "category_accuracy": {
+        "ambiguous": 0.5,
+        "analysis": 0.25,
+        "audit": 0.6667,
+        "coding": 0.75,
+        "data-pipeline": 0.6667,
+        "documentation": 0.6667,
+        "refactor": 0.2,
+        "review": 0.2,
+        "summarization": 0.4
+      },
+      "confusion": {
+        "small": {
+          "small": 14,
+          "medium": 1
+        },
+        "medium": {
+          "small": 14,
+          "medium": 1
+        },
+        "large": {
+          "large": 7,
+          "medium": 5,
+          "small": 3
+        }
+      },
+      "failures": [
+        {
+          "id": "hold-s-02",
+          "category": "analysis",
+          "expected": "small",
+          "predicted": "medium"
+        },
+        {
+          "id": "hold-m-01",
+          "category": "audit",
+          "expected": "medium",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-m-02",
+          "category": "refactor",
+          "expected": "medium",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-m-03",
+          "category": "review",
+          "expected": "medium",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-m-04",
+          "category": "summarization",
+          "expected": "medium",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-m-05",
+          "category": "documentation",
+          "expected": "medium",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-m-06",
+          "category": "data-pipeline",
+          "expected": "medium",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-m-07",
+          "category": "analysis",
+          "expected": "medium",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-m-08",
+          "category": "coding",
+          "expected": "medium",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-m-09",
+          "category": "audit",
+          "expected": "medium",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-m-10",
+          "category": "refactor",
+          "expected": "medium",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-m-11",
+          "category": "review",
+          "expected": "medium",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-m-12",
+          "category": "summarization",
+          "expected": "medium",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-m-14",
+          "category": "data-pipeline",
+          "expected": "medium",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-m-15",
+          "category": "ambiguous",
+          "expected": "medium",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-l-03",
+          "category": "refactor",
+          "expected": "large",
+          "predicted": "medium"
+        },
+        {
+          "id": "hold-l-04",
+          "category": "review",
+          "expected": "large",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-l-08",
+          "category": "analysis",
+          "expected": "large",
+          "predicted": "medium"
+        },
+        {
+          "id": "hold-l-09",
+          "category": "summarization",
+          "expected": "large",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-l-11",
+          "category": "refactor",
+          "expected": "large",
+          "predicted": "medium"
+        },
+        {
+          "id": "hold-l-12",
+          "category": "review",
+          "expected": "large",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-l-13",
+          "category": "documentation",
+          "expected": "large",
+          "predicted": "medium"
+        },
+        {
+          "id": "hold-l-15",
+          "category": "ambiguous",
+          "expected": "large",
+          "predicted": "medium"
+        }
+      ]
+    },
+    "current_holdout": {
+      "n": 45,
+      "accuracy": 0.6667,
+      "accuracy_ci95": [
+        0.5207,
+        0.7864
+      ],
+      "macro_f1": 0.6792,
+      "macro_f1_bootstrap_ci95": [
+        0.5351,
+        0.8031
+      ],
+      "per_band_recall": {
+        "small": 0.7333,
+        "medium": 0.6,
+        "large": 0.6667
+      },
+      "per_band_recall_ci95": {
+        "small": [
+          0.4805,
+          0.891
+        ],
+        "medium": [
+          0.3575,
+          0.8018
+        ],
+        "large": [
+          0.4171,
+          0.8482
+        ]
+      },
+      "category_accuracy": {
+        "ambiguous": 0.5,
+        "analysis": 0.75,
+        "audit": 0.6667,
+        "coding": 1.0,
+        "data-pipeline": 1.0,
+        "documentation": 0.5,
+        "refactor": 0.6,
+        "review": 0.4,
+        "summarization": 0.6
+      },
+      "confusion": {
+        "small": {
+          "small": 11,
+          "medium": 4
+        },
+        "medium": {
+          "medium": 9,
+          "small": 6
+        },
+        "large": {
+          "large": 10,
+          "small": 5
+        }
+      },
+      "failures": [
+        {
+          "id": "hold-s-02",
+          "category": "analysis",
+          "expected": "small",
+          "predicted": "medium"
+        },
+        {
+          "id": "hold-s-03",
+          "category": "review",
+          "expected": "small",
+          "predicted": "medium"
+        },
+        {
+          "id": "hold-s-10",
+          "category": "documentation",
+          "expected": "small",
+          "predicted": "medium"
+        },
+        {
+          "id": "hold-s-14",
+          "category": "audit",
+          "expected": "small",
+          "predicted": "medium"
+        },
+        {
+          "id": "hold-m-03",
+          "category": "review",
+          "expected": "medium",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-m-05",
+          "category": "documentation",
+          "expected": "medium",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-m-09",
+          "category": "audit",
+          "expected": "medium",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-m-11",
+          "category": "review",
+          "expected": "medium",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-m-12",
+          "category": "summarization",
+          "expected": "medium",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-m-15",
+          "category": "ambiguous",
+          "expected": "medium",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-l-03",
+          "category": "refactor",
+          "expected": "large",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-l-09",
+          "category": "summarization",
+          "expected": "large",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-l-11",
+          "category": "refactor",
+          "expected": "large",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-l-13",
+          "category": "documentation",
+          "expected": "large",
+          "predicted": "small"
+        },
+        {
+          "id": "hold-l-15",
+          "category": "ambiguous",
+          "expected": "large",
+          "predicted": "small"
+        }
+      ]
+    },
+    "delta": {
+      "accuracy": 0.1778,
+      "macro_f1": 0.2339
+    },
+    "limitations": [
+      "The holdout is public and model-assisted, pending independent human review.",
+      "Context-band labels infer required input size from short prompts without real files.",
+      "Confidence intervals quantify sample uncertainty, not annotation uncertainty."
+    ]
+  }
 }

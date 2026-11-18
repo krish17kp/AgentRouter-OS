@@ -1,0 +1,39 @@
+{
+  "criteria": [
+    {
+      "id": "AC1",
+      "text": "TS mirrors Python SDK methods",
+      "status": "PASS",
+      "evidence": "9/9 endpoints match"
+    },
+    {
+      "id": "AC2",
+      "text": "error contract -> AgentRouterError",
+      "status": "PASS",
+      "evidence": "tests + non-JSON repair"
+    },
+    {
+      "id": "AC3",
+      "text": "clean semantics parity",
+      "status": "PASS",
+      "evidence": "no_log:false always sent; tests"
+    },
+    {
+      "id": "AC4",
+      "text": "typecheck + tests",
+      "status": "PASS",
+      "evidence": "tsc clean; 8/8 node:test"
+    },
+    {
+      "id": "AC5",
+      "text": "python untouched",
+      "status": "PASS",
+      "evidence": "pytest 426"
+    }
+  ],
+  "commands": [
+    "npm run typecheck => clean",
+    "npm test => 8 pass",
+    "pytest -q => 426 passed"
+  ]
+}

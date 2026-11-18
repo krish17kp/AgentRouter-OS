@@ -20,6 +20,30 @@ eval_app = typer.Typer(help="Graded evaluation against gold + public benchmarks.
 _DEFAULT_OUT = Path("artifacts") / "evaluation"
 
 
+@eval_app.command("context-band-generalization")
+def context_band_generalization(
+    json_out: bool = typer.Option(False, "--json", help="Print the complete metric record."),
+):
+    """Measure development + frozen held-out context-band generalization."""
+    from .context_bands import evaluate_generalization
+
+    result = evaluate_generalization()
+    if json_out:
+        typer.echo(json.dumps(result, indent=2))
+        return
+    current = result["current_holdout"]
+    before = result["pre_task004_holdout"]
+    typer.echo(f"Holdout SHA-256: {result['holdout_sha256']}")
+    typer.echo(f"Current accuracy: {current['accuracy']}  95% CI {current['accuracy_ci95']}")
+    typer.echo(
+        f"Current macro-F1: {current['macro_f1']}  "
+        f"95% bootstrap CI {current['macro_f1_bootstrap_ci95']}"
+    )
+    typer.echo(f"Per-band recall: {current['per_band_recall']}")
+    typer.echo(f"Pre-TASK-004 accuracy: {before['accuracy']}")
+    typer.echo(f"Accuracy delta: {result['delta']['accuracy']:+.4f}")
+
+
 @eval_app.command("list-datasets")
 def list_datasets():
     """Show every registered dataset and its availability."""
@@ -64,10 +88,18 @@ def run_cmd(
     measure_all: bool = typer.Option(
         False, "--all", help="Measure every 100-point dimension (routing/safety/platform/...)."
     ),
+    require_release_ready: bool = typer.Option(
+        False,
+        "--require-release-ready",
+        help="Exit nonzero unless every release gate passes (requires --all).",
+    ),
 ):
     """Run an evaluation profile or a single dataset and write reports."""
     if source not in ("fixture", "real"):
         typer.echo(f"Invalid --source '{source}' (use fixture|real).", err=True)
+        raise typer.Exit(2)
+    if require_release_ready and not measure_all:
+        typer.echo("--require-release-ready requires --all.", err=True)
         raise typer.Exit(2)
     langs = [x.strip() for x in languages.split(",")] if languages else None
     try:
@@ -90,19 +122,20 @@ def run_cmd(
 
     if json_out:
         typer.echo(json.dumps({k: v for k, v in result.items() if k != "classification"}, indent=2))
-        return
-
-    typer.echo(
-        f"\nGrade /100: {result['grade_over_100']}  (measured: {result['grade_of_measured']})"
-    )
-    typer.echo(f"Release-ready: {'YES' if result['release_ready'] else 'NO'}")
-    typer.echo(f"Cases: {result['n_cases']}")
-    typer.echo("\nDatasets:")
-    for name, info in result["datasets"].items():
-        typer.echo(f"  {name:<16} {info['status']:<16} n={info['n']}")
-    typer.echo("\nRelease gates:")
-    for name, ok in result["release_gates"].items():
-        typer.echo(f"  [{'PASS' if ok else 'FAIL'}] {name}")
+    else:
+        typer.echo(
+            f"\nGrade /100: {result['grade_over_100']}  (measured: {result['grade_of_measured']})"
+        )
+        typer.echo(f"Release-ready: {'YES' if result['release_ready'] else 'NO'}")
+        typer.echo(f"Cases: {result['n_cases']}")
+        typer.echo("\nDatasets:")
+        for name, info in result["datasets"].items():
+            typer.echo(f"  {name:<16} {info['status']:<16} n={info['n']}")
+        typer.echo("\nRelease gates:")
+        for name, ok in result["release_gates"].items():
+            typer.echo(f"  [{'PASS' if ok else 'FAIL'}] {name}")
+    if require_release_ready and not result["release_ready"]:
+        raise typer.Exit(1)
 
 
 @eval_app.command("report")

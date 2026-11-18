@@ -1,0 +1,30 @@
+id: TASK-146
+title: OpenAI status mutation coverage
+source: critical mutation CI found unreviewed survivors in the TASK-144 status branch
+priority: 1
+status: verify
+risk: low
+customer_impact: Prevents regressions that accept redirects or non-success HTTP responses from the OpenAI adapter.
+affected_surfaces:
+  - agentrouter/openai_adapter.py
+  - tests/test_openai_adapter.py
+dependencies:
+  - TASK-144
+acceptance_criteria:
+  - Status tests cover 199, 200, 299, 300, 302, 399, 400, 429, 500, and 599.
+  - Missing, null, boolean, float, and string statuses fail closed with a stable adapter error.
+  - The selected suite kills the exact mutation that removes the missing-status fallback.
+  - The focused OpenAI adapter selection passes without a live provider call.
+  - Hosted critical mutation has no unreviewed survivors and all configured gates pass.
+verification_commands:
+  - ./.venv/bin/python -m pytest -q tests/test_openai_adapter.py tests/test_openai_adapter_rust_compat.py
+  - ./.venv/bin/ruff check tests/test_openai_adapter.py
+  - ./.venv/bin/ruff format --check tests/test_openai_adapter.py
+  - git diff --check
+required_reviewers:
+  - mutation-review
+repair_iteration: 0
+external_blockers: []
+owner_blockers: []
+created_at: "2026-11-14"
+updated_at: "2026-11-14"

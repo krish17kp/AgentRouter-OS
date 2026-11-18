@@ -1,0 +1,108 @@
+id: TASK-018A
+title: Versioned HTTP API contract, semantic compatibility gate and SDK parity
+source: EPIC TASK-018 (production reliability and compatibility lab), owner directive 2026-08-09; loop/BACKLOG.yaml local_open L9
+priority: 1
+status: in_progress
+risk: medium
+owner: unassigned
+created: 2026-08-09
+customer_impact: >
+  The REST API is a product surface with two published SDKs, but nothing stops a
+  refactor from renaming a response field, tightening a request constraint or
+  dropping authentication on an endpoint. `GET /openapi.json` describes whatever
+  the process happens to serve, so the API cannot detect its own regression, and
+  a user's integration breaks silently at upgrade time. Separately, an
+  unexpected server-side fault answered with an unshaped 500 gives the client
+  nothing to branch on and, on the registry path, echoed local file contents
+  back to the caller.
+
+objective: >
+  Make the HTTP contract a committed, byte-stable artifact; gate every change
+  through a semantic compatibility checker that fails CI on a breaking change
+  and cannot be silently regenerated; prove both SDKs actually exercise every
+  operation they claim; and give the API stable typed errors that never leak a
+  traceback.
+
+discovery_findings:
+  - "Four of nine operations were declared `-> dict`, so the exported contract
+    said only 'an object' for their responses. A renamed or removed field on
+    /v1/classify, /v1/route, /v1/decisions/{id} or /v1/execute/dry-run produced
+    no diff at all — the gate would have been green while the API broke."
+  - "Auth was a bare X-API-Key Header parameter, indistinguishable in the export
+    from any other optional header, so adding or removing authentication on an
+    endpoint was invisible to a compatibility checker."
+  - "@app.exception_handler(Exception) was registered on Starlette's OUTERMOST
+    middleware, above request_id_middleware, so it never ran: an unhandled error
+    was answered by ServerErrorMiddleware with no X-Request-ID and no envelope."
+  - "The RegistryError handler returned str(exc), which interpolates the registry
+    path and the offending YAML/pydantic source line. A registry is malformed at
+    exactly the moment someone has pasted a credential into it, so this returned
+    that credential to an unauthenticated caller on /v1/models and /ready."
+  - "/ready caught RegistryError itself and reported the vaguer `unavailable`,
+    so readiness and the /v1 routes disagreed about the same condition."
+  - "$ref expansion was unbounded: a document with fan-out references expands
+    exponentially, and validate_refs re-walked every path, so a contract small
+    enough to review by eye took minutes to validate (26 levels = 2**26 steps)."
+  - "An unresolvable, self-referential or remote $ref inlined as {}, so a
+    one-character edit to the committed baseline made a schema look permissive
+    and turned the gate green."
+  - "Neither SDK's parity test drove a real server: listing an operation in a
+    manifest was a claim, not evidence."
+
+scope:
+  - "agentrouter/contract.py: canonical, byte-stable OpenAPI export (recursive
+    key sort, order-insensitive lists normalised, trivial `servers` dropped but a
+    real one kept); provenance in a separate manifest so the contract itself has
+    no timestamp or commit; bounded $ref resolution; baseline refused outright
+    when it contains an unusable $ref; symlink- and root-escape-safe writes."
+  - "semantic checker classifying breaking / risky / additive across endpoints,
+    methods, response statuses, request and response fields, required-ness,
+    types, enums, validation constraints (including a bound introduced where
+    none existed), media types, parameters and their schemas, security, servers,
+    info.version, operationId and deprecation."
+  - "agentrouter contract export | check | check --json | check --out; exit 0 ok,
+    1 breaking, 3 missing/untrustworthy baseline. A missing baseline is never a
+    pass. Export refuses to overwrite a breaking change; --accept-breaking
+    --reason appends to an append-only history that records only the changes the
+    checker itself found."
+  - "typed response models for the four untyped operations (extra='allow' so
+    nothing is stripped from the wire) and APIKeyHeader as a declared security
+    scheme, so the contract has something real to protect."
+  - "stable typed errors: internal_error and registry_unavailable with fixed
+    messages, an X-Request-ID on every response including faults, and the detail
+    logged server-side at ERROR with credentials redacted."
+  - "contracts/sdk/capabilities.json plus parity suites that drive every claimed
+    operation against the real app — Python via in-process uvicorn, TypeScript
+    via scripts/serve_for_parity.py over loopback."
+  - "a dedicated CI api-compatibility job; the enforced release gate depends on it."
+
+acceptance_criteria:
+  - "the committed contract is byte-identical when exported from a clean wheel
+    install in an unrelated directory"
+  - "every served operation appears in the contract and every operation
+    documents a response schema, not a bare object"
+  - "each breaking category is proven detected by a test that mutates the real
+    exported document, not a synthetic one"
+  - "a missing baseline exits 3; a breaking change exits 1; neither is a pass"
+  - "the baseline cannot be defeated by a dangling, self-referential or remote
+    $ref, by a symlink at the export path, or by erasing the acceptance history"
+  - "no raw traceback, registry path, file content or credential reaches an API
+    client on any error path (asserted per path)"
+  - "every operation in the SDK manifest is exercised against the real app in
+    both languages; a skipped live suite fails CI rather than passing"
+  - "full battery green: pytest + coverage gate, hook tests, ruff check/format,
+    bandit, pip-audit, secret scan, build, clean-wheel, npm typecheck/tests,
+    critical-module mutation gate — no threshold lowered"
+
+dependencies:
+  - agentrouter/server/app.py, agentrouter/server/schemas.py, agentrouter/observability.py, agentrouter/cli.py, agentrouter/sdk.py, sdk/typescript/src/index.ts
+
+non_goals:
+  - load, soak and concurrency testing (TASK-018B)
+  - unified doctor, diagnostic bundle and runbooks (TASK-018C)
+  - a v2 API, or any deliberate breaking change to v1
+  - publishing either SDK
+
+external_blockers:
+  - "none: the API under test is an in-process ASGI app, so no network, no
+    credentials and no paid inference are required"

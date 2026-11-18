@@ -17,6 +17,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from enum import Enum
+from importlib import resources
 from pathlib import Path
 
 from .sampling import deterministic_sample
@@ -25,6 +26,19 @@ from .schema import EvaluationCase
 # valid source values for load/sample/checksum
 FIXTURE = "fixture"
 REAL = "real"
+
+
+def fixture_path(name: str) -> Path:
+    """Filesystem path to a shipped eval fixture (agentrouter/evaluation/fixtures/).
+
+    ponytail: assumes an unpacked install (pip's default); zipimport unsupported.
+    """
+    return Path(str(resources.files("agentrouter.evaluation").joinpath("fixtures", name)))
+
+
+def gold_path(name: str) -> Path:
+    """Filesystem path to a shipped gold benchmark (agentrouter/benchmarks/)."""
+    return Path(str(resources.files("agentrouter").joinpath("benchmarks", name)))
 
 
 class Availability(str, Enum):
@@ -172,6 +186,13 @@ class DatasetAdapter:
         Never writes into the repo. Raises SkippedExternal if unavailable.
         """
         cases = self.load(source=REAL)
+        # A bounded prepare is an explicit smoke operation.  Keep the full
+        # download/normalisation validation above, then report the same
+        # deterministic subset that a bounded evaluation would consume.  This
+        # makes ``prepare --limit`` useful without changing provenance of the
+        # source dataset or introducing an order-dependent slice.
+        if limit is not None:
+            cases = deterministic_sample(cases, limit, 0, key=lambda c: c.id)
         return {
             "dataset": self.meta.name,
             "source": self.meta.source,

@@ -1,0 +1,39 @@
+{
+  "criteria": [
+    {
+      "id": "AC1",
+      "text": "CycloneDX SBOM generated + attached",
+      "status": "PASS",
+      "evidence": "release.yml; cmd proven (127 components)"
+    },
+    {
+      "id": "AC2",
+      "text": "SLSA provenance attested",
+      "status": "PASS",
+      "evidence": "attest-build-provenance@v1; perms minimal"
+    },
+    {
+      "id": "AC3",
+      "text": "SBOM cmd proven + [sbom] extra",
+      "status": "PASS",
+      "evidence": "cyclonedx-py run; pyproject"
+    },
+    {
+      "id": "AC4",
+      "text": "UPGRADING.md accurate",
+      "status": "PASS",
+      "evidence": "cross-checked vs cli.py"
+    },
+    {
+      "id": "AC5",
+      "text": "no python impact",
+      "status": "PASS",
+      "evidence": "426 passed"
+    }
+  ],
+  "commands": [
+    "workflows valid YAML",
+    "cyclonedx-py environment -> CycloneDX 1.6 127 components",
+    "pytest -q => 426"
+  ]
+}
